@@ -18,7 +18,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/01.jpg"
+				"img_src": "http://52.192.0.202:8888/images/01.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -40,7 +40,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/02.jpg"
+				"img_src": "http://52.192.0.202:8888/images/02.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -62,7 +62,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/03.jpg"
+				"img_src": "http://52.192.0.202:8888/images/03.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -84,7 +84,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/04.jpg"
+				"img_src": "http://52.192.0.202:8888/images/04.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -106,7 +106,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/05.jpg"
+				"img_src": "http://52.192.0.202:8888/images/05.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -128,7 +128,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/06.jpg"
+				"img_src": "http://52.192.0.202:8888/images/06.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -150,7 +150,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/07.jpg"
+				"img_src": "http://52.192.0.202:8888/images/07.jpg"
 			},
 			"borrowable": true,
 			"returnable": true
@@ -172,7 +172,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/08.jpg"
+				"img_src": "http://52.192.0.202:8888/images/08.jpg"
 			},
 			"borrowable": false,
 			"returnable": true
@@ -194,7 +194,7 @@
 			},
 			"img_info": {
 				"img_version": 0,
-				"img_src": "http://52.192.0.202/images/09.jpg"
+				"img_src": "http://52.192.0.202:8888/images/09.jpg"
 			},
 			"borrowable": false,
 			"returnable": true
