@@ -1,7 +1,12 @@
 var express = require("express");
+var path = require('path');
 var app = express();
 
 function start(reqHandlers){
+
+	// app.use(express.static(path.join("./public", 'public')));
+	app.use(express.static('public'));
+
 	app.get('/getStores', function (req, res){
 		console.log("Request for /getStores received.");
 		reqHandlers.getStores(req, res);
