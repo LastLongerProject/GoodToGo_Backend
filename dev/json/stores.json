@@ -7,21 +7,22 @@
 			"address": "台南市中西區國華街三段43號",
 			"type": ["咖啡", "輕食"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "0900",
 				"close": "1900"
 			},
 			"location" : {
 				"lat" : 22.9942297,
-				"lng" : 120.1951736,
-				"distance": "70"
+				"lng" : 120.1951736
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/01.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 2,
@@ -29,21 +30,22 @@
 			"address": "台南市中西區正興街62-2號",
 			"type": ["茶飲"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "0800",
 				"close": "2300"
 			},
 			"location" : {
 				"lat" : 22.9942649,
-				"lng" : 120.1953823,
-				"distance": "80"
+				"lng" : 120.1953823
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/02.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 3,
@@ -51,21 +53,22 @@
 			"address": "台南市中西區正興街116巷8號",
 			"type": ["茶飲"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "1130",
 				"close": "1800"
 			},
 			"location" : {
 				"lat" : 22.9949266,
-				"lng" : 120.194304,
-				"distance": "90"
+				"lng" : 120.194304
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/03.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 4,
@@ -73,21 +76,22 @@
 			"address": "台南市中西區正興街100號",
 			"type": ["茶飲"],
 			"opening_hours": {
-				"is_opened": false,
 				"open": "1400",
 				"close": "2100"
 			},
 			"location" : {
 				"lat" : 22.994324,
-				"lng" : 120.196996,
-				"distance": "100"
+				"lng" : 120.196996
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/04.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 5,
@@ -95,21 +99,22 @@
 			"address": "台南市中西區正興街73號",
 			"type": ["住宿"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "0000",
 				"close": "2359"
 			},
 			"location" : {
 				"lat" : 22.994324,
-				"lng" : 120.196996,
-				"distance": "110"
+				"lng" : 120.196996
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/05.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 6,
@@ -117,21 +122,22 @@
 			"address": "台南市中西區神農街147號",
 			"type": ["飲品"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "1000",
 				"close": "2100"
 			},
 			"location" : {
 				"lat" : 22.9981449,
-				"lng" : 120.1928663,
-				"distance": "1000"
+				"lng" : 120.1928663
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/06.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 7,
@@ -139,21 +145,22 @@
 			"address": "台南市中西區正興街77巷10號",
 			"type": ["住宿"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "0000",
 				"close": "2359"
 			},
 			"location" : {
 				"lat" : 22.9940729,
-				"lng" : 120.1947033,
-				"distance": "40"
+				"lng" : 120.1947033
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/07.jpg"
 			},
-			"borrowable": true,
-			"returnable": true
+			"contract": {
+				"status_code": 2,
+				"borrowable": true,
+				"returnable": true
+			}
 		},
 		{
 			"id": 8,
@@ -161,21 +168,22 @@
 			"address": "台南市中西區海安路二段269巷9號",
 			"type": ["住宿"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "0000",
 				"close": "2359"
 			},
 			"location" : {
 				"lat" : 22.998116,
-				"lng" : 120.1951038,
-				"distance": "3700"
+				"lng" : 120.1951038
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/08.jpg"
 			},
-			"borrowable": false,
-			"returnable": true
+			"contract": {
+				"status_code": 1,
+				"borrowable": false,
+				"returnable": true
+			}
 		},
 		{
 			"id": 9,
@@ -183,21 +191,22 @@
 			"address": "台南市中西區神農街49號",
 			"type": ["住宿"],
 			"opening_hours": {
-				"is_opened": true,
 				"open": "1300",
 				"close": "2200"
 			},
 			"location" : {
 				"lat" : 22.9971829,
-				"lng" : 120.1948673,
-				"distance": "2300"
+				"lng" : 120.1948673
 			},
 			"img_info": {
 				"img_version": 0,
 				"img_src": "http://52.192.0.202:8888/images/09.jpg"
 			},
-			"borrowable": false,
-			"returnable": true
+			"contract": {
+				"status_code": 1,
+				"borrowable": false,
+				"returnable": true
+			}
 		}
 	]
 }
