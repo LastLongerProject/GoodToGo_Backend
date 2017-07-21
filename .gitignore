@@ -37,3 +37,6 @@ config.js
 
 # IDE
 .vscode
+
+# Developping trash file
+dev/deprecated

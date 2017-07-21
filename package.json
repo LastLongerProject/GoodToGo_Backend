@@ -4,7 +4,7 @@
   "description": "GoodToGo Backend Server",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"Debudding Mode\" & set DEBUG=expressejs:* & nodemon bin/www",
     "start": "nodemon index.js",
     "exp": "node bin/www"
   },
