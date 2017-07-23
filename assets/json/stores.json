@@ -16,8 +16,8 @@
 				"lng" : 120.1951736
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/01.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/01.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -39,8 +39,8 @@
 				"lng" : 120.1953823
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/02.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/02.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -62,8 +62,8 @@
 				"lng" : 120.194304
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/03.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/03.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -85,8 +85,8 @@
 				"lng" : 120.196996
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/04.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/04.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -108,8 +108,8 @@
 				"lng" : 120.196996
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/05.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/05.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -131,8 +131,8 @@
 				"lng" : 120.1928663
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/06.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/06.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -154,8 +154,8 @@
 				"lng" : 120.1947033
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/07.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/07.jpg"
 			},
 			"contract": {
 				"status_code": 2,
@@ -177,8 +177,8 @@
 				"lng" : 120.1951038
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/08.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/08.jpg"
 			},
 			"contract": {
 				"status_code": 1,
@@ -200,8 +200,8 @@
 				"lng" : 120.1948673
 			},
 			"img_info": {
-				"img_version": 0,
-				"img_src": "http://52.192.0.202:8888/images/09.jpg"
+				"img_version": 1,
+				"img_src": "http://52.192.0.202:3000/images/09.jpg"
 			},
 			"contract": {
 				"status_code": 1,

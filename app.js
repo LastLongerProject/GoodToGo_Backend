@@ -10,6 +10,20 @@ var storeList = require('./routes/getStores');
 
 var app = express();
 
+// GA
+var ua = require('universal-analytics');
+var visitor = ua('UA-102945537-1', {https: true}).debug();
+function GAtrigger(req, res, next) {
+	visitor.set('ua', req.headers['user-agent']);
+	visitor.pageview(req.url, function (err) {
+		console.log(req.headers['user-agent']);
+		if (err !== null){
+			console.log('Failed to trigger GA: ' + err);
+		}
+	});
+	next();
+}
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -21,6 +35,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(GAtrigger);
 
 app.use('/', index);
 app.use('/getStores', storeList);
