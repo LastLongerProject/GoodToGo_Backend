@@ -30,6 +30,7 @@ node_modules
 npm-debug.log
 
 # Security
+config
 config.js
 
 # For Apple develop environment

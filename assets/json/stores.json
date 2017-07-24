@@ -1,9 +1,14 @@
 {
 	"title": "Stores list",
 	"updated_time": " ",
+	"contract_code_explanation": [
+		{ "0": "Only borrowable and returnable" },
+		{ "1": "Only returnable" },
+		{ "2": "Borrowable and returnable" }
+	],
 	"shop_data": [
 		{
-			"id": 1,
+			"id": 0,
 			"name": "正興咖啡館",
 			"address": "台南市中西區國華街三段43號",
 			"type": ["咖啡", "輕食"],
@@ -16,7 +21,7 @@
 				"lng" : 120.1951736
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/01.jpg"
 			},
 			"contract": {
@@ -26,7 +31,7 @@
 			}
 		},
 		{
-			"id": 2,
+			"id": 1,
 			"name": "布萊恩紅茶",
 			"address": "台南市中西區正興街62-2號",
 			"type": ["茶飲"],
@@ -39,7 +44,7 @@
 				"lng" : 120.1953823
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/02.jpg"
 			},
 			"contract": {
@@ -49,8 +54,8 @@
 			}
 		},
 		{
-			"id": 3,
-			"name": "N23\u00b0°樂沏",
+			"id": 2,
+			"name": "N23\u00b0樂沏",
 			"address": "台南市中西區正興街116巷8號",
 			"type": ["茶飲"],
 			"opening_hours": {
@@ -62,7 +67,7 @@
 				"lng" : 120.194304
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/03.jpg"
 			},
 			"contract": {
@@ -72,7 +77,7 @@
 			}
 		},
 		{
-			"id": 4,
+			"id": 3,
 			"name": "彩虹來了",
 			"address": "台南市中西區正興街100號",
 			"type": ["茶飲"],
@@ -85,7 +90,7 @@
 				"lng" : 120.196996
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/04.jpg"
 			},
 			"contract": {
@@ -95,7 +100,7 @@
 			}
 		},
 		{
-			"id": 5,
+			"id": 4,
 			"name": "My Way",
 			"address": "台南市中西區正興街73號",
 			"type": ["住宿"],
@@ -108,7 +113,7 @@
 				"lng" : 120.196996
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/05.jpg"
 			},
 			"contract": {
@@ -118,7 +123,7 @@
 			}
 		},
 		{
-			"id": 6,
+			"id": 5,
 			"name": "神榕147",
 			"address": "台南市中西區神農街147號",
 			"type": ["飲品"],
@@ -131,7 +136,7 @@
 				"lng" : 120.1928663
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/06.jpg"
 			},
 			"contract": {
@@ -141,7 +146,7 @@
 			}
 		},
 		{
-			"id": 7,
+			"id": 6,
 			"name": "未艾公寓",
 			"address": "台南市中西區正興街77巷10號",
 			"type": ["住宿"],
@@ -154,7 +159,7 @@
 				"lng" : 120.1947033
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/07.jpg"
 			},
 			"contract": {
@@ -164,7 +169,7 @@
 			}
 		},
 		{
-			"id": 8,
+			"id": 7,
 			"name": "有方公寓",
 			"address": "台南市中西區海安路二段269巷9號",
 			"type": ["住宿"],
@@ -177,7 +182,7 @@
 				"lng" : 120.1951038
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/08.jpg"
 			},
 			"contract": {
@@ -187,7 +192,7 @@
 			}
 		},
 		{
-			"id": 9,
+			"id": 8,
 			"name": "初心地球社",
 			"address": "台南市中西區神農街49號",
 			"type": ["住宿"],
@@ -200,7 +205,7 @@
 				"lng" : 120.1948673
 			},
 			"img_info": {
-				"img_version": 1,
+				"img_version": 0,
 				"img_src": "http://52.192.0.202:3000/images/09.jpg"
 			},
 			"contract": {
