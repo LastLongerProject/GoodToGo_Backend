@@ -4,8 +4,8 @@
   "description": "GoodToGo Backend Server",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www",
-    "start": "nodemon bin/www"
+    "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore tmp/",
+    "start": "nodemon bin/www --ignore tmp/"
   },
   "repository": {
     "type": "git",

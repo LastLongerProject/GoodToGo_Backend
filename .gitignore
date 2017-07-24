@@ -41,3 +41,4 @@ config.js
 
 # Developping trash file
 dev/deprecated
+tmp

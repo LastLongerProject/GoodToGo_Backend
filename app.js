@@ -7,12 +7,13 @@ var bodyParser = require('body-parser');
 
 var index = require('./routes/index');
 var storeList = require('./routes/getStores');
+var config = require('./config/config.js')
 
 var app = express();
 
 // GA
 var ua = require('universal-analytics');
-var visitor = ua('UA-102945537-1', {https: true});
+var visitor = ua(config.getGA_TRACKING_ID, {https: true});
 function GAtrigger(req, res, next) {
 	visitor.set('ua', req.headers['user-agent']);
 	visitor.pageview(req.url, function (err) {
@@ -29,7 +30,7 @@ app.set('view engine', 'ejs');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
+app.use(logger('short'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
