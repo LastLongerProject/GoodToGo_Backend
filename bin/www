@@ -13,7 +13,9 @@ var url = require("url");
 function httpRequest(request, response) {
   var pathname = url.parse(request.url).pathname;
   debug("HTTP request for " + pathname + " received.");
-  res.redirect('https://app.goodtogo.tw'+pathname);
+  response.writeHead(301,
+    {Location: 'https://app.goodtogo.tw'+ pathname});
+  response.end();
 }
 http.createServer(httpRequest).listen(80);
 
