@@ -13,16 +13,21 @@ var app = express();
 
 // GA
 var ua = require('universal-analytics');
-var visitor = ua(config.getGA_TRACKING_ID, {https: true});
+var visitor = ua(config.GA_TRACKING_ID, {https: true});
 function GAtrigger(req, res, next) {
 	visitor.set('ua', req.headers['user-agent']);
 	visitor.pageview(req.url, function (err) {
 		if (err !== null){
-			console.log('Failed to trigger GA: ' + err);
+      console.log('Failed to trigger GA: ' + err);
 		}
 	});
 	next();
 }
+
+// Connect to MongoDB
+var mongo = require('mongodb');
+var monk = require('monk');
+var db = monk('app.goodtogo.tw:27017/backend');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -36,7 +41,14 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Trigger Google Analytics
 app.use(GAtrigger);
+
+// Allow router to access db
+app.use(function(req,res,next){
+  req.db = db;
+  next();
+});
 
 app.use('/', index);
 app.use('/getStores', storeList);

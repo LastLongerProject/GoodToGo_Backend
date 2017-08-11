@@ -6,6 +6,7 @@
 ### Related
 
 - [Facebook](https://www.facebook.com/good.to.go.tw/)
+- [Official Website](http://goodtogo.com.tw/)
 
 ### License
 
