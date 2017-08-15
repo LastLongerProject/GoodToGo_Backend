@@ -7,7 +7,7 @@ var bodyParser = require('body-parser');
 
 var index = require('./routes/index');
 var storeList = require('./routes/getStores');
-var config = require('./config/config.js')
+var config = require('./config/config')
 
 var app = express();
 
@@ -25,9 +25,9 @@ function GAtrigger(req, res, next) {
 }
 
 // Connect to MongoDB
-var mongo = require('mongodb');
-var monk = require('monk');
-var db = monk('app.goodtogo.tw:27017/backend');
+// var mongo = require('mongodb');
+// var monk = require('monk');
+// var db = monk(config.dbUrl);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -40,18 +40,25 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(GAtrigger); // Trigger Google Analytics
 
-// Trigger Google Analytics
-app.use(GAtrigger);
+var mongoose = require('mongoose');
+var passport = require('passport');
+mongoose.connect(config.dbUrl);
+app.use(passport.initialize());
+app.set('passport', passport);
+var user = require('./routes/user/index.js');
+require('./models/passport')(passport); // pass passport for configuration
 
 // Allow router to access db
-app.use(function(req,res,next){
-  req.db = db;
-  next();
-});
+// app.use(function(req,res,next){
+//   req.db = db;
+//   next();
+// });
 
 app.use('/', index);
 app.use('/getStores', storeList);
+app.use('/user', user);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -8,6 +8,9 @@ var debug = require('debug')('goodtogo_backend:server');
 var https = require('https');
 var fs = require('fs');
 
+/**
+ * HTTP redirector server.
+ */
 var http = require('http');
 var url = require("url");
 function httpRequest(request, response) {
