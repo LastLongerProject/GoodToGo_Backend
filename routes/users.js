@@ -1,9 +1,6 @@
 var express = require('express');
 var router = express.Router();
 
-    // =====================================
-    // SIGNUP ==============================
-    // =====================================
 router.post('/signup', function(req, res, next) {
     req.app.get('passport').authenticate('local-signup', { session: false } , function(err, user, info) {
         if (err) {
@@ -21,16 +18,6 @@ router.post('/signup', function(req, res, next) {
         });      
     })(req, res, next);
 });
-    // =====================================
-    // HOME PAGE (with login links) ========
-    // =====================================
-    // app.get('/', function(req, res) {
-    //     res.render('index.ejs'); // load the index.ejs file
-    // });
-
-    // =====================================
-    // LOGIN ===============================
-    // =====================================
 router.post('/login', function(req, res, next) {
     req.app.get('passport').authenticate('local-login', function(err, user, info) {
         if (err) {
@@ -44,10 +31,16 @@ router.post('/login', function(req, res, next) {
             if (loginErr) {
                 return next(loginErr);
             }
-            return res.send(info);
+            return res.setHeader('Authorization', info.headers.Authorization).send(info.body);
         });      
     })(req, res, next);
 });
+    // =====================================
+    // HOME PAGE (with login links) ========
+    // =====================================
+    // app.get('/', function(req, res) {
+    //     res.render('index.ejs'); // load the index.ejs file
+    // });
 
     // =====================================
     // PROFILE SECTION =====================
@@ -67,16 +60,5 @@ router.post('/login', function(req, res, next) {
         // req.logout();
     // res.redirect('/');
     });
-// };
-// route middleware to make sure a user is logged in
-function isLoggedIn(req, res, next) {
-
-    // if user is authenticated in the session, carry on 
-    if (req.isAuthenticated())
-        return next();
-
-    // if they aren't redirect them to the home page
-    // res.redirect('/');
-}
 
 module.exports = router;

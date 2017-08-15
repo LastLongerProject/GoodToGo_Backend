@@ -9,7 +9,8 @@ var passport = require('passport');
 
 var index = require('./routes/index');
 var storeList = require('./routes/getStores');
-var user = require('./routes/user/index.js');
+var users = require('./routes/users');
+var containers = require('./routes/containers');
 var config = require('./config/config')
 
 var app = express();
@@ -47,7 +48,10 @@ require('./models/passport'); // pass passport for configuration
 
 app.use('/', index);
 app.use('/getStores', storeList);
-app.use('/user', user);
+app.use('/users', users);
+app.use('/containers', containers);
+
+app.all('/users/data', [require('./middlewares/validateRequest')]);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
