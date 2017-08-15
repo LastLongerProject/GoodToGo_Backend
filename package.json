@@ -16,21 +16,19 @@
   "license": "ISC",
   "dependencies": {
     "bcrypt-nodejs": "0.0.3",
-    "body-parser": "~1.17.1",
+    "body-parser": "~1.17.2",
     "cookie-parser": "~1.4.3",
     "crypto": "^1.0.1",
-    "debug": "~2.6.3",
-    "ejs": "~2.5.6",
-    "express": "^4.15.3",
-    "mongodb": "^2.2.31",
-    "mongoose": "^4.11.6",
-    "monk": "^6.0.3",
-    "morgan": "~1.8.1",
+    "debug": "~3.0.0",
+    "ejs": "~2.5.7",
+    "express": "^4.15.4",
+    "mongoose": "^4.11.7",
+    "morgan": "~1.8.2",
     "nodemon": "^1.11.0",
     "passport": "^0.4.0",
     "passport-local": "^1.0.0",
-    "serve-favicon": "~2.4.2",
-    "universal-analytics": "^0.4.13"
+    "serve-favicon": "~2.4.3",
+    "universal-analytics": "^0.4.15"
   },
   "bugs": {
     "url": "https://github.com/BenjaminChenTW/GoodToGo_Backend/issues"

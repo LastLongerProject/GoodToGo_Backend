@@ -4,9 +4,12 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
+var passport = require('passport');
 
 var index = require('./routes/index');
 var storeList = require('./routes/getStores');
+var user = require('./routes/user/index.js');
 var config = require('./config/config')
 
 var app = express();
@@ -24,11 +27,6 @@ function GAtrigger(req, res, next) {
 	next();
 }
 
-// Connect to MongoDB
-// var mongo = require('mongodb');
-// var monk = require('monk');
-// var db = monk(config.dbUrl);
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -41,20 +39,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger); // Trigger Google Analytics
-
-var mongoose = require('mongoose');
-var passport = require('passport');
-mongoose.connect(config.dbUrl);
 app.use(passport.initialize());
 app.set('passport', passport);
-var user = require('./routes/user/index.js');
-require('./models/passport')(passport); // pass passport for configuration
 
-// Allow router to access db
-// app.use(function(req,res,next){
-//   req.db = db;
-//   next();
-// });
+mongoose.connect(config.dbUrl,config.dbOptions);
+require('./models/passport'); // pass passport for configuration
 
 app.use('/', index);
 app.use('/getStores', storeList);
