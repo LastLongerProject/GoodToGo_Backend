@@ -44,14 +44,12 @@ app.use(passport.initialize());
 app.set('passport', passport);
 
 mongoose.connect(config.dbUrl,config.dbOptions);
-require('./models/passport'); // pass passport for configuration
+require('./models/userQuery'); // pass passport for configuration
 
 app.use('/', index);
 app.use('/getStores', storeList);
 app.use('/users', users);
 app.use('/containers', containers);
-
-app.all('/users/data', [require('./middlewares/validateRequest')]);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

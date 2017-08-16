@@ -5,7 +5,7 @@ var userSchema = mongoose.Schema({
     container : {
     	ID           : Number,
         typeCode     : Number,
-        status       : String,
+        statusCode   : Number,
         conbineTo    : String
     }
 });

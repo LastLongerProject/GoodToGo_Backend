@@ -1,5 +1,19 @@
 var express = require('express');
 var router = express.Router();
+var validateRequest = require('../models/validateRequest');
+var fs = require('fs');
+
+var stores;
+fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function (err, data) {
+    if (err) throw err;
+    stores = JSON.parse(data);
+});
+
+var type;
+fs.readFile("./assets/json/containerType.json", 'utf8', function (err, data) {
+    if (err) throw err;
+    type = JSON.parse(data);
+});
 
 router.post('/signup', function(req, res, next) {
     req.app.get('passport').authenticate('local-signup', { session: false } , function(err, user, info) {
@@ -18,6 +32,7 @@ router.post('/signup', function(req, res, next) {
         });      
     })(req, res, next);
 });
+
 router.post('/login', function(req, res, next) {
     req.app.get('passport').authenticate('local-login', function(err, user, info) {
         if (err) {
@@ -31,34 +46,55 @@ router.post('/login', function(req, res, next) {
             if (loginErr) {
                 return next(loginErr);
             }
-            return res.setHeader('Authorization', info.headers.Authorization).send(info.body);
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Authorization', info.headers.Authorization);
+            res.send(JSON.stringify(info.body));
+            return res.end();
         });      
     })(req, res, next);
 });
-    // =====================================
-    // HOME PAGE (with login links) ========
-    // =====================================
-    // app.get('/', function(req, res) {
-    //     res.render('index.ejs'); // load the index.ejs file
-    // });
 
-    // =====================================
-    // PROFILE SECTION =====================
-    // =====================================
-    // we will want this protected so you have to be logged in to visit
-    // we will use route middleware to verify this (the isLoggedIn function)
-    router.get('/profile', isLoggedIn, function(req, res) {
-        // res.render('profile.ejs', {
-        //     user : req.user // get the user out of session and pass to template
-        // });
-    });
+router.get('/data', validateRequest, function(dbUser, req, res, next) {
+    var tmp = [];
+    var historyData = dbUser.role.customer.history;
+    var recordCollection = {
+        usingAmount : 0
+    };
+    for (i = 0; i < historyData.length; i++) {
+        var record = {};
+        if (historyData[i].returned === false) recordCollection.usingAmount++;
+        var str = historyData[i].containerID.toString();
+        for (j = 0; j <= 3 - str.length; j++) {
+            str = "0" + str;
+        }
+        record.container = '#' + str;
+        record.time = historyData[i].time;
+        record.returned = historyData[i].returned;
+        record.type = type.type[historyData[i].typeCode];
+        record.store = stores.IDlist[(historyData[i].storeID)].name;
+        if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
+        tmp.push(record);
+    }
+    recordCollection.data = tmp;
+    res.json(recordCollection);
+});
 
-    // =====================================
-    // LOGOUT ==============================
-    // =====================================
-    router.get('/logout', function(req, res) {
-        // req.logout();
-    // res.redirect('/');
-    });
+router.get('/logout', function(req, res, next) {
+    req.app.get('passport').authenticate('local-logout', { session: false } , function(err, user, info) {
+        if (err) {
+            return next(err); // will generate a 500 error
+        }
+        // Generate a JSON response reflecting authentication status
+        if (!user) {
+            return res.send(info);
+        }
+        req.login(user, { session: false } , LogOutErr => {
+            if (LogOutErr) {
+                return next(LogOutErr);
+            }
+            return res.send(info);
+        });      
+    })(req, next);
+});
 
 module.exports = router;
