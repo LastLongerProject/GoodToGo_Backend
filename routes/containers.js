@@ -39,7 +39,7 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 		            return next(err);
 		        if (!container)
 		            return res.status(404).json({ 'type':'borrowContainerMessage', 'message': 'No container found.'});
-		        else if (container.container.statusCode !== 1 || 0)
+		        else if (container.container.statusCode !== 1 && container.container.statusCode !==  0)
 		        	debug('Container conflict. Data : ' + container.container.toString() + 
 		        		' StoreID : ' + dbStore.role.clerk.storeID.toString() + 
 		        		' Customer : ' + dbUser.user.phone);
