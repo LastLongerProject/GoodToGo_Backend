@@ -21,12 +21,20 @@ var userSchema = mongoose.Schema({
 	    }]},
 	    clerk : {
 	    	manager : Boolean,
-	    	storeID : Number
-	    },
+	    	storeID : Number,
+	    	history : [{
+				containerID   : Number,
+				typeCode      : Number,
+				customerPhone : String,
+				action        : String,
+		        time          : { type: Date, default: Date.now }
+	    }]},
 	    admin : Boolean
 	},
     registerTime : { type: Date, default: Date.now }
 });
+
+userSchema.index( { "user.phone": 1 } );
 
 // generating a hash
 userSchema.methods.generateHash = function(password) {

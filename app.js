@@ -6,9 +6,10 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var passport = require('passport');
+var debug = require('debug')('goodtogo_backend:app');
 
 var index = require('./routes/index');
-var storeList = require('./routes/getStores');
+var stores = require('./routes/stores');
 var users = require('./routes/users');
 var containers = require('./routes/containers');
 var config = require('./config/config')
@@ -47,7 +48,8 @@ mongoose.connect(config.dbUrl,config.dbOptions);
 require('./models/userQuery'); // pass passport for configuration
 
 app.use('/', index);
-app.use('/getStores', storeList);
+app.use('/stores', stores);
+app.use('/getStores', function(req, res){debug("Redirect to store.");res.writeHead(301,{Location: 'https://app.goodtogo.tw/stores/list'});res.end()});
 app.use('/users', users);
 app.use('/containers', containers);
 

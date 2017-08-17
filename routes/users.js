@@ -28,7 +28,10 @@ router.post('/signup', function(req, res, next) {
             if (SignUpErr) {
                 return next(SignUpErr);
             }
-            return res.send(info);
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Authorization', info.headers.Authorization);
+            res.send(JSON.stringify(info.body));
+            return res.end();
         });      
     })(req, res, next);
 });

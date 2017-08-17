@@ -31,6 +31,8 @@ function(req, phone, password, done) {
                 // set the user's local credentials
                 newUser.user.phone     = phone;
                 newUser.user.password  = newUser.generateHash(password);
+                newUser.user.apiKey    = keys.apiKey();
+                newUser.user.secretKey = keys.secretKey();
                 if (typeof role === 'undefined') {
                     newUser.role.typeCode = 'customer';
                 } else if (role.typeCode === 'clerk') {
@@ -39,7 +41,8 @@ function(req, phone, password, done) {
                 newUser.save(function(err) { // save the user
                     if (err)
                         throw err;
-                    return done(null, newUser, { type: 'signupMessage', message: 'Signup succeeded' });
+                    var token = jwt.encode({apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: newUser.user.role}, keys.serverSecretKey());
+                    return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
                 });
             }
         });
@@ -71,7 +74,7 @@ function(phone, password, done) { // callback with phone and password
                 if (err)
                     throw err;
             });
-            var token = jwt.encode({apiKey: user.user.apiKey, secretKey: user.user.secretKey, role: user.user.role}, require('../config/keys').serverSecretKey());
+            var token = jwt.encode({apiKey: user.user.apiKey, secretKey: user.user.secretKey, role: user.user.role}, keys.serverSecretKey());
             return done(null, user, {headers: {Authorization: token}, body: {type: 'loginMessage', message: 'Authentication succeeded'}});
         });
     });

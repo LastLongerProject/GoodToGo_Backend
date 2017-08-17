@@ -1,11 +1,11 @@
 var express = require('express');
 var router = express.Router();
+var fs = require('fs');
 
 var debug = require('debug')('goodtogo_backend:containers');
 var Container = require('../models/DB/containerDB'); // load up the user model
 var User = require('../models/DB/userDB'); // load up the user model
 var validateRequest = require('../models/validateRequest');
-var fs = require('fs');
 
 var status = ['cleaned', 'readyToUse', 'borrowed', 'returned', 'notClean'];
 
@@ -21,45 +21,64 @@ router.get('/:id', function(req, res) {
     res.end();
 });
 
-router.get('/borrow/:id', validateRequest, function(dbUser, req, res, next) {
-	var key = req.headers['storeapikey'];
+router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
+	var key = req.headers['userapikey'];
 	if (!key){
-		res.status(401);
-	    res.json({
-	      "status": 401,
+		debug(req.headers);
+		res.status(401).json({
+	      "type": "borrowContainerMessage",
 	      "message": "Invalid Request"
 	    });
     	return;
 	}
 	var id = req.params.id;
-	validateRequest(req, res, function(dbStore) {
+	validateRequest(req, res, function(dbUser) {
 		process.nextTick(function() {
 		    Container.findOne({ 'container.ID' : id }, function(err, container) {
 		        if (err)
 		            return next(err);
 		        if (!container)
-		            return res.status(404).json({ type:'borrowContainerMessage', message: 'No container found.'});
+		            return res.status(404).json({ 'type':'borrowContainerMessage', 'message': 'No container found.'});
+		        else if (container.container.statusCode !== 1)
+		        	debug('Container conflict. Data : ' + container.container.toString() + 
+		        		' StoreID : ' + dbStore.role.clerk.storeID.toString() + 
+		        		' Customer : ' + dbUser.user.phone);
+		        	return res.status(404).json({ 
+		        		'type':'borrowContainerMessage', 
+		        		'message': 'Container conflict. Code : ' + container.container.statusCode.toString(),
+		        		'data': container.container
+		        	});
 		        container.container.statusCode = 2;
+		        container.container.usedCount++;
 		        container.container.conbineTo = dbUser.user.phone;
 		        container.save(function (err, updatedContainer) {
 		        	if (err) return handleError(err);
+			        	dbUser.role.customer.history.push({
+					    'containerID' : id,
+					    'typeCode'    : container.container.typeCode,
+					    'storeID'     : dbStore.role.clerk.storeID,
+					    'returned'    : false
+					});
+				    dbUser.save(function (err, updatedUser) {
+				        if (err) return handleError(err);
+				    	dbStore.role.clerk.history.push({
+						    'containerID'   : id,
+						    'typeCode'      : container.container.typeCode,
+						    'customerPhone' : dbUser.user.phone,
+						    'action'        : 'rent'
+						});
+					    dbStore.save(function (err, updatedStore) {
+					        if (err) return handleError(err);
+					    	res.status(200).json({ type:'borrowContainerMessage', message: 'Borrow succeeded.'});
+					    });
+				    });
 		        });
-			    dbUser.role.customer.history.push({
-				    'containerID' : id,
-				    'typeCode'    : container.container.typeCode,
-				    'storeID'     : dbStore.role.clerk.storeID,
-				    'returned'    : false
-				});
-			    dbUser.save(function (err, updatedUser) {
-			        if (err) return handleError(err);
-			    	res.status(200).json({ type:'borrowContainerMessage', message: 'Borrow succeeded.'});
-			    });
 		    });
 	    });
 	} , key);
 });
 
-router.get('/return/:id', function(req, res, next) {
+router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 	var id = req.params.id;
 	process.nextTick(function() {
 		Container.findOne({ 'container.ID' : id }, function(err, container) {
@@ -67,40 +86,38 @@ router.get('/return/:id', function(req, res, next) {
 		        return next(err);
 		    if (!container)
 		        return res.status(404).json({ type:'returnContainerMessage', message: 'No container found.'});
-		    User.findOne({ 'user.phone' : container.container.conbineTo }, function(err, user) {
+		    User.findOne({ 'user.phone' : container.container.conbineTo }, function(err, dbUser) {
 			    if (err)
 			        return next(err);
-			    if (!user)
+			    if (!dbUser)
 			        return res.status(404).json({ type:'returnContainerMessage', message: 'No user found.'});
-			    var historyData = user.role.customer.history;
-
-			    	console.log(historyData.length);
+			    var historyData = dbUser.role.customer.history;
 			    for (i = 0; i < historyData.length; i++) {
-			    	console.log(typeof historyData[i].containerID);
-			    	console.log(typeof id);
-			    	console.log(historyData[i].containerID === id);
-
-			    	console.log(historyData[i].returned === false);
-			    	console.log(historyData[i].containerID === id && (historyData[i].returned === false));
-
 			    	if (historyData[i].containerID.toString() === id && historyData[i].returned === false) {
 			    		historyData[i].returned = true;
 			    		historyData[i].returnTime = Date.now();
-			    		console.log(historyData[i]);
 			    		break;
 			    	}
 			    }
-			    console.log(historyData);
-			    user.role.customer.history = historyData;
-				user.save(function (err, updateduser) {
+			    dbUser.role.customer.history = historyData;
+				dbUser.save(function (err, updateduser) {
 					if (err) throw err;
+					container.container.statusCode = 1;
+				    container.container.conbineTo = null;
+				    container.save(function (err, updatedContainer) {
+						if (err) throw err;
+						dbStore.role.clerk.history.push({
+						    'containerID'   : id,
+						    'typeCode'      : container.container.typeCode,
+						    'customerPhone' : dbUser.user.phone,
+						    'action'        : 'return'
+						});
+					    dbStore.save(function (err, updatedStore) {
+					        if (err) return handleError(err);
+							res.status(200).json({ type: 'returnContainerMessage', message: 'Return succeeded' });
+					    });
+					});
 				});
-			    container.container.statusCode = 3;
-			    container.container.conbineTo = null;
-			    container.save(function (err, updatedContainer) {
-			       	if (err) throw err;
-				});
-				res.status(200).json({ type: 'returnContainerMessage', message: 'Return succeeded' });
 			});
 		});
 	});
@@ -112,7 +129,8 @@ router.post('/add/:id', function(req, res, next) {
 		res.status(401);
 	    res.json({
 	      "status": 401,
-	      "message": "Invalid Request"
+	      "message": "Invalid Request",
+	      "body": containerData
 	    });
     	return;
 	}

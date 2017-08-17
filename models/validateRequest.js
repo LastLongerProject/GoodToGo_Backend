@@ -10,7 +10,7 @@ module.exports = function(req, res, next, targetKey = null) {
     if (jwtToken && key) {
         try {
           validateUser(key, next, function(dbUser){  // The key would be the logged in user's username
-            if (typeof dbUser === 'undefined') {
+            if (typeof dbUser === 'undefined' || dbUser === null) {
               // No user with this name exists, respond back with a 401
               res.status(401);
               res.json({
@@ -38,8 +38,8 @@ module.exports = function(req, res, next, targetKey = null) {
        
             // Authorize the user to see if s/he can access our resources
             if (dbUser) {
-                if (((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/borrow') >= 0 || req.url.indexOf('/return') >= 0) && dbUser.role.typeCode === 'customer') ||
-                    ((req.url.indexOf('/borrow') >= 0 || req.url.indexOf('/return') >= 0) && dbUser.role.typeCode === 'clerk')) {
+                if (((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0) && dbUser.role.typeCode === 'customer') ||
+                    ((req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0 || req.url.indexOf('/status') >= 0 || req.url.indexOf('/getUser') >= 0) && dbUser.role.typeCode === 'clerk')) {
                     next(dbUser); // To move to next middleware
                 } else {
                 res.status(403);
