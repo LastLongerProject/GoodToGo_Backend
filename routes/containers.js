@@ -39,8 +39,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 		            return next(err);
 		        if (!container)
 		            return res.status(404).json({ 'type':'borrowContainerMessage', 'message': 'No container found.'});
-		        else if (container.container.statusCode !== 1 && container.container.statusCode !==  0)
-		        	debug('Container conflict. Data : ' + container.container.toString() + 
+				if (container.container.statusCode !== 1 && container.container.statusCode !==  0){
+					debug('Container conflict. Data : ' + container.container.toString() + 
 		        		' StoreID : ' + dbStore.role.clerk.storeID.toString() + 
 		        		' Customer : ' + dbUser.user.phone);
 		        	return res.status(404).json({ 
@@ -48,11 +48,12 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 		        		'message': 'Container conflict. Code : ' + container.container.statusCode.toString(),
 		        		'data': container.container
 		        	});
+				}
 		        container.container.statusCode = 2;
 		        container.container.usedCount++;
 		        container.container.conbineTo = dbUser.user.phone;
 		        container.save(function (err, updatedContainer) {
-		        	if (err) return handleError(err);
+		        	if (err) return next(err);
 			        	dbUser.role.customer.history.push({
 					    'containerID' : id,
 					    'typeCode'    : container.container.typeCode,
@@ -60,7 +61,7 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 					    'returned'    : false
 					});
 				    dbUser.save(function (err, updatedUser) {
-				        if (err) return handleError(err);
+				        if (err) return next(err);
 				    	dbStore.role.clerk.history.push({
 						    'containerID'   : id,
 						    'typeCode'      : container.container.typeCode,
@@ -68,7 +69,7 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 						    'action'        : 'rent'
 						});
 					    dbStore.save(function (err, updatedStore) {
-					        if (err) return handleError(err);
+					        if (err) return next(err);
 					    	res.status(200).json({ type:'borrowContainerMessage', message: 'Borrow succeeded.'});
 					    });
 				    });
@@ -113,7 +114,7 @@ router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 						    'action'        : 'return'
 						});
 					    dbStore.save(function (err, updatedStore) {
-					        if (err) return handleError(err);
+					        if (err) return next(err);
 							res.status(200).json({ type: 'returnContainerMessage', message: 'Return succeeded' });
 					    });
 					});
