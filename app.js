@@ -48,7 +48,7 @@ app.set('passport', passport);
 mongoose.connect(config.dbUrl,config.dbOptions);
 require('./models/userQuery'); // pass passport for configuration
 
-// app.all('/*', loggingDefault);
+app.all('/*', loggingDefault);
  
 app.use('/', index);
 app.use('/stores', stores);
