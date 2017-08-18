@@ -39,8 +39,7 @@ function(req, phone, password, done) {
                     newUser.role = role;
                 }
                 newUser.save(function(err) { // save the user
-                    if (err)
-                        throw err;
+                    if (err) return done(err);
                     var token = jwt.encode({apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: newUser.user.role}, keys.serverSecretKey());
                     return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
                 });
@@ -71,8 +70,7 @@ function(phone, password, done) { // callback with phone and password
             user.user.apiKey    = keys.apiKey();
             user.user.secretKey = keys.secretKey();
             user.save(function(err) { // save the user
-                if (err)
-                    throw err;
+                if (err) return done(err);
             });
             var token = jwt.encode({apiKey: user.user.apiKey, secretKey: user.user.secretKey, role: user.user.role}, keys.serverSecretKey());
             return done(null, user, {headers: {Authorization: token}, body: {type: 'loginMessage', message: 'Authentication succeeded'}});
@@ -91,7 +89,7 @@ passport.use('local-logout', new CustomStrategy(function(req, done){
             user.user.apiKey = undefined;
             user.user.secretKey = undefined;
             user.save(function (err, updatedUser) {
-                if (err) return handleError(err);
+                if (err) return done(err);
                 return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
             });
         });

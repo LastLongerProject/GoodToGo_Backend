@@ -50,7 +50,7 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 		        	});
 				}
 		        container.container.statusCode = 2;
-		        container.container.usedCount++;
+		        container.container.usedCounter++;
 		        container.container.conbineTo = dbUser.user.phone;
 		        container.save(function (err, updatedContainer) {
 		        	if (err) return next(err);
@@ -130,8 +130,7 @@ router.post('/add/:id', function(req, res, next) {
 		res.status(401);
 	    res.json({
 	      "status": 401,
-	      "message": "Invalid Request",
-	      "body": containerData
+	      "message": "Invalid Request, no container data"
 	    });
     	return;
 	}
@@ -144,14 +143,16 @@ router.post('/add/:id', function(req, res, next) {
                 return res.status(404).json({ type:'addContainerMessage', message: 'That ID is already exist.' });
             } else {
                 var newContainer       = new Container();
-                newContainer.container.ID         = id;
-                newContainer.container.typeCode   = containerData.typeCode;
-                newContainer.container.statusCode = 0;
-                newContainer.container.conbineTo  = null;                
+                newContainer.container.ID          = id;
+                newContainer.container.typeCode    = containerData.typeCode;
+                newContainer.container.statusCode  = 0;
+		        newContainer.container.usedCounter = 0;
+                newContainer.container.conbineTo   = null;                
                 newContainer.save(function(err) { // save the container
                     if (err)
                         throw err;
                     res.status(200).json({ type: 'addContainerMessage', message: 'Add succeeded' });
+                    return;
                 });
             }
         });

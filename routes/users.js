@@ -28,10 +28,9 @@ router.post('/signup', function(req, res, next) {
             if (SignUpErr) {
                 return next(SignUpErr);
             }
-            res.setHeader('Content-Type', 'application/json');
-            res.setHeader('Authorization', info.headers.Authorization);
-            res.send(JSON.stringify(info.body));
-            return res.end();
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+            return;
         });      
     })(req, res, next);
 });
@@ -43,16 +42,15 @@ router.post('/login', function(req, res, next) {
         }
         // Generate a JSON response reflecting authentication status
         if (!user) {
-            return res.send(info);
+            return res.json(info);
         }
         req.login(user, { session: false } , loginErr => {
             if (loginErr) {
                 return next(loginErr);
             }
-            res.setHeader('Content-Type', 'application/json');
-            res.setHeader('Authorization', info.headers.Authorization);
-            res.send(JSON.stringify(info.body));
-            return res.end();
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+            return;
         });      
     })(req, res, next);
 });
@@ -89,13 +87,13 @@ router.get('/logout', function(req, res, next) {
         }
         // Generate a JSON response reflecting authentication status
         if (!user) {
-            return res.send(info);
+            return res.json(info);
         }
         req.login(user, { session: false } , LogOutErr => {
             if (LogOutErr) {
                 return next(LogOutErr);
             }
-            return res.send(info);
+            return res.json(info);
         });      
     })(req, next);
 });

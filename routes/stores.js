@@ -56,22 +56,19 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
 
 router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
 	var id = req.params.id;
-	var resJson = {
-		users : []
-	};
 	process.nextTick(function() {
-		User.find({ 'user.phone' : new RegExp( id.toString() +'$', "i") }, function(err, user) {
+		User.findOne({ 'user.phone' : new RegExp( id.toString() +'$', "i") }, function(err, user) {
 			if (err)
 				return next(err);
 			if (typeof user !== 'undefined'){
-				for (i in user){
-					if (user[i].role.typeCode === 'customer') {
-						resJson.users.push({'phone' : user[i].user.phone, 'apiKey': user[i].user.apiKey});
-					}
+				if (user.role.typeCode === 'customer') {
+					res.status(200).json({'phone' : user.user.phone, 'apiKey': user.user.apiKey});
+				} else {
+					res.status(401).json({"type" : "Search User Error", "message" : "User role is not customer"});
 				}
+			} else {
+				res.status(401).json({"type" : "Search User Error", "message" : "No User Finded"});
 			}
-			
-			res.json(resJson);
 		});
 	});
 });

@@ -6,7 +6,7 @@ var userSchema = mongoose.Schema({
     	ID           : Number,
         typeCode     : Number,
         statusCode   : Number,
-        usedCount    : Number,
+        usedCounter  : Number,
         conbineTo    : String
     }
 });
