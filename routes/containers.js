@@ -15,7 +15,7 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function (err, data) {
     typeCode = JSON.parse(data);
 });
 
-router.get('/:id', function(req, res) {
+router.all('/:id', function(req, res) {
     debug("Redirect to official website.");
     res.writeHead(301,{Location: 'http://goodtogo.tw'});
     res.end();

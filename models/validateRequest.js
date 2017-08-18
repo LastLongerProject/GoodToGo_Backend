@@ -76,7 +76,7 @@ module.exports = function(req, res, next, targetKey = null) {
 			res.json({
 				"status": 500,
 				"message": "Oops something went wrong",
-				"error": err
+				"error": err.toString()
 			});
 		}
 	} else {

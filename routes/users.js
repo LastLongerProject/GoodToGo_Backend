@@ -16,43 +16,39 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function (err, data) {
 });
 
 router.post('/signup', function(req, res, next) {
-    req.app.get('passport').authenticate('local-signup', { session: false } , function(err, user, info) {
-        if (err) {
-            return next(err); // will generate a 500 error
-        }
-        // Generate a JSON response reflecting authentication status
-        if (!user) {
-            return res.send(info);
-        }
-        req.login(user, { session: false } , SignUpErr => {
-            if (SignUpErr) {
-                return next(SignUpErr);
-            }
-            res.header('Authorization', info.headers.Authorization);
-            res.json(info.body);
-            return;
-        });      
-    })(req, res, next);
+	req.app.get('passport').authenticate('local-signup', function (err, user, info) {
+		if (err) {
+			return next(err); // will generate a 500 error
+		}
+		// Generate a JSON response reflecting authentication status
+		if (!user) {
+			return res.send(info);
+		}
+		req.login(user, { session: false } , Err => {
+			if (Err) return next(Err);
+			res.header('Authorization', info.headers.Authorization);
+			res.json(info.body);
+			return;
+		});
+	})(req, next);
 });
 
 router.post('/login', function(req, res, next) {
-    req.app.get('passport').authenticate('local-login', function(err, user, info) {
-        if (err) {
-            return next(err); // will generate a 500 error
-        }
-        // Generate a JSON response reflecting authentication status
-        if (!user) {
-            return res.json(info);
-        }
-        req.login(user, { session: false } , loginErr => {
-            if (loginErr) {
-                return next(loginErr);
-            }
-            res.header('Authorization', info.headers.Authorization);
-            res.json(info.body);
-            return;
-        });      
-    })(req, res, next);
+    req.app.get('passport').authenticate('local-login', function (err, user, info) {
+		if (err) {
+			return next(err); // will generate a 500 error
+		}
+		// Generate a JSON response reflecting authentication status
+		if (!user) {
+			return res.json(info);
+		}
+		req.login(user, { session: false } , Err => {
+			if (Err) return next(Err);
+			res.header('Authorization', info.headers.Authorization);
+			res.json(info.body);
+			return;
+		});
+	})(req, next);
 });
 
 router.get('/data', validateRequest, function(dbUser, req, res, next) {
@@ -81,7 +77,8 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
 });
 
 router.get('/logout', function(req, res, next) {
-    req.app.get('passport').authenticate('local-logout', { session: false } , function(err, user, info) {
+	req._res = res;
+    req.app.get('passport').authenticate('local-logout', function(err, user, info) {
         if (err) {
             return next(err); // will generate a 500 error
         }

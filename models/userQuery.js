@@ -6,12 +6,12 @@ var validateRequest = require('../models/validateRequest');
 var User = require('../models/DB/userDB'); // load up the user model
 var keys = require('../config/keys')
 
-passport.use('local-signup', new LocalStrategy({
-    usernameField : 'phone',
-    passwordField : 'password',
-    passReqToCallback: true
-},
-function(req, phone, password, done) {
+passport.use('local-signup', new CustomStrategy(function(req, done){
+    var phone = req.body['phone'];
+    var password = req.body['password'];
+    if (typeof phone === 'undefined' || typeof password === 'undefined'){
+        return done(null, false, { type:'signupMessage', message: 'Content lost' });
+    }
     // asynchronous
     // User.findOne wont fire unless data is sent back
     process.nextTick(function() {
@@ -23,7 +23,7 @@ function(req, phone, password, done) {
                 return done(err);
             // check to see if theres already a user with that phone
             if (user) {
-                return done(null, false, { type:'signupMessage', message: 'That phone is already taken.' });
+                return done(null, false, { type:'signupMessage', message: 'That phone is already taken' });
             } else {
                 // if there is no user with that phone, create the user
                 var newUser            = new User();
@@ -48,11 +48,12 @@ function(req, phone, password, done) {
     });
 }));
 
-passport.use('local-login', new LocalStrategy({
-    usernameField : 'phone',
-    passwordField : 'password'
-},
-function(phone, password, done) { // callback with phone and password
+passport.use('local-login', new CustomStrategy(function(req, done){ // callback with phone and password
+    var phone = req.body['phone'];
+    var password = req.body['password'];
+    if (typeof phone === 'undefined' || typeof password === 'undefined'){
+        return done(null, false, { type:'signupMessage', message: 'Content lost' });
+    }
     process.nextTick(function() {
         // find a user whose phone is the same as the forms phone
         // we are checking to see if the user trying to login already exists
@@ -79,21 +80,21 @@ function(phone, password, done) { // callback with phone and password
 }));
 
 passport.use('local-logout', new CustomStrategy(function(req, done){
-    validateRequest(req, null, function(dbUser){
-    process.nextTick(function() {
-        User.findOne({'user.phone': dbUser.user.phone }, function(err, user) {
-            if (err)
-                return done(err);
-            if (!user)
-                return done(null, false, { type:'logoutMessage', message: 'No user found.'});
-            user.user.apiKey = undefined;
-            user.user.secretKey = undefined;
-            user.save(function (err, updatedUser) {
-                if (err) return done(err);
-                return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
+    validateRequest(req, req._res, function(dbUser){
+        process.nextTick(function() {
+            User.findOne({'user.phone': dbUser.user.phone }, function(err, user) {
+                if (err)
+                    return done(err);
+                if (!user)
+                    return done(null, false, { type:'logoutMessage', message: 'No user found.'});
+                user.user.apiKey = undefined;
+                user.user.secretKey = undefined;
+                user.save(function (err, updatedUser) {
+                    if (err) return done(err);
+                    return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
+                });
             });
         });
-    });
     })
 }));
 
