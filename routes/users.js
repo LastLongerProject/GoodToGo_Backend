@@ -22,7 +22,7 @@ router.post('/signup', function(req, res, next) {
 		}
 		// Generate a JSON response reflecting authentication status
 		if (!user) {
-			return res.send(info);
+			return res.status(403).json(info);
 		}
 		req.login(user, { session: false } , Err => {
 			if (Err) return next(Err);
@@ -40,7 +40,7 @@ router.post('/login', function(req, res, next) {
 		}
 		// Generate a JSON response reflecting authentication status
 		if (!user) {
-			return res.json(info);
+			return res.status(401).json(info);
 		}
 		req.login(user, { session: false } , Err => {
 			if (Err) return next(Err);
@@ -84,7 +84,7 @@ router.get('/logout', function(req, res, next) {
         }
         // Generate a JSON response reflecting authentication status
         if (!user) {
-            return res.json(info);
+            return res.status(500).json(info);
         }
         req.login(user, { session: false } , LogOutErr => {
             if (LogOutErr) {
