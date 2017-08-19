@@ -23,7 +23,7 @@ module.exports = {
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
-					return res.status(401).json({"status": 401, "message": "Token Invalid" });
+					return res.status(401).json({type: 'loggingRequest', message: 'Token Invalid'});
 				});
 			} else if (reqTime <= getDate(-3) || reqTime >= getDate(3)){
 				newLogging = new Logging({
@@ -37,7 +37,7 @@ module.exports = {
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
-					return res.status(400).json({"status": 400, "message": "Token Expired" });
+					return res.status(400).json({type: 'loggingRequest', message: 'Token Expired'});
 				});
 			} else {
 				Logging.findOne({'hashID': hashID, 'reqTime' : reqTime }, function(err, logging) {
@@ -54,7 +54,7 @@ module.exports = {
 						});
 						newLogging.save(function(err) {
 							if (err) return next(err);
-							return res.status(401).json({"status": 401, "message": "Token replay" });
+							return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
 						});
 					}
 					newLogging = new Logging({
@@ -90,7 +90,7 @@ module.exports = {
 					});
 					newLogging.save(function(err) {
 						if (err) return next(err);
-						return res.status(401).json({"status": 401, "message": "Token replay" });
+						return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
 					});
 				} else {
 					newLogging = new Logging({

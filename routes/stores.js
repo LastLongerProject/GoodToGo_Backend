@@ -64,10 +64,10 @@ router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
 				if (user.role.typeCode === 'customer') {
 					res.status(200).json({'phone' : user.user.phone, 'apiKey': user.user.apiKey});
 				} else {
-					res.status(401).json({"type" : "Search User Error", "message" : "User role is not customer"});
+					res.status(401).json({"type" : "userSearchingError", "message" : "User role is not customer"});
 				}
 			} else {
-				res.status(401).json({"type" : "Search User Error", "message" : "No User Finded"});
+				res.status(401).json({"type" : "userSearchingError", "message" : "No User Finded"});
 			}
 		});
 	});

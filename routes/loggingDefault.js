@@ -16,7 +16,7 @@ router.all('/*', function(req, res, next) {
 			if (typeof err !== 'undefined' && err !== null){
 				res.status(500);
 				res.json({
-					"status": 500,
+					"type": "loggingRoute",
 					"message": "Oops something went wrong",
 					"error": err.toString()
 				});
