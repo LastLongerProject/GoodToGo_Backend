@@ -34,15 +34,12 @@ module.exports = function(req, res, next, targetKey = null) {
 				res.status(401).json({type: 'validatingUser', message: 'Invalid User'});
 				return;
 			}
-			console.log('2');
 			if (targetKey === null){
-			console.log('3');
 				var decoded;
 				try {
 					decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
 				} catch(err) {	}
 				logging(req, res, decoded, function(err){
-					console.log('4');
 					if (typeof err === 'undefined' && err === null){ return next(err); }
 					else if (typeof decoded.exp === 'undefined'){
 						return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
@@ -52,7 +49,6 @@ module.exports = function(req, res, next, targetKey = null) {
 					validateURL(req, res, next, dbUser);
 				});
 			} else {
-			console.log('4');
 				validateURL(req, res, next, dbUser);
 			}
 		});
