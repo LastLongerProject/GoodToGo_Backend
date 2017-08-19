@@ -23,7 +23,7 @@ module.exports = {
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
-					return res.status(401).json({type: 'loggingRequest', message: 'Token Invalid'});
+					return res.status(401).json({type: 'loggingwithoutAuthRequest', message: 'Token Invalid'});
 				});
 			} else if (reqTime <= getDate(-3) || reqTime >= getDate(3)){
 				newLogging = new Logging({
@@ -37,7 +37,7 @@ module.exports = {
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
-					return res.status(400).json({type: 'loggingRequest', message: 'Token Expired'});
+					return res.status(400).json({type: 'loggingwithoutAuthRequest', message: 'Token Expired'});
 				});
 			} else {
 				Logging.findOne({'hashID': hashID, 'reqTime' : reqTime }, function(err, logging) {
@@ -54,7 +54,7 @@ module.exports = {
 						});
 						newLogging.save(function(err) {
 							if (err) return next(err);
-							return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
+							return res.status(401).json({type: 'loggingwithoutAuthRequest', message: 'Token replay'});
 						});
 					}
 					newLogging = new Logging({
@@ -76,9 +76,21 @@ module.exports = {
 	},
 	withAuth : function(req, res, payload, next) {
 		process.nextTick(function() {
-			var hashID = payload.jti;
-			var reqTime = payload.iat;
-			if (typeof hashID === 'undefined' || typeof reqTime === 'undefined'){
+			if (typeof payload === 'undefined'){
+				newLogging = new Logging({
+					'ip' : req.connection.remoteAddress,
+					'url' : req.url,
+					'method' : req.method,
+					'hashID' : null,
+					'reqTime' : Date.now(),
+					'req.headers' : req.headers,
+					'req.body' : req.body,
+				});
+				newLogging.save(function(err) {
+					if (err) return next(err);
+					return res.status(401).json({type: 'loggingwithAuthRequest', message: 'JWT Invalid'});
+				});
+			} else if (typeof payload.jti === 'undefined' || typeof payload.iat === 'undefined'){
 				newLogging = new Logging({
 					'ip' : req.connection.remoteAddress,
 					'url' : req.url,
@@ -91,7 +103,7 @@ module.exports = {
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
-					return res.status(401).json({type: 'loggingRequest', message: 'Token Invalid'});
+					return res.status(401).json({type: 'loggingwithAuthRequest', message: 'Token Invalid'});
 				});
 			} else {
 				Logging.findOne({'hashID': payload.jti, 'reqTime' : payload.iat }, function(err, logging) {
@@ -108,7 +120,7 @@ module.exports = {
 						});
 						newLogging.save(function(err) {
 							if (err) return next(err);
-							return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
+							return res.status(401).json({type: 'loggingwithAuthRequest', message: 'Token replay'});
 						});
 					} else {
 						newLogging = new Logging({

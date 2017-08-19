@@ -23,48 +23,38 @@ function iatGetDate(int) {
 }
  
 module.exports = function(req, res, next, targetKey = null) {
-
 	var jwtToken = req.headers['authorization'];
 	var key = targetKey || req.headers['apikey'];
 
 	if (jwtToken && key) {
-		try {
-			validateUser(key, next, function(dbUser){  // The key would be the logged in user's username
-				if (typeof dbUser === 'undefined' || dbUser === null) {
-				// No user with this name exists, respond back with a 401
-					res.status(401).json({type: 'validatingUser', message: 'Invalid User'});
-					return;
-				}
-
-				if (targetKey === null){
-					var decoded;
-					try {
-						decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
-					} catch(err) {
-						loggingERR(req, res, function(){
-							return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
-						});
-					}
+		validateUser(key, next, function(dbUser){  // The key would be the logged in user's username
+			if (typeof dbUser === 'undefined' || dbUser === null) {
+			// No user with this name exists, respond back with a 401
+				res.status(401).json({type: 'validatingUser', message: 'Invalid User'});
+				return;
+			}
+			if (targetKey === null){
+				var decoded;
+				try {
+					decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
+				} catch(err) {
 					logging(req, res, decoded, function(err){
-						if (typeof err !== 'undefined' && err !== null){
-							res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
-						} else if (typeof decoded.exp === 'undefined' || typeof decoded.iat === 'undefined'  || typeof decoded.jti === 'undefined'){
+						if (typeof err !== 'undefined' && err !== null){ return next(err); }
+						else if (typeof decoded.exp === 'undefined'){
 							return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
 						} else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
 							return res.status(400).json({type: 'validatingUser', message: 'Token Expired'});
 						}
 						validateURL(req, res, next, dbUser);
 					});
-				} else {
-					validateURL(req, res, next, dbUser);
 				}
-			});
-		} catch (err) {
-			res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
-		}
+			} else {
+				validateURL(req, res, next, dbUser);
+			}
+		});
 	} else {
-		loggingERR(req, res, function(){
-			return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
+		loggingERR(req, res, function(err){
+			return next(err);
 		});
 	}
 };
