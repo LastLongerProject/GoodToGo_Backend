@@ -2,6 +2,7 @@ var jwt = require('jwt-simple');
 var User = require('../models/DB/userDB'); // load up the user model
 var validateUser = require('../config/keys').validateUser;
 var logging = require('../models/loggingQuery').withAuth;
+var loggingERR = require('../models/loggingQuery').withoutAuth;
 
 function validateURL(req, res, next, dbUser) { // Authorize the user to see if s/he can access our resources
 	if (dbUser) {
@@ -40,7 +41,9 @@ module.exports = function(req, res, next, targetKey = null) {
 					try {
 						decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
 					} catch(err) {
-						return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
+						loggingERR(req, res, function(){
+							return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
+						});
 					}
 					logging(req, res, decoded, function(err){
 						if (typeof err !== 'undefined' && err !== null){
@@ -62,6 +65,8 @@ module.exports = function(req, res, next, targetKey = null) {
 			res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
 		}
 	} else {
-		return res.status(401).json({type: 'validatingUser', message: 'Invalid Request'});
+		loggingERR(req, res, function(){
+			return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
+		});
 	}
 };
