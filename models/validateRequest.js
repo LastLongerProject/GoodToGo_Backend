@@ -48,11 +48,9 @@ module.exports = function(req, res, next, targetKey = null) {
 					logging(req, res, decoded, function(err){
 						if (typeof err !== 'undefined' && err !== null){
 							res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
-						}
-						if (typeof decoded.exp === 'undefined'){
+						} else if (typeof decoded.exp === 'undefined' || typeof decoded.iat === 'undefined'  || typeof decoded.jti === 'undefined'){
 							return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
-						}
-						if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
+						} else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
 							return res.status(400).json({type: 'validatingUser', message: 'Token Expired'});
 						}
 						validateURL(req, res, next, dbUser);

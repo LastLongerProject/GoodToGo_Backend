@@ -86,46 +86,48 @@ module.exports = {
 					'hashID' : null,
 					'reqTime' : Date.now(),
 					'req.headers' : req.headers,
-					'req.body' : req.body
+					'req.body' : req.body,
+					'req.payload' : payload
 				});
 				newLogging.save(function(err) {
 					if (err) return next(err);
 					return res.status(401).json({type: 'loggingRequest', message: 'Token Invalid'});
 				});
+			} else {
+				Logging.findOne({'hashID': payload.jti, 'reqTime' : payload.iat }, function(err, logging) {
+					if (err) return next(err);
+					if (logging) {
+						newLogging = new Logging({
+							'ip' : req.connection.remoteAddress,
+							'url' : req.url,
+							'method' : req.method,
+							'hashID' : payload.jti + "-replay",
+							'reqTime' : payload.iat,
+							'req.headers' : req.headers,
+							'req.body' : req.body
+						});
+						newLogging.save(function(err) {
+							if (err) return next(err);
+							return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
+						});
+					} else {
+						newLogging = new Logging({
+							'ip' : req.connection.remoteAddress,
+							'url' : req.url,
+							'method' : req.method,
+							'hashID' : payload.jti,
+							'reqTime' : payload.iat,
+							'req.headers' : req.headers,
+							'req.body' : req.body,
+							'req.payload' : payload
+						});
+						newLogging.save(function(err) {
+							if (err) return next(err);
+							return next();
+						});
+					}
+				});
 			}
-			Logging.findOne({'hashID': payload.jti, 'reqTime' : payload.iat }, function(err, logging) {
-				if (err) return next(err);
-				if (logging) {
-					newLogging = new Logging({
-						'ip' : req.connection.remoteAddress,
-						'url' : req.url,
-						'method' : req.method,
-						'hashID' : payload.jti + "-replay",
-						'reqTime' : payload.iat,
-						'req.headers' : req.headers,
-						'req.body' : req.body
-					});
-					newLogging.save(function(err) {
-						if (err) return next(err);
-						return res.status(401).json({type: 'loggingRequest', message: 'Token replay'});
-					});
-				} else {
-					newLogging = new Logging({
-						'ip' : req.connection.remoteAddress,
-						'url' : req.url,
-						'method' : req.method,
-						'hashID' : payload.jti,
-						'reqTime' : payload.iat,
-						'req.headers' : req.headers,
-						'req.body' : req.body,
-						'req.payload' : payload
-					});
-					newLogging.save(function(err) {
-						if (err) return next(err);
-						return next();
-					});
-				}
-			});
 		});
 	},
 	withToken : function(req, next){}
