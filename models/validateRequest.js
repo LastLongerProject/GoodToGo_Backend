@@ -40,7 +40,7 @@ module.exports = function(req, res, next, targetKey = null) {
 					try {
 						decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
 					} catch(err) {
-						throw err;
+						return res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
 					}
 					logging(req, res, decoded, function(err){
 						if (typeof err !== 'undefined' && err !== null){
