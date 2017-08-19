@@ -23,6 +23,7 @@ function iatGetDate(int) {
 }
  
 module.exports = function(req, res, next, targetKey = null) {
+	console.log('1');
 	var jwtToken = req.headers['authorization'];
 	var key = targetKey || req.headers['apikey'];
 
@@ -33,22 +34,25 @@ module.exports = function(req, res, next, targetKey = null) {
 				res.status(401).json({type: 'validatingUser', message: 'Invalid User'});
 				return;
 			}
+			console.log('2');
 			if (targetKey === null){
+			console.log('3');
 				var decoded;
 				try {
 					decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
-				} catch(err) {
-					logging(req, res, decoded, function(err){
-						if (typeof err !== 'undefined' && err !== null){ return next(err); }
-						else if (typeof decoded.exp === 'undefined'){
-							return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
-						} else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
-							return res.status(400).json({type: 'validatingUser', message: 'Token Expired'});
-						}
-						validateURL(req, res, next, dbUser);
-					});
-				}
+				} catch(err) {	}
+				logging(req, res, decoded, function(err){
+					console.log('4');
+					if (typeof err === 'undefined' && err === null){ return next(err); }
+					else if (typeof decoded.exp === 'undefined'){
+						return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
+					} else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
+						return res.status(400).json({type: 'validatingUser', message: 'Token Expired'});
+					}
+					validateURL(req, res, next, dbUser);
+				});
 			} else {
+			console.log('4');
 				validateURL(req, res, next, dbUser);
 			}
 		});

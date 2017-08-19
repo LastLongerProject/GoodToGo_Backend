@@ -23,7 +23,7 @@ router.all('/:id', function(req, res) {
 
 router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	var key = req.headers['userapikey'];
-	if (!key){
+	if (typeof key === 'undefined' || typeof key === null){
 		debug(req.headers);
 		res.status(401).json({
 	      "type": "borrowContainerMessage",
