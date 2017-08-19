@@ -23,7 +23,6 @@ function iatGetDate(int) {
 }
  
 module.exports = function(req, res, next, targetKey = null) {
-	console.log('1');
 	var jwtToken = req.headers['authorization'];
 	var key = targetKey || req.headers['apikey'];
 
