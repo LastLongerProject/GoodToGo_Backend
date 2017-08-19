@@ -49,7 +49,7 @@ module.exports = function(req, res, next, targetKey = null) {
 						if (typeof err !== 'undefined' && err !== null){
 							res.status(500).json({type: 'validatingUser', message: 'Oops something went wrong', error: err.toString()});
 						}
-						if (typeof decoded.exp === 'undefined' || typeof decoded.iat === 'undefined'  || typeof decoded.jti === 'undefined'){
+						if (typeof decoded.exp === 'undefined'){
 							return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
 						}
 						if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {

@@ -76,6 +76,23 @@ module.exports = {
 	},
 	withAuth : function(req, res, payload, next) {
 		process.nextTick(function() {
+			var hashID = payload.jti;
+			var reqTime = payload.iat;
+			if (typeof hashID === 'undefined' || typeof reqTime === 'undefined'){
+				newLogging = new Logging({
+					'ip' : req.connection.remoteAddress,
+					'url' : req.url,
+					'method' : req.method,
+					'hashID' : null,
+					'reqTime' : Date.now(),
+					'req.headers' : req.headers,
+					'req.body' : req.body
+				});
+				newLogging.save(function(err) {
+					if (err) return next(err);
+					return res.status(401).json({type: 'loggingRequest', message: 'Token Invalid'});
+				});
+			}
 			Logging.findOne({'hashID': payload.jti, 'reqTime' : payload.iat }, function(err, logging) {
 				if (err) return next(err);
 				if (logging) {
