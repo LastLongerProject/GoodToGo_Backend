@@ -31,6 +31,13 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	    });
     	return;
 	}
+	if (dbStore.role.typeCode != "clerk"){
+		res.status(401).json({
+	      "type": "borrowContainerMessage",
+	      "message": "Invalid Role"
+	    });
+    	return;
+	}
 	var id = req.params.id;
 	validateRequest(req, res, function(dbUser) {
 		process.nextTick(function() {
@@ -80,6 +87,13 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 });
 
 router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
+	if (dbStore.role.typeCode != "clerk"){
+		res.status(401).json({
+	      "type": "borrowContainerMessage",
+	      "message": "Invalid Role"
+	    });
+    	return;
+	}
 	var id = req.params.id;
 	process.nextTick(function() {
 		Container.findOne({ 'container.ID' : id }, function(err, container) {
