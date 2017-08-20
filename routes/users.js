@@ -55,6 +55,22 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
     var tmp = [];
     var historyData = dbUser.role.customer.history;
     var recordCollection = {
+        container : [
+            { name : type.type[0],
+            version : 0,
+            icon : [
+                {"1x" : "https://app.goodtogo.tw/images/icon/00_1x.png"},
+                {"2x" : "https://app.goodtogo.tw/images/icon/00_2x.png"},
+                {"3x" : "https://app.goodtogo.tw/images/icon/00_3x.png"}
+            ]},
+            { name : type.type[1],
+            version : 1,
+            icon : [
+                {"1x" : "https://app.goodtogo.tw/images/icon/01_1x.png"},
+                {"2x" : "https://app.goodtogo.tw/images/icon/01_2x.png"},
+                {"3x" : "https://app.goodtogo.tw/images/icon/01_3x.png"}
+            ]}
+        ],
         usingAmount : 0
     };
     for (i = 0; i < historyData.length; i++) {
@@ -67,7 +83,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         record.container = '#' + str;
         record.time = historyData[i].time;
         record.returned = historyData[i].returned;
-        record.type = type.type[historyData[i].typeCode];
+        record.type = historyData[i].typeCode;
         record.store = stores.IDlist[(historyData[i].storeID)].name;
         if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
         tmp.push(record);
