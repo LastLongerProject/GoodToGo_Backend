@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var validateRequest = require('../models/validateRequest');
 var fs = require('fs');
+var signup = require('../routes/signup');
 
 var stores;
 fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function (err, data) {
@@ -15,23 +16,7 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function (err, data) {
     type = JSON.parse(data);
 });
 
-router.post('/signup', function(req, res, next) {
-	req.app.get('passport').authenticate('local-signup', function (err, user, info) {
-		if (err) {
-			return next(err); // will generate a 500 error
-		}
-		// Generate a JSON response reflecting authentication status
-		if (!user) {
-			return res.status(403).json(info);
-		}
-		req.login(user, { session: false } , Err => {
-			if (Err) return next(Err);
-			res.header('Authorization', info.headers.Authorization);
-			res.json(info.body);
-			return;
-		});
-	})(req, next);
-});
+router.use('/signup', signup);
 
 router.post('/login', function(req, res, next) {
     req.app.get('passport').authenticate('local-login', function (err, user, info) {
@@ -49,6 +34,44 @@ router.post('/login', function(req, res, next) {
 			return;
 		});
 	})(req, next);
+});
+
+router.get('/logout', function(req, res, next) {
+    req._res = res;
+    req.app.get('passport').authenticate('local-logout', function(err, user, info) {
+        if (err) {
+            return next(err); // will generate a 500 error
+        }
+        // Generate a JSON response reflecting authentication status
+        if (!user) {
+            return res.status(500).json(info);
+        }
+        req.login(user, { session: false } , LogOutErr => {
+            if (LogOutErr) {
+                return next(LogOutErr);
+            }
+            return res.json(info);
+        });      
+    })(req, next);
+});
+
+router.post('/modifypassword', function(req, res, next) {
+    req._res = res;
+    req.app.get('passport').authenticate('local-chanpass', function (err, user, info) {
+        if (err) {
+            return next(err); // will generate a 500 error
+        }
+        // Generate a JSON response reflecting authentication status
+        if (!user) {
+            return res.status(403).json(info);
+        }
+        req.login(user, { session: false } , Err => {
+            if (Err) return next(Err);
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+            return;
+        });
+    })(req, next);
 });
 
 router.get('/data', validateRequest, function(dbUser, req, res, next) {
@@ -90,25 +113,6 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
     }
     recordCollection.data = tmp;
     res.json(recordCollection);
-});
-
-router.get('/logout', function(req, res, next) {
-	req._res = res;
-    req.app.get('passport').authenticate('local-logout', function(err, user, info) {
-        if (err) {
-            return next(err); // will generate a 500 error
-        }
-        // Generate a JSON response reflecting authentication status
-        if (!user) {
-            return res.status(500).json(info);
-        }
-        req.login(user, { session: false } , LogOutErr => {
-            if (LogOutErr) {
-                return next(LogOutErr);
-            }
-            return res.json(info);
-        });      
-    })(req, next);
 });
 
 module.exports = router;

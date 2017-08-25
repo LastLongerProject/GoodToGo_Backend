@@ -1,6 +1,5 @@
 var jwt = require('jwt-simple');
 var passport = require('passport');
-var LocalStrategy = require('passport-local').Strategy; // load all the things we need
 var CustomStrategy = require('passport-custom').Strategy; // load all the things we need
 var validateRequest = require('../models/validateRequest');
 var User = require('../models/DB/userDB'); // load up the user model
@@ -36,6 +35,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done){
                 if (typeof role === 'undefined') {
                     newUser.role.typeCode = 'customer';
                 } else if (role.typeCode === 'clerk') {
+                    if (typeof req._permission === 'undefined' || req._permission === false)
+                        return done(null, false, { type:'signupMessage', message: 'Permission deny, clerk should be only signup by manager'});
                     newUser.role = role;
                 }
                 newUser.save(function(err) { // save the user
@@ -79,20 +80,36 @@ passport.use('local-login', new CustomStrategy(function(req, done){ // callback 
     });
 }));
 
+passport.use('local-chanpass', new CustomStrategy(function(req, done){ // callback with phone and password
+    var oriPassword = req.body['oriPassword'];
+    var newPassword = req.body['newPassword'];
+    if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined'){
+        return done(null, false, { type:'chanPassMessage', message: 'Content lost' });
+    }
+    validateRequest(req, req._res, function(dbUser){
+        process.nextTick(function() {
+            if (!dbUser.validPassword(oriPassword))
+                return done(null, false, { type:'chanPassMessage', message: 'Oops! Wrong password.' });
+            dbUser.user.password  = dbUser.generateHash(newPassword);
+            dbUser.user.apiKey    = keys.apiKey();
+            dbUser.user.secretKey = keys.secretKey();
+            dbUser.save(function(err) { // save the user
+                if (err) return done(err);
+            });
+            var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+            return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
+        });
+    });
+}));
+
 passport.use('local-logout', new CustomStrategy(function(req, done){
     validateRequest(req, req._res, function(dbUser){
         process.nextTick(function() {
-            User.findOne({'user.phone': dbUser.user.phone }, function(err, user) {
-                if (err)
-                    return done(err);
-                if (!user)
-                    return done(null, false, { type:'logoutMessage', message: 'No user found.'});
-                user.user.apiKey = undefined;
-                user.user.secretKey = undefined;
-                user.save(function (err, updatedUser) {
-                    if (err) return done(err);
-                    return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
-                });
+            dbUser.user.apiKey = undefined;
+            dbUser.user.secretKey = undefined;
+            dbUser.save(function (err, updatedUser) {
+                if (err) return done(err);
+                return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
             });
         });
     })
