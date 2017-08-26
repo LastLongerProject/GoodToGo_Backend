@@ -21,14 +21,13 @@ router.post('/', function(req, res, next) {
 	})(req, next);
 });
 
-router.post('/clerk/:id', validateRequest, function(dbUser, req, res, next) {
-    var id = req.params.id;
+router.post('/clerk', validateRequest, function(dbUser, req, res, next) {
     req._permission = true;
     req.body['role'] = {
         typeCode : "clerk",
         clerk : {
             manager : false,
-            storeID : id
+            storeID : dbUser.role.clerk.storeID
         }
     };
     req.app.get('passport').authenticate('local-signup', function (err, user, info) {
