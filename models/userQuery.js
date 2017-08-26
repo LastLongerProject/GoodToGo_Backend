@@ -109,7 +109,7 @@ passport.use('local-logout', new CustomStrategy(function(req, done){
             dbUser.user.secretKey = undefined;
             dbUser.save(function (err, updatedUser) {
                 if (err) return done(err);
-                return done(null, user, { type:'logoutMessage', message: 'Logout succeeded.'});
+                return done(null, dbUser, { type:'logoutMessage', message: 'Logout succeeded.'});
             });
         });
     })

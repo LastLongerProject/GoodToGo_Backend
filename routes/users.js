@@ -40,9 +40,8 @@ router.get('/logout', function(req, res, next) {
     req._res = res;
     req.app.get('passport').authenticate('local-logout', function(err, user, info) {
         if (err) {
-            return next(err); // will generate a 500 error
+            return next(err);
         }
-        // Generate a JSON response reflecting authentication status
         if (!user) {
             return res.status(500).json(info);
         }

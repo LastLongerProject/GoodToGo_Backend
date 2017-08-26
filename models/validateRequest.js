@@ -55,7 +55,8 @@ module.exports = function(req, res, next, targetKey = null) {
 		});
 	} else {
 		loggingERR(req, res, function(err){
-			return next(err);
+			if (typeof err === 'undefined' && err === null){ return next(err); }
+			return res.status(500).json({type: 'validatingUser', message: 'Unexpected Error'});
 		});
 	}
 };
