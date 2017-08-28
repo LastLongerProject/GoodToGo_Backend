@@ -45,7 +45,11 @@ app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
 
-mongoose.connect(config.dbUrl,config.dbOptions);
+mongoose.Promise = global.Promise;
+mongoose.connect(config.dbUrl,config.dbOptions, function(err){
+  if (err) next(err);
+  debug('DB connect succeed');
+});
 require('./models/userQuery'); // pass passport for configuration
 
 app.all('/*', loggingDefault);
