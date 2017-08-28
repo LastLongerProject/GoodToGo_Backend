@@ -7,6 +7,7 @@ var userSchema = mongoose.Schema({
 	method  : String,
 	hashID  : String,
 	reqTime : Date,
+	logTime : { type: Date, default: Date.now },
 	req     : {
 		headers : Object,
 		payload : Object,

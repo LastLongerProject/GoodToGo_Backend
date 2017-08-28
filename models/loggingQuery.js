@@ -17,7 +17,7 @@ module.exports = {
 					'url' : req.url,
 					'method' : req.method,
 					'hashID' : null,
-					'reqTime' : Date.now(),
+					'reqTime' : null,
 					'req.headers' : req.headers,
 					'req.body' : req.body
 				});
@@ -82,7 +82,7 @@ module.exports = {
 					'url' : req.url,
 					'method' : req.method,
 					'hashID' : null,
-					'reqTime' : Date.now(),
+					'reqTime' : null,
 					'req.headers' : req.headers,
 					'req.body' : req.body,
 				});
@@ -95,8 +95,8 @@ module.exports = {
 					'ip' : req.connection.remoteAddress,
 					'url' : req.url,
 					'method' : req.method,
-					'hashID' : null,
-					'reqTime' : Date.now(),
+					'hashID' : payload.jti || null,
+					'reqTime' : payload.iat || null,
 					'req.headers' : req.headers,
 					'req.body' : req.body,
 					'req.payload' : payload

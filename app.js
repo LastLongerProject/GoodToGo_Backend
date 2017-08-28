@@ -45,6 +45,7 @@ app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
 
+debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
 mongoose.connect(config.dbUrl,config.dbOptions, function(err){
   if (err) next(err);
