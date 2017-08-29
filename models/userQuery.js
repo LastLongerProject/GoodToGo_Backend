@@ -42,7 +42,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done){
                     }
                     newUser.save(function(err) { // save the user
                         if (err) return done(err);
-                        var token = jwt.encode({apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: newUser.user.role}, keys.serverSecretKey());
+                        var payload = {apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: {typeCode: dbUser.role.typeCode, storeID: dbUser.role.clerk.storeID, manager: dbUser.role.clerk.manager}};
+                        var token = jwt.encode(payload, keys.serverSecretKey());
                         return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
                     });
                 });
@@ -76,7 +77,8 @@ passport.use('local-login', new CustomStrategy(function(req, done){ // callback 
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) { // save the user
                     if (err) return done(err);
-                    var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+                    var payload = {apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: {typeCode: dbUser.role.typeCode, storeID: dbUser.role.clerk.storeID, manager: dbUser.role.clerk.manager}};
+                    var token = jwt.encode(payload, keys.serverSecretKey());
                     return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'loginMessage', message: 'Authentication succeeded'}});
                 });
             });
@@ -100,7 +102,8 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done){ // callba
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) { // save the user
                     if (err) return done(err);
-                    var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+                    var payload = {apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: {typeCode: dbUser.role.typeCode, storeID: dbUser.role.clerk.storeID, manager: dbUser.role.clerk.manager}};
+                    var token = jwt.encode(payload, keys.serverSecretKey());
                     return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
                 });
             });
