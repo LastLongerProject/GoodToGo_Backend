@@ -5,7 +5,9 @@
  */
 var app = require('../app');
 var debug = require('debug')('goodtogo_backend:server');
+var redLog = require('debug')('goodtogo_backend:serverRedirect');
 debug.log = console.log.bind(console);
+redLog.log = console.log.bind(console);
 var https = require('https');
 var fs = require('fs');
 
@@ -14,12 +16,13 @@ var fs = require('fs');
  */
 var http = require('http');
 var url = require("url");
-function httpRequest(request, response) {
-  var pathname = url.parse(request.url).pathname;
-  debug("HTTP request from" + request.connection.remoteAddress + " for " + pathname + " received.");
-  response.writeHead(301,
+function httpRequest(req, res) {
+  var pathname = url.parse(req.url).pathname;
+  redLog("HTTP request from" + req.connection.remoteAddress + " for " + pathname + " received.");
+  res.writeHead(301,
     {Location: 'https://app.goodtogo.tw'+ pathname});
-  response.end();
+  res.end();
+  }
 }
 http.createServer(httpRequest).listen(80);
 debug('HTTP redirect server on.');

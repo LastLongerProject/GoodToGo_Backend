@@ -32,7 +32,7 @@ npm-debug.log
 
 # Security
 config
-config.js
+*.config.js
 
 # For Apple develop environment
 .DS_Store

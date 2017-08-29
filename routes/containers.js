@@ -16,7 +16,7 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function (err, data) {
 });
 
 router.all('/:id', function(req, res) {
-    debug("Redirect to official website.");
+    // debug("Redirect to official website.");
     res.writeHead(301,{Location: 'http://goodtogo.tw'});
     res.end();
 });
