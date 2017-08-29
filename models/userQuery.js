@@ -24,25 +24,27 @@ passport.use('local-signup', new CustomStrategy(function(req, done){
             if (user) {
                 return done(null, false, { type:'signupMessage', message: 'That phone is already taken' });
             } else {
-                // if there is no user with that phone, create the user
-                var newUser            = new User();
-                var role               = req.body['role'];
-                // set the user's local credentials
-                newUser.user.phone     = phone;
-                newUser.user.password  = newUser.generateHash(password);
-                newUser.user.apiKey    = keys.apiKey();
-                newUser.user.secretKey = keys.secretKey();
-                if (typeof role === 'undefined') {
-                    newUser.role.typeCode = 'customer';
-                } else if (role.typeCode === 'clerk') {
-                    if (typeof req._permission === 'undefined' || req._permission === false)
-                        return done(null, false, { type:'signupMessage', message: 'Permission deny, clerk should be only signup by manager'});
-                    newUser.role = role;
-                }
-                newUser.save(function(err) { // save the user
-                    if (err) return done(err);
-                    var token = jwt.encode({apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: newUser.user.role}, keys.serverSecretKey());
-                    return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
+                keys.apiKey(function(returnedApikey){
+                    // if there is no user with that phone, create the user
+                    var newUser            = new User();
+                    var role               = req.body['role'];
+                    // set the user's local credentials
+                    newUser.user.phone     = phone;
+                    newUser.user.password  = newUser.generateHash(password);
+                    newUser.user.apiKey    = returnedApikey;
+                    newUser.user.secretKey = keys.secretKey();
+                    if (typeof role === 'undefined') {
+                        newUser.role.typeCode = 'customer';
+                    } else if (role.typeCode === 'clerk') {
+                        if (typeof req._permission === 'undefined' || req._permission === false)
+                            return done(null, false, { type:'signupMessage', message: 'Permission deny, clerk should be only signup by manager'});
+                        newUser.role = role;
+                    }
+                    newUser.save(function(err) { // save the user
+                        if (err) return done(err);
+                        var token = jwt.encode({apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: newUser.user.role}, keys.serverSecretKey());
+                        return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
+                    });
                 });
             }
         });
@@ -58,24 +60,26 @@ passport.use('local-login', new CustomStrategy(function(req, done){ // callback 
     process.nextTick(function() {
         // find a user whose phone is the same as the forms phone
         // we are checking to see if the user trying to login already exists
-        User.findOne({'user.phone': phone }, function(err, user) {
+        User.findOne({'user.phone': phone }, function(err, dbUser) {
             // if there are any errors, return the error before anything else
             if (err)
                 return done(err);
             // if no user is found, return the message
-            if (!user)
+            if (!dbUser)
                 return done(null, false, { type:'loginMessage', message: 'No user found.' });
             // if the user is found but the password is wrong
-            if (!user.validPassword(password))
+            if (!dbUser.validPassword(password))
                 return done(null, false, { type:'loginMessage', message: 'Oops! Wrong password.' }); 
             // all is well, return successful user
-            user.user.apiKey    = keys.apiKey();
-            user.user.secretKey = keys.secretKey();
-            user.save(function(err) { // save the user
-                if (err) return done(err);
+            keys.apiKey(function(returnedApikey){
+                dbUser.user.apiKey    = returnedApikey;
+                dbUser.user.secretKey = keys.secretKey();
+                dbUser.save(function(err) { // save the user
+                    if (err) return done(err);
+                    var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+                    return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'loginMessage', message: 'Authentication succeeded'}});
+                });
             });
-            var token = jwt.encode({apiKey: user.user.apiKey, secretKey: user.user.secretKey, role: user.user.role}, keys.serverSecretKey());
-            return done(null, user, {headers: {Authorization: token}, body: {type: 'loginMessage', message: 'Authentication succeeded'}});
         });
     });
 }));
@@ -96,9 +100,9 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done){ // callba
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) { // save the user
                     if (err) return done(err);
+                    var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+                    return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
                 });
-                var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
-                return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
             });
         });
     });
