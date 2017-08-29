@@ -90,14 +90,16 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done){ // callba
         process.nextTick(function() {
             if (!dbUser.validPassword(oriPassword))
                 return done(null, false, { type:'chanPassMessage', message: 'Oops! Wrong password.' });
-            dbUser.user.password  = dbUser.generateHash(newPassword);
-            dbUser.user.apiKey    = keys.apiKey();
-            dbUser.user.secretKey = keys.secretKey();
-            dbUser.save(function(err) { // save the user
-                if (err) return done(err);
+            keys.apiKey(function(returnedApikey){
+                dbUser.user.password  = dbUser.generateHash(newPassword);
+                dbUser.user.apiKey    = returnedApikey;
+                dbUser.user.secretKey = keys.secretKey();
+                dbUser.save(function(err) { // save the user
+                    if (err) return done(err);
+                });
+                var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
+                return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
             });
-            var token = jwt.encode({apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: dbUser.user.role}, keys.serverSecretKey());
-            return done(null, dbUser, {headers: {Authorization: token}, body: {type: 'chanPassMessage', message: 'Change succeeded'}});
         });
     });
 }));
