@@ -22,7 +22,6 @@ function httpRequest(req, res) {
   res.writeHead(301,
     {Location: 'https://app.goodtogo.tw'+ pathname});
   res.end();
-  }
 }
 http.createServer(httpRequest).listen(80);
 debug('HTTP redirect server on.');
