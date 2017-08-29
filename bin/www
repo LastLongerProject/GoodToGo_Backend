@@ -16,7 +16,7 @@ var http = require('http');
 var url = require("url");
 function httpRequest(request, response) {
   var pathname = url.parse(request.url).pathname;
-  debug("HTTP request for " + pathname + " received.");
+  debug("HTTP request from" + request.connection.remoteAddress + " for " + pathname + " received.");
   response.writeHead(301,
     {Location: 'https://app.goodtogo.tw'+ pathname});
   response.end();
