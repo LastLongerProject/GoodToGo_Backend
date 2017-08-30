@@ -7,6 +7,7 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var passport = require('passport');
 var debug = require('debug')('goodtogo_backend:app');
+var debugError = require('debug')('goodtogo_backend:appERR');
 
 var index = require('./routes/index');
 var loggingDefault = require('./routes/loggingDefault');
@@ -73,6 +74,9 @@ app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+  if (typeof err.status === 'undefined')
+    debugError(err.message);
 
   // render the error page
   res.status(err.status || 500);

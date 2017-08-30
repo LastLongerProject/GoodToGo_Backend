@@ -42,7 +42,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done){
                     }
                     newUser.save(function(err) { // save the user
                         if (err) return done(err);
-                        var payload = {apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: {typeCode: dbUser.role.typeCode, storeID: dbUser.role.clerk.storeID, manager: dbUser.role.clerk.manager}};
+                        var payload = {apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: {typeCode: newUser.role.typeCode, storeID: newUser.role.clerk.storeID, manager: newUser.role.clerk.manager}};
                         var token = jwt.encode(payload, keys.serverSecretKey());
                         return done(null, true, {headers: {Authorization: token}, body: {type: 'signupMessage', message: 'Authentication succeeded'}});
                     });
