@@ -57,7 +57,7 @@ app.all('/*', loggingDefault);
  
 app.use('/', index);
 app.use('/stores', stores);
-app.use('/getStores', function(req, res){debug("Redirect to store.");res.writeHead(301,{Location: 'https://app.goodtogo.tw/stores/list'});res.end()});
+app.use('/getStores', function(req, res){debug("Redirect to store.");res.writeHead(301,{Location: 'https://app.goodtogo.tw/stores/list'});res.end();});
 app.use('/users', users);
 app.use('/containers', containers);
 
@@ -76,7 +76,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.json(err);
+  res.json({type: 'globalError', message: err.message});
 });
 
 module.exports = app;
