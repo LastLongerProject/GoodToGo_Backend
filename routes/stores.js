@@ -61,7 +61,6 @@ router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
 			if (err)
 				return next(err);
 			if (typeof user !== 'undefined' && user !== null){
-				console.log(user);
 				if (user.role.typeCode === 'customer') {
 					res.status(200).json({'phone' : user.user.phone, 'apiKey': user.user.apiKey});
 				} else {
