@@ -60,14 +60,15 @@ router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
 		User.findOne({ 'user.phone' : new RegExp( id.toString() +'$', "i") }, function(err, user) {
 			if (err)
 				return next(err);
-			if (typeof user !== 'undefined'){
+			if (typeof user !== 'undefined' && user !== null){
+				console.log(user);
 				if (user.role.typeCode === 'customer') {
 					res.status(200).json({'phone' : user.user.phone, 'apiKey': user.user.apiKey});
 				} else {
 					res.status(401).json({"type" : "userSearchingError", "message" : "User role is not customer"});
 				}
 			} else {
-				res.status(401).json({"type" : "userSearchingError", "message" : "No User Finded"});
+				res.status(401).json({"type" : "userSearchingError", "message" : "No User: [" + id + "] Finded"});
 			}
 		});
 	});
