@@ -50,7 +50,7 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 					debug('Container conflict. Data : ' + container.container.toString() + 
 		        		' StoreID : ' + dbStore.role.clerk.storeID.toString() + 
 		        		' Customer : ' + dbUser.user.phone);
-		        	return res.status(404).json({ 
+		        	return res.status(403).json({ 
 		        		'type':'borrowContainerMessage', 
 		        		'message': 'Container conflict. Code : ' + container.container.statusCode.toString(),
 		        		'data': container.container
@@ -104,8 +104,11 @@ router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 		    User.findOne({ 'user.phone' : container.container.conbineTo }, function(err, dbUser) {
 			    if (err)
 			        return next(err);
-			    if (!dbUser)
-			        return res.status(404).json({ type:'returnContainerMessage', message: 'No user found.'});
+			    if (!dbUser){
+			    	debug('Return unexpect err. Data : ' + container.container.toString() + 
+		        		' ID in uri : ' + id);
+			        return res.status(500).json({ type:'returnContainerMessage', message: 'No user found.'});
+			    }
 			    var historyData = dbUser.role.customer.history;
 			    for (i = 0; i < historyData.length; i++) {
 			    	if (historyData[i].containerID.toString() === id && historyData[i].returned === false) {
