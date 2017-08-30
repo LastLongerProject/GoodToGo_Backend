@@ -7,12 +7,12 @@ var passLogging = false;
 
 router.all('/containers/:id', function(req, res, next){
 	passLogging = true;
-	logging(req, res, function(err){next();};
+	logRed(req, res, function(err){next();});
 });
 
 router.all('/getStores', function(req, res, next){
 	passLogging = true;
-	logging(req, res, function(err){next();};
+	loggRed(req, res, function(err){next();});
 })
 
 router.all('/*', function(req, res, next) {
