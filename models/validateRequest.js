@@ -41,7 +41,7 @@ module.exports = function(req, res, next, targetKey = null) {
 					decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
 				} catch(err) {	}
 				logging(req, res, decoded, function(err){
-					if (typeof err === 'undefined' && err === null){ return next(err); }
+					if (typeof err === 'undefined' || err === null){ return next(err); }
 					else if (typeof decoded.exp === 'undefined'){
 						return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
 					} else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
@@ -55,7 +55,7 @@ module.exports = function(req, res, next, targetKey = null) {
 		});
 	} else {
 		loggingERR(req, res, function(err){
-			if (typeof err === 'undefined' && err === null){ return next(err); }
+			if (typeof err === 'undefined' || err === null){ return next(err); }
 			return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
 		});
 	}
