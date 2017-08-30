@@ -101,6 +101,9 @@ router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 		        return next(err);
 		    if (!container)
 		        return res.status(404).json({ type:'returnContainerMessage', message: 'No container found.'});
+		    if (container.container.statusCode !== 2){
+		        return res.status(403).json({ type:'returnContainerMessage', message: 'Container has not rented.'});
+			}
 		    User.findOne({ 'user.phone' : container.container.conbineTo }, function(err, dbUser) {
 			    if (err)
 			        return next(err);
