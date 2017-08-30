@@ -2,7 +2,7 @@ var jwt = require('jwt-simple');
 var User = require('../models/DB/userDB'); // load up the user model
 var validateUser = require('../config/keys').validateUser;
 var logging = require('../models/loggingQuery').withAuth;
-var loggingERR = require('../models/loggingQuery').withoutAuth;
+var loggingERR = require('../models/loggingQuery').logERR;
 
 function validateURL(req, res, next, dbUser) { // Authorize the user to see if s/he can access our resources
 	if (dbUser) {
@@ -54,9 +54,9 @@ module.exports = function(req, res, next, targetKey = null) {
 			}
 		});
 	} else {
-		loggingERR(req, res, function(err){
-			if (typeof err === 'undefined'){ return next(err); }
-			return res.status(401).json({type: 'validatingUser', message: 'Token Invalid'});
+		loggingERR(jwtToken, key, req, res, function(err){
+			if (typeof err !== 'undefined'){ return next(err); }
+			return res.status(500).json({type: 'loggingERR', message: 'Unexpect Error: logic err'});
 		});
 	}
 };

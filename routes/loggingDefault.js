@@ -1,13 +1,19 @@
 var express = require('express');
 var router = express.Router();
 var logging = require('../models/loggingQuery').withoutAuth;
+var logRed = require('../models/loggingQuery').redirect;
 
 var passLogging = false;
 
 router.all('/containers/:id', function(req, res, next){
 	passLogging = true;
-	next();
+	logging(req, res, function(err){next();};
 });
+
+router.all('/getStores', function(req, res, next){
+	passLogging = true;
+	logging(req, res, function(err){next();};
+})
 
 router.all('/*', function(req, res, next) {
 	if ((typeof req.headers['authorization'] === 'undefined') && !passLogging){

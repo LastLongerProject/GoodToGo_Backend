@@ -7,57 +7,42 @@ function getDate(int) {
 }
 
 module.exports = {
-	logERR : function(req, res, next) {
+	logERR : function(jwtToken, key, req, res, next) {
 		process.nextTick(function() {
-			var jwtToken = req.headers['authorization'];
-			var key = req.headers['apikey'];
-			if (typeof jwtToken === 'undefined' || typeof key === 'undefined'){
-				newLogging = new Logging({
-					'ip' : req.connection.remoteAddress,
-					'url' : req.url,
-					'method' : req.method,
-					'hashID' : null,
-					'reqTime' : null,
-					'req.headers' : req.headers,
-					'req.body' : req.body
-				});
-				newLogging.save(function(err) {
-					if (err) return next(err);
-					return res.status(401).json({type: 'loggingwithoutAuthRequest', message: 'Token Invalid'});
-				});
-			} else {
-				Logging.findOne({'hashID': hashID, 'reqTime' : reqTime }, function(err, logging) {
-					if (err) return next(err);
-					if (logging) {
-						newLogging = new Logging({
-							'ip' : req.connection.remoteAddress,
-							'url' : req.url,
-							'method' : req.method,
-							'hashID' : hashID + "-replay",
-							'reqTime' : reqTime,
-							'req.headers' : req.headers,
-							'req.body' : req.body
-						});
-						newLogging.save(function(err) {
-							if (err) return next(err);
-							return res.status(401).json({type: 'loggingwithoutAuthRequest', message: 'Token replay'});
-						});
-					}
-					newLogging = new Logging({
-						'ip' : req.connection.remoteAddress,
-						'url' : req.url,
-						'method' : req.method,
-						'hashID' : hashID,
-						'reqTime' : reqTime,
-						'req.headers' : req.headers,
-						'req.body' : req.body
-					});
-					newLogging.save(function(err) {
-						if (err) return next(err);
-						return next();
-					});
-				});
-			}
+			newLogging = new Logging({
+				'ip' : req.connection.remoteAddress,
+				'url' : req.url,
+				'method' : req.method,
+				'hashID' : null,
+				'reqTime' : null,
+				'req.headers' : req.headers,
+				'req.body' : req.body
+			});
+			newLogging.save(function(err) {
+				if (err) return next(err);
+				if (typeof jwtToken === 'undefined' || typeof key === 'undefined'){
+					return res.status(401).json({type: 'loggingERR', message: 'Token Invalid'});
+				} else {
+					return res.status(500).json({type: 'loggingERR', message: 'Unexpect Error: logic err'});
+				}
+			});
+		});
+	},
+	redirect : function(req, res, next) {
+		process.nextTick(function() {
+			newLogging = new Logging({
+				'ip' : req.connection.remoteAddress,
+				'url' : req.url,
+				'method' : req.method,
+				'hashID' : 'red.',
+				'reqTime' : null,
+				'req.headers' : req.headers,
+				'req.body' : req.body
+			});
+			newLogging.save(function(err) {
+				if (err) return next(err);
+				return next();
+			});
 		});
 	},
 	withoutAuth : function(req, res, next) {
