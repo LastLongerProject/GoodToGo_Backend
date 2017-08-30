@@ -42,6 +42,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	}
 	var id = req.params.id;
 	validateRequest(req, res, function(dbUser) {
+		if (typeof dbUser.status)
+			next(dbUser);
 		process.nextTick(function() {
 		    Container.findOne({ 'container.ID' : id }, function(err, container) {
 		        if (err)
