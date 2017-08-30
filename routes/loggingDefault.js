@@ -7,31 +7,28 @@ var passLogging = false;
 
 router.all('/containers/:id', function(req, res, next){
 	passLogging = true;
-	logRed(req, res, function(err){next();});
+	logRed(req, res, function(err){
+		if (err) return next(err);
+		next();
+	});
 });
 
 router.all('/getStores', function(req, res, next){
 	passLogging = true;
-	loggRed(req, res, function(err){next();});
+	loggRed(req, res, function(err){
+		if (err) return next(err);
+		next();
+	});
 })
 
 router.all('/*', function(req, res, next) {
 	if ((typeof req.headers['authorization'] === 'undefined') && !passLogging){
 		passLogging = false;
 		logging(req, res, function(err){
-			if (typeof err !== 'undefined' && err !== null){
-				res.status(500);
-				res.json({
-					"type": "loggingRoute",
-					"message": "Oops something went wrong",
-					"error": err.toString()
-				});
-			}
-			else {
-				next();
-			}
+			if (err) return next(err);
+			next();
 		});
-	} else{
+	} else {
 		passLogging = false;
 		next();
 	}

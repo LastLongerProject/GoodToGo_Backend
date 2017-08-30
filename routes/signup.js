@@ -22,6 +22,8 @@ router.post('/', function(req, res, next) {
 });
 
 router.post('/clerk', validateRequest, function(dbUser, req, res, next) {
+    if (typeof dbUser.status)
+        next(dbUser);
     req._permission = true;
     req.body['role'] = {
         typeCode : "clerk",

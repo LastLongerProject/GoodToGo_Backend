@@ -56,7 +56,7 @@ module.exports = function(req, res, next, targetKey = null) {
 	} else {
 		loggingERR(jwtToken, key, req, res, function(err){
 			if (typeof err !== 'undefined'){ return next(err); }
-			return res.status(500).json({type: 'loggingERR', message: 'Unexpect Error: logic err'});
+			return res.status(500).json({type: 'validatingUser', message: 'Unexpect Error: logic err'});
 		});
 	}
 };

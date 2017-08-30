@@ -75,12 +75,14 @@ app.use(function(err, req, res, next) {
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  if (typeof err.status === 'undefined')
+  if (typeof err.status === 'undefined'){
     debugError(err.message);
-
-  // render the error page
-  res.status(err.status || 500);
-  res.json({type: 'globalError', message: err.message});
+    res.status(500);
+    res.json({type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req)});
+  } else {
+    res.status(err.status);
+    res.json({type: 'globalError', message: err.message});
+  }
 });
 
 module.exports = app;

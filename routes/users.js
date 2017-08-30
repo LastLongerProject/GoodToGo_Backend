@@ -74,6 +74,8 @@ router.post('/modifypassword', function(req, res, next) {
 });
 
 router.get('/data', validateRequest, function(dbUser, req, res, next) {
+    if (typeof dbUser.status)
+        next(dbUser);
     var tmp = [];
     var historyData = dbUser.role.customer.history;
     var recordCollection = {
@@ -86,7 +88,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                 {"3x" : "https://app.goodtogo.tw/images/icon/00_3x.png"}
             ]},
             { name : type.type[1],
-            version : 1,
+            version : 0,
             icon : [
                 {"1x" : "https://app.goodtogo.tw/images/icon/01_1x.png"},
                 {"2x" : "https://app.goodtogo.tw/images/icon/01_2x.png"},

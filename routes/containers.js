@@ -22,6 +22,8 @@ router.all('/:id', function(req, res) {
 });
 
 router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
+	if (typeof dbStore.status)
+		next(dbStore);
 	var key = req.headers['userapikey'];
 	if (typeof key === 'undefined' || typeof key === null){
 		debug(req.headers);
@@ -52,8 +54,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 		        		' Customer : ' + dbUser.user.phone);
 		        	return res.status(403).json({ 
 		        		'type':'borrowContainerMessage', 
-		        		'message': 'Container conflict. Container Status Code : ' + container.container.statusCode.toString(),
-		        		'data': JSON.stringify(container.container)
+		        		'message': 'Container conflict. Container Status: ' + status[container.container.statusCode]
+		        		// ,'data': container.container.toString()
 		        	});
 				}
 		        container.container.statusCode = 2;
@@ -87,6 +89,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 });
 
 router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
+	if (typeof dbStore.status)
+		next(dbStore);
 	if (dbStore.role.typeCode != "clerk"){
 		res.status(401).json({
 	      "type": "borrowContainerMessage",
@@ -108,7 +112,7 @@ router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 			    if (err)
 			        return next(err);
 			    if (!dbUser){
-			    	debug('Return unexpect err. Data : ' + container.container.toString() + 
+			    	debug('Return unexpect err. Data : ' + JSON.stringify(container.container) + 
 		        		' ID in uri : ' + id);
 			        return res.status(500).json({ type:'returnContainerMessage', message: 'No user found.'});
 			    }
