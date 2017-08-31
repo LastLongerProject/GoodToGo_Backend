@@ -1,5 +1,17 @@
 {
+	"contract_code_explanation": [
+		{
+			"0": "Only borrowable and returnable"
+		},
+		{
+			"1": "Only returnable"
+		},
+		{
+			"2": "Borrowable and returnable"
+		}
+	],
 	"imgURL": "htts://app.goodtogo.tw/",
+	"updated_time": "2017-07-25 01:34:39",
 	"IDlist":[
 		{
 			"id": 0,

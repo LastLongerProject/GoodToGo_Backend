@@ -1,768 +1,768 @@
 {
-  "updated_time": "2017-07-25 01:34:39",
-  "shop_data": [
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/01.jpg",
-        "img_version": 0
-      },
-      "name": "正興咖啡館",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 3,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 3,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "09:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.9942297,
-        "lng": 120.1973623
-      },
-      "address": "台南市中西區神農街49號號 B",
-      "type": [
-        "咖啡",
-        "麵包",
-        "住宿",
-        "餐廳",
-        "餐飲",
-        "商店"
-      ],
-      "id": 0
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/02.jpg",
-        "img_version": 0
-      },
-      "name": "布萊恩紅茶",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "23:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 3,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 3,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "07:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "23:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "07:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.99426,
-        "lng": 120.197571
-      },
-      "address": "台南市中西區正興街62-2號",
-      "type": [
-        "咖啡",
-        "餐飲"
-      ],
-      "id": 1
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/03.jpg",
-        "img_version": 0
-      },
-      "name": "N23°樂沏",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "18:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "18:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 3,
-            "time": "18:00"
-          },
-          "open": {
-            "day": 3,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "18:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "18:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "11:30"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "11:30"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.9945157,
-        "lng": 120.1967711
-      },
-      "address": "台南市中西區正興街116巷8號",
-      "type": [
-        "咖啡",
-        "餐飲"
-      ],
-      "id": 2
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/04.jpg",
-        "img_version": 0
-      },
-      "name": "彩虹來了",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "14:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "14:00"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "14:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "14:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "14:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.9943783,
-        "lng": 120.1969464
-      },
-      "address": "台南市中西區正興街100號",
-      "type": [
-        "服飾",
-        "商店"
-      ],
-      "id": 3
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/05.jpg",
-        "img_version": 0
-      },
-      "name": "My Way",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 3,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 3,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "20:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "12:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "12:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.9941261,
-        "lng": 120.196956
-      },
-      "address": "台南市中西區正興街73號",
-      "type": [
-        "住宿",
-        "商店"
-      ],
-      "id": 4
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/06.jpg",
-        "img_version": 0
-      },
-      "name": "神榕147",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "18:30"
-          },
-          "open": {
-            "day": 0,
-            "time": "09:30"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "10:30"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "10:30"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "10:30"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "19:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "10:30"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "18:30"
-          },
-          "open": {
-            "day": 6,
-            "time": "09:30"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.99814,
-        "lng": 120.195055
-      },
-      "address": "台南市中西區神農街147號",
-      "type": [
-        "咖啡",
-        "住宿",
-        "餐飲",
-        "商店"
-      ],
-      "id": 5
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/07.jpg",
-        "img_version": 0
-      },
-      "name": "未艾公寓",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "09:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 2,
-        "returnable": true,
-        "borrowable": true
-      },
-      "location": {
-        "lat": 22.994068,
-        "lng": 120.196892
-      },
-      "address": "台南市中西區正興街77巷10號",
-      "type": [
-        "住宿"
-      ],
-      "id": 6
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/08.jpg",
-        "img_version": 0
-      },
-      "name": "有方公寓",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 1,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 1,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "09:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "21:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "09:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 1,
-        "returnable": true,
-        "borrowable": false
-      },
-      "location": {
-        "lat": 22.9981111,
-        "lng": 120.1972925
-      },
-      "address": "台南市中西區海安路二段269巷9號",
-      "type": [
-        "住宿"
-      ],
-      "id": 7
-    },
-    {
-      "img_info": {
-        "img_src": "https://app.goodtogo.tw/images/09.jpg",
-        "img_version": 0
-      },
-      "name": "初心地球社",
-      "opening_hours": [
-        {
-          "close": {
-            "day": 0,
-            "time": "23:00"
-          },
-          "open": {
-            "day": 0,
-            "time": "11:00"
-          }
-        },
-        {
-          "close": {
-            "day": 2,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 2,
-            "time": "13:00"
-          }
-        },
-        {
-          "close": {
-            "day": 3,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 3,
-            "time": "13:00"
-          }
-        },
-        {
-          "close": {
-            "day": 4,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 4,
-            "time": "13:00"
-          }
-        },
-        {
-          "close": {
-            "day": 5,
-            "time": "22:00"
-          },
-          "open": {
-            "day": 5,
-            "time": "13:00"
-          }
-        },
-        {
-          "close": {
-            "day": 6,
-            "time": "23:00"
-          },
-          "open": {
-            "day": 6,
-            "time": "11:00"
-          }
-        }
-      ],
-      "contract": {
-        "status_code": 1,
-        "returnable": true,
-        "borrowable": false
-      },
-      "location": {
-        "lat": 22.997178,
-        "lng": 120.197056
-      },
-      "address": "台南市中西區神農街49號",
-      "type": [
-        "雜貨",
-        "餐飲",
-        "商店"
-      ],
-      "id": 8
-    }
-  ],
-  "contract_code_explanation": [
-    {
-      "0": "Only borrowable and returnable"
-    },
-    {
-      "1": "Only returnable"
-    },
-    {
-      "2": "Borrowable and returnable"
-    }
-  ],
-  "title": "Stores list"
+	"updated_time": "2017-07-25 01:34:39",
+	"shop_data": [
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/01.jpg",
+				"img_version": 0
+			},
+			"name": "正興咖啡館",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 3,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 3,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "09:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.9942297,
+				"lng": 120.1973623
+			},
+			"address": "台南市中西區神農街49號號 B",
+			"type": [
+				"咖啡",
+				"麵包",
+				"住宿",
+				"餐廳",
+				"餐飲",
+				"商店"
+			],
+			"id": 0
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/02.jpg",
+				"img_version": 0
+			},
+			"name": "布萊恩紅茶",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "23:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 3,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 3,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "07:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "23:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "07:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.99426,
+				"lng": 120.197571
+			},
+			"address": "台南市中西區正興街62-2號",
+			"type": [
+				"咖啡",
+				"餐飲"
+			],
+			"id": 1
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/03.jpg",
+				"img_version": 0
+			},
+			"name": "N23°樂沏",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "18:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "18:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 3,
+						"time": "18:00"
+					},
+					"open": {
+						"day": 3,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "18:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "18:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "11:30"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "11:30"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.9945157,
+				"lng": 120.1967711
+			},
+			"address": "台南市中西區正興街116巷8號",
+			"type": [
+				"咖啡",
+				"餐飲"
+			],
+			"id": 2
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/04.jpg",
+				"img_version": 0
+			},
+			"name": "彩虹來了",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "14:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "14:00"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "14:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "14:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "14:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.9943783,
+				"lng": 120.1969464
+			},
+			"address": "台南市中西區正興街100號",
+			"type": [
+				"服飾",
+				"商店"
+			],
+			"id": 3
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/05.jpg",
+				"img_version": 0
+			},
+			"name": "My Way",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 3,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 3,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "20:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "12:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "12:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.9941261,
+				"lng": 120.196956
+			},
+			"address": "台南市中西區正興街73號",
+			"type": [
+				"住宿",
+				"商店"
+			],
+			"id": 4
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/06.jpg",
+				"img_version": 0
+			},
+			"name": "神榕147",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "18:30"
+					},
+					"open": {
+						"day": 0,
+						"time": "09:30"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "10:30"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "10:30"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "10:30"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "19:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "10:30"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "18:30"
+					},
+					"open": {
+						"day": 6,
+						"time": "09:30"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.99814,
+				"lng": 120.195055
+			},
+			"address": "台南市中西區神農街147號",
+			"type": [
+				"咖啡",
+				"住宿",
+				"餐飲",
+				"商店"
+			],
+			"id": 5
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/07.jpg",
+				"img_version": 0
+			},
+			"name": "未艾公寓",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "09:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 2,
+				"returnable": true,
+				"borrowable": true
+			},
+			"location": {
+				"lat": 22.994068,
+				"lng": 120.196892
+			},
+			"address": "台南市中西區正興街77巷10號",
+			"type": [
+				"住宿"
+			],
+			"id": 6
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/08.jpg",
+				"img_version": 0
+			},
+			"name": "有方公寓",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 1,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 1,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "09:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "21:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "09:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 1,
+				"returnable": true,
+				"borrowable": false
+			},
+			"location": {
+				"lat": 22.9981111,
+				"lng": 120.1972925
+			},
+			"address": "台南市中西區海安路二段269巷9號",
+			"type": [
+				"住宿"
+			],
+			"id": 7
+		},
+		{
+			"img_info": {
+				"img_src": "https://app.goodtogo.tw/images/09.jpg",
+				"img_version": 0
+			},
+			"name": "初心地球社",
+			"opening_hours": [
+				{
+					"close": {
+						"day": 0,
+						"time": "23:00"
+					},
+					"open": {
+						"day": 0,
+						"time": "11:00"
+					}
+				},
+				{
+					"close": {
+						"day": 2,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 2,
+						"time": "13:00"
+					}
+				},
+				{
+					"close": {
+						"day": 3,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 3,
+						"time": "13:00"
+					}
+				},
+				{
+					"close": {
+						"day": 4,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 4,
+						"time": "13:00"
+					}
+				},
+				{
+					"close": {
+						"day": 5,
+						"time": "22:00"
+					},
+					"open": {
+						"day": 5,
+						"time": "13:00"
+					}
+				},
+				{
+					"close": {
+						"day": 6,
+						"time": "23:00"
+					},
+					"open": {
+						"day": 6,
+						"time": "11:00"
+					}
+				}
+			],
+			"contract": {
+				"status_code": 1,
+				"returnable": true,
+				"borrowable": false
+			},
+			"location": {
+				"lat": 22.997178,
+				"lng": 120.197056
+			},
+			"address": "台南市中西區神農街49號",
+			"type": [
+				"雜貨",
+				"餐飲",
+				"商店"
+			],
+			"id": 8
+		}
+	],
+	"contract_code_explanation": [
+		{
+			"0": "Only borrowable and returnable"
+		},
+		{
+			"1": "Only returnable"
+		},
+		{
+			"2": "Borrowable and returnable"
+		}
+	],
+	"title": "Stores list"
 }

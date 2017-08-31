@@ -14,7 +14,7 @@ var loggingDefault = require('./routes/loggingDefault');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
 var containers = require('./routes/containers');
-var config = require('./config/config')
+var config = require('./config/config');
 
 var app = express();
 
@@ -55,7 +55,7 @@ mongoose.connect(config.dbUrl,config.dbOptions, function(err){
 require('./models/userQuery'); // pass passport for configuration
 
 app.all('/*', loggingDefault);
- 
+
 app.use('/', index);
 app.use('/stores', stores);
 app.use('/getStores', function(req, res){debug("Redirect to store.");res.writeHead(301,{Location: 'https://app.goodtogo.tw/stores/list'});res.end();});

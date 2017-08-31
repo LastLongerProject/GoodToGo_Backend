@@ -31,14 +31,28 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
 			{
 				typeCode : 0,
 				type : type.type[0],
-				amount : 0
+				amount : 0,
+				icon : [
+	                {"1x" : "https://app.goodtogo.tw/images/icon/00_1x.png"},
+	                {"2x" : "https://app.goodtogo.tw/images/icon/00_2x.png"},
+	                {"3x" : "https://app.goodtogo.tw/images/icon/00_3x.png"}
+	            ]
 			},
 			{
 				typeCode : 1,
 				type : type.type[1],
-				amount : 0
+				amount : 0,
+				icon : [
+	                {"1x" : "https://app.goodtogo.tw/images/icon/01_1x.png"},
+	                {"2x" : "https://app.goodtogo.tw/images/icon/01_2x.png"},
+	                {"3x" : "https://app.goodtogo.tw/images/icon/01_3x.png"}
+	            ]
 			}
-		]
+		],
+		todayData : {
+			rent : 1,
+			return : 1
+		}
 	};
 	process.nextTick(function() {
 		Container.find({ 'container.conbineTo' : dbStore.user.phone }, function(err, container) {
