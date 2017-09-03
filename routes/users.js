@@ -107,7 +107,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         record.container = '#' + str;
         record.time = historyData[i].time;
         record.returned = historyData[i].returned;
-        record.type = historyData[i].typeCode;
+        record.type = type[historyData[i].typeCode];
         record.store = stores.IDlist[(historyData[i].storeID)].name;
         if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
         tmp.push(record);
