@@ -22,8 +22,8 @@ router.all('/:id', function(req, res) {
 });
 
 router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
-	if (typeof dbStore.status)
-		next(dbStore);
+	if (dbStore.status)
+		return next(dbStore);
 	var key = req.headers['userapikey'];
 	if (typeof key === 'undefined' || typeof key === null){
 		debug(req.headers);
@@ -42,8 +42,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	}
 	var id = req.params.id;
 	validateRequest(req, res, function(dbUser) {
-		if (typeof dbUser.status)
-			next(dbUser);
+		if (dbUser.status)
+			return next(dbUser);
 		process.nextTick(function() {
 		    Container.findOne({ 'container.ID' : id }, function(err, container) {
 		        if (err)
@@ -91,8 +91,8 @@ router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 });
 
 router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
-	if (typeof dbStore.status)
-		next(dbStore);
+	if (dbStore.status)
+		return next(dbStore);
 	if (dbStore.role.typeCode != "clerk"){
 		res.status(401).json({
 	      "type": "borrowContainerMessage",

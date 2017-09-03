@@ -78,7 +78,7 @@ app.use(function(err, req, res, next) {
   if (typeof err.status === 'undefined'){
     debugError(err.message);
     res.status(500);
-    res.json({type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req)});
+    res.json({type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers)});
   } else {
     res.status(err.status);
     res.json({type: 'globalError', message: err.message});

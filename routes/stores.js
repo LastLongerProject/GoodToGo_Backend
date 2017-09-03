@@ -24,8 +24,8 @@ router.get('/list', function(req, res, next) {
 });
 
 router.get('/status', validateRequest, function(dbStore, req, res, next) {
-	if (typeof dbStore.status)
-		next(dbStore);
+	if (dbStore.status)
+		return next(dbStore);
 	var resJson = {
 		containers : [
 			{
@@ -71,8 +71,8 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
 });
 
 router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
-	if (typeof dbStore.status)
-		next(dbStore);
+	if (dbStore.status)
+		return next(dbStore);
 	var id = req.params.id;
 	process.nextTick(function() {
 		User.findOne({ 'user.phone' : new RegExp( id.toString() +'$', "i") }, function(err, user) {

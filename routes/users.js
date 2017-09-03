@@ -74,8 +74,8 @@ router.post('/modifypassword', function(req, res, next) {
 });
 
 router.get('/data', validateRequest, function(dbUser, req, res, next) {
-    if (typeof dbUser.status)
-        next(dbUser);
+    if (dbUser.status)
+        return next(dbUser);
     var tmp = [];
     var historyData = dbUser.role.customer.history;
     var recordCollection = {
