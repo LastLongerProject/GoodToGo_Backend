@@ -9,6 +9,7 @@ var passport = require('passport');
 var compression = require('compression');
 var debug = require('debug')('goodtogo_backend:app');
 var debugError = require('debug')('goodtogo_backend:appERR');
+var redis = require('redis');
 
 var index = require('./routes/index');
 var loggingDefault = require('./routes/loggingDefault');
@@ -53,10 +54,17 @@ debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
 mongoose.connect(config.dbUrl,config.dbOptions, function(err){
   if (err) next(err);
-  debug('DB connect succeed');
+  debug('mongoDB connect succeed');
 });
 require('./models/userQuery'); // pass passport for configuration
 
+// redis.createClient(RDS_PORT,RDS_HOST,RDS_OPTS)
+/*
+redis.createClient(6379, config.reditUrl, {}).on('ready',function(err){
+  if (err) next(err);
+  debug('redisDB create succeed');
+});
+*/
 app.all('/*', loggingDefault);
 
 // app.use('/', index);

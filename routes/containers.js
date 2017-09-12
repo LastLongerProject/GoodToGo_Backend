@@ -21,7 +21,7 @@ router.all('/:id', function(req, res) {
     res.end();
 });
 
-router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
+router.get('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	if (dbStore.status)
 		return next(dbStore);
 	var key = req.headers['userapikey'];
@@ -90,7 +90,7 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
 	} , key);
 });
 
-router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
+router.get('/return/:id', validateRequest, function(dbStore, req, res, next) {
 	if (dbStore.status)
 		return next(dbStore);
 	if (dbStore.role.typeCode != "clerk"){

@@ -29,6 +29,7 @@
     "nodemon": "^1.11.0",
     "passport": "^0.4.0",
     "passport-custom": "^1.0.5",
+    "redis": "^2.8.0",
     "serve-favicon": "~2.4.3",
     "universal-analytics": "^0.4.15"
   },
