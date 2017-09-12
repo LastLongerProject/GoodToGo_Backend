@@ -15,6 +15,7 @@ var loggingDefault = require('./routes/loggingDefault');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
 var containers = require('./routes/containers');
+var containers = require('./routes/images');
 var config = require('./config/config');
 
 var app = express();
@@ -43,7 +44,7 @@ app.use(logger('short'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
@@ -58,11 +59,11 @@ require('./models/userQuery'); // pass passport for configuration
 
 app.all('/*', loggingDefault);
 
-app.use('/', index);
+// app.use('/', index);
 app.use('/stores', stores);
-app.use('/getStores', function(req, res){debug("Redirect to store.");res.writeHead(301,{Location: 'https://app.goodtogo.tw/stores/list'});res.end();});
 app.use('/users', users);
 app.use('/containers', containers);
+app.use('/images', images);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
