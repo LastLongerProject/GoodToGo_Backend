@@ -113,6 +113,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         tmp.push(record);
     }
     recordCollection.data = tmp;
+    console.log(recordCollection);
     res.json(recordCollection);
 });
 
