@@ -105,6 +105,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
             str = "0" + str;
         }
         record.container = '#' + str;
+        console.log(historyData[i].time);
         record.time = historyData[i].time;
         record.returned = historyData[i].returned;
         record.type = type.type[historyData[i].typeCode];
