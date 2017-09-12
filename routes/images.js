@@ -11,7 +11,7 @@ router.get('/:id', function(req, res) {
     fs.readFile('./assets/images/' + id + '.jpg', function(err, data) {
 	    res.writeHead(200, {'Content-Type': 'image/jpeg'});
 	    res.end(data);
-	}
+	});
 });
 
 module.exports = router;

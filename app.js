@@ -15,7 +15,7 @@ var loggingDefault = require('./routes/loggingDefault');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
 var containers = require('./routes/containers');
-var containers = require('./routes/images');
+var images = require('./routes/images');
 var config = require('./config/config');
 
 var app = express();
