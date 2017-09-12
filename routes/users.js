@@ -76,7 +76,8 @@ router.post('/modifypassword', function(req, res, next) {
 router.get('/data', validateRequest, function(dbUser, req, res, next) {
     if (dbUser.status)
         return next(dbUser);
-    var tmp = [];
+    var returned = [];
+    var inUsed = [];
     var historyData = dbUser.role.customer.history;
     var recordCollection = {
         container : [
@@ -110,9 +111,12 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         record.type = type.type[historyData[i].typeCode];
         record.store = stores.IDlist[(historyData[i].storeID)].name;
         if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
-        tmp.push(record);
+        if (historyData[i].returned === true) returned.unshift(record); else inUsed.unshift(record);
     }
-    recordCollection.data = tmp;
+    recordCollection.data = inUsed;
+    inUsed.forEach(function(data){
+        recordCollection.data.push(data);
+    });
     res.json(recordCollection);
 });
 
