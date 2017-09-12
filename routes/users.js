@@ -114,7 +114,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         if (historyData[i].returned === true) returned.unshift(record); else inUsed.unshift(record);
     }
     recordCollection.data = inUsed;
-    inUsed.forEach(function(data){
+    returned.forEach(function(data){
         recordCollection.data.push(data);
     });
     res.json(recordCollection);
