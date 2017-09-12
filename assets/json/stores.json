@@ -3,7 +3,7 @@
 	"shop_data": [
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/01.jpg",
+				"img_src": "https://app.goodtogo.tw/images/01",
 				"img_version": 1
 			},
 			"name": "正興咖啡館",
@@ -101,7 +101,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/02.jpg",
+				"img_src": "https://app.goodtogo.tw/images/02",
 				"img_version": 1
 			},
 			"name": "布萊恩紅茶",
@@ -195,7 +195,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/03.jpg",
+				"img_src": "https://app.goodtogo.tw/images/03",
 				"img_version": 0
 			},
 			"name": "N23°樂沏",
@@ -289,7 +289,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/04.jpg",
+				"img_src": "https://app.goodtogo.tw/images/04",
 				"img_version": 0
 			},
 			"name": "彩虹來了",
@@ -363,7 +363,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/05.jpg",
+				"img_src": "https://app.goodtogo.tw/images/05",
 				"img_version": 0
 			},
 			"name": "My Way",
@@ -457,7 +457,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/06.jpg",
+				"img_src": "https://app.goodtogo.tw/images/06",
 				"img_version": 0
 			},
 			"name": "神榕147",
@@ -543,7 +543,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/07.jpg",
+				"img_src": "https://app.goodtogo.tw/images/07",
 				"img_version": 0
 			},
 			"name": "未艾公寓",
@@ -606,7 +606,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/08.jpg",
+				"img_src": "https://app.goodtogo.tw/images/08",
 				"img_version": 0
 			},
 			"name": "有方公寓",
@@ -669,7 +669,7 @@
 		},
 		{
 			"img_info": {
-				"img_src": "https://app.goodtogo.tw/images/09.jpg",
+				"img_src": "https://app.goodtogo.tw/images/09",
 				"img_version": 0
 			},
 			"name": "初心地球社",
