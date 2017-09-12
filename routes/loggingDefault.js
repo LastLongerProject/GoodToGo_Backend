@@ -5,6 +5,14 @@ var logRed = require('../models/loggingQuery').redirect;
 
 var passLogging = false;
 
+router.all('/images/:id', function(req, res, next){
+	passLogging = true;
+	logRed(req, res, function(err){
+		if (err) return next(err);
+		next();
+	});
+});
+
 router.all('/containers/:id', function(req, res, next){
 	passLogging = true;
 	logRed(req, res, function(err){
