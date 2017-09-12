@@ -4,7 +4,7 @@
 		{
 			"img_info": {
 				"img_src": "https://app.goodtogo.tw/images/01.jpg",
-				"img_version": 0
+				"img_version": 1
 			},
 			"name": "正興咖啡館",
 			"opening_hours": [
@@ -102,7 +102,7 @@
 		{
 			"img_info": {
 				"img_src": "https://app.goodtogo.tw/images/02.jpg",
-				"img_version": 0
+				"img_version": 1
 			},
 			"name": "布萊恩紅茶",
 			"opening_hours": [
