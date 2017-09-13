@@ -59,7 +59,17 @@ mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
 });
 require('./models/userQuery'); // pass passport for configuration
 
-redis.createClient(6379, config.redisUrl, {}).on('ready', function(err) {
+var RDS_PORT = 6379, //端口号
+    RDS_HOST = config.redisUrl, //服务器IP
+    RDS_PWD = config.redisPass,
+    RDS_OPTS = {}, //设置项
+    client = redis.createClient(RDS_PORT, RDS_HOST, RDS_OPTS);
+
+client.auth(RDS_PWD, function() {
+    debug('redisDB auth succeed');
+});
+
+client.on('ready', function(err) {
     if (err) next(err);
     debug('redisDB connect succeed');
 });
