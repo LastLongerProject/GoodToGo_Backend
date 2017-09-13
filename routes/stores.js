@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var fs = require("fs");
+var crc32 = require('buffer-crc32');
 var keys = require('../config/keys');
 var jwt = require('jwt-simple');
 
@@ -8,6 +9,7 @@ var debug = require('debug')('goodtogo_backend:stores');
 var validateRequest = require('../models/validateRequest');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
+var Store = require('../models/DB/storeDB');
 
 var type;
 fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
@@ -15,8 +17,18 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     type = JSON.parse(data);
 });
 
+function wetag(body) {
+    if (body.length === 0) {
+        // fast-path empty body
+        return 'W/"0-0"'
+    }
+    var buf = Buffer.from(body);
+    var len = buf.length
+    return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"'
+};
+
 router.get('/list', function(req, res, next) {
-    var obj;
+    /*var obj;
     fs.readFile("./assets/json/stores.json", 'utf8', function(err, data) {
         if (err) throw err;
         obj = JSON.parse(data);
@@ -24,6 +36,35 @@ router.get('/list', function(req, res, next) {
         var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
         var token = jwt.encode(payload, keys.serverSecretKey());
         res.json(obj);
+    });*/
+    var jsonData = {
+        title: "Stores list",
+        contract_code_explanation: {
+            0: "Only borrowable and returnable",
+            1: "Only returnable",
+            2: "Borrowable and returnable"
+        }
+    }
+    var tmpArr = [];
+    process.nextTick(function() {
+        Store.find().exec(function(err, storeList) {
+            if (err) next(err);
+            var date = new Date();
+            var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+            var token = jwt.encode(payload, keys.serverSecretKey());
+            res.set('etag', wetag(storeList));
+            for (var i = 0; i < storeList.length; i++) {
+                if (storeList[i].active) {
+                    storeList[i]._id = undefined;
+                    storeList[i].__v = undefined;
+                    storeList[i].active = undefined;
+                    storeList[i].img_info.img_src += ("/" + token);
+                    tmpArr.push(storeList[i]);
+                }
+            }
+            jsonData["shop_data"] = tmpArr;
+            res.json(jsonData)
+        });
     });
 });
 
