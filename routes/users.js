@@ -24,9 +24,8 @@ router.use('/signup', signup);
 router.post('/login', function(req, res, next) {
     req.app.get('passport').authenticate('local-login', function(err, user, info) {
         if (err) {
-            return next(err); // will generate a 500 error
+            return next(err);
         }
-        // Generate a JSON response reflecting authentication status
         if (!user) {
             return res.status(401).json(info);
         }
@@ -61,9 +60,8 @@ router.post('/modifypassword', function(req, res, next) {
     req._res = res;
     req.app.get('passport').authenticate('local-chanpass', function(err, user, info) {
         if (err) {
-            return next(err); // will generate a 500 error
+            return next(err);
         }
-        // Generate a JSON response reflecting authentication status
         if (!user) {
             return res.status(403).json(info);
         }
@@ -92,27 +90,6 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
             data.icon[key] = data.icon[key] + "/" + token;
         }
     });
-    // var historyData = dbUser.role.customer.history;
-    // for (i = 0; i < historyData.length; i++) {
-    //     var record = {};
-    //     if (historyData[i].returned === false) recordCollection.usingAmount++;
-    //     var str = historyData[i].containerID.toString();
-    //     for (j = 0; j <= 3 - str.length; j++) {
-    //         str = "0" + str;
-    //     }
-    //     record.container = '#' + str;
-    //     record.time = historyData[i].time;
-    //     record.returned = historyData[i].returned;
-    //     record.type = type.containers[historyData[i].typeCode].name;
-    //     record.store = stores.IDlist[(historyData[i].storeID)].name;
-    //     if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
-    //     if (historyData[i].returned === true) returned.unshift(record);
-    //     else inUsed.unshift(record);
-    // }
-    // recordCollection.data = inUsed;
-    // returned.forEach(function(data) {
-    //     recordCollection.data.push(data);
-    // });
     process.nextTick(function() {
         Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
             rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
@@ -136,12 +113,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
                     var j = inUsed.length - 1;
-                    console.log(i + ":" + returnList[i]);
-                    console.log(j + ":" + JSON.stringify(inUsed[j]));
-                    while (inUsed[j].containerCode !== returnList[i].container.id) {
-                        j--;
-                        console.log(j + ":" + JSON.stringify(inUsed[j]));
-                    }
+                    while (inUsed[j].containerCode !== returnList[i].container.id) { j--; }
                     inUsed[j].returned = true;
                     inUsed[j].returnTime = returnList[i].tradeTime;
                     returned.push(inUsed[j]);
