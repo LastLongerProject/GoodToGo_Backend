@@ -27,7 +27,11 @@ var userSchema = mongoose.Schema({
         }
     },
     registerTime: { type: Date, default: Date.now },
-    active: { type: Boolean, default: false }
+    active: { type: Boolean, default: false },
+    purchase: [{
+        purchaseTime: { type: Date, default: Date.now },
+        expiryTime: Date
+    }]
 });
 
 userSchema.index({ "user.phone": 1 });

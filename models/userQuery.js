@@ -33,6 +33,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     newUser.user.password = newUser.generateHash(password);
                     newUser.user.apiKey = returnedApikey;
                     newUser.user.secretKey = keys.secretKey();
+                    newUser.active = req.body['active'];
                     if (typeof role === 'undefined') {
                         newUser.role.typeCode = 'customer';
                     } else if (role.typeCode === 'clerk') {

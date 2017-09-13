@@ -33,9 +33,7 @@ module.exports = function(req, res, next, targetKey = null) {
                 return res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
             }
             if (targetKey === null) {
-                if (!dbUser.active) {
-                    return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
-                }
+                if (!dbUser.active) return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
                 var decoded;
                 try {
                     decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
