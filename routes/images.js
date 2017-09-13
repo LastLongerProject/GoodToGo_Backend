@@ -3,7 +3,7 @@ var router = express.Router();
 var fs = require('fs');
 
 var validateToken = require('../models/validateToken');
-/*
+
 router.get('/:id', function(req, res, next) {
     var id = req.params.id;
     var s = fs.createReadStream('./assets/images/' + id + '.jpg');
@@ -12,7 +12,7 @@ router.get('/:id', function(req, res, next) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
+        res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
 
@@ -24,10 +24,10 @@ router.get('/icon/:id', function(req, res, next) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
+        res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
-*/
+/*
 router.get('/:id', validateToken, function(err, req, res, next) {
     if (err.status) return next(err);
     var id = req.params.id;
@@ -37,7 +37,7 @@ router.get('/:id', validateToken, function(err, req, res, next) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
+        res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
 
@@ -50,8 +50,8 @@ router.get('/icon/:id', validateToken, function(err, req, res, next) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
+        res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
-
+*/
 module.exports = router;
