@@ -55,11 +55,23 @@ router.get('/list', function(req, res, next) {
             res.set('etag', wetag(storeList));
             for (var i = 0; i < storeList.length; i++) {
                 if (storeList[i].active) {
-                    storeList[i]._id = undefined;
-                    storeList[i].__v = undefined;
-                    storeList[i].active = undefined;
+                    var tmpOpening = [];
+                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                        tmpOpening.push({
+                            close: storeList[i].opening_hours[j].close,
+                            open: storeList[i].opening_hours[j].open
+                        })
                     storeList[i].img_info.img_src += ("/" + token);
-                    tmpArr.push(storeList[i]);
+                    tmpArr.push({
+                        id: storeList[i].id,
+                        name: storeList[i].name,
+                        img_info: storeList[i].img_info,
+                        opening_hours: tmpOpening,
+                        contract: storeList[i].contract,
+                        location: storeList[i].location,
+                        address: storeList[i].address,
+                        type: storeList[i].type
+                    });
                 }
             }
             jsonData["shop_data"] = tmpArr;
