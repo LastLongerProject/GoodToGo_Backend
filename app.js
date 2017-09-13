@@ -46,7 +46,7 @@ app.use(logger(':remote-addr :remote-user :method :url HTTP/:http-version :statu
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
@@ -61,7 +61,7 @@ require('./models/userQuery'); // pass passport for configuration
 
 redis.createClient(6379, config.redisUrl, {}).on('ready', function(err) {
     if (err) next(err);
-    debug('redisDB create succeed');
+    debug('redisDB connect succeed');
 });
 
 app.all('/*', loggingDefault);
