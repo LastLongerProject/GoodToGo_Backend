@@ -23,7 +23,7 @@ router.get('/list', function(req, res, next) {
         obj = JSON.parse(data);
         var date = new Date();
         var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-        res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
+        var token = jwt.encode(payload, keys.serverSecretKey());
         res.json(obj);
     });
 });
@@ -31,6 +31,8 @@ router.get('/list', function(req, res, next) {
 router.get('/status', validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status)
         return next(dbStore);
+    if (dbStore.role.typeCode !== 'clerk')
+        return res.status(403).json({ type: 'storeStatus', message: 'Not Authorized' });
     var resJson = {
         containers: type.containers,
         todayData: {
@@ -38,8 +40,14 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
             return: 1
         }
     };
-    resJson.containers.forEach(function(element) {
-        element.amount = 0;
+    var date = new Date();
+    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+    var token = jwt.encode(payload, keys.serverSecretKey());
+    resJson.containers.forEach(function(data) {
+        data.amount = 0;
+        for (var key in data.icon) {
+            data.icon[key] = data.icon[key] + "/" + token;
+        }
     });
     process.nextTick(function() {
         Container.find({ 'container.conbineTo': dbStore.user.phone }, function(err, container) {
@@ -52,9 +60,6 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
                     else if (container[i].container.typeCode === 1) resJson['containers'][1]['amount']++;
                 }
             }
-            var date = new Date();
-            var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-            res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
             res.json(resJson);
         });
     });

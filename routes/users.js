@@ -85,6 +85,14 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         containers: type.containers,
         usingAmount: 0
     };
+    var date = new Date();
+    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+    var token = jwt.encode(payload, keys.serverSecretKey());
+    recordCollection.containers.forEach(function(data) {
+        for (var key in data.icon) {
+            data.icon[key] = data.icon[key] + "/" + token;
+        }
+    });
     for (i = 0; i < historyData.length; i++) {
         var record = {};
         if (historyData[i].returned === false) recordCollection.usingAmount++;
@@ -105,9 +113,6 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
     returned.forEach(function(data) {
         recordCollection.data.push(data);
     });
-    var date = new Date();
-    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-    res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
     res.json(recordCollection);
 });
 

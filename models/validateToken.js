@@ -3,9 +3,7 @@ var logging = require('../models/loggingQuery').imageLog;
 var loggingERR = require('../models/loggingQuery').logERR;
 var keys = require('../config/keys');
 
-module.exports = function(req, res, next) {
-    var jwtToken = req.headers['authorization'];
-
+module.exports = function(req, res, jwtToken, next) {
     if (jwtToken) {
         var decoded;
         try {
