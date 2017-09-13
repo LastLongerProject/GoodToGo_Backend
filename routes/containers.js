@@ -49,7 +49,9 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
                 if (err)
                     return next(err);
                 if (!container)
-                    return res.status(404).json({ 'type': 'borrowContainerMessage', 'message': 'No container found.' });
+                    return res.status(404).json({ type: 'borrowContainerMessage', message: 'No container found.' });
+                if (!container.active)
+                    return res.status(403).json({ type: 'borrowContainerMessage', message: 'Container not available.' });
                 if (container.statusCode !== 1 && container.statusCode !== 0) {
                     debug('Container conflict. Data : ' + JSON.stringify(container.container) +
                         ' StoreID : ' + dbStore.role.clerk.storeID.toString() +
@@ -107,6 +109,8 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
                 return next(err);
             if (!container)
                 return res.status(404).json({ type: 'returnContainerMessage', message: 'No container found.' });
+            if (!container.active)
+                return res.status(500).json({ type: 'returnContainerMessage', message: 'Container not available.' });
             if (container.statusCode !== 2) {
                 return res.status(403).json({ type: 'returnContainerMessage', message: 'Container has not rented.' });
             }

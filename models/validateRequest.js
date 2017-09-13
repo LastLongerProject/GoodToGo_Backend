@@ -28,13 +28,14 @@ module.exports = function(req, res, next, targetKey = null) {
     var key = targetKey || req.headers['apikey'];
 
     if (jwtToken && key) {
-        validateUser(key, next, function(dbUser) { // The key would be the logged in user's username
+        validateUser(key, next, function(dbUser) {
             if (typeof dbUser === 'undefined' || dbUser === null) {
-                // No user with this name exists, respond back with a 401
-                res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
-                return;
+                return res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
             }
             if (targetKey === null) {
+                if (!dbUser.active) {
+                    return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
+                }
                 var decoded;
                 try {
                     decoded = jwt.decode(jwtToken, dbUser.user.secretKey);

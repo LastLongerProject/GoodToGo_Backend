@@ -54,9 +54,11 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
                 return next(err);
             if (typeof container !== 'undefined') {
                 for (i in container) {
-                    if (container[i].statusCode !== 1) debug("Something Wrong :" + container[i]);
-                    else if (container[i].typeCode === 0) resJson['containers'][0]['amount']++;
-                    else if (container[i].typeCode === 1) resJson['containers'][1]['amount']++;
+                    if (container[i].active) {
+                        if (container[i].statusCode !== 1) debug("Something Wrong :" + container[i]);
+                        else if (container[i].typeCode === 0) resJson['containers'][0]['amount']++;
+                        else if (container[i].typeCode === 1) resJson['containers'][1]['amount']++;
+                    }
                 }
             }
             res.json(resJson);
