@@ -48,7 +48,7 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
         if (!dbUser) return res.status(500).json({ type: 'borrowContainerMessage', message: 'No user found' });
         else if (!dbUser.active) return res.status(401).json({ type: 'borrowContainerMessage', message: 'User has Banned' });
         process.nextTick(function() {
-            Container.findOne({ 'container.ID': id }, function(err, container) {
+            Container.findOne({ 'ID': id }, function(err, container) {
                 if (err)
                     return next(err);
                 if (!container)
@@ -113,7 +113,7 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
     // if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(function() {
-        Container.findOne({ 'container.ID': id }, function(err, container) {
+        Container.findOne({ 'ID': id }, function(err, container) {
             if (err)
                 return next(err);
             if (!container)
@@ -131,7 +131,7 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
                     return res.status(500).json({ type: 'returnContainerMessage', message: 'No user found.' });
                 }
                 newTrade = new Trade();
-                newTrade.tradeTime = res._payload.orderTime;
+                newTrade.tradeTime = res._payload.orderTime || Date.now();
                 newTrade.tradeType = {
                     action: "Return",
                     oriState: 2,

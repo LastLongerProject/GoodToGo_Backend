@@ -10,6 +10,7 @@ var validateRequest = require('../models/validateRequest');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
+var Trade = require('../models/DB/tradeDB');
 
 var type;
 fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
@@ -19,7 +20,6 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
 
 function wetag(body) {
     if (body.length === 0) {
-        // fast-path empty body
         return 'W/"0-0"'
     }
     var buf = Buffer.from(body);
@@ -27,16 +27,14 @@ function wetag(body) {
     return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"'
 };
 
+function dateCheckpoint(checkpoint) {
+    var dateNow = new Date();
+    var date = new Date(Date.UTC(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, -8, 0, 0, 0));
+    if (checkpoint !== 0 && checkpoint !== 1) { return Date.now(); }
+    return date;
+};
+
 router.get('/list', function(req, res, next) {
-    /*var obj;
-    fs.readFile("./assets/json/stores.json", 'utf8', function(err, data) {
-        if (err) throw err;
-        obj = JSON.parse(data);
-        var date = new Date();
-        var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-        var token = jwt.encode(payload, keys.serverSecretKey());
-        res.json(obj);
-    });*/
     var jsonData = {
         title: "Stores list",
         contract_code_explanation: {
@@ -85,36 +83,51 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
         return next(dbStore);
     if (dbStore.role.typeCode !== 'clerk')
         return res.status(403).json({ type: 'storeStatus', message: 'Not Authorized' });
-    var resJson = {
-        containers: type.containers,
-        todayData: {
-            rent: 1,
-            return: 1
-        }
-    };
+    var tmpArr = [];
     var date = new Date();
     var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
     var token = jwt.encode(payload, keys.serverSecretKey());
-    resJson.containers.forEach(function(data) {
-        data.amount = 2;
-        for (var key in data.icon) {
-            data.icon[key] = data.icon[key] + "/" + token;
+    for (var i = 0; i < type.containers.length; i++) {
+        var tmpIcon = {};
+        for (var key in type.containers[i].icon) {
+            tmpIcon[key] = type.containers[i].icon[key] + "/" + token;
         }
-    });
+        tmpArr.push({
+            typeCode: type.containers[i].typeCode,
+            name: type.containers[i].name,
+            version: type.containers[i].version,
+            icon: tmpIcon
+        });
+    }
+    var resJson = {
+        containers: tmpArr,
+        todayData: {
+            rent: 0,
+            return: 0
+        }
+    };
     process.nextTick(function() {
-        Container.find({ 'container.conbineTo': dbStore.role.clerk.storeID }, function(err, container) {
-            if (err)
-                return next(err);
-            if (typeof container !== 'undefined') {
-                for (i in container) {
-                    if (container[i].active) {
-                        if (container[i].statusCode !== 1) debug("Something Wrong :" + container[i]);
-                        else if (container[i].typeCode === 0) resJson['containers'][0]['amount']++;
-                        else if (container[i].typeCode === 1) resJson['containers'][1]['amount']++;
+        Container.find({ 'container.conbineTo': dbStore.role.clerk.storeID }, function(err, containers) {
+            if (err) return next(err);
+            Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
+                if (err) return next(err);
+                if (typeof containers !== 'undefined') {
+                    for (var i in containers) {
+                        if (containers[i].active) {
+                            if (containers[i].statusCode !== 1) debug("Something Wrong :" + containers[i]);
+                            else if (containers[i].typeCode === 0) resJson['containers'][0]['amount']++;
+                            else if (containers[i].typeCode === 1) resJson['containers'][1]['amount']++;
+                        }
                     }
                 }
-            }
-            res.json(resJson);
+                if (typeof trades !== 'undefined') {
+                    for (var i in trades) {
+                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.clerk.storeID) resJson['todayData']['rent']++;
+                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.clerk.storeID) resJson['todayData']['return']++;
+                    }
+                }
+                res.json(resJson);
+            });
         });
     });
 });
