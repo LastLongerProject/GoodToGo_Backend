@@ -44,6 +44,7 @@ module.exports = function(req, res, next, targetKey = null) {
                     } else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
                         return res.status(400).json({ type: 'validatingUser', message: 'Token Expired' });
                     }
+                    res._payload = decoded;
                     validateURL(req, res, next, dbUser);
                 });
             } else {

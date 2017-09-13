@@ -2,29 +2,28 @@ var mongoose = require('mongoose');
 
 // define the schema for our user model
 var userSchema = mongoose.Schema({
-    tradeID: Number,
     tradeTime: Date,
     tradeType: {
         action: String,
-        oriState: String,
-        newState: String
+        oriState: Number,
+        newState: Number
     },
-    oriUser: {
-        type: String,
-        storeID: Number,
-        phone: String
-    },
-    newUser: {
-        type: String,
-        storeID: Number,
-        phone: String
-    },
-    containers: [{
+    oriUser: Object,
+    // {
+    //     type: String,
+    //     storeID: Number,
+    //     phone: String
+    // }
+    newUser: Object,
+    // {
+    //     type: String,
+    //     storeID: Number,
+    //     phone: String
+    // }
+    container: {
         id: Number,
-        typeCode: Number,
-        statusCode: Number,
-        usedCounter: Number
-    }],
+        typeCode: Number
+    },
     logTime: { type: Date, default: Date.now }
 });
 

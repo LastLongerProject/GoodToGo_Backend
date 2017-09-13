@@ -3,9 +3,11 @@ var router = express.Router();
 var fs = require('fs');
 
 var debug = require('debug')('goodtogo_backend:containers');
-var Container = require('../models/DB/containerDB'); // load up the user model
-var User = require('../models/DB/userDB'); // load up the user model
+var Container = require('../models/DB/containerDB');
+var Trade = require('../models/DB/tradeDB');
+var User = require('../models/DB/userDB');
 var validateRequest = require('../models/validateRequest');
+var validateUser = require('../config/keys').validateUser;
 
 var status = ['cleaned', 'readyToUse', 'borrowed', 'returned', 'notClean'];
 
@@ -40,10 +42,11 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
         });
         return;
     }
+    // if (!res._payload.orderTime) return res.status(401).json({ "type": "borrowContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
-    validateRequest(req, res, function(dbUser) {
-        if (dbUser.status)
-            return next(dbUser);
+    validateUser(key, next, function(dbUser) {
+        if (!dbUser) return res.status(500).json({ type: 'borrowContainerMessage', message: 'No user found' });
+        else if (!dbUser.active) return res.status(401).json({ type: 'borrowContainerMessage', message: 'User has Banned' });
         process.nextTick(function() {
             Container.findOne({ 'container.ID': id }, function(err, container) {
                 if (err)
@@ -67,29 +70,34 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
                 container.conbineTo = dbUser.user.phone;
                 container.save(function(err, updatedContainer) {
                     if (err) return next(err);
-                    dbUser.role.customer.history.push({
-                        'containerID': id,
-                        'typeCode': container.typeCode,
-                        'storeID': dbStore.role.clerk.storeID,
-                        'returned': false
-                    });
-                    dbUser.save(function(err, updatedUser) {
+                    newTrade = new Trade();
+                    newTrade.tradeTime = res._payload.orderTime || Date.now();
+                    newTrade.tradeType = {
+                        action: "Rent",
+                        oriState: 1,
+                        newState: 2
+                    };
+                    newTrade.oriUser = {
+                        type: dbStore.role.typeCode,
+                        storeID: dbStore.role.clerk.storeID,
+                        phone: dbStore.user.phone
+                    };
+                    newTrade.newUser = {
+                        type: dbUser.role.typeCode,
+                        phone: dbUser.user.phone
+                    };
+                    newTrade.container = {
+                        id: container.ID,
+                        typeCode: container.typeCode
+                    };
+                    newTrade.save(function(err) {
                         if (err) return next(err);
-                        // dbStore.role.clerk.history.push({
-                        //     'containerID': id,
-                        //     'typeCode': container.typeCode,
-                        //     'customerPhone': dbUser.user.phone,
-                        //     'action': 'rent'
-                        // });
-                        // dbStore.save(function(err, updatedStore) {
-                        //     if (err) return next(err);
                         res.status(200).json({ type: 'borrowContainerMessage', message: 'Borrow succeeded.' });
-                        // });
                     });
                 });
             });
         });
-    }, key);
+    });
 });
 
 router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
@@ -97,11 +105,12 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
         return next(dbStore);
     if (dbStore.role.typeCode != "clerk") {
         res.status(401).json({
-            "type": "borrowContainerMessage",
+            "type": "returnContainerMessage",
             "message": "Invalid Role"
         });
         return;
     }
+    // if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(function() {
         Container.findOne({ 'container.ID': id }, function(err, container) {
@@ -115,38 +124,39 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
                 return res.status(403).json({ type: 'returnContainerMessage', message: 'Container has not rented.' });
             }
             User.findOne({ 'user.phone': container.conbineTo }, function(err, dbUser) {
-                if (err)
-                    return next(err);
+                if (err) return next(err);
                 if (!dbUser) {
                     debug('Return unexpect err. Data : ' + JSON.stringify(container.container) +
                         ' ID in uri : ' + id);
                     return res.status(500).json({ type: 'returnContainerMessage', message: 'No user found.' });
                 }
-                var historyData = dbUser.role.customer.history;
-                for (i = 0; i < historyData.length; i++) {
-                    if (historyData[i].containerID.toString() === id && historyData[i].returned === false) {
-                        historyData[i].returned = true;
-                        historyData[i].returnTime = Date.now();
-                        break;
-                    }
-                }
-                dbUser.role.customer.history = historyData;
-                dbUser.save(function(err, updateduser) {
-                    if (err) throw err;
+                newTrade = new Trade();
+                newTrade.tradeTime = res._payload.orderTime;
+                newTrade.tradeType = {
+                    action: "Return",
+                    oriState: 2,
+                    newState: 1
+                };
+                newTrade.oriUser = {
+                    type: dbUser.role.typeCode,
+                    phone: dbUser.user.phone
+                };
+                newTrade.newUser = {
+                    type: dbStore.role.typeCode,
+                    storeID: dbStore.role.clerk.storeID,
+                    phone: dbStore.user.phone
+                };
+                newTrade.container = {
+                    id: container.ID,
+                    typeCode: container.typeCode
+                };
+                newTrade.save(function(err) {
+                    if (err) return next(err);
                     container.statusCode = 1;
                     container.conbineTo = null;
                     container.save(function(err, updatedContainer) {
-                        if (err) throw err;
-                        // dbStore.role.clerk.history.push({
-                        //     'containerID': id,
-                        //     'typeCode': container.typeCode,
-                        //     'customerPhone': dbUser.user.phone,
-                        //     'action': 'return'
-                        // });
-                        // dbStore.save(function(err, updatedStore) {
-                        //     if (err) return next(err);
+                        if (err) return next(err);
                         res.status(200).json({ type: 'returnContainerMessage', message: 'Return succeeded' });
-                        // });
                     });
                 });
             });

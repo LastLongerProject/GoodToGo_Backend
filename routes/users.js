@@ -1,10 +1,11 @@
 var express = require('express');
 var router = express.Router();
-var validateRequest = require('../models/validateRequest');
+var jwt = require('jwt-simple');
 var fs = require('fs');
+var validateRequest = require('../models/validateRequest');
 var signup = require('../routes/signup');
 var keys = require('../config/keys');
-var jwt = require('jwt-simple');
+var Trade = require('../models/DB/tradeDB');
 
 var stores;
 fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function(err, data) {
@@ -80,10 +81,8 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         return next(dbUser);
     var returned = [];
     var inUsed = [];
-    var historyData = dbUser.role.customer.history;
     var recordCollection = {
-        containers: type.containers,
-        usingAmount: 0
+        containers: type.containers
     };
     var date = new Date();
     var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
@@ -93,27 +92,69 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
             data.icon[key] = data.icon[key] + "/" + token;
         }
     });
-    for (i = 0; i < historyData.length; i++) {
-        var record = {};
-        if (historyData[i].returned === false) recordCollection.usingAmount++;
-        var str = historyData[i].containerID.toString();
-        for (j = 0; j <= 3 - str.length; j++) {
-            str = "0" + str;
-        }
-        record.container = '#' + str;
-        record.time = historyData[i].time;
-        record.returned = historyData[i].returned;
-        record.type = type.containers[historyData[i].typeCode].name;
-        record.store = stores.IDlist[(historyData[i].storeID)].name;
-        if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
-        if (historyData[i].returned === true) returned.unshift(record);
-        else inUsed.unshift(record);
-    }
-    recordCollection.data = inUsed;
-    returned.forEach(function(data) {
-        recordCollection.data.push(data);
+    // var historyData = dbUser.role.customer.history;
+    // for (i = 0; i < historyData.length; i++) {
+    //     var record = {};
+    //     if (historyData[i].returned === false) recordCollection.usingAmount++;
+    //     var str = historyData[i].containerID.toString();
+    //     for (j = 0; j <= 3 - str.length; j++) {
+    //         str = "0" + str;
+    //     }
+    //     record.container = '#' + str;
+    //     record.time = historyData[i].time;
+    //     record.returned = historyData[i].returned;
+    //     record.type = type.containers[historyData[i].typeCode].name;
+    //     record.store = stores.IDlist[(historyData[i].storeID)].name;
+    //     if (typeof historyData[i].returnTime !== 'undefined') record.returnTime = historyData[i].returnTime;
+    //     if (historyData[i].returned === true) returned.unshift(record);
+    //     else inUsed.unshift(record);
+    // }
+    // recordCollection.data = inUsed;
+    // returned.forEach(function(data) {
+    //     recordCollection.data.push(data);
+    // });
+    process.nextTick(function() {
+        Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
+            rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+            recordCollection.usingAmount = rentList.length;
+            for (var i = 0; i < rentList.length; i++) {
+                var record = {};
+                var str = rentList[i].container.id.toString();
+                for (j = 0; j <= 3 - str.length; j++) {
+                    str = "0" + str;
+                }
+                record.container = '#' + str;
+                record.containerCode = rentList[i].container.id;
+                record.time = rentList[i].tradeTime;
+                record.type = type.containers[rentList[i].container.typeCode].name;
+                record.store = stores.IDlist[(rentList[i].oriUser.storeID)].name;
+                record.returned = false;
+                inUsed.push(record);
+            }
+            Trade.find({ "tradeType.action": "Return", "oriUser.phone": dbUser.user.phone }, function(err, returnList) {
+                returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+                recordCollection.usingAmount -= returnList.length;
+                for (var i = 0; i < returnList.length; i++) {
+                    var j = inUsed.length - 1;
+                    console.log(i + ":" + returnList[i]);
+                    console.log(j + ":" + JSON.stringify(inUsed[j]));
+                    while (inUsed[j].containerCode !== returnList[i].container.id) {
+                        j--;
+                        console.log(j + ":" + JSON.stringify(inUsed[j]));
+                    }
+                    inUsed[j].returned = true;
+                    inUsed[j].returnTime = returnList[i].tradeTime;
+                    returned.push(inUsed[j]);
+                    inUsed.splice(j, 1);
+                }
+                recordCollection.data = inUsed;
+                for (var i = 0; i < returned.length; i++) {
+                    recordCollection.data.push(returned[i]);
+                }
+                res.json(recordCollection);
+            });
+        });
     });
-    res.json(recordCollection);
 });
 
 module.exports = router;

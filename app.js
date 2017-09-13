@@ -50,6 +50,7 @@ app.use(cookieParser());
 app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
+app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
 debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
