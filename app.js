@@ -5,7 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
-var redis = require('redis');
+// var redis = require('redis');
 var passport = require('passport');
 var compression = require('compression');
 var ua = require('universal-analytics');
@@ -58,7 +58,7 @@ mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
     debug('mongoDB connect succeed');
 });
 require('./models/userQuery'); // pass passport for configuration
-
+/*
 var RDS_PORT = 6379, //端口号
     RDS_HOST = config.redisUrl, //服务器IP
     RDS_PWD = config.redisPass,
@@ -72,7 +72,7 @@ client.auth(RDS_PWD, function() {
 client.on('ready', function(err) {
     if (err) next(err);
     debug('redisDB connect succeed');
-});
+});*/
 
 app.all('/*', loggingDefault);
 

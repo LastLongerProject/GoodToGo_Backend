@@ -7,10 +7,7 @@ var passLogging = false;
 
 router.all('/images/*', function(req, res, next) {
     passLogging = true;
-    logRed(req, res, function(err) {
-        if (err) return next(err);
-        next();
-    });
+    next();
 });
 
 router.all('/containers/:id', function(req, res, next) {
@@ -21,8 +18,23 @@ router.all('/containers/:id', function(req, res, next) {
     });
 });
 
+router.all('/users/signup', function(req, res, next) {
+    passLogging = true;
+    next();
+});
+
+router.all('/users/login', function(req, res, next) {
+    passLogging = true;
+    next();
+});
+
+router.all('/stores/list', function(req, res, next) {
+    passLogging = true;
+    next();
+});
+
 router.all('/*', function(req, res, next) {
-    if ((typeof req.headers['authorization'] === 'undefined') && !passLogging) {
+    if (!passLogging) {
         passLogging = false;
         logging(req, res, function(err) {
             if (err) return next(err);
