@@ -46,7 +46,7 @@ app.use(logger(':remote-addr :remote-user :method :url HTTP/:http-version :statu
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
@@ -80,7 +80,7 @@ app.all('/*', loggingDefault);
 app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
-// app.use('/images', images);
+app.use('/images', images);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
