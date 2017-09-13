@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 var fs = require("fs");
+var keys = require('../config/keys');
+var jwt = require('jwt-simple');
 
 var debug = require('debug')('goodtogo_backend:stores');
 var validateRequest = require('../models/validateRequest');
@@ -19,6 +21,9 @@ router.get('/list', function(req, res, next) {
     fs.readFile("./assets/json/stores.json", 'utf8', function(err, data) {
         if (err) throw err;
         obj = JSON.parse(data);
+        var date = new Date();
+        var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+        res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
         res.json(obj);
     });
 });

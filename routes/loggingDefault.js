@@ -4,19 +4,6 @@ var logging = require('../models/loggingQuery').withoutAuth;
 var logRed = require('../models/loggingQuery').redirect;
 
 var passLoggingWithoutAuth = true;
-/*
-router.all('/images/*', function(req, res, next) {
-    passLoggingWithoutAuth = true;
-    next();
-});*/
-/*
-router.all('/containers/:id', function(req, res, next) {
-    passLoggingWithoutAuth = true;
-    logRed(req, res, function(err) {
-        if (err) return next(err);
-        next();
-    });
-});*/
 
 router.all('/users/signup', function(req, res, next) {
     passLoggingWithoutAuth = false;
@@ -41,7 +28,6 @@ router.all('/*', function(req, res, next) {
             next();
         });
     } else {
-        // passLoggingWithoutAuth = false;
         next();
     }
 });

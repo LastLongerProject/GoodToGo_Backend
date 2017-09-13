@@ -2,10 +2,10 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 
-var debug = require('debug')('goodtogo_backend:images');
-var validateRequest = require('../models/validateRequest');
+var validateToken = require('../models/validateToken');
 
-router.get('/:id', function(req, res) {
+router.get('/:id', validateToken, function(err, req, res, next) {
+    if (err.status) return next(err);
     var id = req.params.id;
     var s = fs.createReadStream('./assets/images/' + id + '.jpg');
     s.on('open', function() {
@@ -13,12 +13,12 @@ router.get('/:id', function(req, res) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.set('Content-Type', 'text/plain');
-        res.status(404).end('Not found');
+        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
     });
 });
 
-router.get('/icon/:id', function(req, res) {
+router.get('/icon/:id', validateToken, function(err, req, res, next) {
+    if (err.status) return next(err);
     var id = req.params.id;
     var s = fs.createReadStream('./assets/images/icon/' + id + '.png');
     s.on('open', function() {
@@ -26,8 +26,7 @@ router.get('/icon/:id', function(req, res) {
         s.pipe(res);
     });
     s.on('error', function() {
-        res.set('Content-Type', 'text/plain');
-        res.status(404).end('Not found');
+        res.status(404).json({ type: 'readImgERR', message: 'Not found' });
     });
 });
 
