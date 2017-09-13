@@ -15,7 +15,6 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     type = JSON.parse(data);
 });
 
-/* GET Store list json. */
 router.get('/list', function(req, res, next) {
     var obj;
     fs.readFile("./assets/json/stores.json", 'utf8', function(err, data) {
@@ -44,20 +43,20 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
     var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
     var token = jwt.encode(payload, keys.serverSecretKey());
     resJson.containers.forEach(function(data) {
-        data.amount = 0;
+        data.amount = 2;
         for (var key in data.icon) {
             data.icon[key] = data.icon[key] + "/" + token;
         }
     });
     process.nextTick(function() {
-        Container.find({ 'container.conbineTo': dbStore.user.phone }, function(err, container) {
+        Container.find({ 'container.conbineTo': dbStore.role.clerk.storeID }, function(err, container) {
             if (err)
                 return next(err);
             if (typeof container !== 'undefined') {
                 for (i in container) {
-                    if (container[i].container.statusCode !== 1) debug("Something Wrong :" + container[i]);
-                    else if (container[i].container.typeCode === 0) resJson['containers'][0]['amount']++;
-                    else if (container[i].container.typeCode === 1) resJson['containers'][1]['amount']++;
+                    if (container[i].statusCode !== 1) debug("Something Wrong :" + container[i]);
+                    else if (container[i].typeCode === 0) resJson['containers'][0]['amount']++;
+                    else if (container[i].typeCode === 1) resJson['containers'][1]['amount']++;
                 }
             }
             res.json(resJson);
