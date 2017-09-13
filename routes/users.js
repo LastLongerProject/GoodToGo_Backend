@@ -3,6 +3,8 @@ var router = express.Router();
 var validateRequest = require('../models/validateRequest');
 var fs = require('fs');
 var signup = require('../routes/signup');
+var keys = require('../config/keys');
+var jwt = require('jwt-simple');
 
 var stores;
 fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function(err, data) {
@@ -103,6 +105,9 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
     returned.forEach(function(data) {
         recordCollection.data.push(data);
     });
+    var date = new Date();
+    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+    res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
     res.json(recordCollection);
 });
 

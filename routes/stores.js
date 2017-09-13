@@ -52,6 +52,9 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
                     else if (container[i].container.typeCode === 1) resJson['containers'][1]['amount']++;
                 }
             }
+            var date = new Date();
+            var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+            res.header('Authorization', jwt.encode(payload, keys.serverSecretKey()));
             res.json(resJson);
         });
     });
