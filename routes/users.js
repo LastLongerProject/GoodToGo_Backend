@@ -132,7 +132,10 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                 for (var i = 0; i < returned.length; i++) {
                     recordCollection.data.push(returned[i]);
                 }
-                res.json(recordCollection);
+                Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                    recordCollection.globalAmount = count;
+                    res.json(recordCollection);
+                });
             });
         });
     });

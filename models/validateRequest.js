@@ -40,7 +40,7 @@ module.exports = function(req, res, next, targetKey = null) {
                 logging(req, res, decoded, function(err) {
                     if (typeof err !== 'undefined') { err.status = 500; return next(err); } else if (typeof decoded.exp === 'undefined') {
                         return res.status(401).json({ type: 'validatingUser', message: 'Token Invalid' });
-                    } else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(7) || decoded.iat <= iatGetDate(-7)) {
+                    } else if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1)) {
                         return res.status(400).json({ type: 'validatingUser', message: 'Token Expired' });
                     }
                     res._payload = decoded;
