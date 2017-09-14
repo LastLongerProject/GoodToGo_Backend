@@ -225,7 +225,7 @@ function parseHistory(data, dataType, callback) {
             });
             tmpContainerList = [];
         }
-        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3));
+        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type.containers[aHistory.container.typeCode].name);
     }
     phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
     byOrderArr.push({
