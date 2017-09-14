@@ -1,20 +1,7 @@
 var jwt = require('jwt-simple');
-var validateUser = require('../config/keys').validateUser;
+var User = require('../models/DB/userDB'); // load up the user model
 var logging = require('../models/loggingQuery').withAuth;
 var loggingERR = require('../models/loggingQuery').logERR;
-
-function validateURL(req, res, next, dbUser) { // Authorize the user to see if s/he can access our resources
-    if (dbUser) {
-        if ((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0 || req.url.indexOf('/modifypassword') >= 0) ||
-            ((req.url.indexOf('/status') >= 0 || req.url.indexOf('/getUser') >= 0) && dbUser.role.typeCode === 'clerk') ||
-            ((req.url.indexOf('/clerk') >= 0) && dbUser.role.typeCode === 'clerk' && dbUser.role.clerk.manager === true)) {
-            next(dbUser); // To move to next middleware
-        } else {
-            res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
-            return;
-        }
-    }
-}
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -22,17 +9,19 @@ function iatGetDate(int) {
     return tmp;
 }
 
-module.exports = function(req, res, next, targetKey = null) {
+module.exports = function(req, res, next) {
     var jwtToken = req.headers['authorization'];
-    var key = targetKey || req.headers['apikey'];
+    var key = req.headers['apikey'];
 
     if (jwtToken && key) {
-        validateUser(key, next, function(dbUser) {
-            if (typeof dbUser === 'undefined' || dbUser === null) {
-                return res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
-            }
-            if (targetKey === null) {
-                if (!dbUser.active) return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
+        process.nextTick(function() {
+            User.findOne({ 'user.apiKey': key }, function(err, dbUser) {
+                if (err)
+                    return next(err);
+                if (typeof dbUser === 'undefined' || dbUser === null)
+                    return res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
+                if (!dbUser.active)
+                    return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
                 var decoded;
                 try {
                     decoded = jwt.decode(jwtToken, dbUser.user.secretKey);
@@ -44,11 +33,18 @@ module.exports = function(req, res, next, targetKey = null) {
                         return res.status(400).json({ type: 'validatingUser', message: 'Token Expired' });
                     }
                     res._payload = decoded;
-                    validateURL(req, res, next, dbUser);
+                    if (dbUser) {
+                        if ((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0 || req.url.indexOf('/modifypassword') >= 0) ||
+                            ((req.url.indexOf('/status') >= 0 || req.url.indexOf('/getUser') >= 0 || req.url.indexOf('/history') >= 0) && dbUser.role.typeCode === 'clerk') ||
+                            ((req.url.indexOf('/clerk') >= 0) && dbUser.role.typeCode === 'clerk' && dbUser.role.clerk.manager === true)) {
+                            next(dbUser); // To move to next middleware
+                        } else {
+                            res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
+                            return;
+                        }
+                    }
                 });
-            } else {
-                validateURL(req, res, next, dbUser);
-            }
+            });
         });
     } else {
         loggingERR(jwtToken, key, req, res, function(err) {

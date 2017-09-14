@@ -58,7 +58,6 @@ mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
     if (err) next(err);
     debug('mongoDB connect succeed');
 });
-require('./models/userQuery'); // pass passport for configuration
 /*
 var RDS_PORT = 6379,
     RDS_HOST = config.redisUrl,
@@ -75,6 +74,7 @@ client.on('ready', function(err) {
     debug('redisDB connect succeed');
 });*/
 
+require('./models/userQuery'); // pass passport for configuration
 app.all('/*', loggingDefault);
 
 // app.use('/', index);

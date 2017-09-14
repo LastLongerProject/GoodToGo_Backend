@@ -7,9 +7,8 @@ var Container = require('../models/DB/containerDB');
 var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 var validateRequest = require('../models/validateRequest');
-var validateUser = require('../config/keys').validateUser;
 
-var status = ['cleaned', 'readyToUse', 'borrowed', 'returned', 'notClean'];
+var status = ['delivering', 'readyToUse', 'borrowed', 'returned', 'notClean', 'cleaned'];
 
 var typeCode;
 fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
@@ -44,10 +43,10 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
     }
     // if (!res._payload.orderTime) return res.status(401).json({ "type": "borrowContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
-    validateUser(key, next, function(dbUser) {
-        if (!dbUser) return res.status(500).json({ type: 'borrowContainerMessage', message: 'No user found' });
-        else if (!dbUser.active) return res.status(401).json({ type: 'borrowContainerMessage', message: 'User has Banned' });
-        process.nextTick(function() {
+    process.nextTick(function() {
+        User.findOne({ 'user.apiKey': key }, function(err, dbUser) {
+            if (!dbUser) return res.status(500).json({ type: 'borrowContainerMessage', message: 'No user found' });
+            else if (!dbUser.active) return res.status(401).json({ type: 'borrowContainerMessage', message: 'User has Banned' });
             Container.findOne({ 'ID': id }, function(err, container) {
                 if (err)
                     return next(err);

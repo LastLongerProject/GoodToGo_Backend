@@ -1,11 +1,14 @@
 var express = require('express');
 var router = express.Router();
 var fs = require("fs");
-var crc32 = require('buffer-crc32');
-var keys = require('../config/keys');
 var jwt = require('jwt-simple');
-
 var debug = require('debug')('goodtogo_backend:stores');
+
+var keys = require('../config/keys');
+var wetag = require('../models/toolKit').wetag;
+var intReLength = require('../models/toolKit').intReLength;
+var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
+
 var validateRequest = require('../models/validateRequest');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
@@ -17,22 +20,6 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     if (err) throw err;
     type = JSON.parse(data);
 });
-
-function wetag(body) {
-    if (body.length === 0) {
-        return 'W/"0-0"'
-    }
-    var buf = Buffer.from(body);
-    var len = buf.length
-    return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"'
-};
-
-function dateCheckpoint(checkpoint) {
-    var dateNow = new Date();
-    var date = new Date(Date.UTC(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, -8, 0, 0, 0));
-    if (checkpoint !== 0 && checkpoint !== 1) { return Date.now(); }
-    return date;
-};
 
 router.get('/list', function(req, res, next) {
     var jsonData = {
@@ -95,6 +82,7 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
         tmpArr.push({
             typeCode: type.containers[i].typeCode,
             name: type.containers[i].name,
+            amount: 0,
             version: type.containers[i].version,
             icon: tmpIcon
         });
@@ -107,23 +95,30 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
         }
     };
     process.nextTick(function() {
-        Container.find({ 'container.conbineTo': dbStore.role.clerk.storeID }, function(err, containers) {
+        Container.find({ 'conbineTo': dbStore.role.clerk.storeID }, function(err, containers) {
             if (err) return next(err);
             Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
-                        if (containers[i].active) {
-                            if (containers[i].statusCode !== 1) debug("Something Wrong :" + containers[i]);
-                            else if (containers[i].typeCode === 0) resJson['containers'][0]['amount']++;
-                            else if (containers[i].typeCode === 1) resJson['containers'][1]['amount']++;
+                        if (containers[i].statusCode !== 1 || !containers[i].active) debug("Something Wrong :" + JSON.stringify(containers[i]));
+                        else {
+                            for (var j in type.containers) {
+                                tmpTypeCode = type.containers[j].typeCode;
+                                if (containers[i].typeCode === tmpTypeCode) {
+                                    resJson['containers'][tmpTypeCode]['amount']++;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
-                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.clerk.storeID) resJson['todayData']['rent']++;
-                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.clerk.storeID) resJson['todayData']['return']++;
+                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.clerk.storeID)
+                            resJson['todayData']['rent']++;
+                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.clerk.storeID)
+                            resJson['todayData']['return']++;
                     }
                 }
                 res.json(resJson);
@@ -152,5 +147,112 @@ router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
         });
     });
 });
+
+router.get('/history', validateRequest, function(dbStore, req, res, next) {
+    process.nextTick(function() {
+        Trade.find({
+            'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.role.clerk.storeID
+        }, function(err, rentTrades) {
+            Trade.find({
+                'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
+                'tradeType.action': 'Return',
+                'newUser.storeID': dbStore.role.clerk.storeID
+            }, function(err, returnTrades) {
+                if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
+                    parseHistory(rentTrades, 'Rent', function(parsedRent) {
+                        resJson = {
+                            rentHistory: {
+                                amount: parsedRent.length,
+                                dataList: parsedRent
+                            }
+                        };
+                        parseHistory(returnTrades, 'Return', function(parsedReturn) {
+                            resJson.returnHistory = {
+                                amount: parsedReturn.length,
+                                dataList: parsedReturn
+                            }
+                            res.json(resJson);
+                        });
+                    });
+                }
+            });
+        });
+    });
+});
+
+function parseHistory(data, dataType, callback) {
+    if (data.length === 0) return callback([]);
+    data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+    byOrderArr = [];
+    tmpContainerList = [];
+    tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3));
+    for (var i = 1; i < data.length; i++) {
+        aHistory = data[i];
+        lastHistory = data[i - 1];
+        if (dataType === 'Rent') {
+            var thisPhone = aHistory.newUser.phone;
+            var lastPhone = lastHistory.newUser.phone;
+        } else if (dataType === 'Return') {
+            var thisPhone = aHistory.oriUser.phone;
+            var lastPhone = lastHistory.oriUser.phone;
+        }
+        if ((lastHistory.tradeTime - aHistory.tradeTime) > 1000 || lastPhone !== thisPhone) {
+            phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
+            byOrderArr.push({
+                time: lastHistory.tradeTime,
+                phone: phoneFormatted,
+                containerAmount: tmpContainerList.length,
+                containerList: tmpContainerList
+            });
+            tmpContainerList = [];
+        }
+        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3));
+    }
+    phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
+    byOrderArr.push({
+        time: aHistory.tradeTime,
+        phone: phoneFormatted,
+        containerAmount: tmpContainerList.length,
+        containerList: tmpContainerList
+    });
+    byDateArr = [];
+    tmpOrderList = [];
+    date = 0;
+    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) { date--; }
+    hoursFormatted = intReLength(byOrderArr[0].time.getHours(), 2);
+    minutesFormatted = intReLength(byOrderArr[0].time.getMinutes(), 2);
+    byOrderArr[0].time = hoursFormatted + ":" + minutesFormatted;
+    tmpOrderList.push(byOrderArr[0]);
+    for (var i = 1; i < byOrderArr.length; i++) {
+        aOrder = byOrderArr[i];
+        if (!(aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date))) {
+            dateFormatted = dateCheckpoint(date);
+            monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+            dayFormatted = intReLength(dateFormatted.getDate(), 2);
+            byDateArr.push({
+                date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+                orderAmount: tmpOrderList.length,
+                orderList: tmpOrderList
+            });
+            tmpOrderList = [];
+            date--;
+        }
+        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
+        minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
+        aOrder.time = hoursFormatted + ":" + minutesFormatted;
+        tmpOrderList.push(aOrder);
+    }
+    dateFormatted = dateCheckpoint(date);
+    monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+    dayFormatted = intReLength(dateFormatted.getDate(), 2);
+    byDateArr.push({
+        date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+        orderAmount: tmpOrderList.length,
+        orderList: tmpOrderList
+    });
+    return callback(byDateArr);
+}
 
 module.exports = router;

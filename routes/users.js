@@ -2,8 +2,11 @@ var express = require('express');
 var router = express.Router();
 var jwt = require('jwt-simple');
 var fs = require('fs');
+
 var validateRequest = require('../models/validateRequest');
 var signup = require('../routes/signup');
+var wetag = require('../models/toolKit').wetag;
+var intReLength = require('../models/toolKit').intReLength;
 var keys = require('../config/keys');
 var Trade = require('../models/DB/tradeDB');
 
@@ -105,11 +108,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
             recordCollection.usingAmount = rentList.length;
             for (var i = 0; i < rentList.length; i++) {
                 var record = {};
-                var str = rentList[i].container.id.toString();
-                for (j = 0; j <= 3 - str.length; j++) {
-                    str = "0" + str;
-                }
-                record.container = '#' + str;
+                record.container = '#' + intReLength(rentList[i].container.id, 3);
                 record.containerCode = rentList[i].container.id;
                 record.time = rentList[i].tradeTime;
                 record.type = type.containers[rentList[i].container.typeCode].name;
@@ -134,6 +133,11 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                 }
                 Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
                     recordCollection.globalAmount = count;
+                    res.set('etag', wetag(JSON.stringify({
+                        usingAmount: recordCollection.usingAmount,
+                        data: recordCollection.data,
+                        globalAmount: recordCollection.globalAmount
+                    })));
                     res.json(recordCollection);
                 });
             });
