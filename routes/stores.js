@@ -182,6 +182,23 @@ router.get('/history', validateRequest, function(dbStore, req, res, next) {
     });
 });
 
+router.get('/favorite', validateRequest, function(dbStore, req, res, next) {
+    process.nextTick(function() {
+        Trade.find({
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.role.clerk.storeID
+        }, function(err, rentTrades) {
+            if (typeof rentTrades !== 'undefined') {
+                getFavorite(rentTrades, function(userList) {
+                    resJson = {};
+                    resJson.userList = userList;
+                    res.json(resJson);
+                });
+            }
+        });
+    });
+});
+
 function parseHistory(data, dataType, callback) {
     if (data.length === 0) return callback([]);
     data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
@@ -253,6 +270,40 @@ function parseHistory(data, dataType, callback) {
         orderList: tmpOrderList
     });
     return callback(byDateArr);
+}
+
+function getFavorite(data, callback) {
+    if (data.length === 0) return callback([]);
+    data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+    var byOrderArr = [];
+    var tmpContainerList = [];
+    tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3));
+    for (var i = 1; i < data.length; i++) {
+        var aHistory = data[i];
+        var lastHistory = data[i - 1];
+        var thisPhone = aHistory.newUser.phone;
+        var lastPhone = lastHistory.newUser.phone;
+        if ((lastHistory.tradeTime - aHistory.tradeTime) > 1000 || lastPhone !== thisPhone) {
+            byOrderArr.push(thisPhone);
+            tmpContainerList = [];
+        }
+        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3));
+    }
+    byOrderArr.push(thisPhone);
+    var count = {};
+    for (var i = 0; i < byOrderArr.length; i++) {
+        if (byOrderArr[i] in count) {
+            count[byOrderArr[i]]++;
+        } else {
+            count[byOrderArr[i]] = 1;
+        }
+    }
+    var sortable = [];
+    for (var phone in count) {
+        sortable.push([phone, count[phone]]);
+    }
+    sortable.sort(function(a, b) { return b[1] - a[1]; });
+    return callback(sortable);
 }
 
 module.exports = router;
