@@ -46,7 +46,7 @@ router.get('/list', function(req, res, next) {
                             close: storeList[i].opening_hours[j].close,
                             open: storeList[i].opening_hours[j].open
                         })
-                    storeList[i].img_info.img_src += ("/" + token);
+                        // storeList[i].img_info.img_src += ("/" + token);
                     tmpArr.push({
                         id: storeList[i].id,
                         name: storeList[i].name,
@@ -77,7 +77,7 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
     for (var i = 0; i < type.containers.length; i++) {
         var tmpIcon = {};
         for (var key in type.containers[i].icon) {
-            tmpIcon[key] = type.containers[i].icon[key] + "/" + token;
+            tmpIcon[key] = type.containers[i].icon[key] /* + "/" + token*/ ;
         }
         tmpArr.push({
             typeCode: type.containers[i].typeCode,
