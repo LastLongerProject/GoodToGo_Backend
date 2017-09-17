@@ -45,7 +45,7 @@ app.set('view engine', 'ejs');
 app.use(logger(':remote-addr :remote-user :method :url HTTP/:http-version :status - :response-time ms - :date'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+// app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger); // Trigger Google Analytics
 app.use(passport.initialize());
