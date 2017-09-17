@@ -3,6 +3,7 @@ var router = express.Router();
 var fs = require('fs');
 
 var validateToken = require('../models/validateToken');
+/*
 router.get('/:id', function(req, res, next) {
     var id = req.params.id;
     var s = fs.createReadStream('./assets/images/' + id + '.jpg');
@@ -26,7 +27,7 @@ router.get('/icon/:id', function(req, res, next) {
         res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
-
+*/
 router.get('/:id/:a.:b.:c', function(req, res, next) {
     var token = req.params.a + "." + req.params.b + "." + req.params.c;
     validateToken(req, res, token, function(err) {

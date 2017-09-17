@@ -89,7 +89,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
     for (var i = 0; i < type.containers.length; i++) {
         var tmpIcon = {};
         for (var key in type.containers[i].icon) {
-            tmpIcon[key] = type.containers[i].icon[key] /* + "/" + token*/ ;
+            tmpIcon[key] = type.containers[i].icon[key] + "/" + token;
         }
         tmpArr.push({
             typeCode: type.containers[i].typeCode,
