@@ -41,12 +41,12 @@ router.get('/list', function(req, res, next) {
             for (var i = 0; i < storeList.length; i++) {
                 if (storeList[i].active) {
                     var tmpOpening = [];
+                    storeList[i].img_info.img_src += ("/" + token);
                     for (var j = 0; j < storeList[i].opening_hours.length; j++)
                         tmpOpening.push({
                             close: storeList[i].opening_hours[j].close,
                             open: storeList[i].opening_hours[j].open
                         })
-                        // storeList[i].img_info.img_src += ("/" + token);
                     tmpArr.push({
                         id: storeList[i].id,
                         name: storeList[i].name,

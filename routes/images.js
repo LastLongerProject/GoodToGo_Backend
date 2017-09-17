@@ -26,7 +26,7 @@ router.get('/icon/:id', function(req, res, next) {
         res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
     });
 });
-/*
+
 router.get('/:id/:a.:b.:c', function(req, res, next) {
     var token = req.params.a + "." + req.params.b + "." + req.params.c;
     validateToken(req, res, token, function(err) {
@@ -58,5 +58,5 @@ router.get('/icon/:id/:a.:b.:c', function(req, res, next) {
         });
     });
 });
-*/
+
 module.exports = router;
