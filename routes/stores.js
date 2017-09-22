@@ -200,14 +200,22 @@ router.get('/favorite', validateRequest, function(dbStore, req, res, next) {
 });
 
 function parseHistory(data, dataType, callback) {
-    if (data.length === 0) return callback([]);
-    data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+    if (data.length === 0) return callback({});
+    else if (data.length === 1) {
+        var aHistory = data[0];
+        if (dataType === 'Rent')
+            var thisPhone = aHistory.newUser.phone;
+        else if (dataType === 'Return')
+            var thisPhone = aHistory.oriUser.phone;
+    } else {
+        data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+    }
     byOrderArr = [];
     tmpContainerList = [];
     tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3));
     for (var i = 1; i < data.length; i++) {
-        aHistory = data[i];
-        lastHistory = data[i - 1];
+        var aHistory = data[i];
+        var lastHistory = data[i - 1];
         if (dataType === 'Rent') {
             var thisPhone = aHistory.newUser.phone;
             var lastPhone = lastHistory.newUser.phone;
@@ -237,7 +245,18 @@ function parseHistory(data, dataType, callback) {
     byDateArr = [];
     tmpOrderList = [];
     date = 0;
-    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) { date--; }
+    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) {
+        dateFormatted = dateCheckpoint(date);
+        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+        dayFormatted = intReLength(dateFormatted.getDate(), 2);
+        byDateArr.push({
+            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+            orderAmount: tmpOrderList.length,
+            orderList: tmpOrderList
+        });
+        tmpOrderList = [];
+        date--;
+    }
     hoursFormatted = intReLength(byOrderArr[0].time.getHours(), 2);
     minutesFormatted = intReLength(byOrderArr[0].time.getMinutes(), 2);
     byOrderArr[0].time = hoursFormatted + ":" + minutesFormatted;
