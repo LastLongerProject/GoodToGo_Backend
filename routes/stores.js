@@ -200,7 +200,7 @@ router.get('/favorite', validateRequest, function(dbStore, req, res, next) {
 });
 
 function parseHistory(data, dataType, callback) {
-    if (data.length === 0) return callback({});
+    if (data.length === 0) return callback([]);
     else if (data.length === 1) {
         var aHistory = data[0];
         if (dataType === 'Rent')
