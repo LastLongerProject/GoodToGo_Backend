@@ -217,7 +217,7 @@ function parseHistory(data, dataType, callback) {
     }
     byOrderArr = [];
     tmpContainerList = [];
-    tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3));
+    tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3) + " | " + type.containers[data[0].container.typeCode].name);
     for (var i = 1; i < data.length; i++) {
         var aHistory = data[i];
         var lastHistory = data[i - 1];
@@ -250,6 +250,8 @@ function parseHistory(data, dataType, callback) {
     byDateArr = [];
     tmpOrderList = [];
     date = 0;
+    console.log(dateCheckpoint(date))
+    console.log(byOrderArr[0].time)
     while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
@@ -293,6 +295,20 @@ function parseHistory(data, dataType, callback) {
         orderAmount: tmpOrderList.length,
         orderList: tmpOrderList
     });
+    tmpOrderList = [];
+    date--;
+    while (date > -7) {
+        dateFormatted = dateCheckpoint(date);
+        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+        dayFormatted = intReLength(dateFormatted.getDate(), 2);
+        byDateArr.push({
+            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+            orderAmount: tmpOrderList.length,
+            orderList: tmpOrderList
+        });
+        tmpOrderList = [];
+        date--;
+    }
     return callback(byDateArr);
 }
 
