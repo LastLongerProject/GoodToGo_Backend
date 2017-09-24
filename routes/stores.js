@@ -191,7 +191,12 @@ router.get('/favorite', validateRequest, function(dbStore, req, res, next) {
             if (typeof rentTrades !== 'undefined') {
                 getFavorite(rentTrades, function(userList) {
                     resJson = {};
-                    resJson.userList = userList;
+                    if (userList.length > 5)
+                        resJson.userList = userList.slice(0, 5);
+                    else if (userList.length > 0)
+                        resJson.userList = userList;
+                    else
+                        resJson.userList = [];
                     res.json(resJson);
                 });
             }
