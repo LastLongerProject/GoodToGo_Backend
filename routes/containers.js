@@ -41,7 +41,7 @@ router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
         });
         return;
     }
-    // if (!res._payload.orderTime) return res.status(401).json({ "type": "borrowContainerMessage", "message": "Missing Time" });
+    if (!res._payload.orderTime) return res.status(401).json({ "type": "borrowContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(function() {
         User.findOne({ 'user.apiKey': key }, function(err, dbUser) {
@@ -109,7 +109,7 @@ router.post('/return/:id', validateRequest, function(dbStore, req, res, next) {
         });
         return;
     }
-    // if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
+    if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(function() {
         Container.findOne({ 'ID': id }, function(err, container) {
