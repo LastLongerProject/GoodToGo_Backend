@@ -264,7 +264,7 @@ function parseHistory(data, dataType, callback) {
         tmpOrderList = [];
         date--;
     }
-    hoursFormatted = intReLength(byOrderArr[0].time.getHours(), 2);
+    hoursFormatted = intReLength(byOrderArr[0].time.getHours() + 8, 2);
     minutesFormatted = intReLength(byOrderArr[0].time.getMinutes(), 2);
     byOrderArr[0].time = hoursFormatted + ":" + minutesFormatted;
     tmpOrderList.push(byOrderArr[0]);
@@ -282,7 +282,7 @@ function parseHistory(data, dataType, callback) {
             tmpOrderList = [];
             date--;
         }
-        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
+        hoursFormatted = intReLength(aOrder.time.getHours() + 8, 2);
         minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
         aOrder.time = hoursFormatted + ":" + minutesFormatted;
         tmpOrderList.push(aOrder);
