@@ -12,7 +12,8 @@ module.exports = {
     },
     dateCheckpoint: function(checkpoint) {
         var dateNow = new Date();
-        var date = new Date(Date.UTC(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, -8, 0, 0, 0));
+        var date = new Date(Date.UTC(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, 0, 0, 0, 0));
+        console.log(date.toLocaleString(['asia', 'taipei']));
         return date;
     },
     intReLength: function(data, length) {
