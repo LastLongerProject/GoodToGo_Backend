@@ -57,6 +57,7 @@ mongoose.Promise = global.Promise;
 mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
     if (err) next(err);
     debug('mongoDB connect succeed');
+    // require('./tmp/changeTypeCode.js')
 });
 /*
 var RDS_PORT = 6379,

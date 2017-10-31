@@ -8,18 +8,32 @@ var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 var validateRequest = require('../models/validateRequest');
 
-var status = ['delivering', 'readyToUse', 'borrowed', 'returned', 'notClean', 'cleaned'];
+var status = ['delivering', 'readyToUse', 'borrowed', 'returned', 'notClean', 'cleaned', 'boxed'];
 
-var typeCode;
+var typeDict;
 fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     if (err) throw err;
-    typeCode = JSON.parse(data);
+    typeDict = JSON.parse(data);
 });
 
 router.all('/:id', function(req, res) {
     // debug("Redirect to official website.");
     res.writeHead(301, { Location: 'http://goodtogo.tw' });
     res.end();
+});
+
+router.get('/get/list', validateRequest, function(dbStore, req, res, next) {
+    if (dbStore.status) return next(dbStore);
+    Container.find(function(err, list) {
+        if (err) return next(err);
+        var resJSON = {
+            containerDict: {}
+        };
+        for (var i = 0; i < list.length; i++) {
+            resJSON.containerDict[list[i].ID] = typeDict.containers[list[i].typeCode].name;
+        }
+        res.json(resJSON);
+    });
 });
 
 router.post('/rent/:id', validateRequest, function(dbStore, req, res, next) {
