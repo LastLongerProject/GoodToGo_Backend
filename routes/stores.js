@@ -9,7 +9,9 @@ var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
-var validateRequest = require('../models/validateRequest');
+var validateRequest = require('../models/validateRequest').JWT;
+var regAsStore = require('../models/validateRequest').regAsStore;
+var Delivery = require('../models/DB/deliveringDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
@@ -60,16 +62,14 @@ router.get('/list', function(req, res, next) {
                 }
             }
             jsonData["shop_data"] = tmpArr;
-            res.json(jsonData)
+            res.json(jsonData);
         });
     });
 });
 
-router.get('/status', validateRequest, function(dbStore, req, res, next) {
+router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status)
         return next(dbStore);
-    if (dbStore.role.typeCode !== 'clerk')
-        return res.status(403).json({ type: 'storeStatus', message: 'Not Authorized' });
     var tmpArr = [];
     var date = new Date();
     var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
@@ -95,7 +95,7 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
         }
     };
     process.nextTick(function() {
-        Container.find({ 'conbineTo': dbStore.role.clerk.storeID }, function(err, containers) {
+        Container.find({ 'conbineTo': dbStore.role.storeID }, function(err, containers) {
             if (err) return next(err);
             Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
                 if (err) return next(err);
@@ -115,9 +115,9 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
                 }
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
-                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.clerk.storeID)
+                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.storeID)
                             resJson['todayData']['rent']++;
-                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.clerk.storeID)
+                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.storeID)
                             resJson['todayData']['return']++;
                     }
                 }
@@ -127,7 +127,7 @@ router.get('/status', validateRequest, function(dbStore, req, res, next) {
     });
 });
 
-router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
+router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status)
         return next(dbStore);
     var id = req.params.id;
@@ -148,17 +148,54 @@ router.get('/getUser/:id', validateRequest, function(dbStore, req, res, next) {
     });
 });
 
-router.get('/history', validateRequest, function(dbStore, req, res, next) {
+router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res, next) {
+    process.nextTick(function() {
+        Delivery.find({ 'storeID': dbStore.role.storeID }, function(err, deliveryList) {
+            if (err) return next(err);
+            var funcList = [];
+            for (var i = 0; i < deliveryList.length; i++) {
+                funcList.push(
+                    new Promise((resolve, reject) => {
+                        Container.find({
+                            'statusCode': 0,
+                            'conbineTo': deliveryList[i].boxID
+                        }, function(err, containerList) {
+                            if (err) return reject(err);
+                            resolve({
+                                boxID: deliveryList[i].boxID,
+                                containerList: containerList
+                            });
+                        });
+                    })
+                );
+            }
+            Promise
+                .all(funcList)
+                .then((lists) => {
+                    var resJSON = {
+                        boxList: lists
+                    };
+                    return res.json(resJSON);
+                })
+                .catch((err) => {
+                    debug(err);
+                    return next(err);
+                });
+        });
+    });
+});
+
+router.get('/history', regAsStore, validateRequest, function(dbStore, req, res, next) {
     process.nextTick(function() {
         Trade.find({
             'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
             'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.clerk.storeID
+            'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
             Trade.find({
                 'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
                 'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.role.clerk.storeID
+                'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
                     parseHistory(rentTrades, 'Rent', function(parsedRent) {
@@ -182,11 +219,11 @@ router.get('/history', validateRequest, function(dbStore, req, res, next) {
     });
 });
 
-router.get('/favorite', validateRequest, function(dbStore, req, res, next) {
+router.get('/favorite', regAsStore, validateRequest, function(dbStore, req, res, next) {
     process.nextTick(function() {
         Trade.find({
             'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.clerk.storeID
+            'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
             if (typeof rentTrades !== 'undefined') {
                 getFavorite(rentTrades, function(userList) {

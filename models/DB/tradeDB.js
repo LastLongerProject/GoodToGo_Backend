@@ -22,7 +22,8 @@ var userSchema = mongoose.Schema({
     // }
     container: {
         id: Number,
-        typeCode: Number
+        typeCode: Number,
+        cycleCtr: Number
     },
     logTime: { type: Date, default: Date.now }
 });

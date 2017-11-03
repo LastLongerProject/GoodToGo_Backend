@@ -15,7 +15,7 @@ var userSchema = mongoose.Schema({
     }
 });
 
-userSchema.index({ "logTime": -1 });
+userSchema.index({ "logTime": -1, "hashID": 1 });
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('logging', userSchema);

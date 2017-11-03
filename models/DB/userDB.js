@@ -11,20 +11,8 @@ var userSchema = mongoose.Schema({
     },
     role: {
         typeCode: String,
-        customer: {
-            history: [{
-                containerID: Number,
-                typeCode: Number,
-                storeID: Number,
-                time: { type: Date, default: Date.now },
-                returned: Boolean,
-                returnTime: Date
-            }]
-        },
-        clerk: {
-            manager: Boolean,
-            storeID: Number
-        }
+        storeID: Number,
+        manager: Boolean
     },
     registerTime: { type: Date, default: Date.now },
     active: { type: Boolean, default: false },
@@ -34,7 +22,7 @@ var userSchema = mongoose.Schema({
     }]
 });
 
-userSchema.index({ "user.phone": 1 });
+userSchema.index({ "user.phone": 1, "user.apiKey": 1 });
 
 // generating a hash
 userSchema.methods.generateHash = function(password) {

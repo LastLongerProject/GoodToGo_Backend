@@ -3,7 +3,7 @@ var router = express.Router();
 var jwt = require('jwt-simple');
 var fs = require('fs');
 
-var validateRequest = require('../models/validateRequest');
+var validateRequest = require('../models/validateRequest').JWT;
 var signup = require('../routes/signup');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
