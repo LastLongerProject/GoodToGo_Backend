@@ -34,12 +34,13 @@ module.exports = {
                             return res.status(400).json({ type: 'validatingUser', message: 'Token Expired' });
                         }
                         res._payload = decoded;
-                        if (req._role)
+                        if (req._role) {
                             if (dbUser.role.typeCode !== req._role.txt)
                                 return res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
-                        if (req._role.manager)
-                            if (dbUser.role.manager !== req._role.manager)
-                                return res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
+                            if (req._role.manager)
+                                if (dbUser.role.manager !== req._role.manager)
+                                    return res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
+                        }
                         next(dbUser);
                         // if ((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0 || req.url.indexOf('/modifypassword') >= 0) ||
                         //     ((req.url.indexOf('/get') >= 0 || req.url.indexOf('/status') >= 0 || req.url.indexOf('/getUser') >= 0 || req.url.indexOf('/history') >= 0 || req.url.indexOf('/favorite') >= 0) && dbUser.role.typeCode === 'clerk') ||
