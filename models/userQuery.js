@@ -1,7 +1,7 @@
 var jwt = require('jwt-simple');
 var passport = require('passport');
 var CustomStrategy = require('passport-custom').Strategy; // load all the things we need
-var validateRequest = require('../models/validateRequest');
+var validateRequest = require('../models/validateRequest').JWT;
 var User = require('../models/DB/userDB'); // load up the user model
 var keys = require('../config/keys');
 
