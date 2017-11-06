@@ -118,9 +118,7 @@ payload = {
 	apiKey : String,
 	secretKey : String,
 	role : {
-		typeCode : String, // Should be "clerk"
-		storeID : Number,
-		manager : Boolean // false
+		typeCode : String // Should be "clerk"
 	}
 }
 ```
@@ -444,7 +442,9 @@ payload = {
 - JSON
 ```
 {
-	
+    "boxToSign": [
+        Number,... // 1
+    ]
 }
 ```
 
@@ -532,16 +532,221 @@ payload = {
 ## '/containers/:id' - 自動導向至官網
 
 ---
-## '/containers/rent/:id' - 租借容器
+## '/containers/get/list' - 所有容器對應到的類別名稱
+### Request - 
+#### method
+- **GET**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{
+    "containerDict": {
+        "1": "12oz 玻璃杯",...
+    }
+}
+```
+
+### Error Code -
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/get/toDelivery' - 待配送或配送中的箱子清單
+### Request - 
+#### method
+- **GET**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{
+    "typeCodeDict": {
+        "containers": [
+            {
+                "typeCode": 0,
+                "name": "12oz 玻璃杯",
+                "version": 1,
+                "icon": {
+                    "1x": "https://app.goodtogo.tw/images/icon/00_1x",
+                    "2x": "https://app.goodtogo.tw/images/icon/00_2x",
+                    "3x": "https://app.goodtogo.tw/images/icon/00_3x"
+                }
+            },...
+        ]
+    },
+    "toDelivery": [
+        {
+            "boxID": 1,
+            "boxTime": "2017-11-05T15:05:37.456Z",
+            "typeList": [
+                "12oz 玻璃杯"
+            ],
+            "containerList": {
+                "12oz 玻璃杯": [
+                    1,...
+                ]
+            },
+            "isDelivering": false,
+            "containerOverview": [
+                {
+                    "containerType": "12oz 玻璃杯",
+                    "amount": 1
+                },...
+            ],
+            "destinationStore": Number // store ID, if is delivering
+        },...
+    ]
+}
+```
+
+### Error Code -
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/get/deliveryHistory' - 配送成功的歷史清單
+### Request - 
+#### method
+- **GET**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{
+    "typeCodeDict": {
+        "containers": [
+            {
+                "typeCode": 0,
+                "name": "12oz 玻璃杯",
+                "version": 1,
+                "icon": {
+                    "1x": "https://app.goodtogo.tw/images/icon/00_1x",
+                    "2x": "https://app.goodtogo.tw/images/icon/00_2x",
+                    "3x": "https://app.goodtogo.tw/images/icon/00_3x"
+                }
+            },...
+        ]
+    },
+    "toDelivery": [
+        {
+            "boxID": 1,
+            "boxTime": "2017-11-05T15:05:37.456Z",
+            "typeList": [
+                "12oz 玻璃杯"
+            ],
+            "containerList": {
+                "12oz 玻璃杯": [
+                    1,...
+                ]
+            },
+            "destinationStore": Number // store ID
+        },...
+    ]
+}
+```
+
+### Error Code -
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/delivery/:boxid/:storeid' - 配送箱子到指定店面
 ### Request - 
 #### method
 - **POST**
 
-#### uri
-- :id // Container ID
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'DeliveryMessage', message : 'Delivery succeeded'}
+```
+
+### Error Code -
+- **404** "Can Find The Box" : The box ID is wrong
+- **403** "Container not available" : Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **403** "Container conflict" : Container is not ready for rent.
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/sign/:boxid' - 店家簽收箱子
+### Request - 
+#### method
+- **POST**
 
 #### headers
 - [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'SignMessage', message : 'Sign succeed'}
+```
+
+### Error Code -
+- **404** "Box is not found" : The box ID is wrong
+- **401** "Box not belone to the store which user's store" : As the msg says
+- **403** "Container not available" : Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **403** "Container conflict" : Container is not ready for rent.
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/rent/:containerid' - 租借容器
+### Request - 
+#### method
+- **POST**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+ :::warning
+JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
+:::
 - userApiKey // apiKey you get by [/getUser](https://hackmd.io/s/BkTWYMhR-#‘storesgetuserid’-商店取得使用者資訊-始得租借)
 
 ### Response -
@@ -558,25 +763,24 @@ payload = {
 ```
 
 ### Error Code -
-- **401** "Invalid Request"  : Can't get userApiKey
-- **401** "Invalid Role" : Request.headers.apiKey should be clerk's apiKey
+- **401** "Invalid Request" : Can't get userApiKey
+- **401** "Missing Time" : Payload of JWT didn't contain 'orderTime'
 - **403** "Container not available" : Container has marked as not available
 - **404** "No container found." : Container ID invalid
 - **403** "Container conflict" : Container is not ready for rent.
 - Others : Remember 'jti' and contact me
 
-
 ---
-## '/containers/return/:id' - 歸還容器
+## '/containers/return/:containerid' - 歸還容器
 ### Request - 
 #### method
 - **POST**
 
-#### uri
-- :id // Container ID
-
 #### headers
 - [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+ :::warning
+JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
+:::
 
 ### Response -
 #### type
@@ -592,17 +796,89 @@ payload = {
 ```
 
 ### Error Code -
-- **401** "Invalid Request"  : Can't get userApiKey
-- **401** "Invalid Role" : Request.headers.apiKey should be clerk's apiKey
+- **401** "Missing Time" : Payload of JWT didn't contain 'orderTime'
 - **500** "Container not available" : Unexpected error, Container has marked as not available
 - **404** "No container found." : Container ID invalid
 - **403** "Container has not rented." : This container is not rented
 - **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
 - Others : Remember 'jti' and contact me
 
+---
+## '/containers/readyToClean/:containerid' - 回收容器
+### Request - 
+#### method
+- **POST**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+ :::warning
+JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
+:::
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'readyToCleanMessage', message : 'ReadyToClean succeeded.'}
+```
+
+### Error Code -
+- **401** "Missing Time" : Payload of JWT didn't contain 'orderTime'
+- **500** "Container not available" : Unexpected error, Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **403** "Container has not rented." : This container is not rented
+- **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
+- Others : Remember 'jti' and contact me
 
 ---
-## '/images/:id/:token' - 取得店家照片
+## '/containers/cleanStation/box' - 容器裝箱
+### Request - 
+#### method
+- **POST**
+
+#### body
+- JSON
+```
+{
+	boxId : String, // "1"
+	containerList : [
+        Number, // 1
+    ]
+}
+```
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'BoxingMessage', message : 'Boxing succeeded.'}
+```
+
+### Error Code -
+- **401** "Req body incomplete" : Request body is incomplete
+- **401** "Box is already exist" : The box ID is already exist
+- **500** "Container not available" : Unexpected error, Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **403** "Container has not rented." : This container is not rented
+- **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
+- Others : Remember 'jti' and contact me
+---
+## '/images/:storeid/:token' - 取得店家照片
 ### Request - 
 #### method
 - **GET**

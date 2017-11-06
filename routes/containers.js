@@ -137,13 +137,12 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
 
 router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
     if (dbAdmin.status) return next(dbAdmin);
-    if (!res._payload.orderTime) return res.status(401).json({ "type": "DeliveryMessage", "message": "Missing Time" });
     var boxID = req.params.id;
     var storeID = req.params.store;
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
-            if (!aBox) return res.status(404).json({ "type": "DeliveryMessage", "message": "Can Find The Box" });
+            if (!aBox) return res.status(404).json({ "type": "DeliveryMessage", "message": "Can't Find The Box" });
             var containerList = aBox.containerList;
             var funcList = [];
             for (var i = 0; i < containerList.length; i++) {
@@ -167,6 +166,46 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmi
                     aBox.save(function(err) {
                         if (err) return next(err);
                         return res.json({ "type": "DeliveryMessage", "message": "Delivery Succeed" });
+                    })
+                })
+                .catch((err) => {
+                    debug(err);
+                    return next(err);
+                });
+        });
+    });
+});
+
+router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+    if (dbAdmin.status) return next(dbAdmin);
+    var boxID = req.params.id;
+    process.nextTick(() => {
+        Box.findOne({ 'boxID': boxID }, function(err, aBox) {
+            if (err) return next(err);
+            if (!aBox) return res.status(404).json({ "type": "CancelDeliveryMessage", "message": "Can't Find The Box" });
+            var containerList = aBox.containerList;
+            var funcList = [];
+            for (var i = 0; i < containerList.length; i++) {
+                funcList.push(
+                    new Promise((resolve, reject) => {
+                        changeState(resolve, containerList[i], dbAdmin, 'CancelDelivery', 5, res, reject, null, true);
+                    })
+                );
+            }
+            Promise
+                .all(funcList)
+                .then((err) => {
+                    for (var i = 0; i < err.length; i++) {
+                        if (err[i]) {
+                            debug(JSON.stringify(err[i]));
+                            return next(err[i]);
+                        }
+                    }
+                    aBox.delivering = false;
+                    aBox.storeID = undefined;
+                    aBox.save(function(err) {
+                        if (err) return next(err);
+                        return res.json({ "type": "CancelDeliveryMessage", "message": "Cancel Delivery Succeed" });
                     })
                 })
                 .catch((err) => {
@@ -258,18 +297,18 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, 
     var body = req.body;
     if (!body.containerList || !body.boxId)
         return res.status(401).json({ type: 'BoxingMessage', message: 'Req body incomplete' });
-    Box.findOne({ 'boxID': body.boxId }, function(err, aBox) {
-        if (err) return next(err);
-        if (aBox) return res.status(401).json({ type: 'BoxingMessage', message: 'Box is already exist' });
-        var funcList = [];
-        for (var i = 0; i < body.containerList.length; i++) {
-            funcList.push(
-                new Promise((resolve, reject) => {
-                    changeState(resolve, body.containerList[i], dbAdmin, 'Boxing', 5, res, reject, body.boxId);
-                })
-            );
-        }
-        process.nextTick(() => {
+    process.nextTick(() => {
+        Box.findOne({ 'boxID': body.boxId }, function(err, aBox) {
+            if (err) return next(err);
+            if (aBox) return res.status(401).json({ type: 'BoxingMessage', message: 'Box is already exist' });
+            var funcList = [];
+            for (var i = 0; i < body.containerList.length; i++) {
+                funcList.push(
+                    new Promise((resolve, reject) => {
+                        changeState(resolve, body.containerList[i], dbAdmin, 'Boxing', 5, res, reject);
+                    })
+                );
+            }
             Promise
                 .all(funcList)
                 .then((err) => {
@@ -295,7 +334,45 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, 
     });
 });
 
-function changeState(boxing, id, dbNew, action, newState, res, next, key = null) {
+router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+    if (dbAdmin.status) return next(dbAdmin);
+    var boxID = req.params.id;
+    process.nextTick(() => {
+        Box.findOne({ 'boxID': boxID }, function(err, aBox) {
+            if (err) return next(err);
+            if (!aBox) return res.status(404).json({ "type": "UnboxingMessage", "message": "Can't Find The Box" });
+            var containerList = aBox.containerList;
+            var funcList = [];
+            for (var i = 0; i < containerList.length; i++) {
+                funcList.push(
+                    new Promise((resolve, reject) => {
+                        changeState(resolve, containerList[i], dbAdmin, 'Unboxing', 4, res, reject, null, true);
+                    })
+                );
+            }
+            Promise
+                .all(funcList)
+                .then((err) => {
+                    for (var i = 0; i < err.length; i++) {
+                        if (err[i]) {
+                            debug(JSON.stringify(err[i]));
+                            return next(err[i]);
+                        }
+                    }
+                    Box.remove({ 'boxID': boxID }, function(err) {
+                        if (err) return next(err);
+                        return res.json({ "type": "UnboxingMessage", "message": "Unboxing Succeed" });
+                    });
+                })
+                .catch((err) => {
+                    debug(err);
+                    return next(err);
+                });
+        });
+    });
+});
+
+function changeState(boxing, id, dbNew, action, newState, res, next, key = null, bypass = false) {
     var messageType = action + 'Message';
     Container.findOne({ 'ID': id }, function(err, container) {
         if (err)
@@ -309,7 +386,7 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null)
                 'type': messageType,
                 'message': 'Container not belone to this store.'
             });
-        validateStateChanging(container.statusCode, newState, function(succeed, err) {
+        validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
             if (!succeed) {
                 if (err)
                     return res.status(500).json({
@@ -367,6 +444,7 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null)
                     container.statusCode = newState;
                     container.updatetime = Date.now();
                     if (action === 'Delivery') container.cycleCtr++;
+                    else if (action === 'CancelDelivery') container.cycleCtr--;
                     if (action === 'Sign') container.conbineTo = dbNew.role.storeID;
                     else container.conbineTo = dbNew.user.phone;
                     container.save(function(err) {
@@ -382,7 +460,8 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null)
     });
 }
 
-function validateStateChanging(oriState, newState, callback) {
+function validateStateChanging(bypass, oriState, newState, callback) {
+    if (bypass) return callback(true);
     switch (oriState) {
         case 0: // delivering
             if (newState !== 1)
@@ -419,11 +498,11 @@ router.post('/add/:id/:type', function(req, res, next) {
     var id = req.params.id;
     var typeCode = req.params.type;
     process.nextTick(function() {
-        Container.findOne({ 'container.ID': id }, function(err, container) {
+        Container.findOne({ 'ID': id }, function(err, container) {
             if (err)
                 return next(err);
             if (container) {
-                return res.status(404).json({ type: 'addContainerMessage', message: 'That ID is already exist.' });
+                return res.status(403).json({ type: 'addContainerMessage', message: 'That ID is already exist.' });
             } else {
                 var newContainer = new Container();
                 newContainer.ID = id;
