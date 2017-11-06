@@ -1,12 +1,16 @@
 var express = require('express');
 var router = express.Router();
+var jwt = require('jwt-simple');
 var fs = require('fs');
-
 var debug = require('debug')('goodtogo_backend:containers');
+
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
+
+var keys = require('../config/keys');
+var wetag = require('../models/toolKit').wetag;
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validateRequest').regAsAdmin;
@@ -30,9 +34,28 @@ router.get('/get/list', validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status) return next(dbStore);
     Container.find(function(err, list) {
         if (err) return next(err);
+        var tmpArr = [];
+        var date = new Date();
+        var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+        var token = jwt.encode(payload, keys.serverSecretKey());
+        res.set('etag', wetag([list, typeDict]));
+        for (var i = 0; i < typeDict.containers.length; i++) {
+            var tmpIcon = {};
+            for (var key in typeDict.containers[i].icon) {
+                tmpIcon[key] = typeDict.containers[i].icon[key] + "/" + token;
+            }
+            tmpArr.push({
+                typeCode: typeDict.containers[i].typeCode,
+                name: typeDict.containers[i].name,
+                version: typeDict.containers[i].version,
+                icon: tmpIcon
+            });
+        }
         var resJSON = {
+            containerType: tmpArr,
             containerDict: {}
         };
+        delete tmpArr
         for (var i = 0; i < list.length; i++) {
             resJSON.containerDict[list[i].ID] = typeDict.containers[list[i].typeCode].name;
         }
@@ -61,11 +84,11 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
                     var thisBoxContainerList = {};
                     for (var j = 0; j < boxList[i].containerList.length; j++) {
                         thisType = containerDict[boxList[i].containerList[j]];
-                        if (!(thisType in thisBoxTypeList)) {
+                        if (thisBoxTypeList.indexOf(thisType) < 0) {
                             thisBoxTypeList.push(thisType);
                             thisBoxContainerList[thisType] = [];
                         }
-                        thisBoxContainerList[thisType].push(boxList[i].containerList[i]);
+                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
                     }
                     boxArr.push({
                         boxID: thisBox,
@@ -86,7 +109,6 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
                     }
                 }
                 var resJSON = {
-                    typeCodeDict: typeDict,
                     toDelivery: boxArr
                 };
                 res.json(resJSON);
@@ -128,7 +150,6 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
             thisBoxContainerList[thisType].push(list[i].container.id);
         }
         var resJSON = {
-            typeCodeDict: typeDict,
             pastDelivery: boxArr
         };
         res.json(resJSON);

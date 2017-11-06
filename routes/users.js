@@ -82,26 +82,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
         return next(dbUser);
     var returned = [];
     var inUsed = [];
-    var tmpArr = [];
-    var date = new Date();
-    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-    var token = jwt.encode(payload, keys.serverSecretKey());
-    for (var i = 0; i < type.containers.length; i++) {
-        var tmpIcon = {};
-        for (var key in type.containers[i].icon) {
-            tmpIcon[key] = type.containers[i].icon[key] + "/" + token;
-        }
-        tmpArr.push({
-            typeCode: type.containers[i].typeCode,
-            name: type.containers[i].name,
-            version: type.containers[i].version,
-            icon: tmpIcon
-        });
-    }
-    var recordCollection = {
-        containers: tmpArr
-    };
-    delete tmpArr;
+    var recordCollection = {};
     process.nextTick(function() {
         Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
             rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime });

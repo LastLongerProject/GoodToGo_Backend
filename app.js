@@ -77,7 +77,7 @@ client.on('ready', function(err) {
 
 require('./models/userQuery'); // pass passport for configuration
 app.all('/*', loggingDefault);
-
+// console.log(logger)
 // app.use('/', index);
 app.use('/stores', stores);
 app.use('/users', users);
