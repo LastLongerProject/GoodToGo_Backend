@@ -11,7 +11,7 @@ var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
-var Delivery = require('../models/DB/deliveringDB');
+var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
@@ -136,11 +136,7 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, r
             if (err)
                 return next(err);
             if (typeof user !== 'undefined' && user !== null) {
-                if (user.role.typeCode === 'customer') {
-                    res.status(200).json({ 'phone': user.user.phone, 'apiKey': user.user.apiKey });
-                } else {
-                    res.status(401).json({ "type": "userSearchingError", "message": "User role is not customer" });
-                }
+                res.status(200).json({ 'phone': user.user.phone, 'apiKey': user.user.apiKey });
             } else {
                 res.status(401).json({ "type": "userSearchingError", "message": "No User: [" + id + "] Finded" });
             }
@@ -150,37 +146,13 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, r
 
 router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res, next) {
     process.nextTick(function() {
-        Delivery.find({ 'storeID': dbStore.role.storeID }, function(err, deliveryList) {
+        Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
             if (err) return next(err);
-            var funcList = [];
-            for (var i = 0; i < deliveryList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        Container.find({
-                            'statusCode': 0,
-                            'conbineTo': deliveryList[i].boxID
-                        }, function(err, containerList) {
-                            if (err) return reject(err);
-                            resolve({
-                                boxID: deliveryList[i].boxID,
-                                containerList: containerList
-                            });
-                        });
-                    })
-                );
+            var resARR = [];
+            for (var i = 0; i < boxList.length; i++) {
+                resARR.push(boxList[i].boxID);
             }
-            Promise
-                .all(funcList)
-                .then((lists) => {
-                    var resJSON = {
-                        boxList: lists
-                    };
-                    return res.json(resJSON);
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
-                });
+            res.json({ 'boxToSign': resARR });
         });
     });
 });
@@ -287,8 +259,8 @@ function parseHistory(data, dataType, callback) {
     byDateArr = [];
     tmpOrderList = [];
     date = 0;
-    console.log(dateCheckpoint(date))
-    console.log(byOrderArr[0].time)
+    // console.log(dateCheckpoint(date))
+    // console.log(byOrderArr[0].time)
     while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
