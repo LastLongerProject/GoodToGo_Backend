@@ -70,7 +70,16 @@ router.get('/list', function(req, res, next) {
 router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status)
         return next(dbStore);
+    var tmpArr = [];
+    for (var i = 0; i < type.containers.length; i++) {
+        tmpArr.push({
+            typeCode: type.containers[i].typeCode,
+            name: type.containers[i].name,
+            amount: 0
+        });
+    }
     var resJson = {
+        containers: tmpArr,
         todayData: {
             rent: 0,
             return: 0
