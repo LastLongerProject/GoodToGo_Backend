@@ -33,7 +33,7 @@ API doc for https://app.goodtogo.tw
 > You can get ApiKey by signup or login
 ### Error Code
 - **401** "JWT Invalid" : Wrong coding of JWT
-- **401** "Token replay" : 'iat' and 'exp' should be generate on runtime
+- **401** "Token replay" : 'iat' and 'jti' should be generate on runtime
 - **401** "User has Banned" : Clerk has banned by manager or User had not paid
 - **401** "Invalid User" : apiKey is wrong, maybe user had login on another platform
 - **401** "Token Invalid" : JWT content incomplete, or missing 'apiKey' or 'Authorization'
@@ -245,18 +245,6 @@ payload = {
 			returnTime : Date // If returned == true
 		}, ...
 	],
-	containers : [
-		{
-			typeCode : Number, // 0
-			name : String, // 12oz 玻璃杯
-			version : Number,
-			icon : {
-				"1x": "https://app.goodtogo.tw/images/icon/00_1x/:token",
-				"2x": "https://app.goodtogo.tw/images/icon/00_2x/:token",
-				"3x": "https://app.goodtogo.tw/images/icon/00_3x/:token"
-			}
-		}, ...
-	],
 	globalAmount : Number
 }
 ```
@@ -442,8 +430,27 @@ payload = {
 - JSON
 ```
 {
-    "boxToSign": [
-        Number,... // 1
+    "toSign": [
+        {
+            "boxID": 1,
+            "boxTime": "2017-11-06T12:44:00.929Z",
+            "typeList": [
+                "12oz 玻璃杯",...
+            ],
+            "containerList": {
+                "12oz 玻璃杯": [
+                    1,
+                    2,...
+                ],...
+            },
+            "isDelivering": false,
+            "containerOverview": [
+                {
+                    "containerType": "12oz 玻璃杯",
+                    "amount": 2
+                },...
+            ]
+        },...
     ]
 }
 ```
@@ -551,6 +558,18 @@ payload = {
 - JSON
 ```
 {
+	"containerType" : [
+		{
+			typeCode : Number, // 0
+			name : String, // 12oz 玻璃杯
+			version : Number,
+			icon : {
+				"1x": "https://app.goodtogo.tw/images/icon/00_1x/:token",
+				"2x": "https://app.goodtogo.tw/images/icon/00_2x/:token",
+				"3x": "https://app.goodtogo.tw/images/icon/00_3x/:token"
+			}
+		}, ...
+	],
     "containerDict": {
         "1": "12oz 玻璃杯",...
     }
@@ -580,20 +599,6 @@ payload = {
 - JSON
 ```
 {
-    "typeCodeDict": {
-        "containers": [
-            {
-                "typeCode": 0,
-                "name": "12oz 玻璃杯",
-                "version": 1,
-                "icon": {
-                    "1x": "https://app.goodtogo.tw/images/icon/00_1x",
-                    "2x": "https://app.goodtogo.tw/images/icon/00_2x",
-                    "3x": "https://app.goodtogo.tw/images/icon/00_3x"
-                }
-            },...
-        ]
-    },
     "toDelivery": [
         {
             "boxID": 1,
@@ -642,21 +647,7 @@ payload = {
 - JSON
 ```
 {
-    "typeCodeDict": {
-        "containers": [
-            {
-                "typeCode": 0,
-                "name": "12oz 玻璃杯",
-                "version": 1,
-                "icon": {
-                    "1x": "https://app.goodtogo.tw/images/icon/00_1x",
-                    "2x": "https://app.goodtogo.tw/images/icon/00_2x",
-                    "3x": "https://app.goodtogo.tw/images/icon/00_3x"
-                }
-            },...
-        ]
-    },
-    "toDelivery": [
+    "pastDelivery": [
         {
             "boxID": 1,
             "boxTime": "2017-11-05T15:05:37.456Z",
@@ -700,7 +691,36 @@ payload = {
 ```
 
 ### Error Code -
-- **404** "Can Find The Box" : The box ID is wrong
+- **404** "Can't Find The Box" : The box ID is wrong
+- **403** "Container not available" : Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **403** "Container conflict" : Container is not ready for rent.
+- Others : Remember 'jti' and contact me
+
+---
+## '/containers/cancelDelivery/:boxid' - 取消配送箱子
+### Request - 
+#### method
+- **POST**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'CancelDeliveryMessage', message : 'CancelDelivery succeeded'}
+```
+
+### Error Code -
+- **404** "Can't Find The Box" : The box ID is wrong
 - **403** "Container not available" : Container has marked as not available
 - **404** "No container found." : Container ID invalid
 - **403** "Container conflict" : Container is not ready for rent.
@@ -832,7 +852,6 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 - **401** "Missing Time" : Payload of JWT didn't contain 'orderTime'
 - **500** "Container not available" : Unexpected error, Container has marked as not available
 - **404** "No container found." : Container ID invalid
-- **403** "Container has not rented." : This container is not rented
 - **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
 - Others : Remember 'jti' and contact me
 
@@ -846,8 +865,8 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 - JSON
 ```
 {
-	boxId : String, // "1"
-	containerList : [
+    boxId : String, // "1"
+    containerList : [
         Number, // 1
     ]
 }
@@ -866,7 +885,7 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 #### body
 - JSON
 ```
-{ type : 'BoxingMessage', message : 'Boxing succeeded.'}
+{ type : 'BoxingMessage', message : 'Boxing succeed'}
 ```
 
 ### Error Code -
@@ -874,9 +893,38 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 - **401** "Box is already exist" : The box ID is already exist
 - **500** "Container not available" : Unexpected error, Container has marked as not available
 - **404** "No container found." : Container ID invalid
-- **403** "Container has not rented." : This container is not rented
 - **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
 - Others : Remember 'jti' and contact me
+
+---
+## '/containers/cleanStation/unbox/:boxid' - 容器取消裝箱
+### Request - 
+#### method
+- **POST**
+
+#### headers
+- [JWT Auth & Security](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===?#jwt)
+
+### Response -
+#### type
+- **JSON**
+
+#### status code
+- **200**
+
+#### body
+- JSON
+```
+{ type : 'UnboxingMessage', message : 'Unboxing succeed'}
+```
+
+### Error Code -
+- **401** "Box is already exist" : The box ID is already exist
+- **500** "Container not available" : Unexpected error, Container has marked as not available
+- **404** "No container found." : Container ID invalid
+- **500** "No user found." : Unexpected error. Remember 'reqID' and contact me
+- Others : Remember 'jti' and contact me
+
 ---
 ## '/images/:storeid/:token' - 取得店家照片
 ### Request - 
@@ -885,7 +933,9 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 
 #### url
 - [Token Security Control](https://hackmd.io/AwYwTApgZiBGEFoDMwCsBGBAWdBDKCAnLLFghLEmLkrOgBwAmj6QA===#token-control)
-> You can get complete url from [/stores/list](https://hackmd.io/s/BkTWYMhR-#‘storeslist’-取得所有商店資訊)
+:::success
+You can get complete url from [/stores/list](https://hackmd.io/s/BkTWYMhR-#‘storeslist’-取得所有商店資訊)
+:::
 
 ### Response -
 #### type
@@ -906,8 +956,9 @@ JWT 的 payload 應該要另外加上 {'orderTime': Date.now()}
 
 #### url
 - [Token Security Control](https://hackmd.io/s/BkTWYMhR-#‘usersdata’-使用者使用狀態及記錄)
-> You can get complete url [/users/data](https://hackmd.io/s/BkTWYMhR-#‘usersdata’-使用者使用狀態及記錄) or [/store/status](https://hackmd.io/s/BkTWYMhR-#‘storesstatus’-取得商店庫存狀態)
-
+:::success
+You can get complete url [/containers/get/list](https://hackmd.io/s/BkTWYMhR-#‘containersgetlist’-所有容器對應到的類別名稱) or [/stores/status](https://hackmd.io/s/BkTWYMhR-#‘storesstatus’-取得商店庫存狀態)
+:::
 
 ### Response -
 #### type
