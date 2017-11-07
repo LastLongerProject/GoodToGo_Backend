@@ -70,25 +70,7 @@ router.get('/list', function(req, res, next) {
 router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status)
         return next(dbStore);
-    var tmpArr = [];
-    var date = new Date();
-    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-    var token = jwt.encode(payload, keys.serverSecretKey());
-    for (var i = 0; i < type.containers.length; i++) {
-        var tmpIcon = {};
-        for (var key in type.containers[i].icon) {
-            tmpIcon[key] = type.containers[i].icon[key] + "/" + token;
-        }
-        tmpArr.push({
-            typeCode: type.containers[i].typeCode,
-            name: type.containers[i].name,
-            amount: 0,
-            version: type.containers[i].version,
-            icon: tmpIcon
-        });
-    }
     var resJson = {
-        containers: tmpArr,
         todayData: {
             rent: 0,
             return: 0

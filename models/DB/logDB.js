@@ -5,13 +5,11 @@ var userSchema = mongoose.Schema({
     ip: String,
     url: String,
     method: String,
-    hashID: String,
-    reqTime: Date,
     logTime: { type: Date, default: Date.now },
     description: { type: String, default: "Default" },
     req: {
-        headers: Object,
         payload: Object,
+        headers: Object,
         body: Object
     },
     res: {
@@ -21,6 +19,6 @@ var userSchema = mongoose.Schema({
     }
 });
 
-userSchema.index({ "logTime": -1, "hashID": 1 });
+userSchema.index({ "logTime": -1 });
 
 module.exports = mongoose.model('log', userSchema);
