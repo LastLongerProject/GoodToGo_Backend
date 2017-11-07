@@ -42,14 +42,6 @@ module.exports = {
                                     return res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
                         }
                         next(dbUser);
-                        // if ((req.url.indexOf('/logout') >= 0 || req.url.indexOf('/data') >= 0 || req.url.indexOf('/rent') >= 0 || req.url.indexOf('/return') >= 0 || req.url.indexOf('/modifypassword') >= 0) ||
-                        //     ((req.url.indexOf('/get') >= 0 || req.url.indexOf('/status') >= 0 || req.url.indexOf('/getUser') >= 0 || req.url.indexOf('/history') >= 0 || req.url.indexOf('/favorite') >= 0) && dbUser.role.typeCode === 'clerk') ||
-                        //     ((req.url.indexOf('/clerk') >= 0) && dbUser.role.typeCode === 'clerk' && dbUser.role.clerk.manager === true)) {
-                        //     next(dbUser); // To move to next middleware
-                        // } else {
-                        //     res.status(403).json({ type: 'validatingUser', message: 'Not Authorized' });
-                        //     return;
-                        // }
                     });
                 });
             });

@@ -146,13 +146,53 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, r
 
 router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res, next) {
     process.nextTick(function() {
-        Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
+        Container.find(function(err, list) {
             if (err) return next(err);
-            var resARR = [];
-            for (var i = 0; i < boxList.length; i++) {
-                resARR.push(boxList[i].boxID);
+            var containerDict = {};
+            for (var i = 0; i < list.length; i++) {
+                containerDict[list[i].ID] = type.containers[list[i].typeCode].name;
             }
-            res.json({ 'boxToSign': resARR });
+            Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
+                if (err) return next(err);
+                if (boxList.length === 0) return res.json({ toSign: [] });
+                var boxArr = [];
+                var thisBox;
+                var thisType;
+                for (var i = 0; i < boxList.length; i++) {
+                    thisBox = boxList[i].boxID;
+                    var thisBoxTypeList = [];
+                    var thisBoxContainerList = {};
+                    for (var j = 0; j < boxList[i].containerList.length; j++) {
+                        thisType = containerDict[boxList[i].containerList[j]];
+                        if (thisBoxTypeList.indexOf(thisType) < 0) {
+                            thisBoxTypeList.push(thisType);
+                            thisBoxContainerList[thisType] = [];
+                        }
+                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+                    }
+                    boxArr.push({
+                        boxID: thisBox,
+                        boxTime: boxList[i].boxTime,
+                        typeList: thisBoxTypeList,
+                        containerList: thisBoxContainerList,
+                        isDelivering: boxList[i].delivering,
+                        destinationStore: boxList[i].storeID
+                    });
+                }
+                for (var i = 0; i < boxArr.length; i++) {
+                    boxArr[i].containerOverview = [];
+                    for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                        boxArr[i].containerOverview.push({
+                            containerType: boxArr[i].typeList[j],
+                            amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                        });
+                    }
+                }
+                var resJSON = {
+                    toSign: boxArr
+                };
+                res.json(resJSON);
+            });
         });
     });
 });

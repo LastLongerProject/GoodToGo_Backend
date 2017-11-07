@@ -37,7 +37,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     if (typeof role === 'undefined') {
                         newUser.role.typeCode = 'customer';
                     } else if (role.typeCode === 'clerk') {
-                        if (typeof req._permission === 'undefined' || req._permission === false)
+                        if ((typeof req._permission === 'undefined' || req._permission === false) && role.manager !== true)
                             return done(null, false, { type: 'signupMessage', message: 'Permission deny, clerk should be only signup by manager' });
                         newUser.role = role;
                     } else if (role.typeCode === 'admin') {

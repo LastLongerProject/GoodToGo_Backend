@@ -114,7 +114,6 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
                 res.json(resJSON);
             });
         });
-
     });
 });
 
