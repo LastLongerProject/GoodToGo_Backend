@@ -496,7 +496,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         case 3: // returned
-            if (newState <= 3 || newState === 5)
+            if (newState !== 4)
                 return callback(false);
             break;
         case 4: // notClean
@@ -504,7 +504,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         case 5: // boxed
-            if (newState !== 0 && newState !== 4)
+            if (newState !== 0)
                 return callback(false);
             break;
         default:
