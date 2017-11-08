@@ -160,7 +160,6 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
         var resJSON = {
             pastDelivery: boxArr
         };
-        console.log(boxArr)
         res.json(resJSON);
     });
 });
