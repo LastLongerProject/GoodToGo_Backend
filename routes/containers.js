@@ -118,7 +118,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
 
 router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
     if (dbAdmin.status) return next(dbAdmin);
-    Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(6) } }, function(err, list) {
+    Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(6) } }, '', { 'logTime': -1 }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ pastDelivery: [] });
         var boxArr = [];
