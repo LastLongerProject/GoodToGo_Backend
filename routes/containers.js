@@ -30,8 +30,7 @@ router.all('/:id', function(req, res) {
     res.end();
 });
 
-router.get('/get/list', validateRequest, function(dbStore, req, res, next) {
-    if (dbStore.status) return next(dbStore);
+router.get('/get/list', function(req, res, next) {
     Container.find(function(err, list) {
         if (err) return next(err);
         var tmpArr = [];

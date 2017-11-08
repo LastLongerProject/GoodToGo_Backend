@@ -20,6 +20,11 @@ router.all('/stores/list', function(req, res, next) {
     next();
 });
 
+router.all('/containers/get/list', function(req, res, next) {
+    passLoggingWithoutAuth = false;
+    next();
+});
+
 router.all('/*', function(req, res, next) {
     if (!passLoggingWithoutAuth) {
         passLoggingWithoutAuth = true;
