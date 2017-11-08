@@ -36,33 +36,36 @@ router.get('/list', function(req, res, next) {
     process.nextTick(function() {
         Store.find().exec(function(err, storeList) {
             if (err) next(err);
-            var date = new Date();
-            var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-            var token = jwt.encode(payload, keys.serverSecretKey());
-            res.set('etag', wetag(storeList));
-            for (var i = 0; i < storeList.length; i++) {
-                if (storeList[i].active) {
-                    var tmpOpening = [];
-                    storeList[i].img_info.img_src += ("/" + token);
-                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                        tmpOpening.push({
-                            close: storeList[i].opening_hours[j].close,
-                            open: storeList[i].opening_hours[j].open
-                        })
-                    tmpArr.push({
-                        id: storeList[i].id,
-                        name: storeList[i].name,
-                        img_info: storeList[i].img_info,
-                        opening_hours: tmpOpening,
-                        contract: storeList[i].contract,
-                        location: storeList[i].location,
-                        address: storeList[i].address,
-                        type: storeList[i].type
-                    });
+            Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                jsonData.globalAmount = count;
+                var date = new Date();
+                var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+                var token = jwt.encode(payload, keys.serverSecretKey());
+                res.set('etag', wetag([storeList, count]));
+                for (var i = 0; i < storeList.length; i++) {
+                    if (storeList[i].active) {
+                        var tmpOpening = [];
+                        storeList[i].img_info.img_src += ("/" + token);
+                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                            tmpOpening.push({
+                                close: storeList[i].opening_hours[j].close,
+                                open: storeList[i].opening_hours[j].open
+                            })
+                        tmpArr.push({
+                            id: storeList[i].id,
+                            name: storeList[i].name,
+                            img_info: storeList[i].img_info,
+                            opening_hours: tmpOpening,
+                            contract: storeList[i].contract,
+                            location: storeList[i].location,
+                            address: storeList[i].address,
+                            type: storeList[i].type
+                        });
+                    }
                 }
-            }
-            jsonData["shop_data"] = tmpArr;
-            res.json(jsonData);
+                jsonData["shop_data"] = tmpArr;
+                res.json(jsonData);
+            });
         });
     });
 });
@@ -86,7 +89,7 @@ router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, n
         }
     };
     process.nextTick(function() {
-        Container.find({ 'conbineTo': dbStore.role.storeID }, function(err, containers) {
+        Container.find({ 'storeID': dbStore.role.storeID }, function(err, containers) {
             if (err) return next(err);
             Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
                 if (err) return next(err);
@@ -268,7 +271,7 @@ function parseHistory(data, dataType, callback) {
             var thisPhone = aHistory.oriUser.phone;
             var lastPhone = lastHistory.oriUser.phone;
         }
-        if ((lastHistory.tradeTime - aHistory.tradeTime) > 1000 || lastPhone !== thisPhone) {
+        if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
             byOrderArr.push({
                 time: lastHistory.tradeTime,
@@ -363,7 +366,7 @@ function getFavorite(data, callback) {
         var lastHistory = data[i - 1];
         var thisPhone = aHistory.newUser.phone;
         var lastPhone = lastHistory.newUser.phone;
-        if ((lastHistory.tradeTime - aHistory.tradeTime) > 1000 || lastPhone !== thisPhone) {
+        if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             byOrderArr.push(thisPhone);
             tmpContainerList = [];
         }

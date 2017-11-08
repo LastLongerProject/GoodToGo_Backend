@@ -127,10 +127,13 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
         var thisBox;
         var thisBoxTypeList;
         var thisBoxContainerList;
+        var lastIndex;
+        var nowIndex;
         for (var i = 0; i < list.length; i++) {
             thisBox = list[i].container.box;
             thisType = typeDict.containers[list[i].container.typeCode].name;
-            if (boxIDArr.indexOf(thisBox) < 0) {
+            lastIndex = boxArr.length - 1;
+            if (lastIndex < 0 || boxArr[lastIndex].boxID !== thisBox || (boxArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
                 boxIDArr.push(thisBox);
                 boxArr.push({
                     boxID: thisBox,
@@ -140,8 +143,9 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
                     destinationStore: list[i].newUser.storeID
                 });
             }
-            thisBoxTypeList = boxArr[boxIDArr.indexOf(thisBox)].typeList;
-            thisBoxContainerList = boxArr[boxIDArr.indexOf(thisBox)].containerList;
+            nowIndex = boxArr.length - 1;
+            thisBoxTypeList = boxArr[nowIndex].typeList;
+            thisBoxContainerList = boxArr[nowIndex].containerList;
             if (thisBoxTypeList.indexOf(thisType) < 0) {
                 thisBoxTypeList.push(thisType);
                 thisBoxContainerList[thisType] = [];
@@ -248,6 +252,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin
 router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
     if (dbStore.status) return next(dbStore);
     var boxID = req.params.id;
+    res._payload.orderTime = Date.now();
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aDelivery) {
             if (err) return next(err);
