@@ -410,11 +410,12 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null,
             return res.status(404).json({ type: messageType, message: 'No container found.' });
         if (!container.active)
             return res.status(500).json({ type: messageType, message: 'Container not available.' });
-        if (action === 'Rent' && (container.conbineTo !== dbNew.role.storeID.toString()))
-            return res.status(403).json({
-                'type': messageType,
-                'message': 'Container not belone to this store.'
-            });
+        if (action === 'Rent')
+            if (container.storeID !== dbNew.role.storeID.toString())
+                return res.status(403).json({
+                    'type': messageType,
+                    'message': 'Container not belone to this store.'
+                });
         validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
             if (!succeed) {
                 if (err)
@@ -474,8 +475,11 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null,
                     container.updatetime = Date.now();
                     if (action === 'Delivery') container.cycleCtr++;
                     else if (action === 'CancelDelivery') container.cycleCtr--;
-                    if (action === 'Sign') container.conbineTo = dbNew.role.storeID;
-                    else container.conbineTo = dbNew.user.phone;
+                    if (action === 'Sign') container.storeID = dbNew.role.storeID;
+                    else {
+                        if (container.storeID)
+                            container.storeID = undefined;
+                    }
                     container.save(function(err) {
                         if (err) return next(err);
                         if (boxing === false)

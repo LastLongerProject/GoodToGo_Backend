@@ -6,6 +6,7 @@ var userSchema = mongoose.Schema({
     typeCode: Number,
     statusCode: Number,
     conbineTo: String,
+    storeID: Number,
     cycleCtr: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     updatetime: { type: Date, default: Date.now() }
