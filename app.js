@@ -77,8 +77,8 @@ client.on('ready', function(err) {
 
 require('./models/userQuery'); // pass passport for configuration
 
-app.use('/lottery', index);
-app.use('/usage', index);
+app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
+app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
 
 app.all('/*', loggingDefault);
 // console.log(logger)
