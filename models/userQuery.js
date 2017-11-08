@@ -75,15 +75,12 @@ passport.use('local-login', new CustomStrategy(function(req, done) { // callback
             if (!dbUser.validPassword(password))
                 return done(null, false, { type: 'loginMessage', message: 'Oops! Wrong password.' });
             // all is well, return successful user
-            keys.apiKey(function(returnedApikey) {
-                dbUser.user.apiKey = returnedApikey;
-                dbUser.user.secretKey = keys.secretKey();
-                dbUser.save(function(err) { // save the user
-                    if (err) return done(err);
-                    var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
-                    var token = jwt.encode(payload, keys.serverSecretKey());
-                    return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
-                });
+            dbUser.user.secretKey = keys.secretKey();
+            dbUser.save(function(err) { // save the user
+                if (err) return done(err);
+                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                var token = jwt.encode(payload, keys.serverSecretKey());
+                return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
             });
         });
     });
@@ -99,16 +96,13 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callb
         process.nextTick(function() {
             if (!dbUser.validPassword(oriPassword))
                 return done(null, false, { type: 'chanPassMessage', message: 'Oops! Wrong password.' });
-            keys.apiKey(function(returnedApikey) {
-                dbUser.user.password = dbUser.generateHash(newPassword);
-                dbUser.user.apiKey = returnedApikey;
-                dbUser.user.secretKey = keys.secretKey();
-                dbUser.save(function(err) { // save the user
-                    if (err) return done(err);
-                    var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
-                    var token = jwt.encode(payload, keys.serverSecretKey());
-                    return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
-                });
+            dbUser.user.password = dbUser.generateHash(newPassword);
+            dbUser.user.secretKey = keys.secretKey();
+            dbUser.save(function(err) { // save the user
+                if (err) return done(err);
+                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                var token = jwt.encode(payload, keys.serverSecretKey());
+                return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
             });
         });
     });
@@ -117,7 +111,6 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callb
 passport.use('local-logout', new CustomStrategy(function(req, done) {
     validateRequest(req, req._res, function(dbUser) {
         process.nextTick(function() {
-            dbUser.user.apiKey = undefined;
             dbUser.user.secretKey = undefined;
             dbUser.save(function(err, updatedUser) {
                 if (err) return done(err);
