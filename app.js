@@ -76,6 +76,10 @@ client.on('ready', function(err) {
 });*/
 
 require('./models/userQuery'); // pass passport for configuration
+
+app.use('/lottery', index);
+app.use('/usage', index);
+
 app.all('/*', loggingDefault);
 // console.log(logger)
 // app.use('/', index);
