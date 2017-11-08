@@ -133,7 +133,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
                 boxIDArr.push(thisBox);
                 boxArr.push({
                     boxID: thisBox,
-                    time: list[i].tradeTime,
+                    boxTime: list[i].tradeTime,
                     typeList: [],
                     containerList: {},
                     destinationStore: list[i].newUser.storeID
