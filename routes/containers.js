@@ -147,6 +147,15 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
             }
             thisBoxContainerList[thisType].push(list[i].container.id);
         }
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].containerOverview = [];
+            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                boxArr[i].containerOverview.push({
+                    containerType: boxArr[i].typeList[j],
+                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                });
+            }
+        }
         var resJSON = {
             pastDelivery: boxArr
         };
