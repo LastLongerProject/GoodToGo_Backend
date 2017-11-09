@@ -248,28 +248,32 @@ router.get('/favorite', regAsStore, validateRequest, function(dbStore, req, res,
 });
 
 function parseHistory(data, dataType, callback) {
+    var aHistory;
+    var lastHistory;
+    var thisPhone;
+    var lastPhone;
     if (data.length === 0) return callback([]);
     else if (data.length === 1) {
-        var aHistory = data[0];
+        aHistory = data[0];
         if (dataType === 'Rent')
-            var thisPhone = aHistory.newUser.phone;
+            thisPhone = aHistory.newUser.phone;
         else if (dataType === 'Return')
-            var thisPhone = aHistory.oriUser.phone;
+            thisPhone = aHistory.oriUser.phone;
     } else {
         data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
     }
-    byOrderArr = [];
-    tmpContainerList = [];
+    var byOrderArr = [];
+    var tmpContainerList = [];
     tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3) + " | " + type.containers[data[0].container.typeCode].name);
     for (var i = 1; i < data.length; i++) {
-        var aHistory = data[i];
-        var lastHistory = data[i - 1];
+        aHistory = data[i];
+        lastHistory = data[i - 1];
         if (dataType === 'Rent') {
-            var thisPhone = aHistory.newUser.phone;
-            var lastPhone = lastHistory.newUser.phone;
+            thisPhone = aHistory.newUser.phone;
+            lastPhone = lastHistory.newUser.phone;
         } else if (dataType === 'Return') {
-            var thisPhone = aHistory.oriUser.phone;
-            var lastPhone = lastHistory.oriUser.phone;
+            thisPhone = aHistory.oriUser.phone;
+            lastPhone = lastHistory.oriUser.phone;
         }
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
@@ -360,17 +364,18 @@ function getFavorite(data, callback) {
     data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
     var byOrderArr = [];
     var tmpContainerList = [];
-    tmpContainerList.unshift('#' + intReLength(data[0].container.id, 3));
+    var aHistory;
+    var lastHistory;
+    var thisPhone = data[0].newUser.phone;
+    var lastPhone;
     for (var i = 1; i < data.length; i++) {
-        var aHistory = data[i];
-        var lastHistory = data[i - 1];
-        var thisPhone = aHistory.newUser.phone;
-        var lastPhone = lastHistory.newUser.phone;
+        aHistory = data[i];
+        lastHistory = data[i - 1];
+        thisPhone = aHistory.newUser.phone;
+        lastPhone = lastHistory.newUser.phone;
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             byOrderArr.push(thisPhone);
-            tmpContainerList = [];
         }
-        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3));
     }
     byOrderArr.push(thisPhone);
     var count = {};
