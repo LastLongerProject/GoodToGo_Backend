@@ -416,7 +416,7 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null,
         if (!container.active)
             return res.status(500).json({ type: messageType, message: 'Container not available.' });
         if (action === 'Rent')
-            if (container.storeID !== dbNew.role.storeID.toString())
+            if (container.storeID !== dbNew.role.storeID)
                 return res.status(403).json({
                     'type': messageType,
                     'message': 'Container not belone to this store.'
