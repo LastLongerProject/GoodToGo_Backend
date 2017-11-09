@@ -406,7 +406,7 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbA
     });
 });
 
-function changeState(boxing, id, dbNew, action, newState, res, next, key = null, bypass = false) {
+function changeState(resolve, id, dbNew, action, newState, res, next, key = null, bypass = false) {
     var messageType = action + 'Message';
     Container.findOne({ 'ID': id }, function(err, container) {
         if (err)
@@ -423,6 +423,8 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null,
                 });
         validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
             if (!succeed) {
+                if (resolve !== false)
+                    return next(id);
                 if (err)
                     return res.status(500).json({
                         type: messageType,
@@ -487,10 +489,10 @@ function changeState(boxing, id, dbNew, action, newState, res, next, key = null,
                     }
                     container.save(function(err) {
                         if (err) return next(err);
-                        if (boxing === false)
+                        if (resolve === false)
                             return res.status(200).json({ type: messageType, message: action + ' Succeeded' });
                         else
-                            return boxing();
+                            return resolve();
                     });
                 });
             });
