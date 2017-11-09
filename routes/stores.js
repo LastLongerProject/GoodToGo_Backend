@@ -363,7 +363,6 @@ function getFavorite(data, callback) {
     if (data.length === 0) return callback([]);
     data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
     var byOrderArr = [];
-    var tmpContainerList = [];
     var aHistory;
     var lastHistory;
     var thisPhone = data[0].newUser.phone;
