@@ -22,7 +22,7 @@ module.exports = {
                     if (typeof dbUser === 'undefined' || dbUser === null)
                         return res.status(401).json({ type: 'validatingUser', message: 'Invalid User' });
                     if (!dbUser.user.secretKey)
-                        return res.status(401).json({ type: 'validatingUser', message: 'User has login on other device' });
+                        return res.status(401).json({ type: 'validatingUser', message: 'User has logout on other device' });
                     if (!dbUser.active)
                         return res.status(401).json({ type: 'validatingUser', message: 'User has Banned' });
                     var decoded;
