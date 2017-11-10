@@ -90,23 +90,15 @@ router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, n
         }
     };
     process.nextTick(function() {
-        Container.find({ 'storeID': dbStore.role.storeID }, function(err, containers) {
+        Container.find({ 'statusCode': 1, 'storeID': dbStore.role.storeID, 'active': true }, function(err, containers) {
             if (err) return next(err);
             Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
-                        if (containers[i].statusCode !== 1 || !containers[i].active) debug("Something Wrong :" + JSON.stringify(containers[i]));
-                        else {
-                            for (var j in type.containers) {
-                                tmpTypeCode = type.containers[j].typeCode;
-                                if (containers[i].typeCode === tmpTypeCode) {
-                                    resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                                    resJson['containers'][tmpTypeCode]['amount']++;
-                                    break;
-                                }
-                            }
-                        }
+                        tmpTypeCode = containers[i].typeCode;
+                        resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
+                        resJson['containers'][tmpTypeCode]['amount']++;
                     }
                 }
                 if (typeof trades !== 'undefined') {
