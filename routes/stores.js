@@ -78,6 +78,7 @@ router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, n
         tmpArr.push({
             typeCode: type.containers[i].typeCode,
             name: type.containers[i].name,
+            IdList: [],
             amount: 0
         });
     }
@@ -100,6 +101,7 @@ router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, n
                             for (var j in type.containers) {
                                 tmpTypeCode = type.containers[j].typeCode;
                                 if (containers[i].typeCode === tmpTypeCode) {
+                                    resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
                                     resJson['containers'][tmpTypeCode]['amount']++;
                                     break;
                                 }
