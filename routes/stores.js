@@ -160,7 +160,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res
                     }
                     boxArr.push({
                         boxID: thisBox,
-                        boxTime: boxList[i].boxTime,
+                        boxTime: boxList[i].updatedAt,
                         typeList: thisBoxTypeList,
                         containerList: thisBoxContainerList,
                         isDelivering: boxList[i].delivering,
@@ -338,13 +338,18 @@ function parseHistory(data, dataType, callback) {
     });
     tmpOrderList = [];
     date--;
+    var tmpOrderAmount;
     while (date > -7) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dateFormatted.getDate(), 2);
+        tmpOrderAmount = 0;
+        for (var i = 0; i < tmpOrderList.length; i++) {
+            tmpOrderAmount += tmpOrderList[i].containerAmount;
+        }
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-            orderAmount: tmpOrderList.length,
+            orderAmount: tmpOrderAmount,
             orderList: tmpOrderList
         });
         tmpOrderList = [];

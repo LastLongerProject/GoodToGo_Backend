@@ -5,8 +5,9 @@ var userSchema = mongoose.Schema({
     boxID: Number,
     containerList: Array,
     delivering: { type: Boolean, default: false },
-    storeID: Number,
-    boxTime: { type: Date, default: Date.now() }
+    storeID: Number
+}, {
+    timestamps: true
 });
 
 userSchema.index({ "storeID": 1, "boxID": 1 });

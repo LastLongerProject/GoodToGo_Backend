@@ -91,7 +91,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
                     }
                     boxArr.push({
                         boxID: thisBox,
-                        boxTime: boxList[i].boxTime,
+                        boxTime: boxList[i].createdAt,
                         typeList: thisBoxTypeList,
                         containerList: thisBoxContainerList,
                         isDelivering: boxList[i].delivering,
@@ -224,7 +224,7 @@ router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res
                     "type": "SignMessage",
                     "message": "Box not belone to the store which user's store."
                 });
-            promiseMethod(res, next, dbAdmin, 'Sign', 1, false, aDelivery.containerList, () => {
+            promiseMethod(res, next, dbStore, 'Sign', 1, false, aDelivery.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ "type": "SignMessage", "message": "Sign Succeed" });
@@ -414,7 +414,6 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 };
                 if (action === 'Sign') newTrade.container.box = key;
                 container.statusCode = newState;
-                container.updatetime = Date.now();
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
                 if (action === 'Sign') container.storeID = dbNew.role.storeID;

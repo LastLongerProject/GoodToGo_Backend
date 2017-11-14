@@ -8,8 +8,9 @@ var userSchema = mongoose.Schema({
     conbineTo: String,
     storeID: Number,
     cycleCtr: { type: Number, default: 0 },
-    active: { type: Boolean, default: true },
-    updatetime: { type: Date, default: Date.now() }
+    active: { type: Boolean, default: true }
+}, {
+    timestamps: true
 });
 
 userSchema.index({ "ID": 1 });
