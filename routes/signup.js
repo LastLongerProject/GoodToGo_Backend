@@ -1,9 +1,10 @@
 var express = require('express');
 var router = express.Router();
+var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStoreManager = require('../models/validateRequest').regAsStoreManager;
 
-router.post('/', function(req, res, next) {
+router.post('/', validateDefault, function(req, res, next) {
     req._permission = false;
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
     req.app.get('passport').authenticate('local-signup', function(err, user, info) {

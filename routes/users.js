@@ -4,6 +4,7 @@ var jwt = require('jwt-simple');
 var fs = require('fs');
 
 var validateRequest = require('../models/validateRequest').JWT;
+var validateDefault = require('../models/validateDefault');
 var signup = require('../routes/signup');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
@@ -24,7 +25,7 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
 
 router.use('/signup', signup);
 
-router.post('/login', function(req, res, next) {
+router.post('/login', validateDefault, function(req, res, next) {
     req.app.get('passport').authenticate('local-login', function(err, user, info) {
         if (err) {
             return next(err);

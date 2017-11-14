@@ -9,6 +9,7 @@ var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
+var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
 var Box = require('../models/DB/boxDB');
@@ -23,7 +24,7 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     type = JSON.parse(data);
 });
 
-router.get('/list', function(req, res, next) {
+router.get('/list', validateDefault, function(req, res, next) {
     var jsonData = {
         title: "Stores list",
         contract_code_explanation: {

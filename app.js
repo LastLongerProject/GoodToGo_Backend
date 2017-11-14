@@ -17,7 +17,6 @@ var debugError = require('debug')('goodtogo_backend:appERR');
 var logSystem = require('./models/logSystem')
 var logModel = require('./models/DB/logDB')
 var index = require('./routes/index');
-var loggingDefault = require('./routes/loggingDefault');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
 var containers = require('./routes/containers');
@@ -73,7 +72,6 @@ require('./models/userQuery'); // pass passport for configuration
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
 
-app.all('/*', loggingDefault);
 // app.use('/', index);
 app.use('/stores', stores);
 app.use('/users', users);

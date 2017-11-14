@@ -11,6 +11,7 @@ var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
+var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validateRequest').regAsAdmin;
@@ -30,7 +31,7 @@ router.all('/:id', function(req, res) {
     res.end();
 });
 
-router.get('/get/list', function(req, res, next) {
+router.get('/get/list', validateDefault, function(req, res, next) {
     Container.find(function(err, list) {
         if (err) return next(err);
         var tmpArr = [];
