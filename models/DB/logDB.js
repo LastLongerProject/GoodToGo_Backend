@@ -28,4 +28,4 @@ var userSchema = mongoose.Schema({
 
 userSchema.index({ "logTime": -1 });
 
-module.exports = mongoose.model('log', userSchema);
+module.exports = mongoose.model('serverLog', userSchema);
