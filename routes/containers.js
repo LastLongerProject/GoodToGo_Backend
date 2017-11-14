@@ -108,6 +108,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
                         });
                     }
                 }
+                boxArr.sort((a, b) => { return b.boxTime - a.boxTime })
                 var resJSON = {
                     toDelivery: boxArr
                 };
@@ -330,14 +331,17 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, boxID, cont
                 return res.status(403).json({
                     "type": action + "Message",
                     "message": action + " Error",
+                    "stateExplanation": status,
                     "listExplanation": ["containerID", "originalState", "newState"],
                     "errorList": errIdList
                 });
             }
         })
         .catch((err) => {
-            debug(err);
-            return next(err);
+            if (err) {
+                debug(err);
+                return next(err);
+            }
         });
 }
 
@@ -363,13 +367,14 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 if (err)
                     return res.status(500).json({
                         type: messageType,
-                        message: 'Container Origin State Unusual. Origin Status: ' + status[container.statusCode] +
-                            '. New Status: ' + status[newState]
+                        message: 'Container Origin State Unusual. Origin Status Code: ' + container.statusCode
                     });
                 return res.status(403).json({
-                    type: messageType,
-                    message: 'Error on changing state. Origin Status: ' + status[container.statusCode] +
-                        '. New Status: ' + status[newState]
+                    "type": messageType,
+                    "message": action + " Error",
+                    "stateExplanation": status,
+                    "listExplanation": ["containerID", "originalState", "newState"],
+                    "errorList": [id, container.statusCode, newState]
                 });
             }
             var userQuery = {};
@@ -380,11 +385,11 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 if (!dbOri) {
                     debug('Return unexpect err. Data : ' + JSON.stringify(container) +
                         ' ID in uri : ' + id);
-                    if (resolve !== false) return next({ type: messageType, message: 'No user found.' });
-                    else return res.status(500).json({ type: messageType, message: 'No user found.' });
+                    if (resolve !== false) next();
+                    return res.status(500).json({ type: messageType, message: 'No user found.' });
                 } else if (!dbOri.active) {
-                    if (resolve !== false) return next({ type: messageType, message: 'User has Banned' });
-                    else return res.status(401).json({ type: messageType, message: 'User has Banned' });
+                    if (resolve !== false) next();
+                    return res.status(401).json({ type: messageType, message: 'User has Banned' });
                 }
                 if (action === 'Rent') {
                     var tmp = dbOri;
@@ -470,7 +475,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         default:
-            return callback(false, false);
+            return callback(false, true);
             break;
     }
     callback(true);

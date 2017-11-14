@@ -49,7 +49,7 @@ mongoose.Promise = global.Promise;
 mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
     if (err) next(err);
     debug('mongoDB connect succeed');
-    // require('./tmp/changeTradeTime.js')
+    // require('./tmp/changeTypeCode.js')
 });
 /*
 var RDS_PORT = 6379,
@@ -93,22 +93,14 @@ app.use(function(err, req, res, next) {
 
     if (!err.status) {
         debugError(JSON.stringify(err));
-        req._error = {
-            type: 'server',
-            description: 'Unexpect Error',
-            level: 3
-        }
+        req._errorLevel = 3;
         res.status(500);
         res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers) });
     } else if (err.status === 404) {
         res.status(err.status);
         res.json({ code: 'Z001', type: 'globalError', message: err.message });
     } else {
-        req._error = {
-            type: 'Unknown',
-            description: 'Unexpect Error',
-            level: 2
-        }
+        req._errorLevel = 3;
         res.status(err.status);
         res.json({ code: 'Z003', type: 'globalError', message: err.message });
     }

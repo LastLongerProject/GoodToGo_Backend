@@ -53,19 +53,15 @@ function logger(dbModel) {
                 body: getResponseBodyToken(res)
             }
 
-            if (req._error) {
-                aRecord.error = {
-                    typeCode: req._error.type,
-                    description: req._error.description
-                }
-                aRecord.noticeLevel = req._error.level
-                    /**
-                     * 0 : regular
-                     * 1 : notice(client error)
-                     * 2 : warning(unusual error)
-                     * 3 : error(may cause crash)
-                     */
-            }
+            aRecord.noticeLevel = getErrorLevel(req, res)
+                /**
+                 * 0 : regular 200 404
+                 * 1 : notice(client error) 401 503
+                 * 2 : warning(unusual error) 403
+                 * 3 : error(may cause crash) 500
+                 * 4 : user-defined important message
+                 * 5 : unknown level
+                 */
 
             aRecord.save((err) => {
                 if (err) debugERR(err)
@@ -195,6 +191,35 @@ function getResponseHeadersToken(res) {
 function getResponseBodyToken(res) {
     if (res.get('Content-Type') === 'application/json; charset=utf-8') return JSON.parse(res._body)
     else return undefined
+}
+
+/**
+ * error level
+ */
+
+function getErrorLevel(req, res) {
+    if (!req._errorLevel) {
+        switch (getStatusToken(req, res)) {
+            case 200:
+            case 404:
+                req._errorLevel = 0
+                break
+            case 401:
+            case 503:
+                req._errorLevel = 1
+                break
+            case 403:
+                req._errorLevel = 2
+                break
+            case 500:
+                req._errorLevel = 3
+                break
+            default:
+                req._errorLevel = 5
+                break
+        }
+    }
+    return req._errorLevel
 }
 
 /**

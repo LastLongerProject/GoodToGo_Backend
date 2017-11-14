@@ -19,10 +19,6 @@ var userSchema = mongoose.Schema({
         headers: Object,
         body: Object
     },
-    error: {
-        typeCode: String,
-        description: String
-    },
     noticeLevel: { type: Number, default: 0 }
 });
 
