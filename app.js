@@ -91,7 +91,7 @@ app.use(function(err, req, res, next) {
     res.locals.message = err.message;
     res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-    if (typeof err.status === 'undefined') {
+    if (!err.status) {
         debugError(JSON.stringify(err));
         req._error = {
             type: 'server',
@@ -99,16 +99,18 @@ app.use(function(err, req, res, next) {
             level: 3
         }
         res.status(500);
-        res.json({ type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers) });
-    } else {
-        if (err.status !== 404)
-            req._error = {
-                type: 'Unknown',
-                description: 'Unexpect Error',
-                level: 2
-            }
+        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers) });
+    } else if (err.status === 404) {
         res.status(err.status);
-        res.json({ type: 'globalError', message: err.message });
+        res.json({ code: 'Z001', type: 'globalError', message: err.message });
+    } else {
+        req._error = {
+            type: 'Unknown',
+            description: 'Unexpect Error',
+            level: 2
+        }
+        res.status(err.status);
+        res.json({ code: 'Z003', type: 'globalError', message: err.message });
     }
 });
 

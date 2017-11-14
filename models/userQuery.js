@@ -22,7 +22,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                 return done(err);
             // check to see if theres already a user with that phone
             if (user) {
-                return done(null, false, { type: 'signupMessage', message: 'That phone is already taken' });
+                return done(null, false, { code: 'D001', type: 'signupMessage', message: 'That phone is already taken' });
             } else {
                 keys.apiKey(function(returnedApikey) {
                     // if there is no user with that phone, create the user
@@ -38,7 +38,11 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                         newUser.role.typeCode = 'customer';
                     } else if (role.typeCode === 'clerk') {
                         if ((typeof req._permission === 'undefined' || req._permission === false) && role.manager !== true)
-                            return done(null, false, { type: 'signupMessage', message: 'Permission deny, clerk should be only signup by manager' });
+                            return done(null, false, {
+                                code: 'D002',
+                                type: 'signupMessage',
+                                message: 'Permission deny, clerk should be only signup by manager'
+                            });
                         newUser.role = role;
                     } else if (role.typeCode === 'admin') {
                         newUser.role = role;

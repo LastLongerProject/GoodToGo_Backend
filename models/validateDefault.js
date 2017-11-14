@@ -9,9 +9,9 @@ module.exports = function(req, res, next) {
     var reqTime = req.headers['reqtime'];
 
     if (!hashID || !reqTime)
-        return res.status(401).json({ type: 'validatingDefault', message: 'Req Invalid' });
+        return res.status(401).json({ code: 'A001', type: 'validatingDefault', message: 'Req Invalid' });
     if (reqTime <= iatGetDate(-3) || reqTime >= iatGetDate(3))
-        return res.status(400).json({ type: 'validatingDefault', message: 'Req Expired' });
+        return res.status(401).json({ code: 'A002', type: 'validatingDefault', message: 'Req Expired' });
     // check reply attack
     next();
 };
