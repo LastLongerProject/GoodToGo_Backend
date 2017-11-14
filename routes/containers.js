@@ -176,7 +176,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmi
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "DeliveryMessage", "message": "Can't Find The Box" });
-            promiseMethod(res, next, dbAdmin, 'Delivery', 0, aBox.containerList, () => {
+            promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, aBox.containerList, () => {
                 aBox.delivering = true;
                 aBox.storeID = storeID;
                 aBox.save(function(err) {
@@ -195,7 +195,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "CancelDeliveryMessage", "message": "Can't Find The Box" });
-            promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, aBox.containerList, () => {
+            promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, true, aBox.containerList, () => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.save(function(err) {
@@ -224,7 +224,7 @@ router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res
                     "type": "SignMessage",
                     "message": "Box not belone to the store which user's store."
                 });
-            promiseMethod(res, next, dbAdmin, 'Sign', 1, aDelivery.containerList, () => {
+            promiseMethod(res, next, dbAdmin, 'Sign', 1, false, aDelivery.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ "type": "SignMessage", "message": "Sign Succeed" });
@@ -272,7 +272,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, 
         Box.findOne({ 'boxID': body.boxId }, function(err, aBox) {
             if (err) return next(err);
             if (aBox) return res.status(401).json({ type: 'BoxingMessage', message: 'Box is already exist' });
-            promiseMethod(res, next, dbAdmin, 'Boxing', 5, body.containerList, () => {
+            promiseMethod(res, next, dbAdmin, 'Boxing', 5, false, body.containerList, () => {
                 newBox = new Box();
                 newBox.boxID = body.boxId;
                 newBox.containerList = body.containerList;
@@ -292,7 +292,7 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbA
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "UnboxingMessage", "message": "Can't Find The Box" });
-            promiseMethod(res, next, dbAdmin, 'Unboxing', 4, aBox.containerList, () => {
+            promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, aBox.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ "type": "UnboxingMessage", "message": "Unboxing Succeed" });
@@ -302,12 +302,12 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbA
     });
 });
 
-function promiseMethod(res, next, dbAdmin, action, newState, containerList, lastFunc) {
+function promiseMethod(res, next, dbAdmin, action, newState, bypass, containerList, lastFunc) {
     var funcList = [];
     for (var i = 0; i < containerList.length; i++) {
         funcList.push(
             new Promise((resolve, reject) => {
-                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, null, true);
+                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, null, bypass);
             })
         );
     }
@@ -329,7 +329,7 @@ function promiseMethod(res, next, dbAdmin, action, newState, containerList, last
                 return res.status(403).json({
                     "type": action + "Message",
                     "message": action + " Error",
-                    "listDiscription": ["containerID", "originalState", "newState"],
+                    "listExplanation": ["containerID", "originalState", "newState"],
                     "errorList": errIdList
                 });
             }
@@ -358,7 +358,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
             if (!succeed) {
                 if (resolve !== false)
-                    return resolve([false, id, oriState, newState]);
+                    return resolve([false, id, container.statusCode, newState]);
                 if (err)
                     return res.status(500).json({
                         type: messageType,
