@@ -176,35 +176,14 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmi
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "DeliveryMessage", "message": "Can't Find The Box" });
-            var containerList = aBox.containerList;
-            var funcList = [];
-            for (var i = 0; i < containerList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        changeState(resolve, containerList[i], dbAdmin, 'Delivery', 0, res, reject);
-                    })
-                );
-            }
-            Promise
-                .all(funcList)
-                .then((err) => {
-                    for (var i = 0; i < err.length; i++) {
-                        if (err[i]) {
-                            debug(JSON.stringify(err[i]));
-                            return next(err[i]);
-                        }
-                    }
-                    aBox.delivering = true;
-                    aBox.storeID = storeID;
-                    aBox.save(function(err) {
-                        if (err) return next(err);
-                        return res.json({ "type": "DeliveryMessage", "message": "Delivery Succeed" });
-                    })
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
+            promiseMethod(res, next, dbAdmin, 'Delivery', 0, aBox.containerList, () => {
+                aBox.delivering = true;
+                aBox.storeID = storeID;
+                aBox.save(function(err) {
+                    if (err) return next(err);
+                    return res.json({ "type": "DeliveryMessage", "message": "Delivery Succeed" });
                 });
+            });
         });
     });
 });
@@ -216,35 +195,14 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "CancelDeliveryMessage", "message": "Can't Find The Box" });
-            var containerList = aBox.containerList;
-            var funcList = [];
-            for (var i = 0; i < containerList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        changeState(resolve, containerList[i], dbAdmin, 'CancelDelivery', 5, res, reject, null, true);
-                    })
-                );
-            }
-            Promise
-                .all(funcList)
-                .then((err) => {
-                    for (var i = 0; i < err.length; i++) {
-                        if (err[i]) {
-                            debug(JSON.stringify(err[i]));
-                            return next(err[i]);
-                        }
-                    }
-                    aBox.delivering = false;
-                    aBox.storeID = undefined;
-                    aBox.save(function(err) {
-                        if (err) return next(err);
-                        return res.json({ "type": "CancelDeliveryMessage", "message": "Cancel Delivery Succeed" });
-                    })
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
+            promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, aBox.containerList, () => {
+                aBox.delivering = false;
+                aBox.storeID = undefined;
+                aBox.save(function(err) {
+                    if (err) return next(err);
+                    return res.json({ "type": "CancelDeliveryMessage", "message": "CancelDelivery Succeed" });
                 });
+            });
         });
     });
 });
@@ -266,33 +224,12 @@ router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res
                     "type": "SignMessage",
                     "message": "Box not belone to the store which user's store."
                 });
-            var containerIdList = aDelivery.containerList;
-            var funcList = [];
-            for (var i = 0; i < containerIdList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        changeState(resolve, containerIdList[i], dbStore, 'Sign', 1, res, reject, boxID);
-                    })
-                );
-            }
-            Promise
-                .all(funcList)
-                .then((err) => {
-                    for (var i = 0; i < err.length; i++) {
-                        if (err[i]) {
-                            debug(JSON.stringify(err[i]));
-                            return next(err[i]);
-                        }
-                    }
-                    Box.remove({ 'boxID': boxID }, function(err) {
-                        if (err) return next(err);
-                        return res.json({ "type": "SignMessage", "message": "Sign Succeed" });
-                    });
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
+            promiseMethod(res, next, dbAdmin, 'Sign', 1, aDelivery.containerList, () => {
+                Box.remove({ 'boxID': boxID }, function(err) {
+                    if (err) return next(err);
+                    return res.json({ "type": "SignMessage", "message": "Sign Succeed" });
                 });
+            });
         });
     });
 });
@@ -335,35 +272,15 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, 
         Box.findOne({ 'boxID': body.boxId }, function(err, aBox) {
             if (err) return next(err);
             if (aBox) return res.status(401).json({ type: 'BoxingMessage', message: 'Box is already exist' });
-            var funcList = [];
-            for (var i = 0; i < body.containerList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        changeState(resolve, body.containerList[i], dbAdmin, 'Boxing', 5, res, reject);
-                    })
-                );
-            }
-            Promise
-                .all(funcList)
-                .then((err) => {
-                    for (var i = 0; i < err.length; i++) {
-                        if (err[i]) {
-                            debug('1: ' + JSON.stringify(err[i]));
-                            return next(err[i]);
-                        }
-                    }
-                    newBox = new Box();
-                    newBox.boxID = body.boxId;
-                    newBox.containerList = body.containerList;
-                    newBox.save(function(err) {
-                        if (err) return next(err);
-                        return res.status(200).json({ type: 'BoxingMessage', message: 'Boxing Succeeded' });
-                    });
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
+            promiseMethod(res, next, dbAdmin, 'Boxing', 5, body.containerList, () => {
+                newBox = new Box();
+                newBox.boxID = body.boxId;
+                newBox.containerList = body.containerList;
+                newBox.save(function(err) {
+                    if (err) return next(err);
+                    return res.status(200).json({ type: 'BoxingMessage', message: 'Boxing Succeeded' });
                 });
+            });
         });
     });
 });
@@ -375,36 +292,53 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbA
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(404).json({ "type": "UnboxingMessage", "message": "Can't Find The Box" });
-            var containerList = aBox.containerList;
-            var funcList = [];
-            for (var i = 0; i < containerList.length; i++) {
-                funcList.push(
-                    new Promise((resolve, reject) => {
-                        changeState(resolve, containerList[i], dbAdmin, 'Unboxing', 4, res, reject, null, true);
-                    })
-                );
-            }
-            Promise
-                .all(funcList)
-                .then((err) => {
-                    for (var i = 0; i < err.length; i++) {
-                        if (err[i]) {
-                            debug(JSON.stringify(err[i]));
-                            return next(err[i]);
-                        }
-                    }
-                    Box.remove({ 'boxID': boxID }, function(err) {
-                        if (err) return next(err);
-                        return res.json({ "type": "UnboxingMessage", "message": "Unboxing Succeed" });
-                    });
-                })
-                .catch((err) => {
-                    debug(err);
-                    return next(err);
+            promiseMethod(res, next, dbAdmin, 'Unboxing', 4, aBox.containerList, () => {
+                Box.remove({ 'boxID': boxID }, function(err) {
+                    if (err) return next(err);
+                    return res.json({ "type": "UnboxingMessage", "message": "Unboxing Succeed" });
                 });
+            });
         });
     });
 });
+
+function promiseMethod(res, next, dbAdmin, action, newState, containerList, lastFunc) {
+    var funcList = [];
+    for (var i = 0; i < containerList.length; i++) {
+        funcList.push(
+            new Promise((resolve, reject) => {
+                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, null, true);
+            })
+        );
+    }
+    Promise
+        .all(funcList)
+        .then((data) => {
+            var errIdList = [];
+            var saveFuncList = [];
+            for (var i = 0; i < data.length; i++) {
+                if (!data[i][0]) {
+                    errIdList.push([data[i][1], data[i][2], data[i][3]]);
+                } else {
+                    saveFuncList.push(new Promise(data[i][1]));
+                }
+            }
+            if (errIdList.length === 0) {
+                Promise.all(saveFuncList).then(lastFunc).catch((err) => { throw err })
+            } else {
+                return res.status(403).json({
+                    "type": action + "Message",
+                    "message": action + " Error",
+                    "listDiscription": ["containerID", "originalState", "newState"],
+                    "errorList": errIdList
+                });
+            }
+        })
+        .catch((err) => {
+            debug(err);
+            return next(err);
+        });
+}
 
 function changeState(resolve, id, dbNew, action, newState, res, next, key = null, bypass = false) {
     var messageType = action + 'Message';
@@ -424,7 +358,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
             if (!succeed) {
                 if (resolve !== false)
-                    return next(id);
+                    return resolve([false, id, oriState, newState]);
                 if (err)
                     return res.status(500).json({
                         type: messageType,
@@ -445,9 +379,12 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 if (!dbOri) {
                     debug('Return unexpect err. Data : ' + JSON.stringify(container) +
                         ' ID in uri : ' + id);
-                    return res.status(500).json({ type: messageType, message: 'No user found.' });
-                } else if (!dbOri.active)
-                    return res.status(401).json({ type: messageType, message: 'User has Banned' });
+                    if (resolve !== false) return next({ type: messageType, message: 'No user found.' });
+                    else return res.status(500).json({ type: messageType, message: 'No user found.' });
+                } else if (!dbOri.active) {
+                    if (resolve !== false) return next({ type: messageType, message: 'User has Banned' });
+                    else return res.status(401).json({ type: messageType, message: 'User has Banned' });
+                }
                 if (action === 'Rent') {
                     var tmp = dbOri;
                     dbOri = dbNew;
@@ -476,25 +413,30 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     cycleCtr: container.cycleCtr
                 };
                 if (action === 'Sign') newTrade.container.box = key;
-                newTrade.save(function(err) {
-                    if (err) return next(err);
-                    container.statusCode = newState;
-                    container.updatetime = Date.now();
-                    if (action === 'Delivery') container.cycleCtr++;
-                    else if (action === 'CancelDelivery') container.cycleCtr--;
-                    if (action === 'Sign') container.storeID = dbNew.role.storeID;
-                    else {
-                        if (container.storeID)
-                            container.storeID = undefined;
-                    }
-                    container.save(function(err) {
-                        if (err) return next(err);
-                        if (resolve === false)
-                            return res.status(200).json({ type: messageType, message: action + ' Succeeded' });
-                        else
-                            return resolve();
+                container.statusCode = newState;
+                container.updatetime = Date.now();
+                if (action === 'Delivery') container.cycleCtr++;
+                else if (action === 'CancelDelivery') container.cycleCtr--;
+                if (action === 'Sign') container.storeID = dbNew.role.storeID;
+                else {
+                    if (typeof container.storeID === 'Number') container.storeID = undefined;
+                }
+
+                function saveAll(callback, callback2) {
+                    newTrade.save(function(err) {
+                        if (err) return callback2(err);
+                        container.save(function(err) {
+                            if (err) return callback2(err);
+                            return callback();
+                        });
                     });
-                });
+                }
+
+                if (resolve === false) {
+                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next)
+                } else {
+                    resolve([true, (cb, cb2) => saveAll(cb, cb2)]);
+                }
             });
         });
     });

@@ -5,18 +5,25 @@ var userSchema = mongoose.Schema({
     ip: String,
     url: String,
     method: String,
+    httpVersion: String,
     logTime: { type: Date, default: Date.now },
-    description: { type: String, default: "Default" },
     req: {
+        date: String,
         payload: Object,
         headers: Object,
         body: Object
     },
     res: {
+        time: Number,
         status: Number,
         headers: Object,
         body: Object
-    }
+    },
+    error: {
+        typeCode: String,
+        description: String
+    },
+    noticeLevel: { type: Number, default: 0 }
 });
 
 userSchema.index({ "logTime": -1 });

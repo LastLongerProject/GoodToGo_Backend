@@ -1,7 +1,7 @@
 module.exports = logger
 
-var debug = require('debug')('logger')
-var deprecate = require('depd')('logger')
+var debug = require('debug')('log')
+var debugERR = require('debug')('goodtogo_backend:logERR')
 var onFinished = require('on-finished')
 var onHeaders = require('on-headers')
 
@@ -15,67 +15,13 @@ var CLF_MONTH = [
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ]
 
-/**
- * Default log buffer duration.
- * @private
- */
-
-var DEFAULT_BUFFER_DURATION = 1000
-
-/**
- * Create a logger middleware.
- *
- * @public
- * @param {String|Function} format
- * @param {Object} [options]
- * @return {Function} middleware
- */
-
-function logger(format, options) {
-    var fmt = format
-    var opts = options || {}
-
-    if (format && typeof format === 'object') {
-        opts = format
-        fmt = opts.format || 'default'
-
-        // smart deprecation message
-        deprecate('logger(options): use logger(' + (typeof fmt === 'string' ? JSON.stringify(fmt) : 'format') + ', options) instead')
-    }
-
-    if (fmt === undefined) {
-        deprecate('undefined format: specify a format')
-    }
-
-    // output on request instead of response
-    var immediate = opts.immediate
-
-    // check if log entry should be skipped
-    var skip = opts.skip || false
-
-    // format function
-    var formatLine = typeof fmt !== 'function' ?
-        getFormatFunction(fmt) :
-        fmt
-
-    // stream
-    var buffer = opts.buffer
-    var stream = opts.stream || process.stdout
-
-    // buffering support
-    if (buffer) {
-        deprecate('buffer option')
-
-        // flush interval
-        var interval = typeof buffer !== 'number' ?
-            DEFAULT_BUFFER_DURATION :
-            buffer
-
-        // swap the stream
-        stream = createBufferStream(stream, interval)
-    }
+function logger(dbModel) {
+    var localdbModel = dbModel;
 
     return function logger(req, res, next) {
+
+        var aRecord = new localdbModel();
+
         // request data
         req._startAt = undefined
         req._startTime = undefined
@@ -89,122 +35,128 @@ function logger(format, options) {
         recordStartTime.call(req)
 
         function logRequest() {
-            if (skip !== false && skip(req, res)) {
-                debug('skip request')
-                return
+
+            aRecord.ip = getip(req)
+            aRecord.url = getUrlToken(req)
+            aRecord.method = getMethodToken(req)
+            aRecord.httpVersion = getHttpVersionToken(req)
+            aRecord.req = {
+                date: getDateToken(req, res, 'clt'),
+                headers: getHeadersToken(req),
+                payload: res._payload,
+                body: getBodyToken(req)
+            }
+            aRecord.res = {
+                time: getResponseTimeToken(req, res),
+                status: getStatusToken(req, res),
+                headers: getResponseHeadersToken(res),
+                body: getResponseBodyToken(res)
             }
 
-            var line = formatLine(logger, req, res)
-
-            if (line == null) {
-                debug('skip line')
-                return
+            if (req._error) {
+                aRecord.error = {
+                    typeCode: req._error.type,
+                    description: req._error.description
+                }
+                aRecord.noticeLevel = req._error.level
+                    /**
+                     * 0 : regular
+                     * 1 : notice(client error)
+                     * 2 : warning(unusual error)
+                     * 3 : error(may cause crash)
+                     */
             }
+
+            aRecord.save((err) => {
+                if (err) debugERR(err)
+            })
 
             debug('log request')
-            stream.write(line + '\n')
         };
 
-        if (immediate) {
-            // immediate log
-            logRequest()
-        } else {
-            // record response start
-            onHeaders(res, recordStartTime)
+        // record response start
+        onHeaders(res, recordStartTime)
 
-            // log when response finished
-            onFinished(res, logRequest)
-        }
+        // log when response finished
+        onFinished(res, logRequest)
 
         next()
     }
 }
 
 /**
- * Apache combined log format.
+ * Get request IP address.
  */
 
-logger.format('combined', ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"')
-
-/**
- * Apache common log format.
- */
-
-logger.format('common', ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length]')
-
-/**
- * Default format.
- */
-
-logger.format('default', ':remote-addr - :remote-user [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"')
-deprecate.property(logger, 'default', 'default format: use combined format')
-
-/**
- * Short format.
- */
-
-logger.format('short', ':remote-addr :remote-user :method :url HTTP/:http-version :status :res[content-length] - :response-time ms')
-
-/**
- * Tiny format.
- */
-
-logger.format('tiny', ':method :url :status :res[content-length] - :response-time ms')
-
-/**
- * dev (colored)
- */
-
-logger.format('dev', function developmentFormatLine(tokens, req, res) {
-    // get the status code if response written
-    var status = res._header ?
-        res.statusCode :
+function getip(req) {
+    return req.ip ||
+        req._remoteAddress ||
+        (req.connection && req.connection.remoteAddress) ||
         undefined
-
-    // get status color
-    var color = status >= 500 ? 31 // red
-        :
-        status >= 400 ? 33 // yellow
-        :
-        status >= 300 ? 36 // cyan
-        :
-        status >= 200 ? 32 // green
-        :
-        0 // no color
-
-    // get colored function
-    var fn = developmentFormatLine[color]
-
-    if (!fn) {
-        // compile
-        fn = developmentFormatLine[color] = compile('\x1b[0m:method :url \x1b[' +
-            color + 'm:status \x1b[0m:response-time ms - :res[content-length]\x1b[0m')
-    }
-
-    return fn(tokens, req, res)
-})
+}
 
 /**
  * request url
  */
 
-logger.token('url', function getUrlToken(req) {
+function getUrlToken(req) {
     return req.originalUrl || req.url
-})
+}
 
 /**
  * request method
  */
 
-logger.token('method', function getMethodToken(req) {
+function getMethodToken(req) {
     return req.method
-})
+}
+
+/**
+ * HTTP version
+ */
+
+function getHttpVersionToken(req) {
+    return req.httpVersionMajor + '.' + req.httpVersionMinor
+}
+
+/**
+ * current date
+ */
+
+function getDateToken(req, res, format) {
+    var date = new Date()
+
+    switch (format || 'web') {
+        case 'clf':
+            return clfdate(date)
+        case 'iso':
+            return date.toISOString()
+        case 'web':
+            return date.toUTCString()
+    }
+}
+
+/**
+ * request headers
+ */
+
+function getHeadersToken(req) {
+    return req.headers
+}
+
+/**
+ * request body
+ */
+
+function getBodyToken(req) {
+    return req.body || undefined
+}
 
 /**
  * response time in milliseconds
  */
 
-logger.token('response-time', function getResponseTimeToken(req, res, digits) {
+function getResponseTimeToken(req, res, digits) {
     if (!req._startAt || !res._startAt) {
         // missing request and/or response start time
         return
@@ -216,108 +168,34 @@ logger.token('response-time', function getResponseTimeToken(req, res, digits) {
 
     // return truncated value
     return ms.toFixed(digits === undefined ? 3 : digits)
-})
-
-/**
- * current date
- */
-
-logger.token('date', function getDateToken(req, res, format) {
-    var date = new Date()
-
-    switch (format || 'web') {
-        case 'clf':
-            return clfdate(date)
-        case 'iso':
-            return date.toISOString()
-        case 'web':
-            return date.toUTCString()
-    }
-})
+}
 
 /**
  * response status code
  */
 
-logger.token('status', function getStatusToken(req, res) {
+function getStatusToken(req, res) {
     return res._header ?
-        String(res.statusCode) :
-        undefined
-})
+        res.statusCode :
+        null
+}
 
 /**
- * normalized referrer
+ * response headers
  */
 
-logger.token('referrer', function getReferrerToken(req) {
-    return req.headers['referer'] || req.headers['referrer']
-})
+function getResponseHeadersToken(res) {
+    return res._headers
+}
 
 /**
- * remote address
+ * response body
  */
 
-logger.token('remote-addr', getip)
-
-/**
- * remote user
- */
-
-logger.token('remote-user', function getRemoteUserToken(req) {
-    // parse basic credentials
-    var credentials = auth(req)
-
-    // return username
-    return credentials ?
-        credentials.name :
-        undefined
-})
-
-/**
- * HTTP version
- */
-
-logger.token('http-version', function getHttpVersionToken(req) {
-    return req.httpVersionMajor + '.' + req.httpVersionMinor
-})
-
-/**
- * UA string
- */
-
-logger.token('user-agent', function getUserAgentToken(req) {
-    return req.headers['user-agent']
-})
-
-/**
- * request header
- */
-
-logger.token('req', function getRequestToken(req, res, field) {
-    // get header
-    var header = req.headers[field.toLowerCase()]
-
-    return Array.isArray(header) ?
-        header.join(', ') :
-        header
-})
-
-/**
- * response header
- */
-
-logger.token('res', function getResponseHeader(req, res, field) {
-    if (!res._header) {
-        return undefined
-    }
-
-    // get header
-    var header = res.getHeader(field)
-
-    return Array.isArray(header) ?
-        header.join(', ') :
-        header
-})
+function getResponseBodyToken(res) {
+    if (res.get('Content-Type') === 'application/json; charset=utf-8') return JSON.parse(res._body)
+    else return undefined
+}
 
 /**
  * Format a Date in the common log format.
@@ -342,113 +220,6 @@ function clfdate(dateTime) {
 }
 
 /**
- * Compile a format string into a function.
- *
- * @param {string} format
- * @return {function}
- * @public
- */
-
-function compile(format) {
-    if (typeof format !== 'string') {
-        throw new TypeError('argument format must be a string')
-    }
-
-    var fmt = format.replace(/"/g, '\\"')
-    var js = '  "use strict"\n  return "' + fmt.replace(/:([-\w]{2,})(?:\[([^\]]+)\])?/g, function(_, name, arg) {
-        var tokenArguments = 'req, res'
-        var tokenFunction = 'tokens[' + String(JSON.stringify(name)) + ']'
-
-        if (arg !== undefined) {
-            tokenArguments += ', ' + String(JSON.stringify(arg))
-        }
-
-        return '" +\n    (' + tokenFunction + '(' + tokenArguments + ') || "-") + "'
-    }) + '"'
-
-    // eslint-disable-next-line no-new-func
-    return new Function('tokens, req, res', js)
-}
-
-/**
- * Create a basic buffering stream.
- *
- * @param {object} stream
- * @param {number} interval
- * @public
- */
-
-function createBufferStream(stream, interval) {
-    var buf = []
-    var timer = null
-
-    // flush function
-    function flush() {
-        timer = null
-        stream.write(buf.join(''))
-        buf.length = 0
-    }
-
-    // write function
-    function write(str) {
-        if (timer === null) {
-            timer = setTimeout(flush, interval)
-        }
-
-        buf.push(str)
-    }
-
-    // return a minimal "stream"
-    return { write: write }
-}
-
-/**
- * Define a format with the given name.
- *
- * @param {string} name
- * @param {string|function} fmt
- * @public
- */
-
-function format(name, fmt) {
-    logger[name] = fmt
-    return this
-}
-
-/**
- * Lookup and compile a named format function.
- *
- * @param {string} name
- * @return {function}
- * @public
- */
-
-function getFormatFunction(name) {
-    // lookup format
-    var fmt = logger[name] || name || logger.default
-
-    // return compiled format
-    return typeof fmt !== 'function' ?
-        compile(fmt) :
-        fmt
-}
-
-/**
- * Get request IP address.
- *
- * @private
- * @param {IncomingMessage} req
- * @return {string}
- */
-
-function getip(req) {
-    return req.ip ||
-        req._remoteAddress ||
-        (req.connection && req.connection.remoteAddress) ||
-        undefined
-}
-
-/**
  * Pad number to two digits.
  *
  * @private
@@ -470,18 +241,4 @@ function pad2(num) {
 function recordStartTime() {
     this._startAt = process.hrtime()
     this._startTime = new Date()
-}
-
-/**
- * Define a token function with the given name,
- * and callback fn(req, res).
- *
- * @param {string} name
- * @param {function} fn
- * @public
- */
-
-function token(name, fn) {
-    logger[name] = fn
-    return this
 }

@@ -8,10 +8,14 @@ var mongoose = require('mongoose');
 // var redis = require('redis');
 var passport = require('passport');
 var compression = require('compression');
+var helmet = require('helmet')
+var timeout = require('connect-timeout')
 var ua = require('universal-analytics');
 var debug = require('debug')('goodtogo_backend:app');
 var debugError = require('debug')('goodtogo_backend:appERR');
 
+var logSystem = require('./models/logSystem')
+var logModel = require('./models/DB/logDB')
 var index = require('./routes/index');
 var loggingDefault = require('./routes/loggingDefault');
 var stores = require('./routes/stores');
@@ -22,34 +26,23 @@ var config = require('./config/config');
 
 var app = express();
 
-// GA
-var visitor = ua(config.GA_TRACKING_ID, { https: true });
-
-function GAtrigger(req, res, next) {
-    visitor.set('ua', req.headers['user-agent']);
-    visitor.pageview(req.url, function(err) {
-        if (err !== null) {
-            console.log('Failed to trigger GA: ' + err);
-        }
-    });
-    next();
-}
-
-// view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-// app.use(compression());
-app.use(logger(':remote-addr :remote-user :method :url HTTP/:http-version :status - :response-time ms - :date'));
+app.use(favicon(path.join(__dirname, 'assets/images/icon', 'favicon.ico')));
+app.use(logger(':remote-addr - :date - :method :url HTTP/:http-version :status - :response-time ms'));
+app.use(logSystem(logModel));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(resBodyParser);
+app.use(helmet());
+// app.use(compression());
 // app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
-app.use(GAtrigger); // Trigger Google Analytics
+app.use(GAtrigger()); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
+app.use(timeout('10s'))
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
 debug.log = console.log.bind(console);
@@ -81,7 +74,6 @@ app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
 
 app.all('/*', loggingDefault);
-// console.log(logger)
 // app.use('/', index);
 app.use('/stores', stores);
 app.use('/users', users);
@@ -102,13 +94,64 @@ app.use(function(err, req, res, next) {
     res.locals.error = req.app.get('env') === 'development' ? err : {};
 
     if (typeof err.status === 'undefined') {
-        debugError(err.message);
+        debugError(JSON.stringify(err));
+        req._error = {
+            type: 'server',
+            description: 'Unexpect Error',
+            level: 3
+        }
         res.status(500);
         res.json({ type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers) });
     } else {
+        if (err.status !== 404)
+            req._error = {
+                type: 'Unknown',
+                description: 'Unexpect Error',
+                level: 2
+            }
         res.status(err.status);
         res.json({ type: 'globalError', message: err.message });
     }
 });
 
 module.exports = app;
+
+// GA
+function GAtrigger() {
+    var visitor = ua(config.GA_TRACKING_ID, { https: true });
+
+    return function GAtrigger(req, res, next) {
+        visitor.set('ua', req.headers['user-agent']);
+        visitor.pageview(req.url, function(err) {
+            if (err !== null) {
+                console.log('Failed to trigger GA: ' + err);
+            }
+        });
+        next();
+    }
+}
+
+function resBodyParser(req, res, next) {
+    var oldWrite = res.write,
+        oldEnd = res.end;
+
+    var chunks = [];
+
+    res.write = function(chunk) {
+        chunks.push(chunk);
+
+        oldWrite.apply(res, arguments);
+    };
+
+    res.end = function(chunk) {
+        if (chunk)
+            chunks.push(chunk);
+
+        var body = Buffer.concat(chunks).toString('utf8');
+        res._body = body;
+
+        oldEnd.apply(res, arguments);
+    };
+
+    next();
+}
