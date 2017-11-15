@@ -12,7 +12,10 @@ module.exports = {
     },
     dateCheckpoint: function(checkpoint) {
         var dateNow = new Date();
-        var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, 0, 0, 0, 0);
+        var timezoneFix = 0;
+        if (dateNow.getHours() > (24 - 8))
+            timezoneFix++;
+        var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, timezoneFix, 0, 0, 0);
         return date;
     },
     intReLength: function(data, length) {

@@ -274,8 +274,8 @@ function parseHistory(data, dataType, callback) {
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
             byOrderArr.push({
-                time: lastHistory.tradeTime,
-                // time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
+                // time: lastHistory.tradeTime,
+                time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
                 phone: phoneFormatted,
                 containerAmount: tmpContainerList.length,
                 containerList: tmpContainerList
@@ -286,8 +286,8 @@ function parseHistory(data, dataType, callback) {
     }
     phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
     byOrderArr.push({
-        time: aHistory.tradeTime,
-        // time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
+        // time: aHistory.tradeTime,
+        time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
         phone: phoneFormatted,
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
