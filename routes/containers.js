@@ -318,15 +318,18 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, boxID, cont
         .then((data) => {
             var errIdList = [];
             var saveFuncList = [];
+            var hasErr = false;
             for (var i = 0; i < data.length; i++) {
                 if (!data[i][0]) {
+                    hasErr = true;
                     errIdList.push([data[i][1], data[i][2], data[i][3]]);
-                } else {
-                    saveFuncList.push(new Promise(data[i][1]));
                 }
             }
-            if (errIdList.length === 0) {
-                Promise.all(saveFuncList).then(lastFunc).catch((err) => { throw err })
+            if (!hasErr) {
+                for (var i = 0; i < data.length; i++) {
+                    saveFuncList.push(new Promise(data[i][1]));
+                }
+                Promise.all(saveFuncList).then(lastFunc).catch((err) => { next(err) })
             } else {
                 return res.status(403).json({
                     "type": action + "Message",
@@ -427,8 +430,8 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     if (typeof container.storeID === 'Number') container.storeID = undefined;
                 }
 
-                function saveAll(callback, callback2) {
-                    newTrade.save(function(err) {
+                function saveAll(callback, callback2, tmpTrade) {
+                    tmpTrade.save(function(err) {
                         if (err) return callback2(err);
                         container.save(function(err) {
                             if (err) return callback2(err);
@@ -438,9 +441,12 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 }
 
                 if (resolve === false) {
-                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next)
+                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade)
                 } else {
-                    resolve([true, (cb, cb2) => saveAll(cb, cb2)]);
+                    var tmpTrade = new Object(newTrade)
+                    resolve([true, function(cb, cb2) {
+                        saveAll(cb, cb2, tmpTrade)
+                    }]);
                 }
             });
         });

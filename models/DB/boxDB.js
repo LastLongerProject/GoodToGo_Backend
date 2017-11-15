@@ -10,7 +10,8 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-userSchema.index({ "storeID": 1, "boxID": 1 });
+userSchema.index({ "storeID": 1 });
+userSchema.index({ "boxID": 1 });
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Box', userSchema);

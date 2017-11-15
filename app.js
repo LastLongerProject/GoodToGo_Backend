@@ -49,7 +49,7 @@ mongoose.Promise = global.Promise;
 mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
     if (err) next(err);
     debug('mongoDB connect succeed');
-    // require('./tmp/changeTypeCode.js')
+    // require('./tmp/changeTradeTime.js')
 });
 /*
 var RDS_PORT = 6379,
@@ -116,7 +116,7 @@ function GAtrigger() {
         visitor.set('ua', req.headers['user-agent']);
         visitor.pageview(req.url, function(err) {
             if (err !== null) {
-                console.log('Failed to trigger GA: ' + err);
+                debugError('Failed to trigger GA: ' + err);
             }
         });
         next();
@@ -130,14 +130,19 @@ function resBodyParser(req, res, next) {
     var chunks = [];
 
     res.write = function(chunk) {
+        if (typeof chunk !== 'Buffer')
+            chunk = new Buffer(chunk);
         chunks.push(chunk);
 
         oldWrite.apply(res, arguments);
     };
 
     res.end = function(chunk) {
-        if (chunk)
+        if (chunk) {
+            if (typeof chunk !== 'Buffer')
+                chunk = new Buffer(chunk);
             chunks.push(chunk);
+        }
 
         var body = Buffer.concat(chunks).toString('utf8');
         res._body = body;

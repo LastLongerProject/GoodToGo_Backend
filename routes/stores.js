@@ -274,6 +274,7 @@ function parseHistory(data, dataType, callback) {
             phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
             byOrderArr.push({
                 time: lastHistory.tradeTime,
+                // time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
                 phone: phoneFormatted,
                 containerAmount: tmpContainerList.length,
                 containerList: tmpContainerList
@@ -285,6 +286,7 @@ function parseHistory(data, dataType, callback) {
     phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
     byOrderArr.push({
         time: aHistory.tradeTime,
+        // time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
         phone: phoneFormatted,
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
@@ -306,7 +308,7 @@ function parseHistory(data, dataType, callback) {
         tmpOrderList = [];
         date--;
     }
-    hoursFormatted = intReLength(byOrderArr[0].time.getHours() + 8, 2);
+    hoursFormatted = intReLength(byOrderArr[0].time.getHours(), 2);
     minutesFormatted = intReLength(byOrderArr[0].time.getMinutes(), 2);
     byOrderArr[0].time = hoursFormatted + ":" + minutesFormatted;
     tmpOrderList.push(byOrderArr[0]);
@@ -324,7 +326,7 @@ function parseHistory(data, dataType, callback) {
             tmpOrderList = [];
             date--;
         }
-        hoursFormatted = intReLength(aOrder.time.getHours() + 8, 2);
+        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
         minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
         aOrder.time = hoursFormatted + ":" + minutesFormatted;
         tmpOrderList.push(aOrder);

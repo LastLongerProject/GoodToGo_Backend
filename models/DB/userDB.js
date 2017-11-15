@@ -22,7 +22,8 @@ var userSchema = mongoose.Schema({
     }]
 });
 
-userSchema.index({ "user.phone": 1, "user.apiKey": 1 });
+userSchema.index({ "user.phone": 1 });
+userSchema.index({ "user.apiKey": 1 });
 
 // generating a hash
 userSchema.methods.generateHash = function(password) {
