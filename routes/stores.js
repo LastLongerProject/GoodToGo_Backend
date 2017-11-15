@@ -247,6 +247,7 @@ function parseHistory(data, dataType, callback) {
     var lastHistory;
     var thisPhone;
     var lastPhone;
+    var phoneFormatted;
     if (data.length === 0) return callback([]);
     else if (data.length === 1) {
         aHistory = data[0];
@@ -291,12 +292,12 @@ function parseHistory(data, dataType, callback) {
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
     });
-    byDateArr = [];
-    tmpOrderList = [];
-    date = 0;
-    // console.log(dateCheckpoint(date))
-    // console.log(byOrderArr[0].time)
-    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date))) {
+    var byDateArr = [];
+    var tmpOrderList = [];
+    var date = 0;
+    console.log(dateCheckpoint(date))
+    console.log(byOrderArr[0].time)
+    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > -7) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dateFormatted.getDate(), 2);
