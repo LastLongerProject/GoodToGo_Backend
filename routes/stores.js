@@ -274,8 +274,8 @@ function parseHistory(data, dataType, callback) {
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
             byOrderArr.push({
-                // time: lastHistory.tradeTime,
-                time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
+                time: lastHistory.tradeTime,
+                // time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
                 phone: phoneFormatted,
                 containerAmount: tmpContainerList.length,
                 containerList: tmpContainerList
@@ -286,14 +286,15 @@ function parseHistory(data, dataType, callback) {
     }
     phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
     byOrderArr.push({
-        // time: aHistory.tradeTime,
-        time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
+        time: aHistory.tradeTime,
+        // time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
         phone: phoneFormatted,
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
     });
     var byDateArr = [];
     var tmpOrderList = [];
+    var tmpOrderAmount = 0;
     var date = 0;
     console.log(dateCheckpoint(date))
     console.log(byOrderArr[0].time)
@@ -303,7 +304,7 @@ function parseHistory(data, dataType, callback) {
         dayFormatted = intReLength(dateFormatted.getDate(), 2);
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-            orderAmount: tmpOrderList.length,
+            orderAmount: tmpOrderAmount,
             orderList: tmpOrderList
         });
         tmpOrderList = [];
@@ -319,9 +320,13 @@ function parseHistory(data, dataType, callback) {
             dateFormatted = dateCheckpoint(date);
             monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
             dayFormatted = intReLength(dateFormatted.getDate(), 2);
+            tmpOrderAmount = 0;
+            for (var i = 0; i < tmpOrderList.length; i++) {
+                tmpOrderAmount += tmpOrderList[i].containerAmount;
+            }
             byDateArr.push({
                 date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-                orderAmount: tmpOrderList.length,
+                orderAmount: tmpOrderAmount,
                 orderList: tmpOrderList
             });
             tmpOrderList = [];
@@ -342,7 +347,6 @@ function parseHistory(data, dataType, callback) {
     });
     tmpOrderList = [];
     date--;
-    var tmpOrderAmount;
     while (date > -7) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
