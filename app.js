@@ -46,11 +46,7 @@ app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" })
 
 debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
-mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
-    if (err) next(err);
-    debug('mongoDB connect succeed');
-    // require('./tmp/changeTradeTime.js')
-});
+connectMongoDB();
 /*
 var RDS_PORT = 6379,
     RDS_HOST = config.redisUrl,
@@ -95,7 +91,7 @@ app.use(function(err, req, res, next) {
         debugError(JSON.stringify(err));
         req._errorLevel = 3;
         res.status(500);
-        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(req.headers) });
+        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(err) });
     } else if (err.status === 404) {
         res.status(err.status);
         res.json({ code: 'Z001', type: 'globalError', message: err.message });
@@ -121,6 +117,14 @@ function GAtrigger() {
         });
         next();
     }
+}
+
+function connectMongoDB() {
+    mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
+        if (err) next(err);
+        debug('mongoDB connect succeed');
+        // require('./tmp/changeTradeTime.js')
+    });
 }
 
 function resBodyParser(req, res, next) {
