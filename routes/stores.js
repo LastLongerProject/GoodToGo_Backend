@@ -332,6 +332,7 @@ function parseHistory(data, dataType, callback) {
             tmpOrderList = [];
             date--;
         }
+        console.log(aOrder.time)
         hoursFormatted = intReLength(aOrder.time.getHours(), 2);
         minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
         aOrder.time = hoursFormatted + ":" + minutesFormatted;
