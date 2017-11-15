@@ -423,6 +423,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 };
                 if (action === 'Sign') newTrade.container.box = key;
                 container.statusCode = newState;
+                container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
                 if (action === 'Sign') container.storeID = dbNew.role.storeID;
