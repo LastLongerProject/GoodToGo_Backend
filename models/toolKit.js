@@ -15,7 +15,7 @@ module.exports = {
         var timezoneFix = 0;
         if (dateNow.getHours() > (24 - 8))
             timezoneFix++;
-        var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, timezoneFix, 0, 0, 0);
+        var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint + timezoneFix, 0, 0, 0, 0);
         return date;
     },
     intReLength: function(data, length) {
