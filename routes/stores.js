@@ -127,7 +127,7 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
             if (typeof user !== 'undefined' && user !== null) {
                 res.status(200).json({ 'phone': user.user.phone, 'apiKey': user.user.apiKey });
             } else {
-                res.status(401).json({ "type": "userSearchingError", "message": "No User: [" + id + "] Found" });
+                res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
             }
         });
     });

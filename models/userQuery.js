@@ -1,34 +1,26 @@
 var jwt = require('jwt-simple');
 var passport = require('passport');
-var CustomStrategy = require('passport-custom').Strategy; // load all the things we need
+var CustomStrategy = require('passport-custom').Strategy;
 var validateRequest = require('../models/validateRequest').JWT;
-var User = require('../models/DB/userDB'); // load up the user model
+var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 
 passport.use('local-signup', new CustomStrategy(function(req, done) {
     var phone = req.body['phone'];
     var password = req.body['password'];
     if (typeof phone === 'undefined' || typeof password === 'undefined') {
-        return done(null, false, { type: 'signupMessage', message: 'Content lost' });
+        return done(null, false, { code: 'D001', type: 'signupMessage', message: 'Content not Complete' });
     }
-    // asynchronous
-    // User.findOne wont fire unless data is sent back
     process.nextTick(function() {
-        // find a user whose phone is the same as the forms phone
-        // we are checking to see if the user trying to sighup already exists
         User.findOne({ 'user.phone': phone }, function(err, user) {
-            // if there are any errors, return the error
             if (err)
                 return done(err);
-            // check to see if theres already a user with that phone
             if (user) {
-                return done(null, false, { code: 'D001', type: 'signupMessage', message: 'That phone is already taken' });
+                return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
             } else {
                 keys.apiKey(function(returnedApikey) {
-                    // if there is no user with that phone, create the user
                     var newUser = new User();
                     var role = req.body['role'];
-                    // set the user's local credentials
                     newUser.user.phone = phone;
                     newUser.user.password = newUser.generateHash(password);
                     newUser.user.apiKey = returnedApikey;
@@ -39,7 +31,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     } else if (role.typeCode === 'clerk') {
                         if ((typeof req._permission === 'undefined' || req._permission === false) && role.manager !== true)
                             return done(null, false, {
-                                code: 'D002',
+                                code: 'D003',
                                 type: 'signupMessage',
                                 message: 'Permission deny, clerk should be only signup by manager'
                             });
@@ -47,7 +39,7 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     } else if (role.typeCode === 'admin') {
                         newUser.role = role;
                     }
-                    newUser.save(function(err) { // save the user
+                    newUser.save(function(err) {
                         if (err) return done(err);
                         var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, manager: newUser.role.manager } };
                         var token = jwt.encode(payload, keys.serverSecretKey());
@@ -59,28 +51,22 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
     });
 }));
 
-passport.use('local-login', new CustomStrategy(function(req, done) { // callback with phone and password
+passport.use('local-login', new CustomStrategy(function(req, done) {
     var phone = req.body['phone'];
     var password = req.body['password'];
     if (typeof phone === 'undefined' || typeof password === 'undefined') {
-        return done(null, false, { type: 'signupMessage', message: 'Content lost' });
+        return done(null, false, { code: 'D004', type: 'loginMessage', message: 'Content not Complete' });
     }
     process.nextTick(function() {
-        // find a user whose phone is the same as the forms phone
-        // we are checking to see if the user trying to login already exists
         User.findOne({ 'user.phone': phone }, function(err, dbUser) {
-            // if there are any errors, return the error before anything else
             if (err)
                 return done(err);
-            // if no user is found, return the message
             if (!dbUser)
-                return done(null, false, { type: 'loginMessage', message: 'No user found.' });
-            // if the user is found but the password is wrong
+                return done(null, false, { code: 'D005', type: 'loginMessage', message: 'No user found' });
             if (!dbUser.validPassword(password))
-                return done(null, false, { type: 'loginMessage', message: 'Oops! Wrong password.' });
-            // all is well, return successful user
+                return done(null, false, { code: 'D006', type: 'loginMessage', message: 'Wrong password' });
             dbUser.user.secretKey = keys.secretKey();
-            dbUser.save(function(err) { // save the user
+            dbUser.save(function(err) {
                 if (err) return done(err);
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
@@ -90,21 +76,21 @@ passport.use('local-login', new CustomStrategy(function(req, done) { // callback
     });
 }));
 
-passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callback with phone and password
+passport.use('local-chanpass', new CustomStrategy(function(req, done) {
     var oriPassword = req.body['oriPassword'];
     var newPassword = req.body['newPassword'];
     if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
-        return done(null, false, { type: 'chanPassMessage', message: 'Content lost' });
+        return done(null, false, { code: 'D007', type: 'chanPassMessage', message: 'Content not Complete' });
     }
     validateRequest(req, req._res, function() {
         var dbUser = req._user;
-        if (dbUser.status) return next(dbUser);
+        if (dbUser.status) return done(dbUser);
         process.nextTick(function() {
             if (!dbUser.validPassword(oriPassword))
-                return done(null, false, { type: 'chanPassMessage', message: 'Oops! Wrong password.' });
+                return done(null, false, { code: 'D008', type: 'chanPassMessage', message: 'Wrong password' });
             dbUser.user.password = dbUser.generateHash(newPassword);
             dbUser.user.secretKey = keys.secretKey();
-            dbUser.save(function(err) { // save the user
+            dbUser.save(function(err) {
                 if (err) return done(err);
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
@@ -117,7 +103,7 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callb
 passport.use('local-logout', new CustomStrategy(function(req, done) {
     validateRequest(req, req._res, function() {
         var dbUser = req._user;
-        if (dbUser.status) return next(dbUser);
+        if (dbUser.status) return done(dbUser);
         process.nextTick(function() {
             dbUser.user.secretKey = undefined;
             dbUser.save(function(err, updatedUser) {

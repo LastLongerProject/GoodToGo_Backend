@@ -180,13 +180,13 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
-            if (!aBox) return res.status(404).json({ "type": "DeliveryMessage", "message": "Can't Find The Box" });
+            if (!aBox) return res.status(403).json({ code: 'F007', type: "DeliveryMessage", message: "Can't Find The Box" });
             promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, null, aBox.containerList, () => {
                 aBox.delivering = true;
                 aBox.storeID = storeID;
                 aBox.save(function(err) {
                     if (err) return next(err);
-                    return res.json({ "type": "DeliveryMessage", "message": "Delivery Succeed" });
+                    return res.json({ type: "DeliveryMessage", message: "Delivery Succeed" });
                 });
             });
         });
@@ -200,13 +200,13 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
-            if (!aBox) return res.status(404).json({ "type": "CancelDeliveryMessage", "message": "Can't Find The Box" });
+            if (!aBox) return res.status(403).json({ code: 'F007', type: "CancelDeliveryMessage", message: "Can't Find The Box" });
             promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, true, null, aBox.containerList, () => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.save(function(err) {
                     if (err) return next(err);
-                    return res.json({ "type": "CancelDeliveryMessage", "message": "CancelDelivery Succeed" });
+                    return res.json({ type: "CancelDeliveryMessage", message: "CancelDelivery Succeed" });
                 });
             });
         });
@@ -222,19 +222,21 @@ router.post('/sign/:id', regAsStore, validateRequest, function(req, res, next) {
         Box.findOne({ 'boxID': boxID }, function(err, aDelivery) {
             if (err) return next(err);
             if (!aDelivery)
-                return res.status(404).json({
-                    "type": "SignMessage",
-                    "message": "Box is not found."
+                return res.status(403).json({
+                    code: 'F007',
+                    type: "SignMessage",
+                    message: "Can't Find The Box"
                 });
             if (aDelivery.storeID !== dbStore.role.storeID)
-                return res.status(401).json({
-                    "type": "SignMessage",
-                    "message": "Box not belone to the store which user's store."
+                return res.status(403).json({
+                    code: 'F008',
+                    type: "SignMessage",
+                    message: "Box is not belong to user's store"
                 });
             promiseMethod(res, next, dbStore, 'Sign', 1, false, boxID, aDelivery.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
-                    return res.json({ "type": "SignMessage", "message": "Sign Succeed" });
+                    return res.json({ type: "SignMessage", message: "Sign Succeed" });
                 });
             });
         });
@@ -247,12 +249,13 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     var key = req.headers['userapikey'];
     if (typeof key === 'undefined' || typeof key === null) {
         debug(req.headers);
-        return res.status(401).json({
-            "type": "borrowContainerMessage",
-            "message": "Invalid Request"
+        return res.status(403).json({
+            code: 'F009',
+            type: "borrowContainerMessage",
+            message: "Invalid Rent Request"
         });
     }
-    if (!res._payload.orderTime) return res.status(401).json({ "type": "borrowContainerMessage", "message": "Missing Time" });
+    if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "borrowContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
     process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, key));
 });
@@ -260,7 +263,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
 router.post('/return/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
-    if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
+    if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "returnContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
     process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next));
 });
@@ -268,7 +271,7 @@ router.post('/return/:id', regAsStore, validateRequest, function(req, res, next)
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
-    if (!res._payload.orderTime) return res.status(401).json({ "type": "readyToCleanMessage", "message": "Missing Time" });
+    if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "readyToCleanMessage", message: "Missing Order Time" });
     var id = req.params.id;
     process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next));
 });
@@ -278,11 +281,11 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
     if (dbAdmin.status) return next(dbAdmin);
     var body = req.body;
     if (!body.containerList || !body.boxId)
-        return res.status(401).json({ type: 'BoxingMessage', message: 'Req body incomplete' });
+        return res.status(403).json({ code: 'F011', type: 'BoxingMessage', message: 'Boxing req body incomplete' });
     process.nextTick(() => {
         Box.findOne({ 'boxID': body.boxId }, function(err, aBox) {
             if (err) return next(err);
-            if (aBox) return res.status(401).json({ type: 'BoxingMessage', message: 'Box is already exist' });
+            if (aBox) return res.status(403).json({ code: 'F012', type: 'BoxingMessage', message: 'Box is already exist' });
             promiseMethod(res, next, dbAdmin, 'Boxing', 5, false, null, body.containerList, () => {
                 newBox = new Box();
                 newBox.boxID = body.boxId;
@@ -303,11 +306,11 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
             if (err) return next(err);
-            if (!aBox) return res.status(404).json({ "type": "UnboxingMessage", "message": "Can't Find The Box" });
+            if (!aBox) return res.status(403).json({ code: 'F007', type: "UnboxingMessage", message: "Can't Find The Box" });
             promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
-                    return res.json({ "type": "UnboxingMessage", "message": "Unboxing Succeed" });
+                    return res.json({ type: "UnboxingMessage", message: "Unboxing Succeed" });
                 });
             });
         });
@@ -342,11 +345,12 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, boxID, cont
                 Promise.all(saveFuncList).then(lastFunc).catch((err) => { next(err) })
             } else {
                 return res.status(403).json({
-                    "type": action + "Message",
-                    "message": action + " Error",
-                    "stateExplanation": status,
-                    "listExplanation": ["containerID", "originalState", "newState"],
-                    "errorList": errIdList
+                    code: 'F001',
+                    type: action + "Message",
+                    message: action + " Error",
+                    stateExplanation: status,
+                    listExplanation: ["containerID", "originalState", "newState"],
+                    errorList: errIdList
                 });
             }
         })
@@ -363,31 +367,33 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
     Container.findOne({ 'ID': id }, function(err, container) {
         if (err)
             return next(err);
-        if (!container)
-            return res.status(404).json({ type: messageType, message: 'No container found.' });
-        if (!container.active)
-            return res.status(500).json({ type: messageType, message: 'Container not available.' });
+        if (!container) {
+            if (resolve !== false) next();
+            return res.status(403).json({ code: 'F002', type: messageType, message: 'No container found', data: id });
+        } else if (!container.active) {
+            if (resolve !== false) next();
+            return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available' });
+        }
         if (action === 'Rent')
             if (container.storeID !== dbNew.role.storeID)
                 return res.status(403).json({
-                    'type': messageType,
-                    'message': 'Container not belone to this store.'
+                    code: 'F010',
+                    type: messageType,
+                    message: "Container not belone to user's store"
                 });
-        validateStateChanging(bypass, container.statusCode, newState, function(succeed, err) {
+        validateStateChanging(bypass, container.statusCode, newState, function(succeed) {
             if (!succeed) {
                 if (resolve !== false)
                     return resolve([false, id, container.statusCode, newState]);
-                if (err)
-                    return res.status(500).json({
-                        type: messageType,
-                        message: 'Container Origin State Unusual. Origin Status Code: ' + container.statusCode
-                    });
                 return res.status(403).json({
-                    "type": messageType,
-                    "message": action + " Error",
-                    "stateExplanation": status,
-                    "listExplanation": ["containerID", "originalState", "newState"],
-                    "errorList": [id, container.statusCode, newState]
+                    code: 'F001',
+                    type: messageType,
+                    message: action + " Error",
+                    stateExplanation: status,
+                    listExplanation: ["containerID", "originalState", "newState"],
+                    errorList: [
+                        [id, container.statusCode, newState]
+                    ]
                 });
             }
             var userQuery = {};
@@ -399,10 +405,10 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     debug('Return unexpect err. Data : ' + JSON.stringify(container) +
                         ' ID in uri : ' + id);
                     if (resolve !== false) next();
-                    return res.status(500).json({ type: messageType, message: 'No user found.' });
+                    return res.status(500).json({ code: 'F004', type: messageType, message: 'No user found' });
                 } else if (!dbOri.active) {
                     if (resolve !== false) next();
-                    return res.status(401).json({ type: messageType, message: 'User has Banned' });
+                    return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
                 }
                 if (action === 'Rent') {
                     var tmp = dbOri;
@@ -492,7 +498,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         default:
-            return callback(false, true);
+            return callback(false);
             break;
     }
     callback(true);

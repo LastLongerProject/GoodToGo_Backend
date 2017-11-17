@@ -13,8 +13,8 @@ router.get('/:id/:a.:b.:c', function(req, res, next) {
             res.set('Content-Type', 'image/jpeg');
             s.pipe(res);
         });
-        s.on('error', function() {
-            res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
+        s.on('error', function(err) {
+            res.status(500).json({ code: 'G001', type: 'readImgERR', message: 'No Image found', data: err });
         });
     });
 });
@@ -28,8 +28,8 @@ router.get('/icon/:id/:a.:b.:c', function(req, res, next) {
             res.set('Content-Type', 'image/png');
             s.pipe(res);
         });
-        s.on('error', function() {
-            res.status(404).json({ type: 'readImgERR', message: 'No Image found' });
+        s.on('error', function(err) {
+            res.status(500).json({ code: 'G001', type: 'readImgERR', message: 'No Image found', data: err });
         });
     });
 });
