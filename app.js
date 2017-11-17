@@ -91,7 +91,7 @@ app.use(function(err, req, res, next) {
         debugError(JSON.stringify(err));
         req._errorLevel = 3;
         res.status(500);
-        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error. Please contact network administrator with following data: ' + JSON.stringify(err) });
+        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error: ' + JSON.stringify(err), data: err });
     } else if (err.status === 404) {
         res.status(err.status);
         res.json({ code: 'Z001', type: 'globalError', message: err.message });
@@ -123,7 +123,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/changeTradeTime.js')
+        // require('./tmp/changeNoticeLevel.js')
     });
 }
 

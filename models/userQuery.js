@@ -96,7 +96,9 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callb
     if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
         return done(null, false, { type: 'chanPassMessage', message: 'Content lost' });
     }
-    validateRequest(req, req._res, function(dbUser) {
+    validateRequest(req, req._res, function() {
+        var dbUser = req._user;
+        if (dbUser.status) return next(dbUser);
         process.nextTick(function() {
             if (!dbUser.validPassword(oriPassword))
                 return done(null, false, { type: 'chanPassMessage', message: 'Oops! Wrong password.' });
@@ -113,7 +115,9 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) { // callb
 }));
 
 passport.use('local-logout', new CustomStrategy(function(req, done) {
-    validateRequest(req, req._res, function(dbUser) {
+    validateRequest(req, req._res, function() {
+        var dbUser = req._user;
+        if (dbUser.status) return next(dbUser);
         process.nextTick(function() {
             dbUser.user.secretKey = undefined;
             dbUser.save(function(err, updatedUser) {

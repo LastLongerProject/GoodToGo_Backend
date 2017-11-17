@@ -19,7 +19,8 @@ var userSchema = mongoose.Schema({
         headers: Object,
         body: Object
     },
-    noticeLevel: { type: Number, default: 0 }
+    noticeLevel: { type: Number, default: 0 },
+    user: String
 });
 
 userSchema.index({ "logTime": -1 });

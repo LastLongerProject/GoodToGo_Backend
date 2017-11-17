@@ -43,7 +43,8 @@ module.exports = {
                             if (dbUser.role.manager !== req._role.manager)
                                 return res.status(401).json({ code: 'B008', type: 'validatingUser', message: 'Not Authorized for this URI' });
                     }
-                    next(dbUser);
+                    req._user = dbUser;
+                    next();
                 });
             });
         } else {

@@ -63,7 +63,8 @@ router.get('/get/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     process.nextTick(function() {
         Container.find(function(err, list) {
@@ -118,7 +119,8 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(dbAdmin, req
     });
 });
 
-router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
         if (err) return next(err);
@@ -170,7 +172,8 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(dbAdmin
     });
 });
 
-router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     var storeID = req.params.store;
@@ -190,7 +193,8 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(dbAdmi
     });
 });
 
-router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     process.nextTick(() => {
@@ -209,7 +213,8 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(dbAdmin
     });
 });
 
-router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.post('/sign/:id', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var boxID = req.params.id;
     res._payload.orderTime = Date.now();
@@ -236,7 +241,8 @@ router.post('/sign/:id', regAsStore, validateRequest, function(dbStore, req, res
     });
 });
 
-router.post('/rent/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var key = req.headers['userapikey'];
     if (typeof key === 'undefined' || typeof key === null) {
@@ -251,21 +257,24 @@ router.post('/rent/:id', regAsStore, validateRequest, function(dbStore, req, res
     process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, key));
 });
 
-router.post('/return/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.post('/return/:id', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     if (!res._payload.orderTime) return res.status(401).json({ "type": "returnContainerMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next));
 });
 
-router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     if (!res._payload.orderTime) return res.status(401).json({ "type": "readyToCleanMessage", "message": "Missing Time" });
     var id = req.params.id;
     process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next));
 });
 
-router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     var body = req.body;
     if (!body.containerList || !body.boxId)
@@ -287,7 +296,8 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(dbAdmin, 
     });
 });
 
-router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(dbAdmin, req, res, next) {
+router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     process.nextTick(() => {

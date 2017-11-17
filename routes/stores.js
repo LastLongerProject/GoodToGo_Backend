@@ -71,9 +71,9 @@ router.get('/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, next) {
-    if (dbStore.status)
-        return next(dbStore);
+router.get('/status', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
     var tmpArr = [];
     for (var i = 0; i < type.containers.length; i++) {
         tmpArr.push({
@@ -116,9 +116,9 @@ router.get('/status', regAsStore, validateRequest, function(dbStore, req, res, n
     });
 });
 
-router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, res, next) {
-    if (dbStore.status)
-        return next(dbStore);
+router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
     var id = req.params.id;
     process.nextTick(function() {
         User.findOne({ 'user.phone': new RegExp(id.toString() + '$', "i") }, function(err, user) {
@@ -133,7 +133,9 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(dbStore, req, r
     });
 });
 
-router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Container.find(function(err, list) {
             if (err) return next(err);
@@ -186,7 +188,9 @@ router.get('/boxToSign', regAsStore, validateRequest, function(dbStore, req, res
     });
 });
 
-router.get('/history', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.get('/history', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
             'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
@@ -220,7 +224,9 @@ router.get('/history', regAsStore, validateRequest, function(dbStore, req, res, 
     });
 });
 
-router.get('/favorite', regAsStore, validateRequest, function(dbStore, req, res, next) {
+router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
             'tradeType.action': 'Rent',

@@ -37,6 +37,9 @@ function logger(dbModel) {
         function logRequest() {
 
             aRecord.ip = getip(req)
+            if (aRecord.ip !== '::1') {
+                return
+            }
             aRecord.url = getUrlToken(req)
             aRecord.method = getMethodToken(req)
             aRecord.httpVersion = getHttpVersionToken(req)
@@ -52,7 +55,7 @@ function logger(dbModel) {
                 headers: getResponseHeadersToken(res),
                 body: getResponseBodyToken(res)
             }
-
+            aRecord.user = getUser(req)
             aRecord.noticeLevel = getErrorLevel(req, res)
                 /**
                  * 0 : regular 200 404
@@ -62,6 +65,12 @@ function logger(dbModel) {
                  * 4 : user-defined important message
                  * 5 : unknown level
                  */
+
+            if (aRecord.res.body) {
+                if (aRecord.res.body.password) {
+                    aRecord.res.body.password = 'pwd'
+                }
+            }
 
             aRecord.save((err) => {
                 if (err) debugERR(err)
@@ -194,6 +203,14 @@ function getResponseBodyToken(res) {
 }
 
 /**
+ * response body
+ */
+
+function getUser(req) {
+    return req._user.user.phone
+}
+
+/**
  * error level
  */
 
@@ -201,6 +218,7 @@ function getErrorLevel(req, res) {
     if (!req._errorLevel) {
         switch (getStatusToken(req, res)) {
             case 200:
+            case 301:
             case 304:
             case 404:
                 req._errorLevel = 0

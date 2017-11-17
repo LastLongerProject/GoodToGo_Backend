@@ -24,9 +24,9 @@ router.post('/', validateDefault, function(req, res, next) {
     })(req, next);
 });
 
-router.post('/clerk', regAsStoreManager, validateRequest, function(dbUser, req, res, next) {
-    if (dbUser.status)
-        return next(dbUser);
+router.post('/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
+    var dbUser = req._user;
+    if (dbUser.status) return next(dbUser);
     req._permission = true;
     req.body['role'] = {
         typeCode: "clerk",
