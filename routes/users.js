@@ -117,14 +117,14 @@ router.post('/logout', function(req, res, next) {
     })(req, next);
 });
 
-router.get('/data', validateRequest, function(dbUser, req, res, next) {
-    if (dbUser.status)
-        return next(dbUser);
+router.get('/data', validateRequest, function(req, res, next) {
+    var dbUser = req._user;
     var returned = [];
     var inUsed = [];
     var recordCollection = {};
     process.nextTick(function() {
         Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
+            if (err) return next(err);
             rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
             recordCollection.usingAmount = rentList.length;
             for (var i = 0; i < rentList.length; i++) {
@@ -138,6 +138,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                 inUsed.push(record);
             }
             Trade.find({ "tradeType.action": "Return", "oriUser.phone": dbUser.user.phone }, function(err, returnList) {
+                if (err) return next(err);
                 returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
@@ -153,6 +154,7 @@ router.get('/data', validateRequest, function(dbUser, req, res, next) {
                     recordCollection.data.push(returned[i]);
                 }
                 Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                    if (err) return next(err);
                     recordCollection.globalAmount = count;
                     res.set('etag', wetag(JSON.stringify({
                         usingAmount: recordCollection.usingAmount,
