@@ -13,14 +13,19 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
         return done(null, false, { code: 'D001', type: 'signupMessage', message: 'Content not Complete' });
     }
     process.nextTick(function() {
-        User.findOne({ 'user.phone': phone }, function(err, user) {
+        User.findOne({ 'user.phone': phone }, function(err, dbUser) {
             if (err)
                 return done(err);
-            if (user) {
-                // if (user.role.typeCode !== 'customer' && role.typeCode === 'clerk')
-
-                // else 
-                return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
+            if (dbUser) {
+                if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
+                    dbUser.role = role;
+                    if (!dbUser.user.secretKey) dbUser.user.secretKey = keys.secretKey();
+                    var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                    var token = jwt.encode(payload, keys.serverSecretKey());
+                    return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                } else {
+                    return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
+                }
             } else {
                 keys.apiKey(function(returnedApikey) {
                     var newUser = new User();
