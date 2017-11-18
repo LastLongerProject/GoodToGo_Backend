@@ -37,7 +37,7 @@ module.exports = {
                     }
                     // check reply attack
                     if (req._role) {
-                        if (dbUser.role.typeCode !== req._role.txt)
+                        if (req._role.txt.indexOf(dbUser.role.typeCode))
                             return res.status(401).json({ code: 'B008', type: 'validatingUser', message: 'Not Authorized for this URI' });
                         if (req._role.manager)
                             if (dbUser.role.manager !== req._role.manager)
@@ -52,29 +52,45 @@ module.exports = {
         }
     },
     regAsStoreManager: function(req, res, next) {
-        req._role = {
-            txt: 'clerk',
-            manager: true
-        };
+        if (!req._role) {
+            req._role = {
+                txt: 'clerk',
+                manager: true
+            };
+        } else {
+            req._role.txt += 'clerk';
+        }
         next();
     },
     regAsStore: function(req, res, next) {
-        req._role = {
-            txt: 'clerk'
-        };
+        if (!req._role) {
+            req._role = {
+                txt: 'clerk'
+            };
+        } else {
+            req._role.txt += 'clerk';
+        }
         next();
     },
     regAsAdminManager: function(req, res, next) {
-        req._role = {
-            txt: 'admin',
-            manager: true
-        };
+        if (!req._role) {
+            req._role = {
+                txt: 'admin',
+                manager: true
+            };
+        } else {
+            req._role.txt += 'admin';
+        }
         next();
     },
     regAsAdmin: function(req, res, next) {
-        req._role = {
-            txt: 'admin'
-        };
+        if (!req._role) {
+            req._role = {
+                txt: 'admin'
+            };
+        } else {
+            req._role.txt += 'admin';
+        }
         next();
     }
 };

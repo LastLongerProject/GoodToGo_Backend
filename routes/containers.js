@@ -260,7 +260,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, key));
 });
 
-router.post('/return/:id', regAsStore, validateRequest, function(req, res, next) {
+router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "returnContainerMessage", message: "Missing Order Time" });
