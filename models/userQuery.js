@@ -6,6 +6,7 @@ var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 
 passport.use('local-signup', new CustomStrategy(function(req, done) {
+    var role = req.body['role'];
     var phone = req.body['phone'];
     var password = req.body['password'];
     if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -16,11 +17,13 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
             if (err)
                 return done(err);
             if (user) {
+                // if (user.role.typeCode !== 'customer' && role.typeCode === 'clerk')
+
+                // else 
                 return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
             } else {
                 keys.apiKey(function(returnedApikey) {
                     var newUser = new User();
-                    var role = req.body['role'];
                     newUser.user.phone = phone;
                     newUser.user.password = newUser.generateHash(password);
                     newUser.user.apiKey = returnedApikey;

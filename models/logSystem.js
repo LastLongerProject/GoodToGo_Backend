@@ -37,7 +37,7 @@ function logger(dbModel) {
         function logRequest() {
 
             aRecord.ip = getip(req)
-            if (aRecord.ip !== '::1') {
+            if (aRecord.ip === '::1') {
                 return
             }
             aRecord.url = getUrlToken(req)
