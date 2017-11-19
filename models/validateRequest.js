@@ -37,7 +37,7 @@ module.exports = {
                     }
                     // check reply attack
                     if (req._role) {
-                        if (req._role.txt.indexOf(dbUser.role.typeCode))
+                        if (req._role.txt.indexOf(dbUser.role.typeCode) === -1)
                             return res.status(401).json({ code: 'B008', type: 'validatingUser', message: 'Not Authorized for this URI' });
                         if (req._role.manager)
                             if (dbUser.role.manager !== req._role.manager)

@@ -401,19 +401,19 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             else userQuery = { 'user.phone': container.conbineTo };
             User.findOne(userQuery, function(err, dbOri) {
                 if (err) return next(err);
-                if (!dbOri) {
-                    debug('Return unexpect err. Data : ' + JSON.stringify(container) +
-                        ' ID in uri : ' + id);
-                    if (resolve !== false) next();
-                    return res.status(500).json({ code: 'F004', type: messageType, message: 'No user found' });
-                } else if (!dbOri.active) {
-                    if (resolve !== false) next();
-                    return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
-                }
                 if (action === 'Rent') {
                     var tmp = dbOri;
                     dbOri = dbNew;
                     dbNew = tmp;
+                    if (!dbOri) {
+                        debug('Return unexpect err. Data : ' + JSON.stringify(container) +
+                            ' ID in uri : ' + id);
+                        if (resolve !== false) next();
+                        return res.status(500).json({ code: 'F004', type: messageType, message: 'No user found' });
+                    } else if (!dbOri.active) {
+                        if (resolve !== false) next();
+                        return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
+                    }
                 }
                 newTrade = new Trade();
                 newTrade.tradeTime = res._payload.orderTime || Date.now();
@@ -442,7 +442,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
-                if (action === 'Sign') container.storeID = dbNew.role.storeID;
+                if (action === 'Sign' || action === 'Return') container.storeID = dbNew.role.storeID;
                 else {
                     if (typeof container.storeID === 'Number') container.storeID = undefined;
                 }
