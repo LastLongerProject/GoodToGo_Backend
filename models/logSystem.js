@@ -207,7 +207,7 @@ function getResponseBodyToken(res) {
  */
 
 function getUser(req) {
-    return req._user.user.phone
+    return (req._user) ? req._user.user.phone : undefined
 }
 
 /**
