@@ -442,8 +442,14 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
-                if (action === 'Sign' || action === 'Return') container.storeID = dbNew.role.storeID;
-                else {
+                if (action === 'Sign') {
+                    container.storeID = dbNew.role.storeID;
+                } else if (action === 'Return') {
+                    if (dbNew.role.storeID)
+                        container.storeID = dbNew.role.storeID;
+                    else
+                        container.storeID = dbOri.role.storeID;
+                } else {
                     if (typeof container.storeID === 'Number') container.storeID = undefined;
                 }
 
