@@ -265,7 +265,7 @@ router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req
     if (dbStore.status) return next(dbStore);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "returnContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
-    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next));
+    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, req.body['storeId'] || null));
 });
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
@@ -364,6 +364,7 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, boxID, cont
 
 function changeState(resolve, id, dbNew, action, newState, res, next, key = null, bypass = false) {
     var messageType = action + 'Message';
+    var tmpStoreId;
     Container.findOne({ 'ID': id }, function(err, container) {
         if (err)
             return next(err);
@@ -374,13 +375,26 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             if (resolve !== false) next();
             return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available' });
         }
-        if (action === 'Rent')
+        if (action === 'Rent') {
             if (container.storeID !== dbNew.role.storeID)
                 return res.status(403).json({
                     code: 'F010',
                     type: messageType,
                     message: "Container not belone to user's store"
                 });
+        } else if (action === 'Return' && key !== null) {
+            if (resolve !== false)
+                container.statusCode = key;
+            else
+                tmpStoreId = key;
+        }
+        if (container.statusCode === 2 && newState === 4) {
+            changeState((data) => {
+                if (data[0]) data[2].save((err) => { if (err) debug(err) });
+                else debug(data);
+            }, id, dbNew, 'Return', 3, res, next, 2, true);
+            container.statusCode = 3;
+        }
         validateStateChanging(bypass, container.statusCode, newState, function(succeed) {
             if (!succeed) {
                 if (resolve !== false)
@@ -442,15 +456,11 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
+                if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
                 if (action === 'Sign') {
                     container.storeID = dbNew.role.storeID;
-                } else if (action === 'Return') {
-                    if (dbNew.role.storeID)
-                        container.storeID = dbNew.role.storeID;
-                    else
-                        container.storeID = dbOri.role.storeID;
                 } else {
-                    if (typeof container.storeID === 'Number') container.storeID = undefined;
+                    container.storeID = undefined;
                 }
 
                 function saveAll(callback, callback2, tmpTrade) {
@@ -469,7 +479,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     var tmpTrade = new Object(newTrade)
                     resolve([true, function(cb, cb2) {
                         saveAll(cb, cb2, tmpTrade)
-                    }]);
+                    }, tmpTrade]);
                 }
             });
         });
