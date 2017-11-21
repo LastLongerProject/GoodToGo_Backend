@@ -265,7 +265,8 @@ router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req
     if (dbStore.status) return next(dbStore);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "returnContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
-    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, req.body['storeId'] || null));
+    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
+    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, storeId));
 });
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
