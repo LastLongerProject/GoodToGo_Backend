@@ -61,7 +61,7 @@ router.get('/list', validateDefault, function(req, res, next) {
                             location: storeList[i].location,
                             address: storeList[i].address,
                             type: storeList[i].type,
-                            project: storeList[i].project
+                            testing: (storeList[i].project === '正興杯杯') ? false : true
                         });
                     }
                 }
