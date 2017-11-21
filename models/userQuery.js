@@ -6,7 +6,7 @@ var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 
 passport.use('local-signup', new CustomStrategy(function(req, done) {
-    var role = req.body['role'];
+    var role = req.body['role'] || { typeCode: 'customer' };
     var phone = req.body['phone'];
     var password = req.body['password'];
     if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -37,8 +37,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     newUser.user.apiKey = returnedApikey;
                     newUser.user.secretKey = keys.secretKey();
                     newUser.active = req.body['active'];
-                    if (typeof role === 'undefined') {
-                        newUser.role.typeCode = 'customer';
+                    if (role.typeCode === 'admin' || role.typeCode === 'customer') {
+                        newUser.role = role;
                     } else if (role.typeCode === 'clerk') {
                         if ((typeof req._permission === 'undefined' || req._permission === false) && role.manager !== true)
                             return done(null, false, {
@@ -46,8 +46,6 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                                 type: 'signupMessage',
                                 message: 'Permission deny, clerk should be only signup by manager'
                             });
-                        newUser.role = role;
-                    } else if (role.typeCode === 'admin') {
                         newUser.role = role;
                     }
                     newUser.save(function(err) {
