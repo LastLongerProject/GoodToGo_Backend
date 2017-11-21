@@ -213,10 +213,11 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
     });
 });
 
-router.post('/sign/:id', regAsStore, validateRequest, function(req, res, next) {
+router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var boxID = req.params.id;
+    var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
     res._payload.orderTime = Date.now();
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aDelivery) {
@@ -227,13 +228,13 @@ router.post('/sign/:id', regAsStore, validateRequest, function(req, res, next) {
                     type: "SignMessage",
                     message: "Can't Find The Box"
                 });
-            if (aDelivery.storeID !== dbStore.role.storeID)
+            if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
                 return res.status(403).json({
                     code: 'F008',
                     type: "SignMessage",
                     message: "Box is not belong to user's store"
                 });
-            promiseMethod(res, next, dbStore, 'Sign', 1, false, boxID, aDelivery.containerList, () => {
+            promiseMethod(res, next, dbStore, 'Sign', 1, false, { boxID: boxID, storeID: (reqByAdmin) ? dbStore.role.storeID : undefined }, aDelivery.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ type: "SignMessage", message: "Sign Succeed" });
@@ -318,12 +319,12 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
     });
 });
 
-function promiseMethod(res, next, dbAdmin, action, newState, bypass, boxID, containerList, lastFunc) {
+function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, containerList, lastFunc) {
     var funcList = [];
     for (var i = 0; i < containerList.length; i++) {
         funcList.push(
             new Promise((resolve, reject) => {
-                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, boxID, bypass);
+                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, options, bypass);
             })
         );
     }
@@ -453,13 +454,13 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     typeCode: container.typeCode,
                     cycleCtr: container.cycleCtr
                 };
-                if (action === 'Sign') newTrade.container.box = key;
+                if (action === 'Sign') newTrade.container.box = key.boxID;
                 container.statusCode = newState;
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
                 if (action === 'Sign') {
-                    container.storeID = dbNew.role.storeID;
+                    container.storeID = (key.storeID) ? key.storeID : dbNew.role.storeID;
                 } else {
                     container.storeID = undefined;
                 }

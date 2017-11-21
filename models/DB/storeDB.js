@@ -23,6 +23,7 @@ var userSchema = mongoose.Schema({
         open: { day: Number, time: String },
         close: { day: Number, time: String }
     }],
+    project: String,
     active: { type: Boolean, default: true }
 });
 
