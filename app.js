@@ -123,7 +123,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/changeNoticeLevel.js')
+        // require('./tmp/addStoreProject.js')
     });
 }
 

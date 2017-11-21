@@ -60,7 +60,8 @@ router.get('/list', validateDefault, function(req, res, next) {
                             contract: storeList[i].contract,
                             location: storeList[i].location,
                             address: storeList[i].address,
-                            type: storeList[i].type
+                            type: storeList[i].type,
+                            project: storeList[i].project
                         });
                     }
                 }
