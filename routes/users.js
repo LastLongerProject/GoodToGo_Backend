@@ -134,6 +134,7 @@ router.get('/data', validateRequest, function(req, res, next) {
                 record.time = rentList[i].tradeTime;
                 record.type = type.containers[rentList[i].container.typeCode].name;
                 record.store = stores.IDlist[(rentList[i].oriUser.storeID)].name;
+                record.cycle = (typeof rentList[i].container.cycleCtr === 'undefined') ? 0 : rentList[i].container.cycleCtr;
                 record.returned = false;
                 inUsed.push(record);
             }
@@ -142,12 +143,16 @@ router.get('/data', validateRequest, function(req, res, next) {
                 returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
-                    var j = inUsed.length - 1;
-                    while (inUsed[j].containerCode !== returnList[i].container.id) { j--; }
-                    inUsed[j].returned = true;
-                    inUsed[j].returnTime = returnList[i].tradeTime;
-                    returned.push(inUsed[j]);
-                    inUsed.splice(j, 1);
+                    for (var j = inUsed.length - 1; j >= 0; j--) {
+                        if ((inUsed[j].containerCode === returnList[i].container.id) && (inUsed[j].cycle === returnList[i].container.cycleCtr)) {
+                            inUsed[j].returned = true;
+                            inUsed[j].returnTime = returnList[i].tradeTime;
+                            inUsed[j].cycle = undefined;
+                            returned.push(inUsed[j]);
+                            inUsed.splice(j, 1);
+                            break;
+                        }
+                    }
                 }
                 recordCollection.data = inUsed;
                 for (var i = 0; i < returned.length; i++) {
