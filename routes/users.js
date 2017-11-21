@@ -144,7 +144,8 @@ router.get('/data', validateRequest, function(req, res, next) {
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
                     for (var j = inUsed.length - 1; j >= 0; j--) {
-                        if ((inUsed[j].containerCode === returnList[i].container.id) && (inUsed[j].cycle === returnList[i].container.cycleCtr)) {
+                        var returnCycle = (typeof returnList[i].container.cycleCtr === 'undefined') ? 0 : returnList[i].container.cycleCtr;
+                        if ((inUsed[j].containerCode === returnList[i].container.id) && (inUsed[j].cycle === returnCycle)) {
                             inUsed[j].returned = true;
                             inUsed[j].returnTime = returnList[i].tradeTime;
                             inUsed[j].cycle = undefined;
