@@ -429,6 +429,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
                     }
                 }
+                if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
                 newTrade = new Trade();
                 newTrade.tradeTime = res._payload.orderTime || Date.now();
                 newTrade.tradeType = {
@@ -456,7 +457,6 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
-                if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
                 if (action === 'Sign') {
                     container.storeID = dbNew.role.storeID;
                 } else {
