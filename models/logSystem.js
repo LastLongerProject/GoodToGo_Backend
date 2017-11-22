@@ -198,8 +198,15 @@ function getResponseHeadersToken(res) {
  */
 
 function getResponseBodyToken(res) {
-    if (res.get('Content-Type') === 'application/json; charset=utf-8') return JSON.parse(res._body)
-    else return undefined
+    if (res.get('Content-Type') === 'application/json; charset=utf-8') {
+        var returnValue
+        try {
+            returnValue = JSON.parse(res._body)
+        } catch (error) {
+            returnValue = res._body
+        }
+        return returnValue
+    } else return undefined
 }
 
 /**
