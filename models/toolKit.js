@@ -4,11 +4,11 @@ var crc32 = require('buffer-crc32');
 module.exports = {
     wetag: function(body) {
         if (body.length === 0) {
-            return 'W/"0-0"'
+            return 'W/"0-0"';
         }
         var buf = Buffer.from(body);
-        var len = buf.length
-        return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"'
+        var len = buf.length;
+        return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"';
     },
     dateCheckpoint: function(checkpoint) {
         var dateNow = new Date();

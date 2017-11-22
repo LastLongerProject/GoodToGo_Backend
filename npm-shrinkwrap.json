@@ -197,7 +197,7 @@
     },
     "buffer-crc32": {
       "version": "0.2.13",
-      "from": "buffer-crc32@>=0.2.13 <0.3.0",
+      "from": "buffer-crc32@latest",
       "resolved": "https://registry.npmjs.org/buffer-crc32/-/buffer-crc32-0.2.13.tgz"
     },
     "buffer-shims": {
