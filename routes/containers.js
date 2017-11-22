@@ -426,29 +426,29 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             if (resolve !== false) next();
             return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available' });
         }
-        if (action === 'Rent') {
-            if (container.storeID !== dbNew.role.storeID)
-                return res.status(403).json({
-                    code: 'F010',
-                    type: messageType,
-                    message: "Container not belone to user's store"
-                });
+        if (action === 'Rent' && container.storeID !== dbNew.role.storeID) {
+            return res.status(403).json({
+                code: 'F010',
+                type: messageType,
+                message: "Container not belone to user's store"
+            });
         } else if (action === 'Return' && key !== null) {
-            if (resolve !== false)
+            if (resolve !== false) // 未歸還直接回收
                 container.statusCode = key;
-            else
+            else // 正興街髒杯回收
                 tmpStoreId = key;
-        } else if (action === 'ReadyToClean' && key !== null) {
-            tmpStoreId = key;
-        } else if (action === 'Sign' && typeof key.storeID !== 'undefined') {
+        } else if (action === 'ReadyToClean') {
+            if (container.statusCode === 2) { // 未歸還直接回收
+                changeState((data) => {
+                    if (data[0]) data[2].save((err) => { if (err) debug(err); });
+                    else debug(data);
+                }, id, dbNew, 'Return', 3, res, next, 2, true);
+                container.statusCode = 3;
+            } else if (key !== null) { // 正興街髒杯回收
+                tmpStoreId = key;
+            }
+        } else if (action === 'Sign' && typeof key.storeID !== 'undefined') { // 正興街配送
             tmpStoreId = key.storeID;
-        }
-        if (container.statusCode === 2 && newState === 4) {
-            changeState((data) => {
-                if (data[0]) data[2].save((err) => { if (err) debug(err) });
-                else debug(data);
-            }, id, dbNew, 'Return', 3, res, next, 2, true);
-            container.statusCode = 3;
         }
         validateStateChanging(bypass, container.statusCode, newState, function(succeed) {
             if (!succeed) {
@@ -485,8 +485,13 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     }
                 }
                 if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
-                else if (action === 'ReadyToClean' && typeof tmpStoreId !== 'undefined') dbOri.role.storeID = tmpStoreId;
-                if (container.statusCode === 1 && newState === 4 && dbOri.role.typeCode) dbOri.role.storeID = container.storeID;
+                else if (action === 'ReadyToClean') {
+                    if (typeof tmpStoreId !== 'undefined') {
+                        dbOri.role.storeID = tmpStoreId;
+                    } else if (container.statusCode === 1 && dbOri.role.typeCode === 'admin') { // 正興街乾淨回收
+                        dbOri.role.storeID = container.storeID;
+                    }
+                }
                 newTrade = new Trade();
                 newTrade.tradeTime = res._payload.orderTime || Date.now();
                 newTrade.tradeType = {
@@ -514,9 +519,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.conbineTo = dbNew.user.phone;
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
-                if (action === 'Sign') {
-                    container.storeID = dbNew.role.storeID;
-                } else if (action === 'Return') {
+                if (action === 'Sign' || action === 'Return') {
                     container.storeID = dbNew.role.storeID;
                 } else {
                     container.storeID = undefined;
