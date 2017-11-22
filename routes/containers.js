@@ -179,7 +179,6 @@ router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res,
     Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
-        console.log(list)
         list.sort((a, b) => { return b.logTime - a.logTime })
         var boxArr = [];
         var thisBoxTypeList;
@@ -194,8 +193,7 @@ router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res,
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
-                    containerList: {},
-                    destinationStore: list[i].newUser.storeID
+                    containerList: {}
                 });
             }
             nowIndex = boxArr.length - 1;
