@@ -89,9 +89,9 @@ router.get('/clerkList', regAsStoreManager, validateRequest, function(req, res, 
     });
 });
 
-router.post('/layoff', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    var toLayoff = req.body['clerk'];
+    var toLayoff = req.params.id;
     process.nextTick(function() {
         User.findOne({ 'user.phone': toLayoff }, function(err, clerk) {
             if (err) return next(err);
