@@ -326,7 +326,7 @@ function parseHistory(data, dataType, callback) {
             lastPhone = lastHistory.oriUser.phone;
         }
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
-            phoneFormatted = lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10);
+            phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
                 // time: lastHistory.tradeTime,
                 time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
@@ -338,7 +338,7 @@ function parseHistory(data, dataType, callback) {
         }
         tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type.containers[aHistory.container.typeCode].name);
     }
-    phoneFormatted = thisPhone.slice(0, 4) + "-***-" + thisPhone.slice(7, 10);
+    phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
         // time: aHistory.tradeTime,
         time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),

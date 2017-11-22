@@ -483,6 +483,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 }
                 if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
                 else if (action === 'RetuReadyToCleanrn' && typeof tmpStoreId !== 'undefined') dbOri.role.storeID = tmpStoreId;
+                if (container.statusCode === 1 && newState === 4 && dbOri.role.typeCode) dbOri.role.storeID = container.storeID;
                 newTrade = new Trade();
                 newTrade.tradeTime = res._payload.orderTime || Date.now();
                 newTrade.tradeType = {
