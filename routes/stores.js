@@ -76,8 +76,15 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var tmpToUseArr = [];
+    var tmpToReloadArr = [];
     for (var i = 0; i < type.containers.length; i++) {
         tmpToUseArr.push({
+            typeCode: type.containers[i].typeCode,
+            name: type.containers[i].name,
+            IdList: [],
+            amount: 0
+        });
+        tmpToReloadArr.push({
             typeCode: type.containers[i].typeCode,
             name: type.containers[i].name,
             IdList: [],
@@ -86,7 +93,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     }
     var resJson = {
         containers: tmpToUseArr,
-        toReload: new Array(tmpToUseArr),
+        toReload: tmpToReloadArr,
         todayData: {
             rent: 0,
             return: 0
