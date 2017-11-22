@@ -66,9 +66,9 @@ function logger(dbModel) {
                  * 5 : unknown level
                  */
 
-            if (aRecord.res.body) {
-                if (aRecord.res.body.password) {
-                    aRecord.res.body.password = 'pwd'
+            if (aRecord.req.body) {
+                if (aRecord.req.body.password) {
+                    aRecord.req.body.password = 'pwd'
                 }
             }
 
