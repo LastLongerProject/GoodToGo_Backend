@@ -55,7 +55,6 @@ router.get('/get/list', validateDefault, function(req, res, next) {
             containerType: tmpArr,
             containerDict: {}
         };
-        delete tmpArr
         for (var i = 0; i < list.length; i++) {
             resJSON.containerDict[list[i].ID] = typeDict.containers[list[i].typeCode].name;
         }
@@ -109,7 +108,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
                         });
                     }
                 }
-                boxArr.sort((a, b) => { return b.boxTime - a.boxTime })
+                boxArr.sort((a, b) => { return b.boxTime - a.boxTime; });
                 var resJSON = {
                     toDelivery: boxArr
                 };
@@ -125,7 +124,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
     Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ pastDelivery: [] });
-        list.sort((a, b) => { return b.logTime - a.logTime })
+        list.sort((a, b) => { return b.logTime - a.logTime; });
         var boxArr = [];
         var boxIDArr = [];
         var thisBox;
@@ -179,7 +178,7 @@ router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res,
     Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
-        list.sort((a, b) => { return b.logTime - a.logTime })
+        list.sort((a, b) => { return b.logTime - a.logTime; });
         var boxArr = [];
         var thisBoxTypeList;
         var thisBoxContainerList;
@@ -394,7 +393,7 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, co
                 for (var i = 0; i < data.length; i++) {
                     saveFuncList.push(new Promise(data[i][1]));
                 }
-                Promise.all(saveFuncList).then(lastFunc).catch((err) => { next(err) })
+                Promise.all(saveFuncList).then(lastFunc).catch((err) => { next(err); });
             } else {
                 return res.status(403).json({
                     code: 'F001',
@@ -441,6 +440,8 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 tmpStoreId = key;
         } else if (action === 'ReadyToClean' && key !== null) {
             tmpStoreId = key;
+        } else if (action === 'Sign' && typeof key.storeID !== 'undefined') {
+            tmpStoreId = key.storeID;
         }
         if (container.statusCode === 2 && newState === 4) {
             changeState((data) => {
@@ -483,7 +484,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
                     }
                 }
-                if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
+                if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
                 else if (action === 'ReadyToClean' && typeof tmpStoreId !== 'undefined') dbOri.role.storeID = tmpStoreId;
                 if (container.statusCode === 1 && newState === 4 && dbOri.role.typeCode) dbOri.role.storeID = container.storeID;
                 newTrade = new Trade();
@@ -514,7 +515,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 if (action === 'Delivery') container.cycleCtr++;
                 else if (action === 'CancelDelivery') container.cycleCtr--;
                 if (action === 'Sign') {
-                    container.storeID = (key.storeID) ? key.storeID : dbNew.role.storeID;
+                    container.storeID = dbNew.role.storeID;
                 } else if (action === 'Return') {
                     container.storeID = dbNew.role.storeID;
                 } else {
@@ -534,9 +535,9 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 if (resolve === false) {
                     saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade)
                 } else {
-                    var tmpTrade = new Object(newTrade)
+                    var tmpTrade = new Object(newTrade);
                     resolve([true, function(cb, cb2) {
-                        saveAll(cb, cb2, tmpTrade)
+                        saveAll(cb, cb2, tmpTrade);
                     }, tmpTrade]);
                 }
             });
@@ -573,7 +574,6 @@ function validateStateChanging(bypass, oriState, newState, callback) {
             break;
         default:
             return callback(false);
-            break;
     }
     callback(true);
 }
