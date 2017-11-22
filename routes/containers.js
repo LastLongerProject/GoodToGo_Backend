@@ -439,6 +439,8 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 container.statusCode = key;
             else
                 tmpStoreId = key;
+        } else if (action === 'ReadyToClean' && key !== null) {
+            tmpStoreId = key;
         }
         if (container.statusCode === 2 && newState === 4) {
             changeState((data) => {
