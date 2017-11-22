@@ -85,6 +85,7 @@ passport.use('local-login', new CustomStrategy(function(req, done) {
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
                 if (err) return done(err);
+                var storeName;
                 // var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
