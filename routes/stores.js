@@ -12,6 +12,7 @@ var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
+var regAsStoreManager = require('../models/validateRequest').regAsStoreManager;
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
@@ -68,6 +69,40 @@ router.get('/list', validateDefault, function(req, res, next) {
                 jsonData["shop_data"] = tmpArr;
                 res.json(jsonData);
             });
+        });
+    });
+});
+
+router.get('/clerkList', regAsStoreManager, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    process.nextTick(function() {
+        User.find({ 'role.storeID': dbStore.role.storeID }, function(err, list) {
+            if (err) return next(err);
+            var resJson = {
+                clerkList: []
+            };
+            for (var i = 0; i < list.length; i++) {
+                resJson.clerkList.push(list[i].user.phone)
+            }
+            res.json(resJson);
+        });
+    });
+});
+
+router.post('/layoff', regAsStoreManager, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    var toLayoff = req.body['clerk'];
+    process.nextTick(function() {
+        User.findOne({ 'user.phone': toLayoff }, function(err, clerk) {
+            if (err) return next(err);
+            if (!clerk) return res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
+            clerk.role.storeID = undefined;
+            clerk.role.manager = undefined;
+            clerk.role.typeCode = 'customer';
+            clerk.save(function(err) {
+                if (err) return next(err);
+                res.json({ type: 'LayoffMessage', message: 'Layoff succeed' });
+            })
         });
     });
 });

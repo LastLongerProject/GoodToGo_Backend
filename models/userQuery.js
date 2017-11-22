@@ -1,9 +1,16 @@
+var fs = require('fs');
 var jwt = require('jwt-simple');
 var passport = require('passport');
 var CustomStrategy = require('passport-custom').Strategy;
 var validateRequest = require('../models/validateRequest').JWT;
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
+
+var stores;
+fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function(err, data) {
+    if (err) throw err;
+    stores = JSON.parse(data);
+});
 
 passport.use('local-signup', new CustomStrategy(function(req, done) {
     var role = req.body['role'] || { typeCode: 'customer' };
@@ -21,7 +28,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     dbUser.role = role;
                     if (!dbUser.user.secretKey) dbUser.user.secretKey = keys.secretKey();
                     dbUser.save(function(err) {
-                        var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                        var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                        var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                         var token = jwt.encode(payload, keys.serverSecretKey());
                         return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
                     });
@@ -49,7 +57,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     }
                     newUser.save(function(err) {
                         if (err) return done(err);
-                        var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, manager: newUser.role.manager } };
+                        var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                        var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                         var token = jwt.encode(payload, keys.serverSecretKey());
                         return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
                     });
@@ -76,7 +85,8 @@ passport.use('local-login', new CustomStrategy(function(req, done) {
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
                 if (err) return done(err);
-                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
             });
@@ -100,7 +110,8 @@ passport.use('local-chanpass', new CustomStrategy(function(req, done) {
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
                 if (err) return done(err);
-                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };
+                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
             });
