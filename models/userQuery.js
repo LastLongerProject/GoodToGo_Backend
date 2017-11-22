@@ -19,7 +19,6 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
             if (dbUser) {
                 if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
                     dbUser.role = role;
-                    dbUser.user.password = dbUser.generateHash(password);
                     if (!dbUser.user.secretKey) dbUser.user.secretKey = keys.secretKey();
                     dbUser.save(function(err) {
                         var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, manager: dbUser.role.manager } };

@@ -133,6 +133,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
         var thisBoxContainerList;
         var lastIndex;
         var nowIndex;
+        var thisType;
         for (var i = 0; i < list.length; i++) {
             thisBox = list[i].container.box;
             thisType = typeDict.containers[list[i].container.typeCode].name;
@@ -167,6 +168,56 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
         }
         var resJSON = {
             pastDelivery: boxArr
+        };
+        res.json(resJSON);
+    });
+});
+
+router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
+    Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
+        if (err) return next(err);
+        if (list.length === 0) return res.json({ reloadHistory: [] });
+        console.log(list)
+        list.sort((a, b) => { return b.logTime - a.logTime })
+        var boxArr = [];
+        var thisBoxTypeList;
+        var thisBoxContainerList;
+        var lastIndex;
+        var nowIndex;
+        var thisType;
+        for (var i = 0; i < list.length; i++) {
+            thisType = typeDict.containers[list[i].container.typeCode].name;
+            lastIndex = boxArr.length - 1;
+            if (lastIndex < 0 || (boxArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
+                boxArr.push({
+                    boxTime: list[i].tradeTime,
+                    typeList: [],
+                    containerList: {},
+                    destinationStore: list[i].newUser.storeID
+                });
+            }
+            nowIndex = boxArr.length - 1;
+            thisBoxTypeList = boxArr[nowIndex].typeList;
+            thisBoxContainerList = boxArr[nowIndex].containerList;
+            if (thisBoxTypeList.indexOf(thisType) < 0) {
+                thisBoxTypeList.push(thisType);
+                thisBoxContainerList[thisType] = [];
+            }
+            thisBoxContainerList[thisType].push(list[i].container.id);
+        }
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].containerOverview = [];
+            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                boxArr[i].containerOverview.push({
+                    containerType: boxArr[i].typeList[j],
+                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                });
+            }
+        }
+        var resJSON = {
+            reloadHistory: boxArr
         };
         res.json(resJSON);
     });
@@ -234,7 +285,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, 
                     type: "SignMessage",
                     message: "Box is not belong to user's store"
                 });
-            promiseMethod(res, next, dbStore, 'Sign', 1, false, { boxID: boxID, storeID: (reqByAdmin) ? dbStore.role.storeID : undefined }, aDelivery.containerList, () => {
+            promiseMethod(res, next, dbStore, 'Sign', 1, false, { boxID: boxID, storeID: (reqByAdmin) ? aDelivery.storeID : undefined }, aDelivery.containerList, () => {
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ type: "SignMessage", message: "Sign Succeed" });
@@ -275,7 +326,8 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res,
     if (dbAdmin.status) return next(dbAdmin);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "readyToCleanMessage", message: "Missing Order Time" });
     var id = req.params.id;
-    process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next));
+    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
+    process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next, storeId));
 });
 
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res, next) {
@@ -432,6 +484,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     }
                 }
                 if (action === 'Return' && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
+                else if (action === 'RetuReadyToCleanrn' && typeof tmpStoreId !== 'undefined') dbOri.role.storeID = tmpStoreId;
                 newTrade = new Trade();
                 newTrade.tradeTime = res._payload.orderTime || Date.now();
                 newTrade.tradeType = {
