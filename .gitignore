@@ -43,3 +43,4 @@ config
 # Developping trash file
 dev/deprecated
 tmp
+assets/sh
