@@ -75,9 +75,9 @@ router.get('/list', validateDefault, function(req, res, next) {
 router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
-    var tmpArr = [];
+    var tmpToUseArr = [];
     for (var i = 0; i < type.containers.length; i++) {
-        tmpArr.push({
+        tmpToUseArr.push({
             typeCode: type.containers[i].typeCode,
             name: type.containers[i].name,
             IdList: [],
@@ -85,22 +85,30 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         });
     }
     var resJson = {
-        containers: tmpArr,
+        containers: tmpToUseArr,
+        toReload: new Array(tmpToUseArr),
         todayData: {
             rent: 0,
             return: 0
         }
     };
+    var tmpTypeCode;
     process.nextTick(function() {
-        Container.find({ 'statusCode': 1, 'storeID': dbStore.role.storeID, 'active': true }, function(err, containers) {
+        Container.find({ 'storeID': dbStore.role.storeID, 'active': true }, function(err, containers) {
             if (err) return next(err);
             Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
-                        resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                        resJson['containers'][tmpTypeCode]['amount']++;
+                        if (containers[i].statusCode === 1) {
+                            resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
+                            resJson['containers'][tmpTypeCode]['amount']++;
+                        } else if (containers[i].statusCode === 3) {
+                            resJson['toReload'][tmpTypeCode]['IdList'].push(containers[i].ID);
+                            resJson['toReload'][tmpTypeCode]['amount']++;
+                        }
+
                     }
                 }
                 if (typeof trades !== 'undefined') {

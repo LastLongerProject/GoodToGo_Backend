@@ -515,6 +515,8 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 else if (action === 'CancelDelivery') container.cycleCtr--;
                 if (action === 'Sign') {
                     container.storeID = (key.storeID) ? key.storeID : dbNew.role.storeID;
+                } else if (action === 'Return') {
+                    container.storeID = dbNew.role.storeID;
                 } else {
                     container.storeID = undefined;
                 }
