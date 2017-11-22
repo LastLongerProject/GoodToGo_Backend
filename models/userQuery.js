@@ -57,8 +57,8 @@ passport.use('local-signup', new CustomStrategy(function(req, done) {
                     }
                     newUser.save(function(err) {
                         if (err) return done(err);
-                        var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
-                        var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
+                        var storeName = (typeof newUser.role.storeID !== 'undefined') ? stores.IDlist[(newUser.role.storeID)].name : undefined;
+                        var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
                         var token = jwt.encode(payload, keys.serverSecretKey());
                         return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
                     });
