@@ -416,11 +416,7 @@ function parseHistory(data, dataType, callback) {
         tmpOrderList = [];
         date--;
     }
-    hoursFormatted = intReLength(byOrderArr[0].time.getHours(), 2);
-    minutesFormatted = intReLength(byOrderArr[0].time.getMinutes(), 2);
-    byOrderArr[0].time = hoursFormatted + ":" + minutesFormatted;
-    tmpOrderList.push(byOrderArr[0]);
-    for (var i = 1; i < byOrderArr.length; i++) {
+    for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
         if (!(aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date))) {
             dateFormatted = dateCheckpoint(date);
