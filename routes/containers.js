@@ -143,7 +143,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
                 boxArr.push({
                     boxID: thisBox,
                     boxTime: list[i].tradeTime,
-                    phone: boxList[i].user,
+                    phone: list[i].user,
                     typeList: [],
                     containerList: {},
                     destinationStore: list[i].newUser.storeID

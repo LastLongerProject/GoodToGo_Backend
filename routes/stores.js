@@ -95,7 +95,10 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
     process.nextTick(function() {
         User.findOne({ 'user.phone': toLayoff }, function(err, clerk) {
             if (err) return next(err);
-            if (!clerk) return res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
+            if (!clerk)
+                return res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
+            else if (clerk.user.phone === dbStore.user.phone)
+                return res.status(403).json({ code: 'E002', type: "layoffError", message: "Don't lay off yourself" });
             clerk.role.storeID = undefined;
             clerk.role.manager = undefined;
             clerk.role.typeCode = 'customer';
@@ -150,7 +153,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                             resJson['toReload'][tmpTypeCode]['IdList'].push(containers[i].ID);
                             resJson['toReload'][tmpTypeCode]['amount']++;
                         }
-
                     }
                 }
                 if (typeof trades !== 'undefined') {
