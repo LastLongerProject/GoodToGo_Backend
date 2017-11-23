@@ -418,7 +418,12 @@ function parseHistory(data, dataType, callback) {
     }
     for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
-        if (!(aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date))) {
+        nextOrder = byOrderArr[i + 1];
+        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
+        minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
+        aOrder.time = hoursFormatted + ":" + minutesFormatted;
+        tmpOrderList.push(aOrder);
+        if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
             dateFormatted = dateCheckpoint(date);
             monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
             dayFormatted = intReLength(dateFormatted.getDate(), 2);
@@ -434,24 +439,20 @@ function parseHistory(data, dataType, callback) {
             tmpOrderList = [];
             date--;
         }
-        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
-        minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
-        aOrder.time = hoursFormatted + ":" + minutesFormatted;
-        tmpOrderList.push(aOrder);
     }
-    dateFormatted = dateCheckpoint(date);
-    monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-    dayFormatted = intReLength(dateFormatted.getDate(), 2);
-    tmpOrderAmount = 0;
-    for (var i = 0; i < tmpOrderList.length; i++) {
-        tmpOrderAmount += tmpOrderList[i].containerAmount;
-    }
-    byDateArr.push({
-        date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-        orderAmount: tmpOrderAmount,
-        orderList: tmpOrderList
-    });
-    date--;
+    // dateFormatted = dateCheckpoint(date);
+    // monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+    // dayFormatted = intReLength(dateFormatted.getDate(), 2);
+    // tmpOrderAmount = 0;
+    // for (var i = 0; i < tmpOrderList.length; i++) {
+    //     tmpOrderAmount += tmpOrderList[i].containerAmount;
+    // }
+    // byDateArr.push({
+    //     date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+    //     orderAmount: tmpOrderAmount,
+    //     orderList: tmpOrderList
+    // });
+    // date--;
     tmpOrderList = [];
     tmpOrderAmount = 0;
     while (date > -7) {
