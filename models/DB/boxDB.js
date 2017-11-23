@@ -3,6 +3,10 @@ var mongoose = require('mongoose');
 // define the schema for our user model
 var userSchema = mongoose.Schema({
     boxID: Number,
+    user: {
+        box: String,
+        delivery: String
+    },
     containerList: Array,
     delivering: { type: Boolean, default: false },
     storeID: Number

@@ -93,6 +93,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
                     boxArr.push({
                         boxID: thisBox,
                         boxTime: boxList[i].createdAt,
+                        phone: boxList[i].user,
                         typeList: thisBoxTypeList,
                         containerList: thisBoxContainerList,
                         isDelivering: boxList[i].delivering,
@@ -142,6 +143,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
                 boxArr.push({
                     boxID: thisBox,
                     boxTime: list[i].tradeTime,
+                    phone: boxList[i].user,
                     typeList: [],
                     containerList: {},
                     destinationStore: list[i].newUser.storeID
@@ -232,6 +234,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
             promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, null, aBox.containerList, () => {
                 aBox.delivering = true;
                 aBox.storeID = storeID;
+                aBox.user.delivery = dbAdmin.user.phone;
                 aBox.save(function(err) {
                     if (err) return next(err);
                     return res.json({ type: "DeliveryMessage", message: "Delivery Succeed" });
@@ -252,6 +255,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
             promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, true, null, aBox.containerList, () => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
+                aBox.user.delivery = undefined;
                 aBox.save(function(err) {
                     if (err) return next(err);
                     return res.json({ type: "CancelDeliveryMessage", message: "CancelDelivery Succeed" });
@@ -340,6 +344,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
             promiseMethod(res, next, dbAdmin, 'Boxing', 5, false, null, body.containerList, () => {
                 newBox = new Box();
                 newBox.boxID = body.boxId;
+                newBox.user.box = dbAdmin.user.phone;
                 newBox.containerList = body.containerList;
                 newBox.save(function(err) {
                     if (err) return next(err);

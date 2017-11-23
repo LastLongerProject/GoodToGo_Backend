@@ -234,7 +234,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                 Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
                     if (err) return next(err);
                     if (list.length !== 0) {
-                        list.sort((a, b) => { return b.logTime - a.logTime })
+                        list.sort((a, b) => { return b.logTime - a.logTime; });
                         var boxHistoryArr = [];
                         var boxIDArr = [];
                         var thisBoxTypeList;
@@ -360,7 +360,7 @@ function parseHistory(data, dataType, callback) {
         else if (dataType === 'Return')
             thisPhone = aHistory.oriUser.phone;
     } else {
-        data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+        data.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
     }
     var byOrderArr = [];
     var tmpContainerList = [];
@@ -473,7 +473,7 @@ function parseHistory(data, dataType, callback) {
 
 function getFavorite(data, callback) {
     if (data.length === 0) return callback([]);
-    data.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+    data.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
     var byOrderArr = [];
     var aHistory;
     var lastHistory;
