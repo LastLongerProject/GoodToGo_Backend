@@ -536,7 +536,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 }
 
                 if (resolve === false) {
-                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade)
+                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade);
                 } else {
                     var tmpTrade = new Object(newTrade);
                     resolve([true, function(cb, cb2) {
