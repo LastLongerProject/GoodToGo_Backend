@@ -18,6 +18,12 @@ module.exports = {
         var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint + timezoneFix, 16, 0, 0, 0);
         return date;
     },
+    dayFormatter: function(dateToFormat) {
+        var day = dateToFormat.getDate();
+        if (dateToFormat.getHours() >= 16)
+            day++;
+        return day;
+    },
     intReLength: function(data, length) {
         var str = data.toString();
         if (length - str.length) {

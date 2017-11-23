@@ -7,6 +7,7 @@ var debug = require('debug')('goodtogo_backend:stores');
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
+var dayFormatter = require('../models/toolKit').dayFormatter;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var validateDefault = require('../models/validateDefault');
@@ -380,8 +381,8 @@ function parseHistory(data, dataType, callback) {
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
-                // time: lastHistory.tradeTime,
-                time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
+                time: lastHistory.tradeTime,
+                // time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
                 phone: phoneFormatted,
                 containerAmount: tmpContainerList.length,
                 containerList: tmpContainerList
@@ -392,8 +393,8 @@ function parseHistory(data, dataType, callback) {
     }
     phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
-        // time: aHistory.tradeTime,
-        time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
+        time: aHistory.tradeTime,
+        // time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
         phone: phoneFormatted,
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
@@ -407,7 +408,7 @@ function parseHistory(data, dataType, callback) {
     while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > -7) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-        dayFormatted = intReLength(dateFormatted.getDate(), 2);
+        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
             orderAmount: tmpOrderAmount,
@@ -419,14 +420,15 @@ function parseHistory(data, dataType, callback) {
     for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
         nextOrder = byOrderArr[i + 1];
-        hoursFormatted = intReLength(aOrder.time.getHours(), 2);
+        tmpHour = aOrder.time.getHours() + 8;
+        hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
         minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
         aOrder.time = hoursFormatted + ":" + minutesFormatted;
         tmpOrderList.push(aOrder);
         if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
             dateFormatted = dateCheckpoint(date);
             monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-            dayFormatted = intReLength(dateFormatted.getDate(), 2);
+            dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
             tmpOrderAmount = 0;
             for (var j = 0; j < tmpOrderList.length; j++) {
                 tmpOrderAmount += tmpOrderList[j].containerAmount;
@@ -458,7 +460,7 @@ function parseHistory(data, dataType, callback) {
     while (date > -7) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-        dayFormatted = intReLength(dateFormatted.getDate(), 2);
+        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
             orderAmount: tmpOrderAmount,
