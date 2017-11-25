@@ -53,7 +53,7 @@ router.get('/list', validateDefault, function(req, res, next) {
                             tmpOpening.push({
                                 close: storeList[i].opening_hours[j].close,
                                 open: storeList[i].opening_hours[j].open
-                            })
+                            });
                         tmpArr.push({
                             id: storeList[i].id,
                             name: storeList[i].name,
@@ -442,20 +442,6 @@ function parseHistory(data, dataType, callback) {
             date--;
         }
     }
-    // dateFormatted = dateCheckpoint(date);
-    // monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-    // dayFormatted = intReLength(dateFormatted.getDate(), 2);
-    // tmpOrderAmount = 0;
-    // for (var i = 0; i < tmpOrderList.length; i++) {
-    //     tmpOrderAmount += tmpOrderList[i].containerAmount;
-    // }
-    // byDateArr.push({
-    //     date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-    //     orderAmount: tmpOrderAmount,
-    //     orderList: tmpOrderList
-    // });
-    // date--;
-    tmpOrderList = [];
     tmpOrderAmount = 0;
     while (date > -7) {
         dateFormatted = dateCheckpoint(date);

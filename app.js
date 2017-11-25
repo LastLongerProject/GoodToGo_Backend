@@ -36,12 +36,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(resBodyParser);
 app.use(helmet());
 // app.use(compression());
-// app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use(passport.initialize());
 app.set('passport', passport);
-app.use(timeout('10s'))
+app.use(timeout('10s'));
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
 debug.log = console.log.bind(console);
@@ -68,6 +67,10 @@ require('./models/userQuery'); // pass passport for configuration
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
 
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    next();
+});
 // app.use('/', index);
 app.use('/stores', stores);
 app.use('/users', users);

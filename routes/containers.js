@@ -438,20 +438,12 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 message: "Container not belone to user's store"
             });
         } else if (action === 'Return' && key !== null) {
-            if (resolve !== false) // 未歸還直接回收
-                container.statusCode = key;
-            else // 正興街髒杯回收
+            if (container.statusCode === 3) // 髒杯回收時已經被歸還過
+                return res.json({ type: "ReturnMessage", message: "Already Return" });
+            else // 髒杯回收
                 tmpStoreId = key;
-        } else if (action === 'ReadyToClean') {
-            if (container.statusCode === 2) { // 未歸還直接回收
-                changeState((data) => {
-                    if (data[0]) data[2].save((err) => { if (err) debug(err); });
-                    else debug(data);
-                }, id, dbNew, 'Return', 3, res, next, 2, true);
-                container.statusCode = 3;
-            } else if (key !== null) { // 正興街髒杯回收
-                tmpStoreId = key;
-            }
+        } else if (action === 'ReadyToClean' && key !== null) { // 髒杯回收
+            tmpStoreId = key;
         } else if (action === 'Sign' && typeof key.storeID !== 'undefined') { // 正興街配送
             tmpStoreId = key.storeID;
         }
@@ -489,7 +481,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
                     }
                 }
-                if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId;
+                if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId; // 正興街代簽收
                 else if (action === 'ReadyToClean') {
                     if (typeof tmpStoreId !== 'undefined') {
                         dbOri.role.storeID = tmpStoreId;
@@ -565,7 +557,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         case 2: // rented
-            if (newState <= 2 || newState === 5)
+            if (newState !== 3)
                 return callback(false);
             break;
         case 3: // returned
