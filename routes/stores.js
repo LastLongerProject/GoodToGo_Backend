@@ -359,9 +359,9 @@ function parseHistory(data, dataType, callback) {
     else if (data.length === 1) {
         aHistory = data[0];
         if (dataType === 'Rent')
-            thisPhone = aHistory.newUser.phone;
+            lastPhone = aHistory.newUser.phone;
         else if (dataType === 'Return')
-            thisPhone = aHistory.oriUser.phone;
+            lastPhone = aHistory.oriUser.phone;
     } else {
         data.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
     }
