@@ -1,42 +1,44 @@
 {
-  "name": "goodtogo_backend",
-  "version": "0.0.1",
-  "description": "GoodToGo Backend Server",
-  "main": "index.js",
-  "scripts": {
-    "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=production & nodemon bin/wwwhttp --ignore tmp/",
-    "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore tmp/",
-    "start": "nodemon bin/www --ignore tmp/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/BenjaminChenTW/GoodToGo_Backend.git"
-  },
-  "author": "BenjaminChenTW",
-  "license": "ISC",
-  "dependencies": {
-    "bcrypt-nodejs": "0.0.3",
-    "body-parser": "~1.17.2",
-    "buffer-crc32": "^0.2.13",
-    "compression": "^1.7.0",
-    "connect-timeout": "^1.9.0",
-    "cookie-parser": "~1.4.3",
-    "crypto": "^1.0.1",
-    "debug": "~3.0.0",
-    "ejs": "~2.5.7",
-    "express": "^4.15.4",
-    "express-status-monitor": "^1.0.0",
-    "helmet": "^3.9.0",
-    "jwt-simple": "^0.5.1",
-    "mongoose": "^4.11.9",
-    "morgan": "~1.8.2",
-    "nodemon": "^1.11.0",
-    "redis": "^2.8.0",
-    "serve-favicon": "~2.4.3",
-    "universal-analytics": "^0.4.15"
-  },
-  "bugs": {
-    "url": "https://github.com/BenjaminChenTW/GoodToGo_Backend/issues"
-  },
-  "homepage": "https://github.com/BenjaminChenTW/GoodToGo_Backend#readme"
+    "name": "goodtogo_backend",
+    "version": "0.0.1",
+    "description": "GoodToGo Backend Server",
+    "main": "index.js",
+    "scripts": {
+        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=production & nodemon bin/wwwhttp --ignore tmp/",
+        "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore tmp/",
+        "start": "nodemon bin/www --ignore tmp/"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/BenjaminChenTW/GoodToGo_Backend.git"
+    },
+    "author": "BenjaminChenTW",
+    "license": "ISC",
+    "dependencies": {
+        "bcrypt-nodejs": "0.0.3",
+        "body-parser": "~1.17.2",
+        "buffer-crc32": "^0.2.13",
+        "compression": "^1.7.0",
+        "connect-timeout": "^1.9.0",
+        "cookie-parser": "~1.4.3",
+        "crypto": "^1.0.1",
+        "debug": "~3.0.0",
+        "ejs": "~2.5.7",
+        "express": "^4.15.4",
+        "express-status-monitor": "^1.0.0",
+        "google-auth-library": "https://registry.npmjs.org/google-auth-library/-/google-auth-library-0.12.0.tgz",
+        "googleapis": "^23.0.0",
+        "helmet": "^3.9.0",
+        "jwt-simple": "^0.5.1",
+        "mongoose": "^4.11.9",
+        "morgan": "~1.8.2",
+        "nodemon": "^1.11.0",
+        "redis": "^2.8.0",
+        "serve-favicon": "~2.4.3",
+        "universal-analytics": "^0.4.15"
+    },
+    "bugs": {
+        "url": "https://github.com/BenjaminChenTW/GoodToGo_Backend/issues"
+    },
+    "homepage": "https://github.com/BenjaminChenTW/GoodToGo_Backend#readme"
 }
