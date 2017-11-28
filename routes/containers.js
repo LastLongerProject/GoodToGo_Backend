@@ -429,7 +429,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             return res.status(403).json({ code: 'F002', type: messageType, message: 'No container found', data: id });
         } else if (!container.active) {
             if (resolve !== false) next();
-            return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available' });
+            return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available', data: id });
         }
         if (action === 'Rent' && container.storeID !== dbNew.role.storeID) {
             return res.status(403).json({
