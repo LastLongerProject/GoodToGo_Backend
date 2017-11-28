@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 
+var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStoreManager = require('../models/validateRequest').regAsStoreManager;
@@ -25,20 +26,16 @@ fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
 router.post('/signup', validateDefault, function(req, res, next) {
     req._permission = false;
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
-    req.app.get('passport').authenticate('local-signup', function(err, user, info) {
+    userQuery.signup(req, function(err, user, info) {
         if (err) {
             return next(err);
-        }
-        if (!user) {
-            return res.status(403).json(info);
-        }
-        req.login(user, { session: false }, Err => {
-            if (Err) return next(Err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
-            return;
-        });
-    })(req, next);
+        }
+    });
 });
 
 router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
@@ -51,70 +48,52 @@ router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, r
         storeID: dbUser.role.storeID
     };
     req.body['active'] = true;
-    req.app.get('passport').authenticate('local-signup', function(err, user, info) {
+    userQuery.signup(req, function(err, user, info) {
         if (err) {
             return next(err);
-        }
-        if (!user) {
+        } else if (!user) {
             return res.status(401).json(info);
-        }
-        req.login(user, { session: false }, Err => {
-            if (Err) return next(Err);
+        } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
-            return;
-        });
-    })(req, next);
+        }
+    });
 });
 
 router.post('/login', validateDefault, function(req, res, next) {
-    req.app.get('passport').authenticate('local-login', function(err, user, info) {
+    userQuery.login(req, function(err, user, info) {
         if (err) {
             return next(err);
-        }
-        if (!user) {
+        } else if (!user) {
             return res.status(401).json(info);
-        }
-        req.login(user, { session: false }, Err => {
-            if (Err) return next(Err);
+        } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
-            return;
-        });
-    })(req, next);
+        }
+    });
 });
 
-router.post('/modifypassword', function(req, res, next) {
-    req._res = res;
-    req.app.get('passport').authenticate('local-chanpass', function(err, user, info) {
+router.post('/modifypassword', validateRequest, function(req, res, next) {
+    if (req._user.status) return next(req._user);
+    userQuery.chanpass(req, function(err, user, info) {
         if (err) {
             return next(err);
-        }
-        if (!user) {
-            return res.status(401).json(info);
-        }
-        req.login(user, { session: false }, Err => {
-            if (Err) return next(Err);
+        } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
-            return;
-        });
-    })(req, next);
+        }
+    });
 });
 
-router.post('/logout', function(req, res, next) {
-    req._res = res;
-    req.app.get('passport').authenticate('local-logout', function(err, user, info) {
+router.post('/logout', validateRequest, function(req, res, next) {
+    if (req._user.status) return next(req._user);
+    userQuery.logout(req, function(err, user, info) {
         if (err) {
             return next(err);
+        } else {
+            res.json(info);
         }
-        req.login(user, { session: false }, LogOutErr => {
-            if (LogOutErr) {
-                return next(LogOutErr);
-            }
-            return res.json(info);
-        });
-    })(req, next);
+    });
 });
 
 router.get('/data', validateRequest, function(req, res, next) {

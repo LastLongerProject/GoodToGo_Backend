@@ -6,16 +6,16 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 // var redis = require('redis');
-var passport = require('passport');
 var compression = require('compression');
-var helmet = require('helmet')
-var timeout = require('connect-timeout')
+var helmet = require('helmet');
+var timeout = require('connect-timeout');
 var ua = require('universal-analytics');
 var debug = require('debug')('goodtogo_backend:app');
 var debugError = require('debug')('goodtogo_backend:appERR');
 
-var logSystem = require('./models/logSystem')
-var logModel = require('./models/DB/logDB')
+var logSystem = require('./models/logSystem');
+var logModel = require('./models/DB/logDB');
+var appInit = require('./models/appInit');
 var index = require('./routes/index');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
@@ -38,14 +38,13 @@ app.use(helmet());
 // app.use(compression());
 // app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger()); // Trigger Google Analytics
-app.use(passport.initialize());
-app.set('passport', passport);
 app.use(timeout('10s'));
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
 debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
 connectMongoDB();
+
 /*
 var RDS_PORT = 6379,
     RDS_HOST = config.redisUrl,
@@ -61,8 +60,6 @@ client.on('ready', function(err) {
     if (err) next(err);
     debug('redisDB connect succeed');
 });*/
-
-require('./models/userQuery'); // pass passport for configuration
 
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
@@ -127,6 +124,8 @@ function connectMongoDB() {
         if (err) next(err);
         debug('mongoDB connect succeed');
         // require('./tmp/addStoreProject.js')
+        app.set('placeID', appInit.placeID);
+        app.set('containerType', appInit.containerType);
     });
 }
 
