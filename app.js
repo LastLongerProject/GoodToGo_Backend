@@ -94,7 +94,7 @@ app.use(function(err, req, res, next) {
         debugError(JSON.stringify(err));
         req._errorLevel = 3;
         res.status(500);
-        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error: ' + JSON.stringify(err), data: err });
+        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error', data: err });
     } else if (err.status === 404) {
         res.status(err.status);
         res.json({ code: 'Z001', type: 'globalError', message: err.message });
@@ -127,8 +127,8 @@ function connectMongoDB() {
         if (err) next(err);
         debug('mongoDB connect succeed');
         // require('./tmp/addStoreProject.js')
-        app.set('placeID', appInit.placeID);
-        app.set('containerType', appInit.containerType);
+        // app.set('placeID', appInit.placeID);
+        // app.set('containerType', appInit.containerType);
     });
 }
 

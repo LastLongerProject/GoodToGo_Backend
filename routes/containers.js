@@ -489,56 +489,60 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         dbOri.role.storeID = container.storeID;
                     }
                 }
-                newTrade = new Trade();
-                newTrade.tradeTime = res._payload.orderTime || Date.now();
-                newTrade.tradeType = {
-                    action: action,
-                    oriState: container.statusCode,
-                    newState: newState
-                };
-                newTrade.oriUser = {
-                    type: dbOri.role.typeCode,
-                    storeID: dbOri.role.storeID,
-                    phone: dbOri.user.phone
-                };
-                newTrade.newUser = {
-                    type: dbNew.role.typeCode,
-                    storeID: dbNew.role.storeID,
-                    phone: dbNew.user.phone
-                };
-                newTrade.container = {
-                    id: container.ID,
-                    typeCode: container.typeCode,
-                    cycleCtr: container.cycleCtr
-                };
-                if (action === 'Sign') newTrade.container.box = key.boxID;
-                container.statusCode = newState;
-                container.conbineTo = dbNew.user.phone;
-                if (action === 'Delivery') container.cycleCtr++;
-                else if (action === 'CancelDelivery') container.cycleCtr--;
-                if (action === 'Sign' || action === 'Return') {
-                    container.storeID = dbNew.role.storeID;
-                } else {
-                    container.storeID = undefined;
-                }
+                try {
+                    newTrade = new Trade();
+                    newTrade.tradeTime = res._payload.orderTime || Date.now();
+                    newTrade.tradeType = {
+                        action: action,
+                        oriState: container.statusCode,
+                        newState: newState
+                    };
+                    newTrade.oriUser = {
+                        type: dbOri.role.typeCode,
+                        storeID: dbOri.role.storeID,
+                        phone: dbOri.user.phone
+                    };
+                    newTrade.newUser = {
+                        type: dbNew.role.typeCode,
+                        storeID: dbNew.role.storeID,
+                        phone: dbNew.user.phone
+                    };
+                    newTrade.container = {
+                        id: container.ID,
+                        typeCode: container.typeCode,
+                        cycleCtr: container.cycleCtr
+                    };
+                    if (action === 'Sign') newTrade.container.box = key.boxID;
+                    container.statusCode = newState;
+                    container.conbineTo = dbNew.user.phone;
+                    if (action === 'Delivery') container.cycleCtr++;
+                    else if (action === 'CancelDelivery') container.cycleCtr--;
+                    if (action === 'Sign' || action === 'Return') {
+                        container.storeID = dbNew.role.storeID;
+                    } else {
+                        container.storeID = undefined;
+                    }
 
-                function saveAll(callback, callback2, tmpTrade) {
-                    tmpTrade.save(function(err) {
-                        if (err) return callback2(err);
-                        container.save(function(err) {
+                    function saveAll(callback, callback2, tmpTrade) {
+                        tmpTrade.save(function(err) {
                             if (err) return callback2(err);
-                            return callback();
+                            container.save(function(err) {
+                                if (err) return callback2(err);
+                                return callback();
+                            });
                         });
-                    });
-                }
+                    }
 
-                if (resolve === false) {
-                    saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade);
-                } else {
-                    var tmpTrade = new Object(newTrade);
-                    resolve([true, function(cb, cb2) {
-                        saveAll(cb, cb2, tmpTrade);
-                    }, tmpTrade]);
+                    if (resolve === false) {
+                        saveAll(() => res.status(200).json({ type: messageType, message: action + ' Succeeded' }), next, newTrade);
+                    } else {
+                        var tmpTrade = new Object(newTrade);
+                        resolve([true, function(cb, cb2) {
+                            saveAll(cb, cb2, tmpTrade);
+                        }, tmpTrade]);
+                    }
+                } catch (err) {
+                    next(err);
                 }
             });
         });
