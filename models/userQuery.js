@@ -43,17 +43,16 @@ module.exports = {
                         newUser.user.apiKey = returnedApikey;
                         newUser.user.secretKey = keys.secretKey();
                         newUser.active = req.body['active'];
-                        if (role.typeCode === 'admin' || role.typeCode === 'customer') {
-                            newUser.role = role;
-                        } else if (role.typeCode === 'clerk') {
-                            if ((typeof req._permission === 'undefined' || req._permission === false) && role.manager !== true)
-                                return done(null, false, {
-                                    code: 'D003',
-                                    type: 'signupMessage',
-                                    message: 'Permission deny, clerk should be only signup by manager'
-                                });
-                            newUser.role = role;
+                        if ((role.typeCode === 'clerk' && typeof role.manager === 'undefined' && typeof role.storeID === 'undefined') ||
+                            (role.typeCode === 'admin' && typeof role.manager === 'undefined' && typeof role.storeID !== 'undefined') ||
+                            (role.typeCode === 'customer' && typeof role.manager !== 'undefined' && typeof role.storeID !== 'undefined')) {
+                            return done(null, false, {
+                                code: 'D003',
+                                type: 'signupMessage',
+                                message: 'Role structure invalid'
+                            });
                         }
+                        newUser.role = role;
                         newUser.save(function(err) {
                             if (err) return done(err);
                             var storeName = (typeof newUser.role.storeID !== 'undefined') ? stores.IDlist[(newUser.role.storeID)].name : undefined;
