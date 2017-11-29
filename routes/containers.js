@@ -412,8 +412,11 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, co
         })
         .catch((err) => {
             if (err) {
-                debug(err);
-                return next(err);
+                if (typeof err.code === 'string') return res.status(403).json(err);
+                else {
+                    debug(err);
+                    return next(err);
+                }
             }
         });
 }
@@ -425,11 +428,13 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         if (err)
             return next(err);
         if (!container) {
-            if (resolve !== false) next();
-            return res.status(403).json({ code: 'F002', type: messageType, message: 'No container found', data: id });
+            var errData = { code: 'F002', type: messageType, message: 'No container found', data: id };
+            if (resolve !== false) return next(errData);
+            else return res.status(403).json(errData);
         } else if (!container.active) {
-            if (resolve !== false) next();
-            return res.status(403).json({ code: 'F003', type: messageType, message: 'Container not available', data: id });
+            var errData = { code: 'F003', type: messageType, message: 'Container not available', data: id };
+            if (resolve !== false) return next(errData);
+            else return res.status(403).json(errData);
         }
         if (action === 'Rent' && container.storeID !== dbNew.role.storeID) {
             return res.status(403).json({
@@ -468,21 +473,19 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             User.findOne(userQuery, function(err, dbOri) {
                 if (err) return next(err);
                 if (action === 'Rent') {
-                    var tmp = dbOri;
-                    dbOri = dbNew;
-                    dbNew = tmp;
                     if (!dbOri) {
                         debug('Return unexpect err. Data : ' + JSON.stringify(container) +
                             ' ID in uri : ' + id);
-                        if (resolve !== false) next();
-                        return res.status(500).json({ code: 'F004', type: messageType, message: 'No user found' });
+                        return res.status(403).json({ code: 'F004', type: messageType, message: 'No user found' });
                     } else if (!dbOri.active) {
-                        if (resolve !== false) next();
-                        return res.status(401).json({ code: 'F005', type: messageType, message: 'User has Banned' });
+                        return res.status(403).json({ code: 'F005', type: messageType, message: 'User has Banned' });
                     }
-                }
-                if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') dbNew.role.storeID = tmpStoreId; // 正興街代簽收
-                else if (action === 'ReadyToClean') {
+                    var tmp = dbOri;
+                    dbOri = dbNew;
+                    dbNew = tmp;
+                } else if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') {
+                    dbNew.role.storeID = tmpStoreId; // 正興街代簽收
+                } else if (action === 'ReadyToClean') {
                     if (typeof tmpStoreId !== 'undefined') {
                         dbOri.role.storeID = tmpStoreId;
                     } else if (container.statusCode === 1 && dbOri.role.typeCode === 'admin') { // 正興街乾淨回收
@@ -542,6 +545,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         }, tmpTrade]);
                     }
                 } catch (err) {
+                    debug('#dbNew: ', JSON.stringify(dbNew), ', #dbOri: ', JSON.stringify(dbOri), ', #newTrade: ', JSON.stringify(newTrade));
                     next(err);
                 }
             });
