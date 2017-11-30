@@ -43,9 +43,9 @@ module.exports = {
                         newUser.user.apiKey = returnedApikey;
                         newUser.user.secretKey = keys.secretKey();
                         newUser.active = req.body['active'];
-                        if ((role.typeCode === 'clerk' && typeof role.manager === 'undefined' && typeof role.storeID === 'undefined') ||
-                            (role.typeCode === 'admin' && typeof role.manager === 'undefined' && typeof role.storeID !== 'undefined') ||
-                            (role.typeCode === 'customer' && typeof role.manager !== 'undefined' && typeof role.storeID !== 'undefined')) {
+                        if ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID === 'undefined')) ||
+                            (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined')) ||
+                            (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined'))) {
                             return done(null, false, {
                                 code: 'D003',
                                 type: 'signupMessage',
