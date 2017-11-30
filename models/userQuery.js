@@ -55,7 +55,7 @@ module.exports = {
                         newUser.role = role;
                         newUser.save(function(err) {
                             if (err) return done(err); // 下面要改回來
-                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? (stores.IDlist[(newUser.role.storeID)].name || "1982 de glacée 法式冰淇淋") : undefined;
+                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores.IDlist[(newUser.role.storeID)]) ? stores.IDlist[(newUser.role.storeID)].name : "1982 de glacée 法式冰淇淋") : undefined;
                             var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
                             var token = jwt.encode(payload, keys.serverSecretKey());
                             return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
@@ -82,7 +82,7 @@ module.exports = {
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) {
                     if (err) return done(err); // 下面要改回來
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? (stores.IDlist[(dbUser.role.storeID)].name || "1982 de glacée 法式冰淇淋") : undefined;
+                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores.IDlist[(dbUser.role.storeID)]) ? stores.IDlist[(dbUser.role.storeID)].name : "1982 de glacée 法式冰淇淋") : undefined;
                     var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                     var token = jwt.encode(payload, keys.serverSecretKey());
                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
@@ -104,7 +104,7 @@ module.exports = {
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
                 if (err) return done(err); // 下面要改回來
-                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? (stores.IDlist[(dbUser.role.storeID)].name || "1982 de glacée 法式冰淇淋") : undefined;
+                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores.IDlist[(dbUser.role.storeID)]) ? stores.IDlist[(dbUser.role.storeID)].name : "1982 de glacée 法式冰淇淋") : undefined;
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
