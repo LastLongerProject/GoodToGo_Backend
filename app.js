@@ -126,7 +126,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/addStoreProject.js')
+        // require('./tmp/addStore.js')
         // app.set('placeID', appInit.placeID);
         // app.set('containerType', appInit.containerType);
     });
