@@ -81,8 +81,8 @@ module.exports = {
                     return done(null, false, { code: 'D006', type: 'loginMessage', message: 'Wrong password' });
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) {
-                    if (err) return done(err);
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                    if (err) return done(err); // 下面要改回來
+                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? (stores.IDlist[(dbUser.role.storeID)].name || "1982 de glacée 法式冰淇淋") : undefined;
                     var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                     var token = jwt.encode(payload, keys.serverSecretKey());
                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
@@ -103,8 +103,8 @@ module.exports = {
             dbUser.user.password = dbUser.generateHash(newPassword);
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
-                if (err) return done(err);
-                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                if (err) return done(err); // 下面要改回來
+                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? (stores.IDlist[(dbUser.role.storeID)].name || "1982 de glacée 法式冰淇淋") : undefined;
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
