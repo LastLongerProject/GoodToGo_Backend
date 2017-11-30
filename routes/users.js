@@ -78,6 +78,8 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
     userQuery.chanpass(req, function(err, user, info) {
         if (err) {
             return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
         } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
