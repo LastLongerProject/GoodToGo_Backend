@@ -20,6 +20,8 @@ var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 
+const historyDays = 14;
+
 var type;
 fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
     if (err) throw err;
@@ -294,12 +296,12 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
-            'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
+            'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
             Trade.find({
-                'tradeTime': { '$gte': dateCheckpoint(-6), '$lt': dateCheckpoint(1) },
+                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
@@ -382,7 +384,6 @@ function parseHistory(data, dataType, callback) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
                 time: lastHistory.tradeTime,
-                // time: new Date(lastHistory.tradeTime.setHours(lastHistory.tradeTime.getHours() + 8)),
                 phone: phoneFormatted,
                 containerAmount: tmpContainerList.length,
                 containerList: tmpContainerList
@@ -394,7 +395,6 @@ function parseHistory(data, dataType, callback) {
     phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
         time: aHistory.tradeTime,
-        // time: new Date(aHistory.tradeTime.setHours(aHistory.tradeTime.getHours() + 8)),
         phone: phoneFormatted,
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
@@ -405,7 +405,7 @@ function parseHistory(data, dataType, callback) {
     var date = 0;
     // console.log(dateCheckpoint(date))
     // console.log(byOrderArr[0].time)
-    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > -7) {
+    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > (-1 * historyDays)) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
@@ -443,7 +443,7 @@ function parseHistory(data, dataType, callback) {
         }
     }
     tmpOrderAmount = 0;
-    while (date > -7) {
+    while (date > (-1 * historyDays)) {
         dateFormatted = dateCheckpoint(date);
         monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dayFormatter(dateFormatted), 2);

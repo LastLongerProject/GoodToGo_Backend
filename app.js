@@ -46,7 +46,7 @@ mongoose.Promise = global.Promise;
 connectMongoDB();
 
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
-// require("./models/google/sheet")
+// require("./models/google/sheet").getContainer();
 
 /*
 var RDS_PORT = 6379,
