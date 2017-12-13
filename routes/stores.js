@@ -236,7 +236,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                         }
                     }
                 }
-                Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
+                Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
                     if (err) return next(err);
                     if (list.length !== 0) {
                         list.sort((a, b) => { return b.logTime - a.logTime; });

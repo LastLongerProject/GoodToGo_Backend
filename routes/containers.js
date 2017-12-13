@@ -17,6 +17,7 @@ var regAsStore = require('../models/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validateRequest').regAsAdmin;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
+const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
 var typeDict;
@@ -122,7 +123,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
 router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
-    Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
+    Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ pastDelivery: [] });
         list.sort((a, b) => { return b.logTime - a.logTime; });
@@ -177,7 +178,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
 router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
-    Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(-6) } }, function(err, list) {
+    Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
         list.sort((a, b) => { return b.logTime - a.logTime; });
@@ -194,7 +195,8 @@ router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res,
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
-                    containerList: {}
+                    containerList: {},
+                    cleanReload: (list[i].tradeType.oriState === 1)
                 });
             }
             nowIndex = boxArr.length - 1;
@@ -486,9 +488,9 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 } else if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') {
                     dbNew.role.storeID = tmpStoreId; // 正興街代簽收
                 } else if (action === 'ReadyToClean') {
-                    if (typeof tmpStoreId !== 'undefined') {
+                    if (typeof tmpStoreId !== 'undefined' && tmpStoreId !== -1) {
                         dbOri.role.storeID = tmpStoreId;
-                    } else if (container.statusCode === 1 && dbOri.role.typeCode === 'admin') { // 正興街乾淨回收
+                    } else if (container.statusCode === 1 && dbOri.role.typeCode === 'admin') { // 乾淨回收
                         dbOri.role.storeID = container.storeID;
                     }
                 }
