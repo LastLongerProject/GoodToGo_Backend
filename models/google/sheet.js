@@ -146,13 +146,17 @@ module.exports = {
                                 newStore.project = placeArr[localCtr].project;
                                 newStore.address = dataObject.result.formatted_address.slice(dataObject.result.formatted_address.indexOf('台灣') + 2);
                                 newStore.opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
+                                for (var j = 0; j < newStore.opening_hours.length; j++) {
+                                    newStore.opening_hours[j].close.time = newStore.opening_hours[j].close.time.slice(0, 2) + ":" + newStore.opening_hours[j].close.time.slice(2);
+                                    newStore.opening_hours[j].open.time = newStore.opening_hours[j].open.time.slice(0, 2) + ":" + newStore.opening_hours[j].open.time.slice(2);
+                                }
                                 newStore.location = dataObject.result.geometry.location;
                                 newStore.img_info = {
                                     img_src: "https://app.goodtogo.tw/images/" + intReLength(newStore.id, 2),
                                     img_version: 0
                                 };
                                 newStore.type = [];
-                                for (var j = 2; j < dataObject.result.types.length; j++) {
+                                for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
                                     newStore.type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
                                 }
                                 return resolve([placeArr[localCtr], newStore]);
@@ -168,13 +172,19 @@ module.exports = {
                             for (var i = 0; i < data.length; i++) {
                                 data[i][0].save();
                             }
-                            Store.remove({}, (err) => {
+                            Store.find({}, (err, oldList) => {
                                 if (err) return debug(err);
-                                for (var i = 0; i < data.length; i++) {
-                                    returnObject.push(data[i][1])
-                                    data[i][1].save();
-                                }
-                                return cb(returnObject);
+                                oldList.sort(function(a, b) { return a.id - b.id; });
+                                data.sort(function(a, b) { return a[1].id - b[1].id; });
+                                Store.remove({}, (err) => {
+                                    if (err) return debug(err);
+                                    for (var i = 0; i < data.length; i++) {
+                                        if (typeof oldList[i] !== 'undefined') data[i][1].img_info.img_version = oldList[i].img_info.img_version;
+                                        returnObject.push(data[i][1]);
+                                        data[i][1].save();
+                                    }
+                                    return cb(returnObject);
+                                });
                             });
                         });
                     })
