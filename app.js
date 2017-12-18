@@ -46,11 +46,11 @@ mongoose.Promise = global.Promise;
 connectMongoDB();
 
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
-require("./models/google/sheet").getStore((storeList) => {
-    // console.log(storeList);
-    // console.log('finish');
-    debug('storeList init');
-});
+// require("./models/google/sheet").getStore((storeList) => {
+//     // console.log(storeList);
+//     // console.log('finish');
+//     debug('storeList init');
+// });
 
 /*
 var RDS_PORT = 6379,

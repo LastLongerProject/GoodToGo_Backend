@@ -175,10 +175,12 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
     });
 });
 
-router.get('/get/reloadHistory', regAsStore, validateRequest, function(req, res, next) {
+router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
-    Trade.find({ 'tradeType.action': 'ReadyToClean', 'oriUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
+    var queryCond = { 'tradeType.action': 'ReadyToClean', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } };
+    if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
+    Trade.find(queryCond, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
         list.sort((a, b) => { return b.logTime - a.logTime; });
