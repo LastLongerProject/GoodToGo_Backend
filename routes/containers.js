@@ -197,6 +197,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
                     typeList: [],
                     containerList: {},
                     cleanReload: (list[i].tradeType.oriState === 1),
+                    phone: (dbStore.role.typeCode === 'clerk') ? undefined : { reload: list[i].newUser.phone },
                     from: (dbStore.role.typeCode === 'clerk') ? undefined : list[i].oriUser.storeID
                 });
             }
