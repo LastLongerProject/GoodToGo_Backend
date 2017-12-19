@@ -1,5 +1,5 @@
 var jwt = require('jwt-simple');
-var User = require('../models/DB/userDB'); // load up the user model
+var User = require('../DB/userDB'); // load up the user model
 
 function iatGetDate(int) {
     var tmp = new Date();

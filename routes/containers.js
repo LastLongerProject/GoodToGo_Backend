@@ -11,10 +11,10 @@ var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
-var validateDefault = require('../models/validateDefault');
-var validateRequest = require('../models/validateRequest').JWT;
-var regAsStore = require('../models/validateRequest').regAsStore;
-var regAsAdmin = require('../models/validateRequest').regAsAdmin;
+var validateDefault = require('../models/validation/validateDefault');
+var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsStore = require('../models/validation/validateRequest').regAsStore;
+var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 const historyDays = 14;

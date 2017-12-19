@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 
-var validateToken = require('../models/validateToken');
+var validateToken = require('../models/validation/validateToken');
 
 router.get('/:id/:a.:b.:c', function(req, res, next) {
     var token = req.params.a + "." + req.params.b + "." + req.params.c;

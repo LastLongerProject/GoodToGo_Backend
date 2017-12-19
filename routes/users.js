@@ -2,9 +2,9 @@ var express = require('express');
 var router = express.Router();
 
 var userQuery = require('../models/userQuery');
-var validateDefault = require('../models/validateDefault');
-var validateRequest = require('../models/validateRequest').JWT;
-var regAsStoreManager = require('../models/validateRequest').regAsStoreManager;
+var validateDefault = require('../models/validation/validateDefault');
+var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var keys = require('../config/keys');

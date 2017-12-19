@@ -1,5 +1,5 @@
 var jwt = require('jwt-simple');
-var keys = require('../config/keys');
+var keys = require('../../config/keys');
 
 module.exports = function(req, res, jwtToken, next) {
     var decoded;

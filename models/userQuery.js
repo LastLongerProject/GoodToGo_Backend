@@ -1,5 +1,5 @@
 var jwt = require('jwt-simple');
-var validateRequest = require('../models/validateRequest').JWT;
+var validateRequest = require('../models/validation/validateRequest').JWT;
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 

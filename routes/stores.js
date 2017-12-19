@@ -9,10 +9,10 @@ var intReLength = require('../models/toolKit').intReLength;
 var dayFormatter = require('../models/toolKit').dayFormatter;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
-var validateDefault = require('../models/validateDefault');
-var validateRequest = require('../models/validateRequest').JWT;
-var regAsStore = require('../models/validateRequest').regAsStore;
-var regAsStoreManager = require('../models/validateRequest').regAsStoreManager;
+var validateDefault = require('../models/validation/validateDefault');
+var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsStore = require('../models/validation/validateRequest').regAsStore;
+var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
