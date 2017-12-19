@@ -33,7 +33,11 @@ router.get('/icon/:id/:a.:b.:c', function(req, res, next) {
             s.pipe(res);
         });
         s.on('error', function(err) {
-            res.status(500).json({ code: 'G001', type: 'readImgERR', message: 'No Image found', data: err });
+            var s2 = fs.createReadStream('./assets/images/icon/99' + id.slice(2) + '.png');
+            s2.on('open', function() {
+                res.set('Content-Type', 'image/png');
+                s2.pipe(res);
+            });
         });
     });
 });
