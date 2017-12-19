@@ -198,13 +198,13 @@ router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res
                 return res.status(403).json({ code: 'E003', type: "changeOpeningTimeError", message: "Data format invalid" });
             }
         }
-        Store.find({ 'id': dbStore.role.storeID }, (err, aStore) => {
+        Store.findOne({ 'id': dbStore.role.storeID }, (err, aStore) => {
             if (err) return next(err);
             aStore.opening_hours = days;
             aStore.opening_default = true;
             aStore.save((err) => {
                 if (err) return next(err);
-                res.json({ type: "changeOpeningTimeError", message: "Change succeed" });
+                res.json({ type: "changeOpeningTime", message: "Change succeed" });
             });
         });
     } else {
