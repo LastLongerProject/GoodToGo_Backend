@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
 
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validateDefault');
@@ -10,18 +9,6 @@ var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var keys = require('../config/keys');
 var Trade = require('../models/DB/tradeDB');
-
-var stores;
-fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function(err, data) {
-    if (err) throw err;
-    stores = JSON.parse(data);
-});
-
-var type;
-fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
-    if (err) throw err;
-    type = JSON.parse(data);
-});
 
 router.post('/signup', validateDefault, function(req, res, next) {
     req._permission = false;
@@ -106,15 +93,15 @@ router.get('/data', validateRequest, function(req, res, next) {
     process.nextTick(function() {
         Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
             if (err) return next(err);
-            rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+            rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
             recordCollection.usingAmount = rentList.length;
             for (var i = 0; i < rentList.length; i++) {
                 var record = {};
                 record.container = '#' + intReLength(rentList[i].container.id, 3);
                 record.containerCode = rentList[i].container.id;
                 record.time = rentList[i].tradeTime;
-                record.type = type.containers[rentList[i].container.typeCode].name;
-                record.store = stores.IDlist[(rentList[i].oriUser.storeID)].name;
+                record.type = req.app.get('containerType')[rentList[i].container.typeCode].name;
+                record.store = req.app.get('store')[(rentList[i].oriUser.storeID)].name;
                 record.cycle = (typeof rentList[i].container.cycleCtr === 'undefined') ? 0 : rentList[i].container.cycleCtr;
                 record.returned = false;
                 inUsed.push(record);

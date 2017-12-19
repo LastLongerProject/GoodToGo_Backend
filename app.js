@@ -11,6 +11,7 @@ var helmet = require('helmet');
 var timeout = require('connect-timeout');
 var ua = require('universal-analytics');
 var debug = require('debug')('goodtogo_backend:app');
+debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appERR');
 
 var logSystem = require('./models/logSystem');
@@ -41,16 +42,10 @@ app.use(GAtrigger()); // Trigger Google Analytics
 app.use(timeout('10s'));
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
-debug.log = console.log.bind(console);
 mongoose.Promise = global.Promise;
 connectMongoDB();
 
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
-// require("./models/google/sheet").getStore((storeList) => {
-//     // console.log(storeList);
-//     // console.log('finish');
-//     debug('storeList init');
-// });
 
 /*
 var RDS_PORT = 6379,
@@ -128,11 +123,12 @@ function GAtrigger() {
 
 function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
-        if (err) next(err);
+        if (err) return next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/addStore.js')
-        // app.set('placeID', appInit.placeID);
-        // app.set('containerType', appInit.containerType);
+        // require('./tmp/deleteTmpData.js')
+
+        appInit.container(app);
+        appInit.store(app);
     });
 }
 

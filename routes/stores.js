@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var fs = require("fs");
 var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:stores');
 
@@ -22,12 +21,6 @@ var Trade = require('../models/DB/tradeDB');
 
 const historyDays = 14;
 
-var type;
-fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
-    if (err) throw err;
-    type = JSON.parse(data);
-});
-
 router.get('/list', validateDefault, function(req, res, next) {
     var jsonData = {
         title: "Stores list",
@@ -39,7 +32,7 @@ router.get('/list', validateDefault, function(req, res, next) {
     }
     var tmpArr = [];
     process.nextTick(function() {
-        Store.find().exec(function(err, storeList) {
+        Store.find({}, {}, { sort: { id: 1 } }, function(err, storeList) {
             if (err) next(err);
             Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
                 jsonData.globalAmount = count;
@@ -118,16 +111,17 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     if (dbStore.status) return next(dbStore);
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
-    for (var i = 0; i < type.containers.length; i++) {
+    var type = req.app.get('containerType');
+    for (var i = 0; i < type.length; i++) {
         tmpToUseArr.push({
-            typeCode: type.containers[i].typeCode,
-            name: type.containers[i].name,
+            typeCode: type[i].typeCode,
+            name: type[i].name,
             IdList: [],
             amount: 0
         });
         tmpToReloadArr.push({
-            typeCode: type.containers[i].typeCode,
-            name: type.containers[i].name,
+            typeCode: type[i].typeCode,
+            name: type[i].name,
             IdList: [],
             amount: 0
         });
@@ -196,8 +190,9 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
         Container.find(function(err, list) {
             if (err) return next(err);
             var containerDict = {};
+            var type = req.app.get('containerType');
             for (var i = 0; i < list.length; i++) {
-                containerDict[list[i].ID] = type.containers[list[i].typeCode].name;
+                containerDict[list[i].ID] = type[list[i].typeCode].name;
             }
             Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
                 if (err) return next(err);
@@ -248,7 +243,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                         var nowIndex;
                         for (var i = 0; i < list.length; i++) {
                             thisBox = list[i].container.box;
-                            thisType = type.containers[list[i].container.typeCode].name;
+                            thisType = type[list[i].container.typeCode].name;
                             lastIndex = boxHistoryArr.length - 1;
                             if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
                                 boxIDArr.push(thisBox);
@@ -296,7 +291,8 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
     if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         var funcList = [];
-        for (var i = 0; i < type.containers.length; i++) {
+        var type = req.app.get('containerType');
+        for (var i = 0; i < type.length; i++) {
             funcList.push(new Promise((resolve, reject) => {
                 var localPtr = i;
                 Trade.count({
@@ -331,6 +327,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
 router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
+    var type = req.app.get('containerType');
     process.nextTick(function() {
         Trade.find({
             'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
@@ -343,14 +340,14 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
                 'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                    parseHistory(rentTrades, 'Rent', function(parsedRent) {
+                    parseHistory(rentTrades, 'Rent', type, function(parsedRent) {
                         resJson = {
                             rentHistory: {
                                 amount: parsedRent.length,
                                 dataList: parsedRent
                             }
                         };
-                        parseHistory(returnTrades, 'Return', function(parsedReturn) {
+                        parseHistory(returnTrades, 'Return', type, function(parsedReturn) {
                             resJson.returnHistory = {
                                 amount: parsedReturn.length,
                                 dataList: parsedReturn
@@ -388,7 +385,7 @@ router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
-function parseHistory(data, dataType, callback) {
+function parseHistory(data, dataType, type, callback) {
     var aHistory;
     var lastHistory;
     var thisPhone;
@@ -406,7 +403,7 @@ function parseHistory(data, dataType, callback) {
     }
     var byOrderArr = [];
     var tmpContainerList = [];
-    tmpContainerList.push('#' + intReLength(data[0].container.id, 3) + " | " + type.containers[data[0].container.typeCode].name);
+    tmpContainerList.push('#' + intReLength(data[0].container.id, 3) + " | " + type[data[0].container.typeCode].name);
     for (var i = 1; i < data.length; i++) {
         aHistory = data[i];
         lastHistory = data[i - 1];
@@ -427,7 +424,7 @@ function parseHistory(data, dataType, callback) {
             });
             tmpContainerList = [];
         }
-        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type.containers[aHistory.container.typeCode].name);
+        tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type[aHistory.container.typeCode].name);
     }
     phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({

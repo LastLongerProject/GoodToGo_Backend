@@ -3,13 +3,7 @@ var mongoose = require('mongoose');
 var userSchema = mongoose.Schema({
     typeCode: Number,
     name: String,
-    active: { type: Boolean, default: false },
-    version: { type: Number, default: 1 },
-    icon: {
-        "1x": String,
-        "2x": String,
-        "3x": String
-    }
+    version: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

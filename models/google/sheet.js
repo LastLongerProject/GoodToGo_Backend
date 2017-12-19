@@ -1,6 +1,5 @@
 var fs = require('fs');
 var request = require('request');
-var readline = require('readline');
 var google = require('googleapis');
 var GoogleAuth = require('google-auth-library');
 var debug = require('debug')('goodtogo_backend:google_sheet');
@@ -8,9 +7,11 @@ var debug = require('debug')('goodtogo_backend:google_sheet');
 var intReLength = require('../toolKit').intReLength;
 var PlaceID = require('../DB/placeIdDB');
 var Store = require('../DB/storeDB');
+var ContainerType = require('../DB/containerTypeDB');
+var Container = require('../DB/containerDB');
 
 var authFactory = new GoogleAuth();
-var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', ''];
+var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 var defaultPeriods = [];
 for (var i = 0; i < 7; i++) {
@@ -41,38 +42,59 @@ function googleAuth(callback) {
 }
 
 module.exports = {
-    getContainer: function() {
+    getContainer: function(cb) {
         googleAuth(function getSheet(auth) {
             var sheets = google.sheets('v4');
             sheets.spreadsheets.values.batchGet({
                 auth: auth,
                 spreadsheetId: '1wgd6RgTs5TXfFhX6g8DBNFqr_V7tSTyWC9BqAeFVOyQ',
-                ranges: ['container_type!A2:C', 'container!A2:C'],
+                ranges: ['container!A2:F', 'container_type!A2:C'],
             }, function(err, response) {
                 if (err) {
                     debug('The API returned an error: ' + err);
                     return;
                 }
-                var rows = response.valueRanges[0].values;
-                if (rows.length == 0) {
-                    debug('No data found.');
-                } else {
-                    console.log('Name, Major:');
-                    for (var i = 0; i < rows.length; i++) {
-                        var row = rows[i];
-                        console.log('%s, %s', row[1], row[2]);
-                    }
+                var sheetContainerList = response.valueRanges[0].values;
+                var sheetContainerTypeList = response.valueRanges[1].values;
+                var funcList = [];
+                for (var i = 0; i < sheetContainerTypeList.length; i++) {
+                    funcList.push(new Promise((resolve, reject) => {
+                        var row = sheetContainerTypeList[i];
+                        var localPtr = i;
+                        ContainerType.update({ 'typeCode': row[0] }, {
+                            'name': row[1],
+                        }, {
+                            upsert: true,
+                            setDefaultsOnInsert: true
+                        }, (err, rawRes) => {
+                            if (err) return reject(err);
+                            resolve(rawRes);
+                        });
+                    }));
                 }
-                rows = response.valueRanges[1].values;
-                if (rows.length == 0) {
-                    debug('No data found.');
-                } else {
-                    console.log('Name, Major:');
-                    for (var i = 0; i < rows.length; i++) {
-                        var row = rows[i];
-                        console.log('%s, %s', row[1], row[2]);
-                    }
+                for (var i = 0; i < sheetContainerList.length; i++) {
+                    funcList.push(new Promise((resolve, reject) => {
+                        var row = sheetContainerList[i];
+                        Container.update({ 'ID': row[0] }, {
+                            'active': (row[3] === '1'),
+                            'typeCode': row[1]
+                        }, {
+                            upsert: true,
+                            setDefaultsOnInsert: true
+                        }, (err, rawRes) => {
+                            if (err) return reject(err);
+                            resolve(rawRes);
+                        });
+                    }));
                 }
+                Promise
+                    .all(funcList)
+                    .then((dataList) => {
+                        cb();
+                    })
+                    .catch((err) => {
+                        if (err) return debug(err);
+                    });
             });
         });
     },

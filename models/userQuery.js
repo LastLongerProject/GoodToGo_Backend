@@ -1,14 +1,7 @@
-var fs = require('fs');
 var jwt = require('jwt-simple');
 var validateRequest = require('../models/validateRequest').JWT;
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
-
-var stores;
-fs.readFile("./assets/json/googlePlaceIDs.json", 'utf8', function(err, data) {
-    if (err) throw err;
-    stores = JSON.parse(data);
-});
 
 module.exports = {
     signup: function(req, done) {
@@ -18,6 +11,7 @@ module.exports = {
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
             return done(null, false, { code: 'D001', type: 'signupMessage', message: 'Content not Complete' });
         }
+        var stores = req.app.get('store');
         process.nextTick(function() {
             User.findOne({ 'user.phone': phone }, function(err, dbUser) {
                 if (err)
@@ -27,7 +21,7 @@ module.exports = {
                         dbUser.role = role;
                         if (!dbUser.user.secretKey) dbUser.user.secretKey = keys.secretKey();
                         dbUser.save(function(err) {
-                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores.IDlist[(dbUser.role.storeID)].name : undefined;
+                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores[(dbUser.role.storeID)].name : undefined;
                             var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                             var token = jwt.encode(payload, keys.serverSecretKey());
                             return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
@@ -55,7 +49,7 @@ module.exports = {
                         newUser.role = role;
                         newUser.save(function(err) {
                             if (err) return done(err);
-                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores.IDlist[(newUser.role.storeID)]) ? stores.IDlist[(newUser.role.storeID)].name : "找不到店家") : undefined;
+                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
                             var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
                             var token = jwt.encode(payload, keys.serverSecretKey());
                             return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
@@ -71,6 +65,7 @@ module.exports = {
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
             return done(null, false, { code: 'D004', type: 'loginMessage', message: 'Content not Complete' });
         }
+        var stores = req.app.get('store');
         process.nextTick(function() {
             User.findOne({ 'user.phone': phone }, function(err, dbUser) {
                 if (err)
@@ -82,7 +77,7 @@ module.exports = {
                 dbUser.user.secretKey = keys.secretKey();
                 dbUser.save(function(err) {
                     if (err) return done(err);
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores.IDlist[(dbUser.role.storeID)]) ? stores.IDlist[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
                     var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                     var token = jwt.encode(payload, keys.serverSecretKey());
                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
@@ -96,6 +91,7 @@ module.exports = {
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
             return done(null, false, { code: 'D007', type: 'chanPassMessage', message: 'Content not Complete' });
         }
+        var stores = req.app.get('store');
         var dbUser = req._user;
         process.nextTick(function() {
             if (!dbUser.validPassword(oriPassword))
@@ -104,7 +100,7 @@ module.exports = {
             dbUser.user.secretKey = keys.secretKey();
             dbUser.save(function(err) {
                 if (err) return done(err);
-                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores.IDlist[(dbUser.role.storeID)]) ? stores.IDlist[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
                 var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });

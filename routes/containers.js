@@ -1,7 +1,6 @@
 var express = require('express');
 var router = express.Router();
 var jwt = require('jwt-simple');
-var fs = require('fs');
 var debug = require('debug')('goodtogo_backend:containers');
 
 var Box = require('../models/DB/boxDB');
@@ -11,6 +10,7 @@ var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
+var intReLength = require('../models/toolKit').intReLength;
 var validateDefault = require('../models/validateDefault');
 var validateRequest = require('../models/validateRequest').JWT;
 var regAsStore = require('../models/validateRequest').regAsStore;
@@ -19,12 +19,6 @@ var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
-
-var typeDict;
-fs.readFile("./assets/json/containerType.json", 'utf8', function(err, data) {
-    if (err) throw err;
-    typeDict = JSON.parse(data);
-});
 
 router.all('/:id', function(req, res) {
     // debug("Redirect to official website.");
@@ -35,20 +29,21 @@ router.all('/:id', function(req, res) {
 router.get('/get/list', validateDefault, function(req, res, next) {
     Container.find(function(err, list) {
         if (err) return next(err);
+        var typeDict = req.app.get('containerType');
         var tmpArr = [];
         var date = new Date();
         var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
         var token = jwt.encode(payload, keys.serverSecretKey());
         res.set('etag', wetag([list, typeDict]));
-        for (var i = 0; i < typeDict.containers.length; i++) {
+        for (var i = 0; i < typeDict.length; i++) {
             var tmpIcon = {};
-            for (var key in typeDict.containers[i].icon) {
-                tmpIcon[key] = typeDict.containers[i].icon[key] + "/" + token;
+            for (var j = 1; j <= 3; j++) {
+                tmpIcon[j + 'x'] = "https://app.goodtogo.tw/images/icon/" + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
             }
             tmpArr.push({
-                typeCode: typeDict.containers[i].typeCode,
-                name: typeDict.containers[i].name,
-                version: typeDict.containers[i].version,
+                typeCode: typeDict[i].typeCode,
+                name: typeDict[i].name,
+                version: typeDict[i].version,
                 icon: tmpIcon
             });
         }
@@ -57,7 +52,7 @@ router.get('/get/list', validateDefault, function(req, res, next) {
             containerDict: {}
         };
         for (var i = 0; i < list.length; i++) {
-            resJSON.containerDict[list[i].ID] = typeDict.containers[list[i].typeCode].name;
+            resJSON.containerDict[list[i].ID] = typeDict[list[i].typeCode].name;
         }
         res.json(resJSON);
     });
@@ -66,12 +61,13 @@ router.get('/get/list', validateDefault, function(req, res, next) {
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
+    var typeDict = req.app.get('containerType');
     process.nextTick(function() {
         Container.find(function(err, list) {
             if (err) return next(err);
             var containerDict = {};
             for (var i = 0; i < list.length; i++) {
-                containerDict[list[i].ID] = typeDict.containers[list[i].typeCode].name;
+                containerDict[list[i].ID] = typeDict[list[i].typeCode].name;
             }
             Box.find(function(err, boxList) {
                 if (err) return next(err);
@@ -123,6 +119,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
 router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
+    var typeDict = req.app.get('containerType');
     Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ pastDelivery: [] });
@@ -137,7 +134,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
         var thisType;
         for (var i = 0; i < list.length; i++) {
             thisBox = list[i].container.box;
-            thisType = typeDict.containers[list[i].container.typeCode].name;
+            thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
             if (lastIndex < 0 || boxArr[lastIndex].boxID !== thisBox || (boxArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
                 boxIDArr.push(thisBox);
@@ -178,6 +175,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
 router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
+    var typeDict = req.app.get('containerType');
     var queryCond = { 'tradeType.action': 'ReadyToClean', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } };
     if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
     Trade.find(queryCond, function(err, list) {
@@ -191,7 +189,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         var nowIndex;
         var thisType;
         for (var i = 0; i < list.length; i++) {
-            thisType = typeDict.containers[list[i].container.typeCode].name;
+            thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
             if (lastIndex < 0 || (boxArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
                 boxArr.push({
