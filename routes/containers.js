@@ -196,7 +196,8 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
                     boxTime: list[i].tradeTime,
                     typeList: [],
                     containerList: {},
-                    cleanReload: (list[i].tradeType.oriState === 1)
+                    cleanReload: (list[i].tradeType.oriState === 1),
+                    from: (dbStore.role.typeCode === 'clerk') ? undefined : list[i].oriUser.storeID
                 });
             }
             nowIndex = boxArr.length - 1;

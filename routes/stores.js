@@ -183,6 +183,35 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     });
 });
 
+router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
+    var newData = req.body;
+    var days = newData.opening_hours;
+    if (Array.isArray(days)) {
+        for (var i = 0; i < days.length; i++) {
+            if (!(typeof days[i].close !== 'undefined' && typeof days[i].close.day !== 'undefined' && typeof days[i].close.time === 'string' &&
+                    typeof days[i].open !== 'undefined' && typeof days[i].open.day !== 'undefined' && typeof days[i].open.time === 'string' &&
+                    days[i].close.time.length === 5 && days[i].open.time.length === 5 &&
+                    parseInt(days[i].close.day) < 7 && parseInt(days[i].open.day) < 7 &&
+                    parseInt(days[i].close.day) >= 0 && parseInt(days[i].open.day) >= 0)) {
+                return res.status(403).json({ code: 'E003', type: "changeOpeningTimeError", message: "Data format invalid" });
+            }
+        }
+        Store.find({ 'id': dbStore.role.storeID }, (err, aStore) => {
+            if (err) return next(err);
+            aStore.opening_hours = days;
+            aStore.opening_default = true;
+            aStore.save((err) => {
+                if (err) return next(err);
+                res.json({ type: "changeOpeningTimeError", message: "Change succeed" });
+            });
+        });
+    } else {
+        res.status(403).json({ code: 'E003', type: "changeOpeningTimeError", message: "Data format invalid" });
+    }
+});
+
 router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);

@@ -202,6 +202,7 @@ module.exports = {
                                     if (err) return debug(err);
                                     for (var i = 0; i < data.length; i++) {
                                         if (typeof oldList[i] !== 'undefined') data[i][1].img_info.img_version = oldList[i].img_info.img_version;
+                                        if (oldList[i].opening_default) data[i][1].opening_hours = oldList[i].opening_hours;
                                         returnObject.push(data[i][1]);
                                         data[i][1].save();
                                     }
