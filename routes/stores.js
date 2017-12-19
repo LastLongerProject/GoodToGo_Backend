@@ -291,6 +291,43 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
+router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
+    process.nextTick(function() {
+        var funcList = [];
+        for (var i = 0; i < type.containers.length; i++) {
+            funcList.push(new Promise((resolve, reject) => {
+                var localPtr = i;
+                Trade.count({
+                    'tradeType.action': 'Rent',
+                    'oriUser.storeID': dbStore.role.storeID,
+                    'container.typeCode': localPtr
+                }, (err, amount) => {
+                    if (err) return reject(err);
+                    resolve({ typeCode: localPtr, amount: amount });
+                });
+            }));
+        }
+        Promise
+            .all(funcList)
+            .then((data) => {
+                Trade.count({
+                    'tradeType.action': 'Rent'
+                }, (err, totalAmount) => {
+                    if (err) return next(err);
+                    res.json({
+                        store: data,
+                        total: totalAmount
+                    });
+                });
+            })
+            .catch((err) => {
+                if (err) return next(err);
+            });
+    });
+});
+
 router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
