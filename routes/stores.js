@@ -112,7 +112,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = req.app.get('containerType');
-    for (var i = 0; i < type.length; i++) {
+    for (var i = 0; i < ((type.length < 2) ? type.length : 2); i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
             name: type[i].name,
@@ -143,6 +143,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
+                        if (tmpTypeCode >= 2) continue;
                         if (containers[i].statusCode === 1) {
                             resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
                             resJson['containers'][tmpTypeCode]['amount']++;
