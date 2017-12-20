@@ -14,15 +14,16 @@ var debug = require('debug')('goodtogo_backend:app');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appERR');
 
+var config = require('./config/config');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
 var appInit = require('./models/appInit');
 var index = require('./routes/index');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
-var containers = require('./routes/containers');
 var images = require('./routes/images');
-var config = require('./config/config');
+var manager = require('./routes/manager');
+var containers = require('./routes/containers');
 
 var app = express();
 
@@ -75,6 +76,7 @@ app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
 app.use('/images', images);
+app.use('/manager', manager);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -118,7 +120,7 @@ function GAtrigger() {
             }
         });
         next();
-    }
+    };
 }
 
 function connectMongoDB() {
@@ -139,7 +141,7 @@ function resBodyParser(req, res, next) {
     var chunks = [];
 
     res.write = function(chunk) {
-        if (typeof chunk !== 'Buffer')
+        if (!Buffer.isBuffer(chunk))
             chunk = new Buffer(chunk);
         chunks.push(chunk);
 
@@ -147,8 +149,8 @@ function resBodyParser(req, res, next) {
     };
 
     res.end = function(chunk) {
-        if (chunk) {
-            if (typeof chunk !== 'Buffer')
+        if (typeof chunk !== 'undefined') {
+            if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer(chunk);
             chunks.push(chunk);
         }

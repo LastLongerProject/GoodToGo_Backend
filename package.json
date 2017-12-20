@@ -4,8 +4,8 @@
     "description": "GoodToGo Backend Server",
     "main": "index.js",
     "scripts": {
-        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=production & nodemon bin/wwwhttp --ignore tmp/",
-        "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore tmp/",
+        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=production & nodemon bin/wwwhttp --ignore assets/",
+        "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore assets/",
         "start": "nodemon bin/www --ignore tmp/"
     },
     "repository": {

@@ -27,7 +27,7 @@ router.all('/:id', function(req, res) {
 });
 
 router.get('/get/list', validateDefault, function(req, res, next) {
-    Container.find(function(err, list) {
+    Container.find({ 'active': true }, function(err, list) {
         if (err) return next(err);
         var typeDict = req.app.get('containerType');
         var tmpArr = [];
