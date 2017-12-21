@@ -30,8 +30,8 @@ module.exports = {
             });
         });
     },
-    refreshContainer: function(app, cb) {
-        sheet.getContainer(() => {
+    refreshContainer: function(app, dbUser, cb) {
+        sheet.getContainer(dbUser, () => {
             ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, list) {
                 if (err) return debugError(err);
                 app.set('containerType', list);

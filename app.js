@@ -1,13 +1,15 @@
-var express = require('express');
 var path = require('path');
-var favicon = require('serve-favicon');
 var logger = require('morgan');
-var cookieParser = require('cookie-parser');
+var express = require('express');
+var favicon = require('serve-favicon');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
+var redis = require('redis');
 var mongoose = require('mongoose');
-// var redis = require('redis');
-var compression = require('compression');
+var session = require('express-session');
+var RedisStore = require('connect-redis')(session);
 var helmet = require('helmet');
+var compression = require('compression');
 var timeout = require('connect-timeout');
 var ua = require('universal-analytics');
 var debug = require('debug')('goodtogo_backend:app');
@@ -15,6 +17,7 @@ debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appERR');
 
 var config = require('./config/config');
+var keys = require('./config/keys');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
 var appInit = require('./models/appInit');
@@ -42,27 +45,26 @@ app.use(helmet());
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
-mongoose.Promise = global.Promise;
-connectMongoDB();
-
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
 
-/*
-var RDS_PORT = 6379,
-    RDS_HOST = config.redisUrl,
-    RDS_PWD = config.redisPass,
-    RDS_OPTS = {},
-    client = redis.createClient(RDS_PORT, RDS_HOST, RDS_OPTS);
+mongoose.Promise = global.Promise;
+connectMongoDB();
+var redisClient = redis.createClient(6379, config.redisUrl, { password: config.redisPass });
+regisRedisEvent(redisClient);
+app.set('redis', redisClient);
 
-client.auth(RDS_PWD, function() {
-    debug('redisDB auth succeed');
-});
-
-client.on('ready', function(err) {
-    if (err) next(err);
-    debug('redisDB connect succeed');
-});*/
-
+// app.use(session({
+//     store: new RedisStore({
+//         client: redisClient
+//     }),
+//     secret: keys.serverSecretKey()
+// }));
+// app.use(function(req, res, next) {
+//     if (!req.session) {
+//         return next(new Error('Plz retry later.'));
+//     }
+//     next();
+// })
 app.use('/manager', manager);
 app.use(timeout('10s'));
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
@@ -131,6 +133,24 @@ function connectMongoDB() {
 
         appInit.container(app);
         appInit.store(app);
+    });
+}
+
+function regisRedisEvent(redisClient) {
+    redisClient.on('ready', function() {
+        debug('redisDB ready');
+    });
+
+    redisClient.on('connect', function() {
+        debug('redisDB connect');
+    });
+
+    redisClient.on('reconnecting', function(delay, attempt) {
+        debug('redisDB reconnecting');
+    });
+
+    redisClient.on('error', function(err) {
+        debugError('redisDB err ', err);
     });
 }
 

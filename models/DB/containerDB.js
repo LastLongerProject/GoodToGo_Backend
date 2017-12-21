@@ -5,7 +5,7 @@ var userSchema = mongoose.Schema({
     ID: Number,
     typeCode: Number,
     statusCode: { type: Number, default: 4 },
-    conbineTo: { type: String, default: 'new' },
+    conbineTo: String,
     storeID: Number,
     cycleCtr: { type: Number, default: 0 },
     active: { type: Boolean, default: true }

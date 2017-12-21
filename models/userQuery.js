@@ -49,6 +49,10 @@ module.exports = {
                         newUser.role = role;
                         newUser.save(function(err) {
                             if (err) return done(err);
+                            // req.app.get('redis').hmset("user:" + newUser.user.apiKey, ["secretKey", newUser.user.secretKey, "phone", newUser.user.phone], function(err, res) {
+                            //     console.log(err)
+                            //     console.log(res);
+                            // });
                             var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
                             var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
                             var token = jwt.encode(payload, keys.serverSecretKey());
