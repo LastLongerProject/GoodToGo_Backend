@@ -40,7 +40,6 @@ app.use(helmet());
 // app.use(compression());
 // app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger()); // Trigger Google Analytics
-app.use(timeout('10s'));
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 
 mongoose.Promise = global.Promise;
@@ -64,6 +63,8 @@ client.on('ready', function(err) {
     debug('redisDB connect succeed');
 });*/
 
+app.use('/manager', manager);
+app.use(timeout('10s'));
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
 
@@ -76,7 +77,6 @@ app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
 app.use('/images', images);
-app.use('/manager', manager);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

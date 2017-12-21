@@ -1,4 +1,5 @@
 var fs = require('fs');
+var sharp = require('sharp');
 var google = require('googleapis');
 var GoogleAuth = require('google-auth-library');
 var debug = require('debug')('goodtogo_backend:google_drive');
@@ -125,6 +126,7 @@ function downloadFile(aFile, type, resolve, reject) {
         googleAuth(function(auth) {
             var drive = google.drive('v2');
             var fileName = aFile.name.replace('@', '_');
+            var compressedFileName = fileName;
             if (type === 'shop') fileName = fileName.slice(0, 2) + '_ori.jpg';
             drive.files.get({
                 auth: auth,
@@ -144,7 +146,16 @@ function downloadFile(aFile, type, resolve, reject) {
                         debug('Error during saving file: ' + aFile.name + ' err: ' + err);
                         reject(err);
                     } else {
-                        resolve(aFile);
+                        if (type === 'shop') {
+                            sharp(buffer)
+                                .resize(500)
+                                .toFile('./assets/images/' + type + '/' + compressedFileName)
+                                .then(function() {
+                                    resolve(aFile);
+                                });
+                        } else {
+                            resolve(aFile);
+                        }
                     }
                 });
             });
