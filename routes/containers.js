@@ -476,14 +476,14 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             else userQuery = { 'user.phone': container.conbineTo };
             User.findOne(userQuery, function(err, dbOri) {
                 if (err) return next(err);
+                if (!dbOri) {
+                    debug('Return unexpect err. Data : ' + JSON.stringify(container) +
+                        ' ID in uri : ' + id);
+                    return res.status(403).json({ code: 'F004', type: messageType, message: 'No user found' });
+                } else if (!dbOri.active) {
+                    return res.status(403).json({ code: 'F005', type: messageType, message: 'User has Banned' });
+                }
                 if (action === 'Rent') {
-                    if (!dbOri) {
-                        debug('Return unexpect err. Data : ' + JSON.stringify(container) +
-                            ' ID in uri : ' + id);
-                        return res.status(403).json({ code: 'F004', type: messageType, message: 'No user found' });
-                    } else if (!dbOri.active) {
-                        return res.status(403).json({ code: 'F005', type: messageType, message: 'User has Banned' });
-                    }
                     var tmp = dbOri;
                     dbOri = dbNew;
                     dbNew = tmp;

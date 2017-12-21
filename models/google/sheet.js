@@ -42,7 +42,7 @@ function googleAuth(callback) {
 }
 
 module.exports = {
-    getContainer: function(cb) {
+    getContainer: function(dbAdmin, cb) {
         googleAuth(function getSheet(auth) {
             var sheets = google.sheets('v4');
             sheets.spreadsheets.values.batchGet({
@@ -77,7 +77,8 @@ module.exports = {
                         var row = sheetContainerList[i];
                         Container.update({ 'ID': row[0] }, {
                             'active': (row[3] === '1'),
-                            'typeCode': row[1]
+                            'typeCode': row[1],
+                            '$setOnInsert': { 'conbineTo': dbAdmin.user.phone }
                         }, {
                             upsert: true,
                             setDefaultsOnInsert: true
