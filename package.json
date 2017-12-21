@@ -30,12 +30,12 @@
         "googleapis": "^23.0.0",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.1",
-        "mongoose": "^4.11.9",
+        "mongoose": "^4.13.7",
         "morgan": "~1.8.2",
-        "nodemon": "^1.11.0",
         "redis": "^2.8.0",
         "serve-favicon": "~2.4.3",
-        "universal-analytics": "^0.4.15"
+        "sharp": "^0.18.4",
+        "universal-analytics": "^0.4.16"
     },
     "bugs": {
         "url": "https://github.com/BenjaminChenTW/GoodToGo_Backend/issues"
