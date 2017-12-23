@@ -4,10 +4,13 @@
     "description": "GoodToGo Backend Server",
     "main": "index.js",
     "scripts": {
-        "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & set NODE_DEBUG=redis & nodemon bin/wwwhttp --ignore assets/",
-        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & nodemon bin/wwwhttp --ignore assets/",
-        "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www --ignore assets/",
+        "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & set NODE_DEBUG=redis & nodemon bin/wwwhttp",
+        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & nodemon bin/wwwhttp",
+        "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www",
         "start": "nodemon bin/www --ignore tmp/"
+    },
+    "nodemonConfig": {
+        "ignore": ["assets/*", "*.json"]
     },
     "repository": {
         "type": "git",
