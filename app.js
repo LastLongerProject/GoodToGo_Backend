@@ -20,7 +20,7 @@ var keys = require('./config/keys');
 var config = require('./config/config');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
-var appInit = require('./models/appInit');
+var scheduler = require('./models/scheduler');
 var index = require('./routes/index');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
@@ -131,8 +131,7 @@ function connectMongoDB() {
         debug('mongoDB connect succeed');
         // require('./tmp/applyRedis.js')
 
-        appInit.container(app);
-        appInit.store(app);
+        scheduler(app);
     });
 }
 

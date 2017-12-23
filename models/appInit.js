@@ -35,6 +35,7 @@ module.exports = {
             PlaceID.find({}, {}, { sort: { ID: 1 } }, (err, stores) => {
                 if (err) return next(err);
                 app.set('store', stores);
+                debug('storeList refresh');
                 cb();
             });
         });
@@ -51,6 +52,7 @@ module.exports = {
                     }
                     app.set('container', containerDict);
                     app.set('containerType', containerTypeList);
+                    debug('containerList refresh');
                     cb();
                 });
             });
