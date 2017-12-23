@@ -27,35 +27,31 @@ router.all('/:id', function(req, res) {
 });
 
 router.get('/get/list', validateDefault, function(req, res, next) {
-    Container.find({ 'active': true }, function(err, list) {
-        if (err) return next(err);
-        var typeDict = req.app.get('containerType');
-        var tmpArr = [];
-        var date = new Date();
-        var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-        var token = jwt.encode(payload, keys.serverSecretKey());
-        res.set('etag', wetag([list, typeDict]));
-        for (var i = 0; i < typeDict.length; i++) {
-            var tmpIcon = {};
-            for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = "https://app.goodtogo.tw/images/icon/" + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
-            }
-            tmpArr.push({
-                typeCode: typeDict[i].typeCode,
-                name: typeDict[i].name,
-                version: typeDict[i].version,
-                icon: tmpIcon
-            });
+    var typeDict = req.app.get('containerType');
+    var containerDict = req.app.get('container');
+    var tmpIcon = {};
+    var tmpArr = [];
+    var date = new Date();
+    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+    var token = jwt.encode(payload, keys.serverSecretKey());
+    res.set('etag', wetag([containerDict, typeDict]));
+    for (var i = 0; i < typeDict.length; i++) {
+        tmpIcon = {};
+        for (var j = 1; j <= 3; j++) {
+            tmpIcon[j + 'x'] = "https://app.goodtogo.tw/images/icon/" + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
         }
-        var resJSON = {
-            containerType: tmpArr,
-            containerDict: {}
-        };
-        for (var i = 0; i < list.length; i++) {
-            resJSON.containerDict[list[i].ID] = typeDict[list[i].typeCode].name;
-        }
-        res.json(resJSON);
-    });
+        tmpArr.push({
+            typeCode: typeDict[i].typeCode,
+            name: typeDict[i].name,
+            version: typeDict[i].version,
+            icon: tmpIcon
+        });
+    }
+    var resJSON = {
+        containerType: tmpArr,
+        containerDict: containerDict
+    };
+    res.json(resJSON);
 });
 
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {

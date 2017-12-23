@@ -41,7 +41,8 @@ router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, r
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            res.header('Authorization', info.headers.Authorization);
+            if (info.headers)
+                res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -108,7 +109,7 @@ router.get('/data', validateRequest, function(req, res, next) {
             }
             Trade.find({ "tradeType.action": "Return", "oriUser.phone": dbUser.user.phone }, function(err, returnList) {
                 if (err) return next(err);
-                returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime });
+                returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
                     for (var j = inUsed.length - 1; j >= 0; j--) {

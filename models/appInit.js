@@ -1,4 +1,5 @@
 var PlaceID = require('../models/DB/placeIdDB');
+var Container = require('../models/DB/containerDB');
 var ContainerType = require('../models/DB/containerTypeDB');
 var sheet = require('./google/sheet');
 var drive = require('./google/drive');
@@ -15,10 +16,18 @@ module.exports = {
         });
     },
     container: function(app) {
-        ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, list) {
+        ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, containerTypeList) {
             if (err) return debugError(err);
-            app.set('containerType', list);
-            debug('containerTypeList init');
+            Container.find({ 'active': true }, {}, { sort: { ID: 1 } }, function(err, containerList) {
+                var containerDict = {};
+                if (err) return debugError(err);
+                for (var i = 0; i < containerList.length; i++) {
+                    containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                }
+                app.set('container', containerDict);
+                app.set('containerType', containerTypeList);
+                debug('containerList init');
+            });
         });
     },
     refreshStore: function(app, cb) {
@@ -34,7 +43,14 @@ module.exports = {
         sheet.getContainer(dbUser, () => {
             ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, list) {
                 if (err) return debugError(err);
-                app.set('containerType', list);
+                Container.find({ 'active': true }, {}, { sort: { ID: 1 } }, function(err, containerList) {
+                    if (err) return debugError(err);
+                    for (var i = 0; i < list.length; i++) {
+                        resJSON.containerDict[list[i].ID] = containerTypeList[list[i].typeCode].name;
+                    }
+                });
+                app.set('container', containerList);
+                app.set('containerType', containerTypeList);
                 cb();
             });
         });

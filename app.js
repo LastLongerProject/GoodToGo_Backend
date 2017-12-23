@@ -16,8 +16,8 @@ var debug = require('debug')('goodtogo_backend:app');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appERR');
 
-var config = require('./config/config');
 var keys = require('./config/keys');
+var config = require('./config/config');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
 var appInit = require('./models/appInit');
@@ -129,7 +129,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) return next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/deleteTmpData.js')
+        // require('./tmp/applyRedis.js')
 
         appInit.container(app);
         appInit.store(app);

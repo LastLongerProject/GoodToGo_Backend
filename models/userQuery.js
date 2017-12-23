@@ -1,5 +1,6 @@
 var jwt = require('jwt-simple');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 
@@ -8,7 +9,7 @@ module.exports = {
         var role = req.body['role'] || { typeCode: 'customer' };
         var phone = req.body['phone'];
         var password = req.body['password'];
-        if (typeof phone === 'undefined' || typeof password === 'undefined') {
+        if (typeof phone === 'undefined' || (typeof password === 'undefined' && !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
             return done(null, false, { code: 'D001', type: 'signupMessage', message: 'Content not Complete' });
         }
         var stores = req.app.get('store');
@@ -19,24 +20,15 @@ module.exports = {
                 if (dbUser) {
                     if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
                         dbUser.role = role;
-                        if (!dbUser.user.secretKey) dbUser.user.secretKey = keys.secretKey();
                         dbUser.save(function(err) {
-                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ? stores[(dbUser.role.storeID)].name : undefined;
-                            var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
-                            var token = jwt.encode(payload, keys.serverSecretKey());
-                            return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                            if (err) return done(err);
+                            return done(null, dbUser, { body: { type: 'loginMessage', message: 'Authentication succeeded' } });
                         });
                     } else {
                         return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
                     }
                 } else {
                     keys.apiKey(function(returnedApikey) {
-                        var newUser = new User();
-                        newUser.user.phone = phone;
-                        newUser.user.password = newUser.generateHash(password);
-                        newUser.user.apiKey = returnedApikey;
-                        newUser.user.secretKey = keys.secretKey();
-                        newUser.active = req.body['active'];
                         if ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID === 'undefined')) ||
                             (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined')) ||
                             (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined'))) {
@@ -46,17 +38,26 @@ module.exports = {
                                 message: 'Role structure invalid'
                             });
                         }
+                        var newUser = new User();
+                        newUser.user.phone = phone;
+                        newUser.user.password = newUser.generateHash(password);
+                        newUser.active = req.body['active'];
+                        var newUserKey = new UserKeys();
+                        newUserKey.phone = phone;
+                        newUserKey.userAgent = req.headers['user-agent'];
+                        newUserKey.apiKey = returnedApikey;
+                        newUserKey.secretKey = keys.secretKey();
+                        newUserKey.user = newUser._id;
                         newUser.role = role;
                         newUser.save(function(err) {
                             if (err) return done(err);
-                            // req.app.get('redis').hmset("user:" + newUser.user.apiKey, ["secretKey", newUser.user.secretKey, "phone", newUser.user.phone], function(err, res) {
-                            //     console.log(err)
-                            //     console.log(res);
-                            // });
-                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
-                            var payload = { apiKey: newUser.user.apiKey, secretKey: newUser.user.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
-                            var token = jwt.encode(payload, keys.serverSecretKey());
-                            return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                            newUserKey.save(function(err) {
+                                if (err) return done(err);
+                                var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
+                                var payload = { apiKey: returnedApikey, secretKey: newUserKey.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
+                                var token = jwt.encode(payload, keys.serverSecretKey());
+                                return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                            });
                         });
                     });
                 }
@@ -71,20 +72,36 @@ module.exports = {
         }
         var stores = req.app.get('store');
         process.nextTick(function() {
-            User.findOne({ 'user.phone': phone }, function(err, dbUser) {
-                if (err)
-                    return done(err);
-                if (!dbUser)
-                    return done(null, false, { code: 'D005', type: 'loginMessage', message: 'No user found' });
-                if (!dbUser.validPassword(password))
-                    return done(null, false, { code: 'D006', type: 'loginMessage', message: 'Wrong password' });
-                dbUser.user.secretKey = keys.secretKey();
-                dbUser.save(function(err) {
-                    if (err) return done(err);
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
-                    var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
-                    var token = jwt.encode(payload, keys.serverSecretKey());
-                    return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
+            keys.apiKey(function(returnedApikey) {
+                User.findOne({ 'user.phone': phone }, function(err, dbUser) {
+                    if (err)
+                        return done(err);
+                    if (!dbUser)
+                        return done(null, false, { code: 'D005', type: 'loginMessage', message: 'No user found' });
+                    if (!dbUser.validPassword(password))
+                        return done(null, false, { code: 'D006', type: 'loginMessage', message: 'Wrong password' });
+                    var newSecretKey = keys.secretKey()
+                    UserKeys.findOneAndUpdate({ 'phone': phone, 'userAgent': req.headers['user-agent'] }, {
+                        'secretKey': newSecretKey,
+                        '$setOnInsert': { 'apiKey': returnedApikey, 'user': dbUser._id, 'userAgent': req.headers['user-agent'] }
+                    }, {
+                        upsert: true,
+                        setDefaultsOnInsert: true
+                    }, (err, keyPair) => {
+                        if (err) return done(err);
+                        dbUser.save(function(err) {
+                            if (err) return done(err);
+                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                            var payload;
+                            if (!keyPair) {
+                                payload = { apiKey: returnedApikey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
+                            } else {
+                                payload = { apiKey: keyPair.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
+                            }
+                            var token = jwt.encode(payload, keys.serverSecretKey());
+                            return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
+                        });
+                    });
                 });
             });
         });
@@ -97,26 +114,28 @@ module.exports = {
         }
         var stores = req.app.get('store');
         var dbUser = req._user;
-        process.nextTick(function() {
-            if (!dbUser.validPassword(oriPassword))
-                return done(null, false, { code: 'D008', type: 'chanPassMessage', message: 'Wrong password' });
-            dbUser.user.password = dbUser.generateHash(newPassword);
-            dbUser.user.secretKey = keys.secretKey();
-            dbUser.save(function(err) {
+        var dbKey = req._key;
+        if (!dbUser.validPassword(oriPassword))
+            return done(null, false, { code: 'D008', type: 'chanPassMessage', message: 'Wrong password' });
+        dbUser.user.password = dbUser.generateHash(newPassword);
+        dbKey.secretKey = keys.secretKey();
+        dbUser.save(function(err) {
+            if (err) return done(err);
+            dbKey.save(function(err) {
                 if (err) return done(err);
                 var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
-                var payload = { apiKey: dbUser.user.apiKey, secretKey: dbUser.user.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
+                var payload = { apiKey: dbKey.apiKey, secretKey: dbKey.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                 var token = jwt.encode(payload, keys.serverSecretKey());
                 return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
             });
         });
     },
     logout: function(req, done) {
+        var dbKey = req._key;
         var dbUser = req._user;
-        dbUser.user.secretKey = undefined;
-        dbUser.save(function(err, updatedUser) {
+        dbKey.remove(function(err, updatedUser) {
             if (err) return done(err);
-            return done(null, dbUser, { type: 'logoutMessage', message: 'Logout succeeded.' });
+            return done(null, dbKey, { type: 'logoutMessage', message: 'Logout succeeded.' });
         });
     }
 };
