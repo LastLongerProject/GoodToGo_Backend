@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var jwt = require('jwt-simple');
+var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:stores');
 
 var keys = require('../config/keys');
@@ -33,37 +34,41 @@ router.get('/list', validateDefault, function(req, res, next) {
     var tmpArr = [];
     process.nextTick(function() {
         Store.find({}, {}, { sort: { id: 1 } }, function(err, storeList) {
-            if (err) next(err);
+            if (err) return next(err);
             Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                if (err) return next(err);
                 jsonData.globalAmount = count;
-                var date = new Date();
-                var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-                var token = jwt.encode(payload, keys.serverSecretKey());
-                res.set('etag', wetag([storeList, count]));
-                for (var i = 0; i < storeList.length; i++) {
-                    if (storeList[i].active) {
-                        var tmpOpening = [];
-                        storeList[i].img_info.img_src += ("/" + token);
-                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                            tmpOpening.push({
-                                close: storeList[i].opening_hours[j].close,
-                                open: storeList[i].opening_hours[j].open
+                keys.serverSecretKey((err, key) => {
+                    if (err) return next(err);
+                    var date = new Date();
+                    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+                    var token = jwt.encode(payload, key);
+                    res.set('etag', wetag([storeList, count]));
+                    for (var i = 0; i < storeList.length; i++) {
+                        if (storeList[i].active) {
+                            var tmpOpening = [];
+                            storeList[i].img_info.img_src += ("/" + token);
+                            for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                                tmpOpening.push({
+                                    close: storeList[i].opening_hours[j].close,
+                                    open: storeList[i].opening_hours[j].open
+                                });
+                            tmpArr.push({
+                                id: storeList[i].id,
+                                name: storeList[i].name,
+                                img_info: storeList[i].img_info,
+                                opening_hours: tmpOpening,
+                                contract: storeList[i].contract,
+                                location: storeList[i].location,
+                                address: storeList[i].address,
+                                type: storeList[i].type,
+                                testing: (storeList[i].project === '正興杯杯') ? false : true
                             });
-                        tmpArr.push({
-                            id: storeList[i].id,
-                            name: storeList[i].name,
-                            img_info: storeList[i].img_info,
-                            opening_hours: tmpOpening,
-                            contract: storeList[i].contract,
-                            location: storeList[i].location,
-                            address: storeList[i].address,
-                            type: storeList[i].type,
-                            testing: (storeList[i].project === '正興杯杯') ? false : true
-                        });
+                        }
                     }
-                }
-                jsonData["shop_data"] = tmpArr;
-                res.json(jsonData);
+                    jsonData["shop_data"] = tmpArr;
+                    res.json(jsonData);
+                });
             });
         });
     });
@@ -171,14 +176,24 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var id = req.params.id;
+    var redis = req.app.get('redis');
     process.nextTick(function() {
         User.findOne({ 'user.phone': new RegExp(id.toString() + '$', "i") }, function(err, user) {
             if (err)
                 return next(err);
-            if (typeof user !== 'undefined' && user !== null) {
-                res.status(200).json({ 'phone': user.user.phone, 'apiKey': user.user.apiKey });
-            } else {
+            if (!user) {
                 res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
+            } else {
+                var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
+                redis.set('user_token:' + token, user.user.phone, (err, reply) => {
+                    if (err) return next(err);
+                    if (reply !== 'OK') return next(reply);
+                    redis.expire('user_token:' + token, 60 * 30, (err, replyNum) => {
+                        if (err) return next(err);
+                        if (replyNum !== 1) return next(replyNum);
+                        res.status(200).json({ 'phone': user.user.phone, 'apiKey': token });
+                    });
+                });
             }
         });
     });

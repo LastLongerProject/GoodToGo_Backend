@@ -7,7 +7,6 @@ var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
-var keys = require('../config/keys');
 var Trade = require('../models/DB/tradeDB');
 
 router.post('/signup', validateDefault, function(req, res, next) {

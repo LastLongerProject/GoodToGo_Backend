@@ -12,6 +12,7 @@ module.exports = {
     JWT: function(req, res, next) {
         var jwtToken = req.headers['authorization'];
         var key = req.headers['apikey'];
+        var redis = req.app.get('redis');
 
         if (jwtToken && key) {
             process.nextTick(function() {
@@ -39,7 +40,6 @@ module.exports = {
                         if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1)) {
                             return res.status(401).json({ code: 'B007', type: 'validatingUser', message: 'JWT Expired' });
                         }
-                        // check reply attack
                         if (req._role) {
                             if (req._role.txt.indexOf(dbUser.role.typeCode) === -1)
                                 return res.status(401).json({ code: 'B008', type: 'validatingUser', message: 'Not Authorized for this URI' });
@@ -47,9 +47,23 @@ module.exports = {
                                 if (dbUser.role.manager !== req._role.manager)
                                     return res.status(401).json({ code: 'B008', type: 'validatingUser', message: 'Not Authorized for this URI' });
                         }
-                        req._user = dbUser;
-                        req._key = dbKey;
-                        next();
+                        redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
+                            if (reply !== null) {
+                                return res.status(401).json({ code: 'Z004', type: 'security', message: 'Token reply' });
+                            } else {
+                                redis.set('reply_check:' + decoded.jti + ':' + decoded.iat, 0, (err, reply) => {
+                                    if (err) return next(err);
+                                    if (reply !== 'OK') return next(reply);
+                                    redis.expire('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, (err, reply) => {
+                                        if (err) return next(err);
+                                        if (reply !== 1) return next(reply);
+                                        req._user = dbUser;
+                                        req._key = dbKey;
+                                        next();
+                                    });
+                                });
+                            }
+                        });
                     });
                 });
             });

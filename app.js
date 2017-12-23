@@ -57,7 +57,7 @@ app.set('redis', redisClient);
 //     store: new RedisStore({
 //         client: redisClient
 //     }),
-//     secret: keys.serverSecretKey()
+//     secret: keys.sessionKey()
 // }));
 // app.use(function(req, res, next) {
 //     if (!req.session) {
