@@ -1,6 +1,6 @@
 var fs = require('fs');
 var request = require('request');
-var google = require('googleapis');
+var sheets = require('googleapis').sheets('v4');
 var GoogleAuth = require('google-auth-library');
 var debug = require('debug')('goodtogo_backend:google_sheet');
 
@@ -47,7 +47,6 @@ module.exports = {
             if (err) throw err;
             var spreadsheetId = JSON.parse(data).container_sheet_ID;
             googleAuth(function getSheet(auth) {
-                var sheets = google.sheets('v4');
                 sheets.spreadsheets.values.batchGet({
                     auth: auth,
                     spreadsheetId: spreadsheetId,
@@ -113,7 +112,6 @@ module.exports = {
                 var spreadsheetId = dataToObject.store_sheet_ID;
                 var dictionary = dataToObject.translater;
                 googleAuth(function getSheet(auth) {
-                    var sheets = google.sheets('v4');
                     sheets.spreadsheets.values.get({
                         auth: auth,
                         spreadsheetId: spreadsheetId,

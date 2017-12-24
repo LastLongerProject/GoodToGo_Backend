@@ -1,6 +1,6 @@
 var fs = require('fs');
 var sharp = require('sharp');
-var google = require('googleapis');
+var drive = require('googleapis').drive('v3');
 var GoogleAuth = require('google-auth-library');
 var debug = require('debug')('goodtogo_backend:google_drive');
 
@@ -35,7 +35,6 @@ module.exports = {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
             googleAuth(function(auth) {
-                var drive = google.drive('v3');
                 drive.files.list({
                     auth: auth,
                     q: "'" + googleContent.container_icon_folderID + "' in parents",
@@ -50,7 +49,6 @@ module.exports = {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
             googleAuth(function(auth) {
-                var drive = google.drive('v3');
                 drive.files.list({
                     auth: auth,
                     q: "'" + googleContent.store_img_folderID + "' in parents",
@@ -124,7 +122,6 @@ function downloadFile(aFile, type, resolve, reject) {
     if (connectionCtr < 6) {
         connectionCtr++;
         googleAuth(function(auth) {
-            var drive = google.drive('v2');
             var fileName = aFile.name.replace('@', '_');
             var compressedFileName = fileName;
             if (type === 'shop') fileName = fileName.slice(0, 2) + '_ori.jpg';
