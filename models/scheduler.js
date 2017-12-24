@@ -29,7 +29,7 @@ module.exports = function(app) {
         setTimeout(function() {
             setInterval(function tasks() {
                 debug('scheduler start');
-                setTimeout(appInit.refreshContainer, 1000 * 60 * 5, app, bot, cb); // 0, app, bot, cb);
+                setTimeout(appInit.refreshContainer, 0, app, bot, cb);
                 setTimeout(appInit.refreshStore, 1000 * 60 * 5, app, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);

@@ -10,7 +10,7 @@
         "start": "nodemon bin/www --ignore tmp/"
     },
     "nodemonConfig": {
-        "ignore": ["assets/*", "*.json"]
+        "ignore": ["assets/*", "*.json", "tmp/*"]
     },
     "repository": {
         "type": "git",
