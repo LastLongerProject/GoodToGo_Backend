@@ -1,8 +1,9 @@
 var PlaceID = require('../models/DB/placeIdDB');
+var Container = require('../models/DB/containerDB');
 var ContainerType = require('../models/DB/containerTypeDB');
 var sheet = require('./google/sheet');
 var drive = require('./google/drive');
-var debug = require('debug')('goodtogo_backend:appINIT');
+var debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appINIT_ERR');
 
@@ -15,10 +16,18 @@ module.exports = {
         });
     },
     container: function(app) {
-        ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, list) {
+        ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, containerTypeList) {
             if (err) return debugError(err);
-            app.set('containerType', list);
-            debug('containerTypeList init');
+            Container.find({ 'active': true }, {}, { sort: { ID: 1 } }, function(err, containerList) {
+                var containerDict = {};
+                if (err) return debugError(err);
+                for (var i = 0; i < containerList.length; i++) {
+                    containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                }
+                app.set('container', containerDict);
+                app.set('containerType', containerTypeList);
+                debug('containerList init');
+            });
         });
     },
     refreshStore: function(app, cb) {
@@ -26,16 +35,26 @@ module.exports = {
             PlaceID.find({}, {}, { sort: { ID: 1 } }, (err, stores) => {
                 if (err) return next(err);
                 app.set('store', stores);
+                debug('storeList refresh');
                 cb();
             });
         });
     },
     refreshContainer: function(app, dbUser, cb) {
         sheet.getContainer(dbUser, () => {
-            ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, list) {
+            ContainerType.find({}, {}, { sort: { typeCode: 1 } }, function(err, containerTypeList) {
                 if (err) return debugError(err);
-                app.set('containerType', list);
-                cb();
+                Container.find({ 'active': true }, {}, { sort: { ID: 1 } }, function(err, containerList) {
+                    var containerDict = {};
+                    if (err) return debugError(err);
+                    for (var i = 0; i < containerList.length; i++) {
+                        containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                    }
+                    app.set('container', containerDict);
+                    app.set('containerType', containerTypeList);
+                    debug('containerList refresh');
+                    cb();
+                });
             });
         });
     },

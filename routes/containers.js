@@ -27,16 +27,17 @@ router.all('/:id', function(req, res) {
 });
 
 router.get('/get/list', validateDefault, function(req, res, next) {
-    Container.find({ 'active': true }, function(err, list) {
-        if (err) return next(err);
-        var typeDict = req.app.get('containerType');
-        var tmpArr = [];
-        var date = new Date();
-        var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
-        var token = jwt.encode(payload, keys.serverSecretKey());
-        res.set('etag', wetag([list, typeDict]));
+    var typeDict = req.app.get('containerType');
+    var containerDict = req.app.get('container');
+    var tmpIcon = {};
+    var tmpArr = [];
+    var date = new Date();
+    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+    keys.serverSecretKey((err, key) => {
+        var token = jwt.encode(payload, key);
+        res.set('etag', wetag([containerDict, typeDict]));
         for (var i = 0; i < typeDict.length; i++) {
-            var tmpIcon = {};
+            tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
                 tmpIcon[j + 'x'] = "https://app.goodtogo.tw/images/icon/" + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
             }
@@ -49,11 +50,8 @@ router.get('/get/list', validateDefault, function(req, res, next) {
         }
         var resJSON = {
             containerType: tmpArr,
-            containerDict: {}
+            containerDict: containerDict
         };
-        for (var i = 0; i < list.length; i++) {
-            resJSON.containerDict[list[i].ID] = typeDict[list[i].typeCode].name;
-        }
         res.json(resJSON);
     });
 });
@@ -314,7 +312,11 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     }
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "borrowContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
-    process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, key));
+    var redis = req.app.get('redis');
+    redis.get('user_token:' + token, (err, reply) => {
+        if (err) return next(err);
+        process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, reply));
+    });
 });
 
 router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
@@ -472,9 +474,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 });
             }
             var userQuery = {};
-            if (action === 'Rent') userQuery = { 'user.apiKey': key };
-            else userQuery = { 'user.phone': container.conbineTo };
-            User.findOne(userQuery, function(err, dbOri) {
+            User.findOne({ 'user.phone': (action === 'Rent') ? key : container.conbineTo }, function(err, dbOri) {
                 if (err) return next(err);
                 if (!dbOri) {
                     debug('Return unexpect err. Data : ' + JSON.stringify(container) +

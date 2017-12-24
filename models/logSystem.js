@@ -225,6 +225,7 @@ function getErrorLevel(req, res) {
     if (!req._errorLevel) {
         switch (getStatusToken(req, res)) {
             case 200:
+            case 204:
             case 301:
             case 304:
             case 404:
