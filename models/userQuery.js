@@ -85,7 +85,7 @@ module.exports = {
                     var newSecretKey = returnKeys.secretKey;
                     UserKeys.findOneAndUpdate({ 'phone': phone, 'userAgent': req.headers['user-agent'] }, {
                         'secretKey': newSecretKey,
-                        '$setOnInsert': { 'apiKey': returnKeys.apikey, 'user': dbUser._id, 'userAgent': req.headers['user-agent'] }
+                        '$setOnInsert': { 'apiKey': returnKeys.apiKey, 'user': dbUser._id, 'userAgent': req.headers['user-agent'] }
                     }, {
                         upsert: true,
                         setDefaultsOnInsert: true
@@ -96,7 +96,7 @@ module.exports = {
                             var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
                             var payload;
                             if (!keyPair) {
-                                payload = { apiKey: returnKeys.apikey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
+                                payload = { apiKey: returnKeys.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                             } else {
                                 payload = { apiKey: keyPair.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                             }

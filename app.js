@@ -129,7 +129,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) return next(err);
         debug('mongoDB connect succeed');
-        // require('./tmp/applyRedis.js')
+        // require('./tmp/changeUserStruc.js')
 
         scheduler(app);
     });
