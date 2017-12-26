@@ -53,6 +53,7 @@ router.get('/list', validateDefault, function(req, res, next) {
                                     close: storeList[i].opening_hours[j].close,
                                     open: storeList[i].opening_hours[j].open
                                 });
+                            tmpOpening.sort((a, b) => { return b.close.day - a.close.day; });
                             tmpArr.push({
                                 id: storeList[i].id,
                                 name: storeList[i].name,
