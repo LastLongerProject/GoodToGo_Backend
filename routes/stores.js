@@ -173,6 +173,34 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
+router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
+    process.nextTick(function() {
+        Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
+            if (err) return next(err);
+            if (!store) return next('Mapping store ID failed');
+            res.json({ opening_hours: store.opening_hours });
+        });
+    });
+});
+
+router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    if (dbStore.status) return next(dbStore);
+    process.nextTick(function() {
+        Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
+            if (err) return next(err);
+            if (!store) return next('Mapping store ID failed');
+            store.opening_default = false;
+            store.save((err) => {
+                if (err) return next(err);
+                res.status(204).end();
+            });
+        });
+    });
+});
+
 router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);

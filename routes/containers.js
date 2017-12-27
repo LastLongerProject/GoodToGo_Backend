@@ -313,7 +313,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "borrowContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
     var redis = req.app.get('redis');
-    redis.get('user_token:' + token, (err, reply) => {
+    redis.get('user_token:' + key, (err, reply) => {
         if (err) return next(err);
         process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, reply));
     });
