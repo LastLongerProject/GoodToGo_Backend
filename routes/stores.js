@@ -33,7 +33,7 @@ router.get('/list', validateDefault, function(req, res, next) {
     }
     var tmpArr = [];
     process.nextTick(function() {
-        Store.find({}, {}, { sort: { id: 1 } }, function(err, storeList) {
+        Store.find({ "project": { "$ne": "測試用" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
             if (err) return next(err);
             Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
                 if (err) return next(err);
