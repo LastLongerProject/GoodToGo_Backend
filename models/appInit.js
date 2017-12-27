@@ -1,3 +1,4 @@
+var Store = require('../models/DB/storeDB');
 var PlaceID = require('../models/DB/placeIdDB');
 var Container = require('../models/DB/containerDB');
 var ContainerType = require('../models/DB/containerTypeDB');
@@ -61,7 +62,28 @@ module.exports = {
     refreshStoreImg: function(forceRenew, cb) {
         drive.getStore(forceRenew, (succeed, data) => {
             if (succeed) {
-                cb(succeed, { type: 'refreshStoreImg', message: 'refresh succeed', data: data });
+                var funcList = [];
+                for (var i = 0; i < data.length; i++) {
+                    funcList.push(new Promise((resolve, reject) => {
+                        Store.findOne({ 'id': data[i].slice(0, 2) }, (err, aStore) => {
+                            if (err) return debugError(err);
+                            if (!aStore) return resolve();
+                            aStore.img_info.img_version++;
+                            aStore.save((err) => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                        });
+                    }));
+                }
+                Promise
+                    .all(funcList)
+                    .then((returnData) => {
+                        cb(succeed, { type: 'refreshStoreImg', message: 'refresh succeed', data: data });
+                    })
+                    .catch((err) => {
+                        if (err) return debugError(err);
+                    });
             } else {
                 cb(succeed, { type: 'refreshStoreImg', message: 'refresh fail', data: data });
             }
