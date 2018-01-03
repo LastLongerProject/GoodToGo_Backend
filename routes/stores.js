@@ -180,7 +180,7 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
         Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
-            res.json({ opening_hours: store.opening_hours });
+            res.json({ opening_hours: store.opening_hours, isSync: !store.opening_default });
         });
     });
 });
