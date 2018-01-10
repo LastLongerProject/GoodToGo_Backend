@@ -303,7 +303,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     if (dbStore.status) return next(dbStore);
     var key = req.headers['userapikey'];
     if (typeof key === 'undefined' || typeof key === null) {
-        debug(req.headers);
+        // debug(req.headers);
         return res.status(403).json({
             code: 'F009',
             type: "borrowContainerMessage",
