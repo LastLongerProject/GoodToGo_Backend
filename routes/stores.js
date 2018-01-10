@@ -515,8 +515,8 @@ function parseHistory(data, dataType, type, callback) {
     // console.log(byOrderArr[0].time)
     while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > (-1 * historyDays)) {
         dateFormatted = dateCheckpoint(date);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
+        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
             orderAmount: tmpOrderAmount,
@@ -535,8 +535,8 @@ function parseHistory(data, dataType, type, callback) {
         tmpOrderList.push(aOrder);
         if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
             dateFormatted = dateCheckpoint(date);
-            monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
             dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
+            monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
             tmpOrderAmount = 0;
             for (var j = 0; j < tmpOrderList.length; j++) {
                 tmpOrderAmount += tmpOrderList[j].containerAmount;
@@ -553,8 +553,8 @@ function parseHistory(data, dataType, type, callback) {
     tmpOrderAmount = 0;
     while (date > (-1 * historyDays)) {
         dateFormatted = dateCheckpoint(date);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
+        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         byDateArr.push({
             date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
             orderAmount: tmpOrderAmount,
