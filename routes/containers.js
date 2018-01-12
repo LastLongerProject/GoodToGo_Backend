@@ -87,7 +87,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
                     }
                     boxArr.push({
                         boxID: thisBox,
-                        boxTime: boxList[i].createdAt,
+                        boxTime: boxList[i].updatedAt,
                         phone: boxList[i].user,
                         typeList: thisBoxTypeList,
                         containerList: thisBoxContainerList,
