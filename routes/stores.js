@@ -261,100 +261,94 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
-        Container.find(function(err, list) {
+        var containerDict = req.app.get('container');
+        var type = req.app.get('containerType');
+        Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
             if (err) return next(err);
-            var containerDict = {};
-            var type = req.app.get('containerType');
-            for (var i = 0; i < list.length; i++) {
-                containerDict[list[i].ID] = type[list[i].typeCode].name;
-            }
-            Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
-                if (err) return next(err);
-                var boxArr = [];
-                if (boxList.length !== 0) {
-                    var thisBox;
-                    var thisType;
-                    for (var i = 0; i < boxList.length; i++) {
-                        thisBox = boxList[i].boxID;
-                        var thisBoxTypeList = [];
-                        var thisBoxContainerList = {};
-                        for (var j = 0; j < boxList[i].containerList.length; j++) {
-                            thisType = containerDict[boxList[i].containerList[j]];
-                            if (thisBoxTypeList.indexOf(thisType) < 0) {
-                                thisBoxTypeList.push(thisType);
-                                thisBoxContainerList[thisType] = [];
-                            }
-                            thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+            var boxArr = [];
+            if (boxList.length !== 0) {
+                var thisBox;
+                var thisType;
+                for (var i = 0; i < boxList.length; i++) {
+                    thisBox = boxList[i].boxID;
+                    var thisBoxTypeList = [];
+                    var thisBoxContainerList = {};
+                    for (var j = 0; j < boxList[i].containerList.length; j++) {
+                        thisType = containerDict[boxList[i].containerList[j]];
+                        if (thisBoxTypeList.indexOf(thisType) < 0) {
+                            thisBoxTypeList.push(thisType);
+                            thisBoxContainerList[thisType] = [];
                         }
-                        boxArr.push({
-                            boxID: thisBox,
-                            boxTime: boxList[i].updatedAt,
-                            typeList: thisBoxTypeList,
-                            containerList: thisBoxContainerList,
-                            isDelivering: false,
-                            destinationStore: boxList[i].storeID
+                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+                    }
+                    boxArr.push({
+                        boxID: thisBox,
+                        boxTime: boxList[i].updatedAt,
+                        typeList: thisBoxTypeList,
+                        containerList: thisBoxContainerList,
+                        isDelivering: false,
+                        destinationStore: boxList[i].storeID
+                    });
+                }
+                for (var i = 0; i < boxArr.length; i++) {
+                    boxArr[i].containerOverview = [];
+                    for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                        boxArr[i].containerOverview.push({
+                            containerType: boxArr[i].typeList[j],
+                            amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                         });
                     }
-                    for (var i = 0; i < boxArr.length; i++) {
-                        boxArr[i].containerOverview = [];
-                        for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                            boxArr[i].containerOverview.push({
-                                containerType: boxArr[i].typeList[j],
-                                amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                }
+            }
+            Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
+                if (err) return next(err);
+                if (list.length !== 0) {
+                    list.sort((a, b) => { return b.logTime - a.logTime; });
+                    var boxHistoryArr = [];
+                    var boxIDArr = [];
+                    var thisBoxTypeList;
+                    var thisBoxContainerList;
+                    var lastIndex;
+                    var nowIndex;
+                    for (var i = 0; i < list.length; i++) {
+                        thisBox = list[i].container.box;
+                        thisType = type[list[i].container.typeCode].name;
+                        lastIndex = boxHistoryArr.length - 1;
+                        if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
+                            boxIDArr.push(thisBox);
+                            boxHistoryArr.push({
+                                boxID: thisBox,
+                                boxTime: list[i].tradeTime,
+                                typeList: [],
+                                containerList: {},
+                                isDelivering: true,
+                                destinationStore: list[i].newUser.storeID
+                            });
+                        }
+                        nowIndex = boxHistoryArr.length - 1;
+                        thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
+                        thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
+                        if (thisBoxTypeList.indexOf(thisType) < 0) {
+                            thisBoxTypeList.push(thisType);
+                            thisBoxContainerList[thisType] = [];
+                        }
+                        thisBoxContainerList[thisType].push(list[i].container.id);
+                    }
+                    for (var i = 0; i < boxHistoryArr.length; i++) {
+                        boxHistoryArr[i].containerOverview = [];
+                        for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
+                            boxHistoryArr[i].containerOverview.push({
+                                containerType: boxHistoryArr[i].typeList[j],
+                                amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
                             });
                         }
                     }
+                    boxArr = boxArr.concat(boxHistoryArr);
                 }
-                Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
-                    if (err) return next(err);
-                    if (list.length !== 0) {
-                        list.sort((a, b) => { return b.logTime - a.logTime; });
-                        var boxHistoryArr = [];
-                        var boxIDArr = [];
-                        var thisBoxTypeList;
-                        var thisBoxContainerList;
-                        var lastIndex;
-                        var nowIndex;
-                        for (var i = 0; i < list.length; i++) {
-                            thisBox = list[i].container.box;
-                            thisType = type[list[i].container.typeCode].name;
-                            lastIndex = boxHistoryArr.length - 1;
-                            if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
-                                boxIDArr.push(thisBox);
-                                boxHistoryArr.push({
-                                    boxID: thisBox,
-                                    boxTime: list[i].tradeTime,
-                                    typeList: [],
-                                    containerList: {},
-                                    isDelivering: true,
-                                    destinationStore: list[i].newUser.storeID
-                                });
-                            }
-                            nowIndex = boxHistoryArr.length - 1;
-                            thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
-                            thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
-                            if (thisBoxTypeList.indexOf(thisType) < 0) {
-                                thisBoxTypeList.push(thisType);
-                                thisBoxContainerList[thisType] = [];
-                            }
-                            thisBoxContainerList[thisType].push(list[i].container.id);
-                        }
-                        for (var i = 0; i < boxHistoryArr.length; i++) {
-                            boxHistoryArr[i].containerOverview = [];
-                            for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
-                                boxHistoryArr[i].containerOverview.push({
-                                    containerType: boxHistoryArr[i].typeList[j],
-                                    amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
-                                });
-                            }
-                        }
-                        boxArr = boxArr.concat(boxHistoryArr);
-                    }
-                    var resJSON = {
-                        toSign: boxArr
-                    };
-                    res.json(resJSON);
-                });
+                var resJSON = {
+                    toSign: boxArr
+                };
+                res.json(resJSON);
             });
         });
     });
