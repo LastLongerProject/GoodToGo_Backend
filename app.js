@@ -66,7 +66,7 @@ app.set('redis', redisClient);
 //     next();
 // })
 app.use('/manager', manager);
-app.use('.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime')));
+app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime')));
 app.use(timeout('10s'));
 app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
 app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
