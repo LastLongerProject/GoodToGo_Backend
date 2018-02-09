@@ -44,3 +44,5 @@ config
 dev/deprecated
 tmp
 assets/sh
+.dist
+runtime
