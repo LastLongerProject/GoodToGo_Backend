@@ -8,7 +8,8 @@ var userSchema = mongoose.Schema({
         returnable: Boolean,
         borrowable: Boolean
     },
-    project: String
+    project: String,
+    type: String
 }, {
     timestamps: true
 });

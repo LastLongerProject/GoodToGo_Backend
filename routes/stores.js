@@ -19,6 +19,7 @@ var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
+var Place = require('../models/DB/placeIdDB');
 
 const historyDays = 14;
 
@@ -70,6 +71,30 @@ router.get('/list', validateDefault, function(req, res, next) {
                     jsonData["shop_data"] = tmpArr;
                     res.json(jsonData);
                 });
+            });
+        });
+    });
+});
+
+router.get('/list/jsonp', function(req, res, next) {
+    var tmpArr = [];
+    process.nextTick(function() {
+        Place.find({ "project": { "$ne": "測試用帳號" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
+            if (err) return next(err);
+            Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                if (err) return next(err);
+                for (var i = 0; i < storeList.length; i++) {
+                    if (storeList[i].active) {
+                        tmpArr.push({
+                            placeid: storeList[i].placeID,
+                            name: storeList[i].name,
+                            borrow: storeList[i].contract.borrowable ? !0 : !1,
+                            return: storeList[i].contract.returnable ? !0 : !1,
+                            type: storeList[i].type
+                        });
+                    }
+                }
+                res.jsonp({ placeid_json: tmpArr });
             });
         });
     });
