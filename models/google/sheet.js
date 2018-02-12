@@ -133,7 +133,7 @@ module.exports = {
                                 returnable: (row[3] === 'V'),
                                 borrowable: (row[4] === 'V')
                             };
-                            newPlace.type = row[7];
+                            newPlace.type = row[6];
                             newPlace.project = row[8];
                             // console.log(newPlace);
                             placeArr.push(newPlace);
