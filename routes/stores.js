@@ -76,7 +76,7 @@ router.get('/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/list/jsonp', function(req, res, next) {
+router.get('/list/js', function(req, res, next) {
     var tmpArr = [];
     process.nextTick(function() {
         Place.find({ "project": { "$ne": "測試用帳號" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
@@ -85,12 +85,13 @@ router.get('/list/jsonp', function(req, res, next) {
                 tmpArr.push({
                     placeid: storeList[i].placeID,
                     name: storeList[i].name,
-                    borrow: storeList[i].contract.borrowable ? !0 : !1,
-                    return: storeList[i].contract.returnable ? !0 : !1,
+                    borrow: storeList[i].contract.borrowable,
+                    return: storeList[i].contract.returnable,
                     type: storeList[i].type
                 });
             }
-            res.jsonp({ placeid_json: tmpArr });
+            res.type('application/javascript');
+            res.end("var placeid_json = " + JSON.stringify(tmpArr));
         });
     });
 });
