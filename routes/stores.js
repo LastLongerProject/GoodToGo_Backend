@@ -81,21 +81,16 @@ router.get('/list/jsonp', function(req, res, next) {
     process.nextTick(function() {
         Place.find({ "project": { "$ne": "測試用帳號" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
             if (err) return next(err);
-            Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
-                if (err) return next(err);
-                for (var i = 0; i < storeList.length; i++) {
-                    if (storeList[i].active) {
-                        tmpArr.push({
-                            placeid: storeList[i].placeID,
-                            name: storeList[i].name,
-                            borrow: storeList[i].contract.borrowable ? !0 : !1,
-                            return: storeList[i].contract.returnable ? !0 : !1,
-                            type: storeList[i].type
-                        });
-                    }
-                }
-                res.jsonp({ placeid_json: tmpArr });
-            });
+            for (var i = 0; i < storeList.length; i++) {
+                tmpArr.push({
+                    placeid: storeList[i].placeID,
+                    name: storeList[i].name,
+                    borrow: storeList[i].contract.borrowable ? !0 : !1,
+                    return: storeList[i].contract.returnable ? !0 : !1,
+                    type: storeList[i].type
+                });
+            }
+            res.jsonp({ placeid_json: tmpArr });
         });
     });
 });
