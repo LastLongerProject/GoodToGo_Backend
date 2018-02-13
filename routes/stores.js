@@ -76,7 +76,7 @@ router.get('/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/list/js', function(req, res, next) {
+router.get('/list.js', function(req, res, next) {
     var tmpArr = [];
     process.nextTick(function() {
         Place.find({ "project": { "$ne": "測試用帳號" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
