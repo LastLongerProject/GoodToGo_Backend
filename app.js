@@ -9,7 +9,6 @@ var mongoose = require('mongoose');
 var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var helmet = require('helmet');
-var compression = require('compression');
 var timeout = require('connect-timeout');
 var ua = require('universal-analytics');
 var debug = require('debug')('goodtogo_backend:app');
@@ -40,8 +39,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(resBodyParser);
 app.use(helmet());
-// app.use(compression());
-// app.use(express.static(path.join(__dirname, 'public')));
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
 

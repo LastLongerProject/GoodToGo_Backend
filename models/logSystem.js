@@ -94,7 +94,8 @@ function logger(dbModel) {
  */
 
 function getip(req) {
-    return req.ip ||
+    return req.headers["x-real-ip"] ||
+        req.ip ||
         req._remoteAddress ||
         (req.connection && req.connection.remoteAddress) ||
         undefined
