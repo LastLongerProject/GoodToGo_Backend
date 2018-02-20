@@ -23,6 +23,7 @@
     "author": "BenjaminChenTW",
     "license": "ISC",
     "dependencies": {
+        "aws-sdk": "^2.198.0",
         "bcrypt-nodejs": "0.0.3",
         "body-parser": "~1.17.2",
         "buffer-crc32": "^0.2.13",
