@@ -33,7 +33,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 app.use(favicon(path.join(__dirname, 'assets/images/icon', 'favicon.ico')));
-app.use(logger(':remote-addr - :date - :method :url HTTP/:http-version :status - :response-time ms'));
+app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
 app.use(logSystem(logModel));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
