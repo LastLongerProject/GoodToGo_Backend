@@ -1,6 +1,7 @@
 var fs = require('fs');
 var AWS = require('aws-sdk');
 var configData = require('../config/config.js');
+var debug = require('debug')('goodtogo_backend:sms');
 
 AWS.config = {
     accessKeyId: configData.AWS.Access_Key_ID,
@@ -11,7 +12,7 @@ AWS.config = {
 var sns = new AWS.SNS();
 
 module.exports = {
-    now: function(user, msg, callback) {
+    sms_now: function(user, msg, callback) {
         var publishParams = {
             Message: msg,
             PhoneNumber: user
@@ -26,11 +27,10 @@ module.exports = {
             else callback(null, data);
         });
         sns.subscribe(subscribeParams, function(err, data) {
-            if (err) callback(err, err.stack);
-            else callback(null, data);
+            if (err) debug(err, err.stack);
         });
     },
-    publish: function(msg, callback) {
+    sms_publish: function(msg, callback) {
         var publishParams = {
             Message: msg,
             TopicArn: configData.AWS.TopicArn,

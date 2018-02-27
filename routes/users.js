@@ -4,19 +4,21 @@ var router = express.Router();
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var Trade = require('../models/DB/tradeDB');
 
 router.post('/signup', validateDefault, function(req, res, next) {
-    req._permission = false;
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
     userQuery.signup(req, function(err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
+        } else if (info.needCode) {
+            return res.status(205).json(info.body);
         } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
@@ -27,7 +29,6 @@ router.post('/signup', validateDefault, function(req, res, next) {
 router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbUser = req._user;
     if (dbUser.status) return next(dbUser);
-    req._permission = true;
     req.body['role'] = {
         typeCode: "clerk",
         manager: false,
@@ -42,6 +43,21 @@ router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, r
         } else {
             if (info.headers)
                 res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
+router.post('/signup/root', regAsAdminManager, validateRequest, function(req, res, next) {
+    req.body['active'] = true;
+    req._passCode = true;
+    userQuery.signup(req, function(err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
