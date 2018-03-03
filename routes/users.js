@@ -90,6 +90,21 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
     });
 });
 
+router.post('/forgotpassword', validateDefault, function(req, res, next) {
+    userQuery.forgotpass(req, function(err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else if (info.needCode) {
+            return res.status(205).json(info.body);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
 router.post('/logout', validateRequest, function(req, res, next) {
     if (req._user.status) return next(req._user);
     userQuery.logout(req, function(err, user, info) {
