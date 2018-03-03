@@ -164,7 +164,7 @@ module.exports = {
     forgotpass: function(req, done) {
         var phone = req.body['phone'];
         var code = req.body['verification_code'];
-        var newPassword = req.body['newPassword'];
+        var newPassword = req.body['new_password'];
         var redis = req.app.get('redis');
         if (typeof phone === 'undefined') {
             return done(null, false, { code: 'D012', type: 'forgotPassMessage', message: 'Content not Complete' });
