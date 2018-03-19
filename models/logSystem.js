@@ -58,7 +58,7 @@ function logger(dbModel) {
             aRecord.user = getUser(req)
             aRecord.noticeLevel = getErrorLevel(req, res)
                 /**
-                 * 0 : regular 200 404
+                 * 0 : regular 200 204 205 404
                  * 1 : notice(client error) 401 503
                  * 2 : warning(unusual error) 403
                  * 3 : error(may cause crash) 500
@@ -227,6 +227,7 @@ function getErrorLevel(req, res) {
         switch (getStatusToken(req, res)) {
             case 200:
             case 204:
+            case 205:
             case 301:
             case 304:
             case 404:
