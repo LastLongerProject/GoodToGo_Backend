@@ -302,7 +302,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var key = req.headers['userapikey'];
-    if (typeof key === 'undefined' || typeof key === null) {
+    if (typeof key === 'undefined' || typeof key === null || key.length === 0) {
         // debug(req.headers);
         return res.status(403).json({
             code: 'F009',
@@ -315,6 +315,11 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     var redis = req.app.get('redis');
     redis.get('user_token:' + key, (err, reply) => {
         if (err) return next(err);
+        if (!reply) return res.status(403).json({
+            code: 'F013',
+            type: "borrowContainerMessage",
+            message: "Rent Request Expired"
+        });
         process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, reply));
     });
 });
