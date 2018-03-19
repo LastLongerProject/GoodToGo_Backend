@@ -129,7 +129,7 @@ function connectMongoDB() {
         debug('mongoDB connect succeed');
         // require('./tmp/changeUserStruc.js')
         if (process.env.NODE_ENV === "testing") {
-            debug("Testing ENV no scheduler.");
+            debug("Testing ENV no scheduler");
         } else {
             scheduler(app);
         }
