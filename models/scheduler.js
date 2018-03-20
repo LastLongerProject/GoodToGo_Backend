@@ -1,4 +1,3 @@
-var appInit = require('./appInit');
 var User = require('./DB/userDB');
 var UserKeys = require('./DB/userKeysDB');
 var dateCheckpoint = require('./toolKit').dateCheckpoint;
@@ -19,8 +18,6 @@ function driveCb(succeed, data) {
 }
 
 module.exports = function(app) {
-    appInit.container(app);
-    appInit.store(app);
     User.findOne({ 'user.phone': '0900000000' }, (err, bot) => {
         if (err) return debugError(err);
         if (!bot) return debugError('missing bot acount');

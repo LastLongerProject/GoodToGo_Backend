@@ -17,6 +17,7 @@ var debugError = require('debug')('goodtogo_backend:appERR');
 
 var keys = require('./config/keys');
 var config = require('./config/config');
+var appInit = require('./models/appInit');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
 var scheduler = require('./models/scheduler');
@@ -128,6 +129,8 @@ function connectMongoDB() {
         if (err) throw err;
         debug('mongoDB connect succeed');
         // require('./tmp/changeUserStruc.js')
+        appInit.container(app);
+        appInit.store(app);
         if (process.env.NODE_ENV === "testing") {
             debug("Testing ENV no scheduler");
         } else {

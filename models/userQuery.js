@@ -3,7 +3,7 @@ var validateRequest = require('../models/validation/validateRequest').JWT;
 var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
-var sendCode = require('../models/sendSNS').sms_now;
+var sendCode = require('../models/sendSNS').sns_now;
 
 module.exports = {
     signup: function(req, done) {
