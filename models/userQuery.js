@@ -3,7 +3,7 @@ var validateRequest = require('../models/validation/validateRequest').JWT;
 var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
-var sendCode = require('../models/sendSNS').sns_now;
+var sendCode = require('../models/SMS').sns_now;
 
 module.exports = {
     signup: function(req, done) {
@@ -196,7 +196,7 @@ module.exports = {
                     UserKeys.remove({ 'phone': phone }, function(err) {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        keys.secretKey(function(err, returnKeys) {
+                        keys.apiKey(function(err, returnKeys) {
                             var newUserKey = new UserKeys();
                             newUserKey.phone = phone;
                             newUserKey.userAgent = req.headers['user-agent'];
