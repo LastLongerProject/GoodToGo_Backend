@@ -202,7 +202,7 @@ module.exports = {
                             newUserKey.userAgent = req.headers['user-agent'];
                             newUserKey.apiKey = returnKeys.apiKey;
                             newUserKey.secretKey = returnKeys.secretKey;
-                            newUserKey.user = newUser._id;
+                            newUserKey.user = dbUser._id;
                             dbUser.save(function(err) {
                                 if (err) return done(err);
                                 newUserKey.save(function(err) {

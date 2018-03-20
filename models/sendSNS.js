@@ -40,5 +40,23 @@ module.exports = {
             if (err) callback(err, err.stack);
             else callback(null, data);
         });
+    },
+    ios_subscribe: function(msg, callback) {
+        var publishParams = {
+            Message: msg,
+            TopicArn: configData.AWS.TopicArn,
+            MessageAttributes: { 'AWS.SNS.SMS.SMSType': { 'StringValue': 'Promotional', 'DataType': 'String' } }
+        };
+        sns.publish(publishParams, function(err, data) {
+            if (err) callback(err, err.stack);
+            else callback(null, data);
+        });
+        sns.createPlatformEndpoint(params, function(err, EndPointResult) {
+            if (err) callback(err, err.stack);
+            else {
+                var client_arn = EndPointResult["EndpointArn"];
+                callback(null, data);
+            }
+        });
     }
 };
