@@ -123,6 +123,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     dbUser.deviceToken = deviceToken;
     dbUser.save((err) => {
         if (err) return debug(err);
+        res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
     });
 });
 
