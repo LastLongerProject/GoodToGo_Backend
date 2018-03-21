@@ -3,7 +3,7 @@ var validateRequest = require('../models/validation/validateRequest').JWT;
 var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
-var sendCode = require('../models/SMS').sns_now;
+var sendCode = require('../models/SNS').sms_now;
 
 module.exports = {
     signup: function(req, done) {
@@ -20,75 +20,75 @@ module.exports = {
             User.findOne({ 'user.phone': phone }, function(err, dbUser) {
                 if (err)
                     return done(err);
-                // if (dbUser) {
-                //     if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
-                //         dbUser.role = role;
-                //         dbUser.save(function(err) {
-                //             if (err) return done(err);
-                //             return done(null, dbUser, { body: { type: 'signupMessage', message: 'Authentication succeeded' } });
-                //         });
-                //     } else {
-                //         return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
-                //     }
-                // } else {
-                if (req._passCode !== true && typeof code === 'undefined') {
-                    if (typeof phone === 'string' && phone.length === 10) {
-                        var newCode = keys.getVerificationCode();
-                        sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                if (dbUser) {
+                    if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
+                        dbUser.role = role;
+                        dbUser.save(function(err) {
                             if (err) return done(err);
-                            redis.set('user_verifying:' + phone, newCode, (err, reply) => {
+                            return done(null, dbUser, { body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                        });
+                    } else {
+                        return done(null, false, { code: 'D002', type: 'signupMessage', message: 'That phone is already taken' });
+                    }
+                } else {
+                    if (req._passCode !== true && typeof code === 'undefined') {
+                        if (typeof phone === 'string' && phone.length === 10) {
+                            var newCode = keys.getVerificationCode();
+                            sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
                                 if (err) return done(err);
-                                if (reply !== 'OK') return done(reply);
-                                redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
+                                redis.set('user_verifying:' + phone, newCode, (err, reply) => {
                                     if (err) return done(err);
-                                    if (reply !== 1) return done(reply);
-                                    done(null, true, { needCode: true, body: { type: 'signupMessage', message: 'Send Again With Verification Code' } });
+                                    if (reply !== 'OK') return done(reply);
+                                    redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
+                                        if (err) return done(err);
+                                        if (reply !== 1) return done(reply);
+                                        done(null, true, { needCode: true, body: { type: 'signupMessage', message: 'Send Again With Verification Code' } });
+                                    });
+                                });
+                            });
+                        } else {
+                            done(null, false, { code: 'D009', type: 'signupMessage', message: 'Phone is not valid' });
+                        }
+                    } else {
+                        redis.get('user_verifying:' + phone, (err, reply) => {
+                            if (reply === null && req._passCode !== true) return done(null, false, { code: 'D010', type: 'signupMessage', message: 'Verification Code expired' });
+                            else if (reply !== code && req._passCode !== true) return done(null, false, { code: 'D011', type: 'signupMessage', message: "Verification Code isn't correct" });
+                            keys.apiKey(function(err, returnKeys) {
+                                if (err) return done(err);
+                                if ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID === 'undefined')) ||
+                                    (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined')) ||
+                                    (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined'))) {
+                                    return done(null, false, {
+                                        code: 'D003',
+                                        type: 'signupMessage',
+                                        message: 'Role structure invalid'
+                                    });
+                                }
+                                var newUser = new User();
+                                newUser.user.phone = phone;
+                                newUser.user.password = newUser.generateHash(password);
+                                newUser.active = req.body['active'];
+                                var newUserKey = new UserKeys();
+                                newUserKey.phone = phone;
+                                newUserKey.userAgent = req.headers['user-agent'];
+                                newUserKey.apiKey = returnKeys.apiKey;
+                                newUserKey.secretKey = returnKeys.secretKey;
+                                newUserKey.user = newUser._id;
+                                newUser.role = role;
+                                newUser.save(function(err) {
+                                    if (err) return done(err);
+                                    newUserKey.save(function(err) {
+                                        if (err) return done(err);
+                                        var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
+                                        var payload = { apiKey: returnKeys.apiKey, secretKey: returnKeys.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
+                                        var token = jwt.encode(payload, returnKeys.serverSecretKey);
+                                        return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
+                                    });
                                 });
                             });
                         });
-                    } else {
-                        done(null, false, { code: 'D009', type: 'signupMessage', message: 'Phone is not valid' });
                     }
-                } else {
-                    redis.get('user_verifying:' + phone, (err, reply) => {
-                        if (reply === null && req._passCode !== true) return done(null, false, { code: 'D010', type: 'signupMessage', message: 'Verification Code expired' });
-                        else if (reply !== code && req._passCode !== true) return done(null, false, { code: 'D011', type: 'signupMessage', message: "Verification Code isn't correct" });
-                        keys.apiKey(function(err, returnKeys) {
-                            if (err) return done(err);
-                            if ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID === 'undefined')) ||
-                                (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined')) ||
-                                (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined'))) {
-                                return done(null, false, {
-                                    code: 'D003',
-                                    type: 'signupMessage',
-                                    message: 'Role structure invalid'
-                                });
-                            }
-                            var newUser = new User();
-                            newUser.user.phone = phone;
-                            newUser.user.password = newUser.generateHash(password);
-                            newUser.active = req.body['active'];
-                            var newUserKey = new UserKeys();
-                            newUserKey.phone = phone;
-                            newUserKey.userAgent = req.headers['user-agent'];
-                            newUserKey.apiKey = returnKeys.apiKey;
-                            newUserKey.secretKey = returnKeys.secretKey;
-                            newUserKey.user = newUser._id;
-                            newUser.role = role;
-                            // newUser.save(function(err) {
-                            //     if (err) return done(err);
-                            //     newUserKey.save(function(err) {
-                            //         if (err) return done(err);
-                            var storeName = (typeof newUser.role.storeID !== 'undefined') ? ((stores[(newUser.role.storeID)]) ? stores[(newUser.role.storeID)].name : "找不到店家") : undefined;
-                            var payload = { apiKey: returnKeys.apiKey, secretKey: returnKeys.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
-                            var token = jwt.encode(payload, returnKeys.serverSecretKey);
-                            return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
-                            //     });
-                            // });
-                        });
-                    });
                 }
-                // }
             });
         });
     },

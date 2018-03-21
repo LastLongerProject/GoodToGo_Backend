@@ -116,6 +116,16 @@ router.post('/logout', validateRequest, function(req, res, next) {
     });
 });
 
+router.post('/subscribeSNS', validateRequest, function(req, res, next) {
+    if (req._user.status) return next(req._user);
+    var deviceToken = req.body.deviceToken.replace(' ').replace('<').replace('>');
+    var dbUser = req._user;
+    dbUser.deviceToken = deviceToken;
+    dbUser.save((err) => {
+        if (err) return debug(err);
+    });
+});
+
 router.get('/data', validateRequest, function(req, res, next) {
     var dbUser = req._user;
     var returned = [];

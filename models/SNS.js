@@ -12,7 +12,7 @@ AWS.config = {
 var sns = new AWS.SNS();
 
 module.exports = {
-    sns_now: function(user, msg, callback) {
+    sms_now: function(user, msg, callback) {
         var publishParams = {
             Message: msg,
             PhoneNumber: user
@@ -30,7 +30,7 @@ module.exports = {
             if (err) debug(err, err.stack);
         });
     },
-    sns_publish: function(msg, callback) {
+    sms_publish: function(msg, callback) {
         var publishParams = {
             Message: msg,
             TopicArn: configData.AWS.TopicArn.SMS,
@@ -41,7 +41,7 @@ module.exports = {
             else callback(null, data);
         });
     },
-    sms_subscribe: function(system, type, token, callback) {
+    sns_subscribe: function(system, type, token, callback) {
         var TargetARN = config.TargetARN;
         switch (system) {
             case 'ios':
