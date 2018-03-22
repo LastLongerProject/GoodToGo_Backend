@@ -118,7 +118,7 @@ router.post('/logout', validateRequest, function(req, res, next) {
 
 router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     if (req._user.status) return next(req._user);
-    var deviceToken = req.body.deviceToken.replace(' ').replace('<').replace('>');
+    var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
     var dbUser = req._user;
     dbUser.deviceToken = deviceToken;
     dbUser.save((err) => {
