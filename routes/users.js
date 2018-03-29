@@ -123,9 +123,9 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     var type = req.body.appType;
     var system = req.body.system;
     if (typeof deviceToken === undefined || typeof type === undefined || typeof system === undefined) {
-        return req.status(401).json({ code: 'D009', type: 'subscribeMessage', message: 'Content not Complete' });
+        return res.status(401).json({ code: 'D009', type: 'subscribeMessage', message: 'Content not Complete' });
     } else if (!(type === "shop" || type === "customer") || !(system === "ios" || system === "android")) {
-        return req.status(401).json({ code: 'D010', type: 'subscribeMessage', message: 'Content invalid' });
+        return res.status(401).json({ code: 'D010', type: 'subscribeMessage', message: 'Content invalid' });
     }
     if (deviceToken === "HEYBITCH") {
         res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
