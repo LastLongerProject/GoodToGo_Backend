@@ -42,8 +42,8 @@ module.exports = {
         });
     },
     sns_subscribe: function(system, type, userData, token, callback) {
-        var TargetARN = config.TargetARN;
-        var TopicArn = config.TopicArn.SNS + type;
+        var TargetARN = configData.AWS.TargetARN;
+        var TopicArn = configData.AWS.TopicArn.SNS + type;
         switch (system) {
             case 'ios':
                 TargetARN += '/APNS';
