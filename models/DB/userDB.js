@@ -14,7 +14,7 @@ var userSchema = mongoose.Schema({
         storeID: Number,
         manager: Boolean
     },
-    deviceToken: Object,
+    pushNotificationArn: Object,
     registerTime: { type: Date, default: Date.now },
     active: { type: Boolean, default: false },
     purchase: [{

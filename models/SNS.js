@@ -41,8 +41,9 @@ module.exports = {
             else callback(null, data);
         });
     },
-    sns_subscribe: function(system, type, token, callback) {
+    sns_subscribe: function(system, type, userData, token, callback) {
         var TargetARN = config.TargetARN;
+        var TopicArn = config.TopicArn.SNS + type;
         switch (system) {
             case 'ios':
                 TargetARN += '/APNS';
@@ -60,12 +61,21 @@ module.exports = {
                 TargetARN += 'Customer';
                 break;
         }
-        sns.createPlatformEndpoint({ 'PlatformApplicationArn': TargetARN, 'Token': token }, function(err, EndPointResult) {
-            if (err) callback(err, err.stack);
-            else {
-                var client_arn = EndPointResult["EndpointArn"];
+        sns.createPlatformEndpoint({
+            'PlatformApplicationArn': TargetARN,
+            'Token': token,
+            'CustomUserData': userData
+        }, function(err, EndPointResult) {
+            if (err) return callback(err, err.stack);
+            var client_arn = EndPointResult["EndpointArn"];
+            sns.subscribe({
+                Protocol: 'application',
+                TopicArn: TopicArn,
+                Endpoint: client_arn
+            }, function(err, data) {
+                if (err) return callback(err, err.stack);
                 callback(null, client_arn);
-            }
+            });
         });
     }
 };

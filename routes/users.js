@@ -8,6 +8,7 @@ var regAsAdminManager = require('../models/validation/validateRequest').regAsAdm
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
+var subscribeSNS = require('../models/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
 router.post('/signup', validateDefault, function(req, res, next) {
@@ -130,12 +131,15 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
     } else {
         var dbUser = req._user;
-        if (!dbUser.deviceToken)
-            dbUser.deviceToken = {}
-        dbUser.deviceToken[type + "-" + system] = deviceToken;
-        dbUser.save((err) => {
-            if (err) return debug(err);
-            res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
+        subscribeSNS(system, type, dbUser.user.phone, deviceToken, function(err, arn) {
+            if (err) return next(err);
+            if (!dbUser.pushNotificationArn)
+                dbUser.pushNotificationArn = {}
+            dbUser.pushNotificationArn[type + "-" + system] = arn;
+            dbUser.save((err) => {
+                if (err) return debug(err);
+                res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
+            });
         });
     }
 });
