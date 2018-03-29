@@ -249,6 +249,49 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     });
 });
 
+router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    var rentedIdList = [];
+    var resJson = { data: [] };
+    if (dbStore.status) return next(dbStore);
+    process.nextTick(function() {
+        Trade.find({
+            'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+            'tradeType.action': "Rent",
+            'oriUser.storeID': dbStore.role.storeID
+        }, function(err, rentedList) {
+            if (err) return next(err);
+            rentedList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+            for (var i in rentedList)
+                rentedIdList.push(rentedList[i].container.id);
+            Trade.find({
+                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+                'tradeType.action': "Return",
+                'tradeType.container.id': { '$in': rentedIdList }
+            }, function(err, returnedList) {
+                if (err) return next(err);
+                returnedList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+                for (var i in returnedList) {
+                    var index = rentedList.findIndex(function(ele) {
+                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr
+                    });
+                    if (index !== -1) {
+                        rentedList.splice(index, 1);
+                    }
+                }
+                for (var i in rentedList) {
+                    resJson.data.push({
+                        id: rentedList[i].container.id,
+                        phone: rentedList[i].newUser.phone,
+                        rentedTime: rentedList[i].tradeTime
+                    });
+                }
+                res.json(resJson);
+            });
+        });
+    });
+});
+
 router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
