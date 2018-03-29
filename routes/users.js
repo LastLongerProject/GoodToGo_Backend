@@ -130,6 +130,8 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
     } else {
         var dbUser = req._user;
+        if (!dbUser.deviceToken)
+            dbUser.deviceToken = {}
         dbUser.deviceToken[type + "-" + system] = deviceToken;
         dbUser.save((err) => {
             if (err) return debug(err);
