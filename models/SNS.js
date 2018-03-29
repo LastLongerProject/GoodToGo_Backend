@@ -66,14 +66,20 @@ module.exports = {
             'Token': token,
             'CustomUserData': userData
         }, function(err, EndPointResult) {
-            if (err) return callback(err, err.stack);
+            if (err) {
+                err.type = "createPlatformEndpoint";
+                return callback(err, err.stack);
+            }
             var client_arn = EndPointResult["EndpointArn"];
             sns.subscribe({
                 Protocol: 'application',
                 TopicArn: TopicArn,
                 Endpoint: client_arn
             }, function(err, data) {
-                if (err) return callback(err, err.stack);
+                if (err) {
+                    err.type = "subscribe";
+                    return callback(err, err.stack);
+                }
                 callback(null, client_arn);
             });
         });
