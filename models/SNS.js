@@ -44,6 +44,7 @@ module.exports = {
     sns_subscribe: function(system, type, userData, token, callback) {
         var TargetARN = configData.AWS.TargetARN;
         var TopicArn = configData.AWS.TopicArn.SNS + type;
+        var payload;
         switch (system) {
             case 'ios':
                 TargetARN += '/APNS';
@@ -61,23 +62,27 @@ module.exports = {
                 TargetARN += 'Customer';
                 break;
         }
-        sns.createPlatformEndpoint({
+        payload = {
             'PlatformApplicationArn': TargetARN,
             'Token': token,
             'CustomUserData': userData
-        }, function(err, EndPointResult) {
+        };
+        sns.createPlatformEndpoint(payload, function(err, EndPointResult) {
             if (err) {
                 err.type = "createPlatformEndpoint";
+                err.payload = payload;
                 return callback(err, err.stack);
             }
             var client_arn = EndPointResult["EndpointArn"];
-            sns.subscribe({
+            payload = {
                 Protocol: 'application',
                 TopicArn: TopicArn,
                 Endpoint: client_arn
-            }, function(err, data) {
+            };
+            sns.subscribe(payload, function(err, data) {
                 if (err) {
-                    err.type = "subscribe";
+                    err.type = "createPlatformEndpoint";
+                    err.payload = payload;
                     return callback(err, err.stack);
                 }
                 callback(null, client_arn);
