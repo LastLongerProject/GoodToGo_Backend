@@ -14,7 +14,7 @@ var userSchema = mongoose.Schema({
         storeID: Number,
         manager: Boolean
     },
-    deviceToken: String,
+    deviceToken: Object,
     registerTime: { type: Date, default: Date.now },
     active: { type: Boolean, default: false },
     purchase: [{
