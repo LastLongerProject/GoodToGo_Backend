@@ -134,10 +134,10 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         subscribeSNS(system, type, dbUser.user.phone, deviceToken, function(err, arn) {
             if (err) return next(err);
             if (!dbUser.pushNotificationArn)
-                dbUser.pushNotificationArn = {}
+                dbUser.pushNotificationArn = {};
             dbUser.pushNotificationArn[type + "-" + system] = arn;
             dbUser.save((err) => {
-                if (err) return debug(err);
+                if (err) return next(err);
                 res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
             });
         });
