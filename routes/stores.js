@@ -267,7 +267,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
             Trade.find({
                 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
                 'tradeType.action': "Return",
-                'tradeType.container.id': { '$in': rentedIdList }
+                'container.id': { '$in': rentedIdList }
             }, function(err, returnedList) {
                 if (err) return next(err);
                 returnedList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
