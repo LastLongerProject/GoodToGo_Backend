@@ -41,7 +41,7 @@ module.exports = {
             else callback(null, data);
         });
     },
-    sns_subscribe: function(system, type, userData, token, callback) {
+    sns_subscribe: function(system, type, token, callback) {
         var TargetARN = configData.AWS.TargetARN;
         var TopicArn = configData.AWS.TopicArn.SNS + type;
         var payload;
@@ -64,8 +64,7 @@ module.exports = {
         }
         payload = {
             'PlatformApplicationArn': TargetARN,
-            'Token': token,
-            'CustomUserData': userData
+            'Token': token
         };
         sns.createPlatformEndpoint(payload, function(err, EndPointResult) {
             if (err) {

@@ -131,7 +131,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         res.json({ type: 'subscribeMessage', message: 'Subscribe succeeded' })
     } else {
         var dbUser = req._user;
-        subscribeSNS(system, type, dbUser.user.phone, deviceToken, function(err, arn) {
+        subscribeSNS(system, type, deviceToken, function(err, arn) {
             if (err) return next(err);
             if (!dbUser.pushNotificationArn)
                 dbUser.pushNotificationArn = {};
