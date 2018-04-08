@@ -17,10 +17,11 @@ var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
+var iconBaseUrl;
 if (process.env.NODE_ENV === "testing") {
-    const iconBaseUrl = "https://app.goodtogo.tw/test/images/icon/";
+    iconBaseUrl = "https://app.goodtogo.tw/test/images/icon/";
 } else {
-    const iconBaseUrl = "https://app.goodtogo.tw/images/icon/";
+    iconBaseUrl = "https://app.goodtogo.tw/images/icon/";
 }
 
 const historyDays = 14;
