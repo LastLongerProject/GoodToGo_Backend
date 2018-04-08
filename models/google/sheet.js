@@ -60,6 +60,7 @@ module.exports = {
                     var sheetContainerList = response.valueRanges[0].values;
                     var sheetContainerTypeList = response.valueRanges[1].values;
                     var funcList = [];
+                    var isNum = /^\d+$/;
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
