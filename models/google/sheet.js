@@ -13,6 +13,7 @@ var Container = require('../DB/containerDB');
 var authFactory = new GoogleAuth();
 var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
+var isNum = /^\d+$/;
 var defaultPeriods = [];
 for (var i = 0; i < 7; i++) {
     defaultPeriods.push({
@@ -59,7 +60,6 @@ module.exports = {
                     var sheetContainerList = response.valueRanges[0].values;
                     var sheetContainerTypeList = response.valueRanges[1].values;
                     var funcList = [];
-		    var isNum = /^\d+$/;
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
@@ -76,9 +76,9 @@ module.exports = {
                         }));
                     }
                     for (var i = 0; i < sheetContainerList.length; i++) {
-                        for (var j = 0; j < 2; j++) if (!isNum.test(sheetContainerList[i][j])) continue;
-			if (sheetContainerList[i][0].indexOf("x") >= 0) continue;
-			funcList.push(new Promise((resolve, reject) => {
+                        if (!isNum.test(sheetContainerList[i][0])) continue;
+                        if (!isNum.test(sheetContainerList[i][1])) continue;
+                        funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerList[i];
                             Container.update({ 'ID': row[0] }, {
                                 'active': (row[3] === '1'),
@@ -143,6 +143,7 @@ module.exports = {
                         }
                         var funcArr = [];
                         for (var i = 0; i < placeArr.length; i++) {
+                            if (!isNum.test(placeArr[i].ID)) continue;
                             funcArr.push(new Promise((resolve, reject) => {
                                 var localCtr = i;
                                 var dataArray = [];
