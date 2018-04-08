@@ -60,7 +60,6 @@ module.exports = {
                     var sheetContainerList = response.valueRanges[0].values;
                     var sheetContainerTypeList = response.valueRanges[1].values;
                     var funcList = [];
-                    var isNum = /^\d+$/;
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
@@ -84,6 +83,7 @@ module.exports = {
                             Container.update({ 'ID': row[0] }, {
                                 'active': (row[3] === '1'),
                                 'typeCode': row[1],
+                                'checkedAt': Date.now(),
                                 '$setOnInsert': { 'conbineTo': dbAdmin.user.phone }
                             }, {
                                 upsert: true,
