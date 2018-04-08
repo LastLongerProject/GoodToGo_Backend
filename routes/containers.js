@@ -17,6 +17,12 @@ var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
+if (process.env.NODE_ENV === "testing") {
+    const iconBaseUrl = "https://app.goodtogo.tw/test/images/icon/";
+} else {
+    const iconBaseUrl = "https://app.goodtogo.tw/images/icon/";
+}
+
 const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
@@ -39,7 +45,7 @@ router.get('/get/list', validateDefault, function(req, res, next) {
         for (var i = 0; i < typeDict.length; i++) {
             tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = "https://app.goodtogo.tw/images/icon/" + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
+                tmpIcon[j + 'x'] = iconBaseUrl + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
             }
             tmpArr.push({
                 typeCode: typeDict[i].typeCode,

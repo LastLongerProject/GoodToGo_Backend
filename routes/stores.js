@@ -23,6 +23,17 @@ var Place = require('../models/DB/placeIdDB');
 
 const historyDays = 14;
 
+if (process.env.NODE_ENV === "testing") {
+    function getImageUrl(src, token) {
+        var index = src.indexOf('images/');
+        return src.slice(0, index) + 'test/' + src.slice(index) + "/" + token;
+    }
+} else {
+    function getImageUrl(src, token) {
+        return src + "/" + token;
+    }
+}
+
 router.get('/list', validateDefault, function(req, res, next) {
     var jsonData = {
         title: "Stores list",
@@ -48,7 +59,7 @@ router.get('/list', validateDefault, function(req, res, next) {
                     for (var i = 0; i < storeList.length; i++) {
                         if (storeList[i].active) {
                             var tmpOpening = [];
-                            storeList[i].img_info.img_src += ("/" + token);
+                            storeList[i].img_info.img_src = getImageUrl(storeList[i].img_info.img_src, token);
                             for (var j = 0; j < storeList[i].opening_hours.length; j++)
                                 tmpOpening.push({
                                     close: storeList[i].opening_hours[j].close,
