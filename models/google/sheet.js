@@ -83,6 +83,7 @@ module.exports = {
                             Container.update({ 'ID': row[0] }, {
                                 'active': (row[3] === '1'),
                                 'typeCode': row[1],
+                                'checkedAt': Date.now(),
                                 '$setOnInsert': { 'conbineTo': dbAdmin.user.phone }
                             }, {
                                 upsert: true,

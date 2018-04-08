@@ -8,7 +8,8 @@ var userSchema = mongoose.Schema({
     conbineTo: String,
     storeID: Number,
     cycleCtr: { type: Number, default: 0 },
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
+    checkedAt: Date
 }, {
     timestamps: true
 });
