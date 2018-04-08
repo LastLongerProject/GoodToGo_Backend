@@ -1,6 +1,6 @@
-var appInit = require('./appInit');
 var User = require('./DB/userDB');
 var UserKeys = require('./DB/userKeysDB');
+var appInit = require('./appInit');
 var dateCheckpoint = require('./toolKit').dateCheckpoint;
 
 var fs = require('fs');
@@ -19,12 +19,12 @@ function driveCb(succeed, data) {
 }
 
 module.exports = function(app) {
-    appInit.container(app);
-    appInit.store(app);
     User.findOne({ 'user.phone': '0900000000' }, (err, bot) => {
         if (err) return debugError(err);
         if (!bot) return debugError('missing bot acount');
         var dateNow = new Date();
+        appInit.refreshContainer(app, bot, cb);
+        appInit.refreshStore(app, cb);
         var shouldWait = dateCheckpoint(1) - dateNow;
         setTimeout(function() {
             setInterval(function tasks() {
