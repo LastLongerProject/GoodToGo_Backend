@@ -26,6 +26,7 @@ module.exports = function(app) {
         if (!bot) return debugError('missing bot acount');
         var dateNow = new Date();
         var shouldWait = dateCheckpoint(1) - dateNow;
+        appInit.refreshContainer(app, bot, cb);
         setTimeout(function() {
             setInterval(function tasks() {
                 debug('scheduler start');

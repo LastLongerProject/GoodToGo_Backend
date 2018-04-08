@@ -59,6 +59,7 @@ module.exports = {
                     var sheetContainerList = response.valueRanges[0].values;
                     var sheetContainerTypeList = response.valueRanges[1].values;
                     var funcList = [];
+		    var isNum = /^\d+$/;
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
@@ -75,7 +76,9 @@ module.exports = {
                         }));
                     }
                     for (var i = 0; i < sheetContainerList.length; i++) {
-                        funcList.push(new Promise((resolve, reject) => {
+                        for (var j = 0; j < 2; j++) if (!isNum.test(sheetContainerList[i][j])) continue;
+			if (sheetContainerList[i][0].indexOf("x") >= 0) continue;
+			funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerList[i];
                             Container.update({ 'ID': row[0] }, {
                                 'active': (row[3] === '1'),
