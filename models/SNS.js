@@ -1,4 +1,3 @@
-var fs = require('fs');
 var AWS = require('aws-sdk');
 var configData = require('../config/config.js');
 var debug = require('debug')('goodtogo_backend:sms');
