@@ -60,6 +60,7 @@ module.exports = {
                     var sheetContainerList = response.valueRanges[0].values;
                     var sheetContainerTypeList = response.valueRanges[1].values;
                     var funcList = [];
+                    var checkpoint = Date.now();
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
@@ -97,7 +98,10 @@ module.exports = {
                     Promise
                         .all(funcList)
                         .then((dataList) => {
-                            cb();
+                            Container.remove({ 'checkedAt': { '$lt': checkpoint } }, (err) => {
+                                if (err) return debug(err);
+                                cb();
+                            });
                         })
                         .catch((err) => {
                             if (err) return debug(err);
