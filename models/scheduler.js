@@ -26,7 +26,6 @@ module.exports = function(app) {
         appInit.refreshContainer(app, bot, cb);
         appInit.refreshStore(app, cb);
         var shouldWait = dateCheckpoint(1) - dateNow;
-        appInit.refreshContainer(app, bot, cb);
         setTimeout(function() {
             setInterval(function tasks() {
                 debug('scheduler start');

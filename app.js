@@ -128,8 +128,13 @@ function connectMongoDB() {
         if (err) throw err;
         debug('mongoDB connect succeed');
         // require('./tmp/changeUserStruc.js')
-
-        scheduler(app);
+        appInit.container(app);
+        appInit.store(app);
+        if (process.env.NODE_ENV === "testing") {
+            debug("Testing ENV no scheduler");
+        } else {
+            scheduler(app);
+        }
     });
 }
 
