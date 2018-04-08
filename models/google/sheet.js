@@ -13,6 +13,7 @@ var Container = require('../DB/containerDB');
 var authFactory = new GoogleAuth();
 var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
+var isNum = /^\d+$/;
 var defaultPeriods = [];
 for (var i = 0; i < 7; i++) {
     defaultPeriods.push({
@@ -75,6 +76,8 @@ module.exports = {
                         }));
                     }
                     for (var i = 0; i < sheetContainerList.length; i++) {
+                        if (!isNum.test(sheetContainerList[i][0])) continue;
+                        if (!isNum.test(sheetContainerList[i][1])) continue;
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerList[i];
                             Container.update({ 'ID': row[0] }, {
@@ -140,6 +143,7 @@ module.exports = {
                         }
                         var funcArr = [];
                         for (var i = 0; i < placeArr.length; i++) {
+                            if (!isNum.test(placeArr[i].ID)) continue;
                             funcArr.push(new Promise((resolve, reject) => {
                                 var localCtr = i;
                                 var dataArray = [];
