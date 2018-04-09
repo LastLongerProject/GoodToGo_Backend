@@ -1,6 +1,6 @@
 var AWS = require('aws-sdk');
 var configData = require('../config/config.js');
-var debug = require('debug')('goodtogo_backend:sms');
+var debug = require('debug')('goodtogo_backend:sns');
 
 AWS.config = {
     accessKeyId: configData.AWS.Access_Key_ID,
@@ -85,6 +85,37 @@ module.exports = {
                 }
                 callback(null, client_arn);
             });
+        });
+    },
+    sns_publish: function(TargetArn, title, body, callback) {
+        var subPayload = {
+            'default': title + ' : ' + body,
+            'APNS': {
+                'aps': {
+                    'alert': {
+                        'title': title,
+                        'body': body
+                    },
+                    'sound': 'default'
+                }
+            }
+        };
+        for (var keys in subPayload) {
+            if (typeof subPayload[keys] === 'object')
+                subPayload[keys] = JSON.stringify(subPayload[keys]);
+        }
+        var payload = {
+            'Message': JSON.stringify(subPayload),
+            'MessageStructure': 'json',
+            'TargetArn': TargetArn
+        };
+        sns.publish(payload, function(err, data) {
+            if (err) {
+                err.type = "publishSNS";
+                err.payload = payload;
+                return callback(err, err.stack);
+            }
+            callback(null, data);
         });
     }
 };

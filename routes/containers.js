@@ -9,6 +9,7 @@ var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
+var sns = require('../models/SNS');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var validateDefault = require('../models/validation/validateDefault');
@@ -246,6 +247,22 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                 aBox.user.delivery = dbAdmin.user.phone;
                 aBox.save(function(err) {
                     if (err) return next(err);
+                    User.find({ 'role.storeID': storeID }, function(err, userList) {
+                        var funcList = [];
+                        for (var i in userList) {
+                            if (typeof userList[i].pushNotificationArn !== "undefined")
+                                funcList.push(new Promise((resolve, reject) => {
+                                    sns.sns_publish(userList[i].pushNotificationArn, '新容器送到囉！', '點我簽收 #' + boxID, (err, data) => {
+                                        if (err) return reject(err);
+                                        resolve();
+                                    });
+                                }));
+                        }
+                        Promise
+                            .all(funcList)
+                            .then((data) => {})
+                            .catch((err) => { if (err) debug(err); });
+                    });
                     return res.json({ type: "DeliveryMessage", message: "Delivery Succeed" });
                 });
             });
