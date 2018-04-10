@@ -254,8 +254,9 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                                 for (var keys in userList[i].pushNotificationArn) {
                                     if (keys.indexOf('shop') >= 0)
                                         funcList.push(new Promise((resolve, reject) => {
-                                            sns.sns_publish(userList[i].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, "BOX_DELIVERY", (err, data) => {
-                                                if (err) return reject(err);
+                                            var localCtr = i;
+                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, "BOX_DELIVERY", (err, data) => {
+                                                if (err) return reject(userList[localCtr].user.phone, err);
                                                 resolve();
                                             });
                                         }));
