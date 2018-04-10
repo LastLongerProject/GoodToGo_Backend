@@ -122,7 +122,7 @@ module.exports = {
                             if (err) return done(err);
                             var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
                                 ((function() {
-                                    var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                                    var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
                                     if (theStore) return theStore.name;
                                     else return "找不到店家"
                                 }())) :
@@ -161,7 +161,7 @@ module.exports = {
                     if (err) return done(err);
                     var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
                         ((function() {
-                            var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                            var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
                             if (theStore) return theStore.name;
                             else return "找不到店家"
                         }())) :
@@ -221,7 +221,7 @@ module.exports = {
                                     if (err) return done(err);
                                     var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
                                         ((function() {
-                                            var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                                            var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
                                             if (theStore) return theStore.name;
                                             else return "找不到店家"
                                         }())) :
