@@ -87,14 +87,15 @@ module.exports = {
             });
         });
     },
-    sns_publish: function(TargetArn, title, body, callback) {
+    sns_publish: function(TargetArn, title, body, option, callback) {
         var subPayload = {
             'default': title + ' : ' + body,
             'APNS': {
                 'aps': {
                     'alert': {
                         'title': title,
-                        'body': body
+                        'body': body,
+                        'action-loc-key': option && option.action || null
                     },
                     'sound': 'default'
                 }
