@@ -179,7 +179,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     Trade.find(queryCond, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
-        list.sort((a, b) => { return b.logTime - a.logTime; });
+        list.sort((a, b) => { return b.tradeTime - a.tradeTime; });
         var boxArr = [];
         var thisBoxTypeList;
         var thisBoxContainerList;
@@ -189,7 +189,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         for (var i = 0; i < list.length; i++) {
             thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) <= 1000) {
+            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 100) {
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
