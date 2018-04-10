@@ -184,7 +184,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     var typeDict = req.app.get('containerType');
     var queryCond = { 'tradeType.action': 'ReadyToClean', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } };
     if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
-    Trade.find(queryCond, {}, { limit: 50 }, function(err, list) {
+    Trade.find(queryCond, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
         list.sort((a, b) => { return b.tradeTime - a.tradeTime; });
