@@ -120,7 +120,13 @@ module.exports = {
                         if (err) return done(err);
                         dbUser.save(function(err) {
                             if (err) return done(err);
-                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
+                                ((function() {
+                                    var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                                    if (theStore) return theStore.name;
+                                    else return "找不到店家"
+                                }())) :
+                                undefined;
                             var payload;
                             if (!keyPair) {
                                 payload = { apiKey: returnKeys.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
@@ -153,7 +159,13 @@ module.exports = {
                 if (err) return done(err);
                 dbKey.save(function(err) {
                     if (err) return done(err);
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
+                        ((function() {
+                            var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                            if (theStore) return theStore.name;
+                            else return "找不到店家"
+                        }())) :
+                        undefined;
                     var payload = { apiKey: dbKey.apiKey, secretKey: dbKey.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                     var token = jwt.encode(payload, returnKeys.serverSecretKey);
                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
@@ -207,7 +219,13 @@ module.exports = {
                                 if (err) return done(err);
                                 newUserKey.save(function(err) {
                                     if (err) return done(err);
-                                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ? ((stores[(dbUser.role.storeID)]) ? stores[(dbUser.role.storeID)].name : "找不到店家") : undefined;
+                                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
+                                        ((function() {
+                                            var theStore = stores.find((aStore) => { return aStore.id === dbUser.role.storeID; });
+                                            if (theStore) return theStore.name;
+                                            else return "找不到店家"
+                                        }())) :
+                                        undefined;
                                     var payload = { apiKey: newUserKey.apiKey, secretKey: newUserKey.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                                     var token = jwt.encode(payload, returnKeys.serverSecretKey);
                                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'forgotPassMessage', message: 'Change Password succeeded' } });
