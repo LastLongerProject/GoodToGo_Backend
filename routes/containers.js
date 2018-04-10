@@ -184,10 +184,10 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     var typeDict = req.app.get('containerType');
     var queryCond = { 'tradeType.action': 'ReadyToClean', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } };
     if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
-    Trade.find(queryCond, function(err, list) {
+    Trade.find(queryCond, {}, { limit: 50 }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({ reloadHistory: [] });
-        list.sort((a, b) => { return b.logTime - a.logTime; });
+        list.sort((a, b) => { return b.tradeTime - a.tradeTime; });
         var boxArr = [];
         var thisBoxTypeList;
         var thisBoxContainerList;
@@ -197,7 +197,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         for (var i = 0; i < list.length; i++) {
             thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || (boxArr[lastIndex].boxTime - list[i].tradeTime) <= 1000) {
+            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 100) {
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
