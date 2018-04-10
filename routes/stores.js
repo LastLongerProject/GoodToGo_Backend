@@ -558,7 +558,7 @@ function parseHistory(data, dataType, type, callback) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
-        if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {
+        if ((lastHistory.tradeTime - aHistory.tradeTime) <= 1000 || lastPhone !== thisPhone) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
                 time: lastHistory.tradeTime,

@@ -197,7 +197,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         for (var i = 0; i < list.length; i++) {
             thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || (boxArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
+            if (lastIndex < 0 || (boxArr[lastIndex].boxTime - list[i].tradeTime) <= 1000) {
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
