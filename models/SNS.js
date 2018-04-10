@@ -116,7 +116,11 @@ module.exports = {
                 err.payload = payload;
                 return callback(err, err.stack);
             }
-            callback(null, data);
+            callback(null, data, payload);
         });
     }
 };
+
+// module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/f6e2e819-07dc-35e4-9cab-9cfcaaa7e1ec', 'TITLE', "CONTENT", "A", (a, b, c) => {
+//     console.log(a, b, c)
+// })

@@ -255,16 +255,23 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                                     if (keys.indexOf('shop') >= 0)
                                         funcList.push(new Promise((resolve, reject) => {
                                             var localCtr = i;
-                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, "BOX_DELIVERY", (err, data) => {
-                                                if (err) return reject(userList[localCtr].user.phone, err);
-                                                resolve();
+                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, "BOX_DELIVERY", (err, data, payload) => {
+                                                if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
+                                                resolve([userList[localCtr].user.phone, data, payload]);
                                             });
                                         }));
                                 }
                         }
                         Promise
                             .all(funcList)
-                            .then((data) => {})
+                            .then((data) => {
+                                data.forEach(element => {
+                                    if (element[1] === 'err')
+                                        element[1].forEach((ele) => {
+                                            console.log(ele);
+                                        });
+                                });
+                            })
                             .catch((err) => { if (err) debug(err); });
                     });
                     return res.json({ type: "DeliveryMessage", message: "Delivery Succeed" });
