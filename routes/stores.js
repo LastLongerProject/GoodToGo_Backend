@@ -664,9 +664,9 @@ function getFavorite(data, callback) {
     }
     var sortable = [];
     for (var phone in count) {
-        sortable.push([phone, count[phone]]);
+        sortable.push({ phone: phone, times: count[phone] });
     }
-    sortable.sort(function(a, b) { return b[1] - a[1]; });
+    sortable.sort(function(a, b) { return b.times - a.times; });
     return callback(sortable);
 }
 
