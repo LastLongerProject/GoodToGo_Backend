@@ -16,6 +16,7 @@ var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var iconBaseUrl;
@@ -413,6 +414,36 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
                 Box.remove({ 'boxID': boxID }, function(err) {
                     if (err) return next(err);
                     return res.json({ type: "UnboxingMessage", message: "Unboxing Succeed" });
+                });
+            });
+        });
+    });
+});
+
+var actionCanUndo = ['ReadyToClean']
+router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
+    if (dbAdmin.status) return next(dbAdmin);
+    var action = req.params.action;
+    var containerID = req.params.id;
+    if (actionCanUndo.indexOf(action) === -1) return next();
+    process.nextTick(() => {
+        Trade.findOne({ 'container.id': containerID }, {}, { sort: { logTime: -1 } }, function(err, theTrade) {
+            if (err) return next(err);
+            Container.findOne({ 'ID': containerID }, function(err, theContainer) {
+                if (err) return next(err);
+                if (theTrade.tradeType.action !== action)
+                    return res.status(403).json({ code: 'F00?', type: "UndoMessage", message: "Container is not in that state" });
+                theContainer.conbineTo = theTrade.oriUser.phone;
+                theContainer.statusCode = theTrade.tradeType.oriState;
+                if ([1, 3].indexOf(theTrade.tradeType.oriState) >= 0) theContainer.storeID = theTrade.oriUser.storeID;
+                else theContainer.storeID = undefined;
+                Trade.remove({ '_id': theTrade._id }, (err) => {
+                    if (err) return next(err);
+                    theContainer.save((err) => {
+                        if (err) return next(err);
+                        res.json({ type: "UndoMessage", message: "Undo " + action + " Succeeded" });
+                    });
                 });
             });
         });
