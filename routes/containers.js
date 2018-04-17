@@ -517,7 +517,7 @@ function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, co
                     type: action + "Message",
                     message: action + " Error",
                     stateExplanation: status,
-                    listExplanation: ["containerID", "originalState", "newState"],
+                    listExplanation: ["containerID", "originalState", "newState", "boxID"],
                     errorList: errIdList
                 });
             }
@@ -566,18 +566,37 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         }
         validateStateChanging(bypass, container.statusCode, newState, function(succeed) {
             if (!succeed) {
-                if (resolve !== false)
-                    return resolve([false, id, container.statusCode, newState]);
-                return res.status(403).json({
-                    code: 'F001',
-                    type: messageType,
-                    message: action + " Error",
-                    stateExplanation: status,
-                    listExplanation: ["containerID", "originalState", "newState"],
-                    errorList: [
-                        [id, container.statusCode, newState]
-                    ]
-                });
+                var oriState = container.statusCode;
+                if (oriState === 0 || oriState === 1) {
+                    Box.findOne({ 'containerList': { '$all': [id] } }, function(err, aBox) {
+                        if (err) return next(err);
+                        if (resolve !== false)
+                            return resolve([false, id, container.statusCode, newState, aBox.boxID]);
+                        return res.status(403).json({
+                            code: 'F001',
+                            type: messageType,
+                            message: action + " Error",
+                            stateExplanation: status,
+                            listExplanation: ["containerID", "originalState", "newState", "boxID"],
+                            errorList: [
+                                [id, container.statusCode, newState, aBox.boxID]
+                            ]
+                        });
+                    });
+                } else {
+                    if (resolve !== false)
+                        return resolve([false, id, container.statusCode, newState]);
+                    return res.status(403).json({
+                        code: 'F001',
+                        type: messageType,
+                        message: action + " Error",
+                        stateExplanation: status,
+                        listExplanation: ["containerID", "originalState", "newState"],
+                        errorList: [
+                            [id, container.statusCode, newState]
+                        ]
+                    });
+                }
             }
             var userQuery = {};
             User.findOne({ 'user.phone': (action === 'Rent') ? key : container.conbineTo }, function(err, dbOri) {

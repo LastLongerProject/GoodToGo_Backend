@@ -14,6 +14,7 @@ var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
@@ -107,10 +108,22 @@ router.get('/list.js', function(req, res, next) {
     });
 });
 
-router.get('/clerkList', regAsStoreManager, validateRequest, function(req, res, next) {
-    var dbStore = req._user;
+router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
+    var dbUser = req._user;
+    if (dbUser.status) return next(dbUser);
+    var condition = {};
+    switch (dbUser.role.typeCode) {
+        case 'admin':
+            condition = { 'role.typeCode': 'admin' };
+            break;
+        case 'clerk':
+            condition = { 'role.storeID': dbUser.role.storeID };
+            break;
+        default:
+            next();
+    }
     process.nextTick(function() {
-        User.find({ 'role.storeID': dbStore.role.storeID }, function(err, list) {
+        User.find(condition, function(err, list) {
             if (err) return next(err);
             var resJson = {
                 clerkList: []
@@ -304,7 +317,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
     });
 });
 
-router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     if (dbStore.status) return next(dbStore);
     var newData = req.body;
