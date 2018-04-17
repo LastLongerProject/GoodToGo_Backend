@@ -420,7 +420,7 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
     });
 });
 
-var actionCanUndo = ['ReadyToClean']
+var actionCanUndo = ['ReadyToClean'];
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     if (dbAdmin.status) return next(dbAdmin);
@@ -432,6 +432,8 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
             if (err) return next(err);
             Container.findOne({ 'ID': containerID }, function(err, theContainer) {
                 if (err) return next(err);
+                if (!theContainer || !theTrade)
+                    return res.json({ code: 'F002', type: "UndoMessage", message: 'No container found', data: containerID });
                 if (theTrade.tradeType.action !== action)
                     return res.status(403).json({ code: 'F00?', type: "UndoMessage", message: "Container is not in that state" });
                 theContainer.conbineTo = theTrade.oriUser.phone;
@@ -445,6 +447,39 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
                         res.json({ type: "UndoMessage", message: "Undo " + action + " Succeeded" });
                     });
                 });
+            });
+        });
+    });
+});
+
+var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
+router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
+    var dbUser = req._user;
+    if (dbUser.status) return next(dbUser);
+    var action = req.params.action;
+    var containerID = req.params.id;
+    var newState = actionTodo.indexOf(action);
+    if (newState === -1) return next();
+    process.nextTick(() => {
+        Container.findOne({ 'ID': containerID }, function(err, theContainer) {
+            if (err) return next(err);
+            if (!theContainer)
+                return res.json({ code: 'F002', type: "ChallengeMessage", message: 'No container found', data: containerID });
+            validateStateChanging(false, theContainer.statusCode, newState, function(succeed) {
+                if (!succeed) {
+                    return res.status(403).json({
+                        code: 'F001',
+                        type: "ChallengeMessage",
+                        message: "Can NOT be " + action,
+                        stateExplanation: status,
+                        listExplanation: ["containerID", "originalState", "newState"],
+                        errorList: [
+                            [containerID, theContainer.statusCode, newState]
+                        ]
+                    });
+                } else {
+                    return res.json({ type: "ChallengeMessage", message: "Can be " + action });
+                }
             });
         });
     });
