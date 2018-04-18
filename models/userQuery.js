@@ -79,13 +79,7 @@ module.exports = {
                                     if (err) return done(err);
                                     newUserKey.save(function(err) {
                                         if (err) return done(err);
-                                        var storeName = (typeof newUser.role.storeID !== 'undefined') ?
-                                            ((function() {
-                                                var theStore = stores.find((aStore) => { return aStore.ID === newUser.role.storeID; });
-                                                if (theStore) return theStore.name;
-                                                else return "找不到店家"
-                                            }())) :
-                                            undefined;
+                                        var storeName = getStoreName(stores, newUser);
                                         var payload = { apiKey: returnKeys.apiKey, secretKey: returnKeys.secretKey, role: { typeCode: newUser.role.typeCode, storeID: newUser.role.storeID, storeName: storeName, manager: newUser.role.manager } };
                                         var token = jwt.encode(payload, returnKeys.serverSecretKey);
                                         return done(null, true, { headers: { Authorization: token }, body: { type: 'signupMessage', message: 'Authentication succeeded' } });
@@ -126,19 +120,9 @@ module.exports = {
                         if (err) return done(err);
                         dbUser.save(function(err) {
                             if (err) return done(err);
-                            var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
-                                ((function() {
-                                    var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
-                                    if (theStore) return theStore.name;
-                                    else return "找不到店家"
-                                }())) :
-                                undefined;
-                            var payload;
-                            if (!keyPair) {
-                                payload = { apiKey: returnKeys.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
-                            } else {
-                                payload = { apiKey: keyPair.apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
-                            }
+                            var storeName = getStoreName(stores, dbUser);
+                            var apiKey = (!keyPair) ? returnKeys.apiKey : keyPair.apiKey;
+                            var payload = { apiKey: apiKey, secretKey: newSecretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                             var token = jwt.encode(payload, returnKeys.serverSecretKey);
                             return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'loginMessage', message: 'Authentication succeeded' } });
                         });
@@ -165,13 +149,7 @@ module.exports = {
                 if (err) return done(err);
                 dbKey.save(function(err) {
                     if (err) return done(err);
-                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
-                        ((function() {
-                            var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
-                            if (theStore) return theStore.name;
-                            else return "找不到店家"
-                        }())) :
-                        undefined;
+                    var storeName = getStoreName(stores, dbUser);
                     var payload = { apiKey: dbKey.apiKey, secretKey: dbKey.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                     var token = jwt.encode(payload, returnKeys.serverSecretKey);
                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'chanPassMessage', message: 'Change succeeded' } });
@@ -225,13 +203,7 @@ module.exports = {
                                 if (err) return done(err);
                                 newUserKey.save(function(err) {
                                     if (err) return done(err);
-                                    var storeName = (typeof dbUser.role.storeID !== 'undefined') ?
-                                        ((function() {
-                                            var theStore = stores.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
-                                            if (theStore) return theStore.name;
-                                            else return "找不到店家"
-                                        }())) :
-                                        undefined;
+                                    var storeName = getStoreName(stores, dbUser);
                                     var payload = { apiKey: newUserKey.apiKey, secretKey: newUserKey.secretKey, role: { typeCode: dbUser.role.typeCode, storeID: dbUser.role.storeID, storeName: storeName, manager: dbUser.role.manager } };
                                     var token = jwt.encode(payload, returnKeys.serverSecretKey);
                                     return done(null, dbUser, { headers: { Authorization: token }, body: { type: 'forgotPassMessage', message: 'Change Password succeeded' } });
@@ -252,3 +224,10 @@ module.exports = {
         });
     }
 };
+
+function getStoreName(storeList, dbUser) {
+    if (typeof dbUser.role.storeID === 'undefined') return undefined;
+    var theStore = storeList.find((aStore) => { return aStore.ID === dbUser.role.storeID; });
+    if (theStore) return theStore.name;
+    else return "找不到店家"
+}
