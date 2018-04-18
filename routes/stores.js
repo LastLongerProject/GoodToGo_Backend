@@ -381,7 +381,11 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                     }
                 }
             }
-            Trade.find({ 'tradeType.action': 'Sign', 'newUser.storeID': dbStore.role.storeID, 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
+            Trade.find({
+                'tradeType.action': 'Sign',
+                'newUser.storeID': dbStore.role.storeID,
+                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) }
+            }, function(err, list) {
                 if (err) return next(err);
                 if (list.length !== 0) {
                     list.sort((a, b) => { return b.logTime - a.logTime; });
@@ -481,11 +485,13 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
+            if (err) return next(err);
             Trade.find({
                 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
+                if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
                     parseHistory(rentTrades, 'Rent', type, function(parsedRent) {
                         resJson = {
@@ -515,6 +521,7 @@ router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
+            if (err) return next(err);
             if (typeof rentTrades !== 'undefined') {
                 getFavorite(rentTrades, function(userList) {
                     resJson = {};
