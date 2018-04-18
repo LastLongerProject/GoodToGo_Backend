@@ -67,7 +67,6 @@ router.get('/get/list', validateDefault, function(req, res, next) {
 
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var typeDict = req.app.get('containerType');
     process.nextTick(function() {
         Container.find(function(err, list) {
@@ -126,7 +125,6 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
 
 router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var typeDict = req.app.get('containerType');
     Trade.find({ 'tradeType.action': 'Sign', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } }, function(err, list) {
         if (err) return next(err);
@@ -182,7 +180,6 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
 
 router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var typeDict = req.app.get('containerType');
     var queryCond = { 'tradeType.action': 'ReadyToClean', 'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) } };
     if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
@@ -236,7 +233,6 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
 
 router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
@@ -253,7 +249,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) 
 
 router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     var storeID = req.params.store;
     process.nextTick(() => {
@@ -302,7 +297,6 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
 
 router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
@@ -323,7 +317,6 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
 
 router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var boxID = req.params.id;
     var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
     res._payload.orderTime = Date.now();
@@ -354,7 +347,6 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, 
 
 router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var key = req.headers['userapikey'];
     if (typeof key === 'undefined' || typeof key === null || key.length === 0) {
         // debug(req.headers);
@@ -380,7 +372,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
 
 router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "returnContainerMessage", message: "Missing Order Time" });
     var id = req.params.id;
     var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
@@ -389,7 +380,6 @@ router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     if (!res._payload.orderTime) return res.status(403).json({ code: 'F006', type: "readyToCleanMessage", message: "Missing Order Time" });
     var id = req.params.id;
     var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
@@ -398,7 +388,6 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res,
 
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var body = req.body;
     if (!body.containerList || !body.boxId)
         return res.status(403).json({ code: 'F011', type: 'BoxingMessage', message: 'Boxing req body incomplete' });
@@ -422,7 +411,6 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
 
 router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({ 'boxID': boxID }, function(err, aBox) {
@@ -441,7 +429,6 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
 var actionCanUndo = ['ReadyToClean'];
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    if (dbAdmin.status) return next(dbAdmin);
     var action = req.params.action;
     var containerID = req.params.id;
     if (actionCanUndo.indexOf(action) === -1) return next();
@@ -473,7 +460,6 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbUser = req._user;
-    if (dbUser.status) return next(dbUser);
     var action = req.params.action;
     var containerID = req.params.id;
     var newState = actionTodo.indexOf(action);

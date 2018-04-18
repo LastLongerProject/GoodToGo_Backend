@@ -29,7 +29,6 @@ router.post('/signup', validateDefault, function(req, res, next) {
 
 router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbUser = req._user;
-    if (dbUser.status) return next(dbUser);
     req.body['role'] = {
         typeCode: "clerk",
         manager: false,
@@ -78,7 +77,6 @@ router.post('/login', validateDefault, function(req, res, next) {
 });
 
 router.post('/modifypassword', validateRequest, function(req, res, next) {
-    if (req._user.status) return next(req._user);
     userQuery.chanpass(req, function(err, user, info) {
         if (err) {
             return next(err);
@@ -107,7 +105,6 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
 });
 
 router.post('/logout', validateRequest, function(req, res, next) {
-    if (req._user.status) return next(req._user);
     userQuery.logout(req, function(err, user, info) {
         if (err) {
             return next(err);
@@ -118,7 +115,6 @@ router.post('/logout', validateRequest, function(req, res, next) {
 });
 
 router.post('/subscribeSNS', validateRequest, function(req, res, next) {
-    if (req._user.status) return next(req._user);
     var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
     var type = req.body.appType;
     var system = req.body.system;

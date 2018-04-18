@@ -110,7 +110,6 @@ router.get('/list.js', function(req, res, next) {
 
 router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
     var dbUser = req._user;
-    if (dbUser.status) return next(dbUser);
     var condition = {};
     switch (dbUser.role.typeCode) {
         case 'admin':
@@ -159,7 +158,6 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
 
 router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = req.app.get('containerType');
@@ -221,7 +219,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
             if (err) return next(err);
@@ -233,7 +230,6 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
 
 router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
             if (err) return next(err);
@@ -249,7 +245,6 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(re
 
 router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var id = req.params.id;
     var redis = req.app.get('redis');
     process.nextTick(function() {
@@ -278,7 +273,6 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
     var dbStore = req._user;
     var rentedIdList = [];
     var resJson = { data: [] };
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
             'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
@@ -319,7 +313,6 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
 
 router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var newData = req.body;
     var days = newData.opening_hours;
     if (Array.isArray(days)) {
@@ -348,7 +341,6 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(r
 
 router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         var containerDict = req.app.get('container');
         var type = req.app.get('containerType');
@@ -445,7 +437,6 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         var funcList = [];
         var type = req.app.get('containerType');
@@ -483,7 +474,6 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
 
 router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var type = req.app.get('containerType');
     process.nextTick(function() {
         Trade.find({
@@ -520,7 +510,6 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
             'tradeType.action': 'Rent',
