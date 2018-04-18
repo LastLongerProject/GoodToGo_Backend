@@ -100,6 +100,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
                         phone: boxList[i].user,
                         typeList: thisBoxTypeList,
                         containerList: thisBoxContainerList,
+                        stocking: boxList[i].stocking,
                         isDelivering: boxList[i].delivering,
                         destinationStore: boxList[i].storeID
                     });
@@ -230,6 +231,23 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
             reloadHistory: boxArr
         };
         res.json(resJSON);
+    });
+});
+
+router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) {
+    var dbAdmin = req._user;
+    if (dbAdmin.status) return next(dbAdmin);
+    var boxID = req.params.id;
+    process.nextTick(() => {
+        Box.findOne({ 'boxID': boxID }, function(err, aBox) {
+            if (err) return next(err);
+            if (!aBox) return res.status(403).json({ code: 'F007', type: "stockBoxMessage", message: "Can't Find The Box" });
+            aBox.stocking = true;
+            aBox.save(function(err) {
+                if (err) return next(err);
+                return res.json({ type: "stockBoxMessage", message: "StockBox Succeed" });
+            });
+        });
     });
 });
 
@@ -731,10 +749,8 @@ router.post('/add/:id/:type', function(req, res, next) {
                 newContainer.statusCode = 4;
                 newContainer.conbineTo = '0936111000';
                 newContainer.save(function(err) { // save the container
-                    if (err)
-                        throw err;
+                    if (err) return next(err);
                     res.status(200).json({ type: 'addContainerMessage', message: 'Add succeeded' });
-                    return;
                 });
             }
         });
