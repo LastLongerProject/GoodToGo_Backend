@@ -128,8 +128,9 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
                 clerkList: []
             };
             for (var i = 0; i < list.length; i++) {
-                resJson.clerkList.push(list[i].user.phone)
+                resJson.clerkList.push({ phone: list[i].user.phone, isManager: list[i].role.manager });
             }
+            resJson.clerkList.sort((a, b) => { return (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1; });
             res.json(resJson);
         });
     });
