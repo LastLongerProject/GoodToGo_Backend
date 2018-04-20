@@ -196,7 +196,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         for (var i = 0; i < list.length; i++) {
             thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 100) {
+            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 1000 || list[i].oriUser.storeID !== list[i - 1].oriUser.storeID) {
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
@@ -281,7 +281,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                             .then((data) => {
                                 data.forEach(element => {
                                     if (element[1] === 'err')
-                                        element[1].forEach((ele) => {
+                                        element.forEach((ele) => {
                                             console.log(ele);
                                         });
                                 });
