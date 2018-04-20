@@ -443,9 +443,24 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
                     return res.status(403).json({ code: 'F00?', type: "UndoMessage", message: "Container is not in that state" });
                 theContainer.conbineTo = theTrade.oriUser.phone;
                 theContainer.statusCode = theTrade.tradeType.oriState;
-                if ([1, 3].indexOf(theTrade.tradeType.oriState) >= 0) theContainer.storeID = theTrade.oriUser.storeID;
-                else theContainer.storeID = undefined;
-                Trade.remove({ '_id': theTrade._id }, (err) => {
+                theContainer.storeID = ([1, 3].indexOf(theTrade.tradeType.oriState) >= 0) ? theTrade.oriUser.storeID : undefined;
+                newTrade = new Trade();
+                newTrade.tradeTime = Date.now();
+                newTrade.tradeType = {
+                    action: "Undo" + action,
+                    oriState: theTrade.tradeType.newState,
+                    newState: theTrade.tradeType.oriState
+                };
+                var tmpTradeUser = theTrade.newUser;
+                newTrade.newUser = theTrade.oriUser;
+                newTrade.newUser.undoBy = dbAdmin.user.phone;
+                newTrade.oriUser = tmpTradeUser;
+                newTrade.container = {
+                    id: containerID,
+                    typeCode: theContainer.typeCode,
+                    cycleCtr: theContainer.cycleCtr
+                };
+                newTrade.save((err) => {
                     if (err) return next(err);
                     theContainer.save((err) => {
                         if (err) return next(err);
