@@ -203,7 +203,7 @@ router.get('/data', validateRequest, function(req, res, next) {
 router.get('/globalAmount', function(req, res, next) {
     Trade.count({ "tradeType.action": "Return" }, function(err, count) {
         if (err) return next(err);
-        res.end(count);
+        res.end(count + 14642);
     });
 });
 

@@ -94,11 +94,11 @@ module.exports = {
                 'aps': {
                     'alert': {
                         'title': title,
-                        'body': body,
-                        'action-loc-key': option && option.action || null
+                        'body': body
                     },
                     'sound': 'default'
-                }
+                },
+                'action': option && option.action || null
             }
         };
         for (var keys in subPayload) {
@@ -121,6 +121,6 @@ module.exports = {
     }
 };
 
-// module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/f6e2e819-07dc-35e4-9cab-9cfcaaa7e1ec', 'TITLE', "CONTENT", "A", (a, b, c) => {
-//     console.log(a, b, c)
-// })
+module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/9e7c1219-d5d7-3a6d-9da1-65c99f00ef2f', 'TITLE', "CONTENT", { action: "BOX_DELIVERY" }, (a, b, c) => {
+    console.log(a, b, c)
+})

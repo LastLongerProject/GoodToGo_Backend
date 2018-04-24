@@ -269,7 +269,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                                     if (keys.indexOf('shop') >= 0)
                                         funcList.push(new Promise((resolve, reject) => {
                                             var localCtr = i;
-                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, "BOX_DELIVERY", (err, data, payload) => {
+                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, { action: "BOX_DELIVERY" }, (err, data, payload) => {
                                                 if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
                                                 resolve([userList[localCtr].user.phone, data, payload]);
                                             });
