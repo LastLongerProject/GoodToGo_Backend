@@ -462,7 +462,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
             .all(funcList)
             .then((data) => {
                 Trade.count({
-                    'tradeType.action': 'Rent'
+                    'tradeType.action': 'Return'
                 }, (err, totalAmount) => {
                     if (err) return next(err);
                     res.json({

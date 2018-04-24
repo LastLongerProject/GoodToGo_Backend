@@ -185,7 +185,7 @@ router.get('/data', validateRequest, function(req, res, next) {
                 for (var i = 0; i < returned.length; i++) {
                     recordCollection.data.push(returned[i]);
                 }
-                Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                Trade.count({ "tradeType.action": "Return" }, function(err, count) {
                     if (err) return next(err);
                     recordCollection.globalAmount = count;
                     res.set('etag', wetag(JSON.stringify({
@@ -197,6 +197,13 @@ router.get('/data', validateRequest, function(req, res, next) {
                 });
             });
         });
+    });
+});
+
+router.get('/globalAmount', function(req, res, next) {
+    Trade.count({ "tradeType.action": "Return" }, function(err, count) {
+        if (err) return next(err);
+        res.end(count);
     });
 });
 
