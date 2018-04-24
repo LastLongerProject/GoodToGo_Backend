@@ -758,4 +758,11 @@ router.post('/add/:id/:type', function(req, res, next) {
     });
 });
 
+router.get('/globalUsedAmount', function(req, res, next) {
+    Trade.count({ "tradeType.action": "Return" }, function(err, count) {
+        if (err) return next(err);
+        res.end(count + 14642);
+    });
+});
+
 module.exports = router;
