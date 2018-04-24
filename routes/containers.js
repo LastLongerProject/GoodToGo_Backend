@@ -29,6 +29,13 @@ if (process.env.NODE_ENV === "testing") {
 const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
+router.get('/globalUsedAmount', function(req, res, next) {
+    Trade.count({ "tradeType.action": "Return" }, function(err, count) {
+        if (err) return next(err);
+        res.end(count + 14642);
+    });
+});
+
 router.all('/:id', function(req, res) {
     // debug("Redirect to official website.");
     res.writeHead(301, { Location: 'http://goodtogo.tw' });
@@ -755,13 +762,6 @@ router.post('/add/:id/:type', function(req, res, next) {
                 });
             }
         });
-    });
-});
-
-router.get('/globalUsedAmount', function(req, res, next) {
-    Trade.count({ "tradeType.action": "Return" }, function(err, count) {
-        if (err) return next(err);
-        res.end(count + 14642);
     });
 });
 
