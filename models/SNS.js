@@ -121,6 +121,6 @@ module.exports = {
     }
 };
 
-module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/9e7c1219-d5d7-3a6d-9da1-65c99f00ef2f', 'TITLE', "CONTENT", { action: "BOX_DELIVERY" }, (a, b, c) => {
-    console.log(a, b, c)
-})
+// module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/9e7c1219-d5d7-3a6d-9da1-65c99f00ef2f', 'TITLE', "CONTENT", { action: "BOX_DELIVERY" }, (a, b, c) => {
+//     console.log(a, b, c)
+// })
