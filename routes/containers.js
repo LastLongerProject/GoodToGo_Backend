@@ -32,7 +32,8 @@ var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'box
 router.get('/globalUsedAmount', function(req, res, next) {
     Trade.count({ "tradeType.action": "Return" }, function(err, count) {
         if (err) return next(err);
-        res.end(count + 14642);
+        res.send(new String(count + 14642));
+        res.end();
     });
 });
 
