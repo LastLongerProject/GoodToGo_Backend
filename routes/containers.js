@@ -435,20 +435,20 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
     });
 });
 
-var actionCanUndo = ['ReadyToClean'];
+var actionCanUndo = { 'Return': 3, 'ReadyToClean': 4 };
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     var action = req.params.action;
     var containerID = req.params.id;
-    if (actionCanUndo.indexOf(action) === -1) return next();
+    if (!(action in actionCanUndo)) return next();
     process.nextTick(() => {
-        Trade.findOne({ 'container.id': containerID }, {}, { sort: { logTime: -1 } }, function(err, theTrade) {
+        Trade.findOne({ 'container.id': containerID, 'tradeType.action': action }, {}, { sort: { logTime: -1 } }, function(err, theTrade) {
             if (err) return next(err);
             Container.findOne({ 'ID': containerID }, function(err, theContainer) {
                 if (err) return next(err);
                 if (!theContainer || !theTrade)
                     return res.json({ code: 'F002', type: "UndoMessage", message: 'No container found', data: containerID });
-                if (theTrade.tradeType.action !== action)
+                if (theContainer.statusCode !== actionCanUndo[action])
                     return res.status(403).json({ code: 'F00?', type: "UndoMessage", message: "Container is not in that state" });
                 theContainer.conbineTo = theTrade.oriUser.phone;
                 theContainer.statusCode = theTrade.tradeType.oriState;
@@ -464,6 +464,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
                 newTrade.newUser = theTrade.oriUser;
                 newTrade.newUser.undoBy = dbAdmin.user.phone;
                 newTrade.oriUser = tmpTradeUser;
+                newTrade.oriUser.undoBy = undefined;
                 newTrade.container = {
                     id: containerID,
                     typeCode: theContainer.typeCode,
@@ -488,6 +489,7 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
     var containerID = req.params.id;
     var newState = actionTodo.indexOf(action);
     if (newState === -1) return next();
+    req.headers['if-none-match'] = 'no-match-for-this';
     process.nextTick(() => {
         Container.findOne({ 'ID': containerID }, function(err, theContainer) {
             if (err) return next(err);
@@ -659,7 +661,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     };
                     newTrade.oriUser = {
                         type: dbOri.role.typeCode,
-                        storeID: dbOri.role.storeID,
+                        storeID: dbOri.role.storeID || container.storeID,
                         phone: dbOri.user.phone
                     };
                     newTrade.newUser = {
@@ -722,7 +724,7 @@ function validateStateChanging(bypass, oriState, newState, callback) {
                 return callback(false);
             break;
         case 2: // rented
-            if (newState !== 3)
+            if (newState !== 3 && newState !== 4)
                 return callback(false);
             break;
         case 3: // returned

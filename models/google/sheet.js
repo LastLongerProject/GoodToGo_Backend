@@ -177,7 +177,7 @@ module.exports = {
                                         newStore.contract = placeArr[localCtr].contract;
                                         newStore.contract.status_code = (((newStore.contract.returnable) ? 1 : 0) + ((newStore.contract.borrowable) ? 1 : 0));
                                         newStore.project = placeArr[localCtr].project;
-                                        newStore.address = dataObject.result.formatted_address.slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('));
+                                        newStore.address = dataObject.result.formatted_address.slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\(')).replace('区', '區');
                                         newStore.opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
                                         for (var j = 0; j < newStore.opening_hours.length; j++) {
                                             newStore.opening_hours[j].close.time = newStore.opening_hours[j].close.time.slice(0, 2) + ":" + newStore.opening_hours[j].close.time.slice(2);
@@ -188,9 +188,13 @@ module.exports = {
                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(newStore.id, 2),
                                             img_version: 0
                                         };
-                                        newStore.type = [];
-                                        for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
-                                            newStore.type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
+                                        if (placeArr[localCtr].type === '') {
+                                            newStore.type = [];
+                                            for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
+                                                newStore.type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
+                                            }
+                                        } else {
+                                            newStore.type = placeArr[localCtr].type.split(", ");
                                         }
                                         return resolve([placeArr[localCtr], newStore]);
                                     });
