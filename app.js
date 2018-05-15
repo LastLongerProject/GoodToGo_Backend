@@ -37,17 +37,23 @@ app.use(favicon(path.join(__dirname, 'assets/images/icon', 'favicon.ico')));
 app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
 app.use(logSystem(logModel));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 app.use(resBodyParser);
 app.use(helmet());
 app.use(GAtrigger()); // Trigger Google Analytics
-app.use(require('express-status-monitor')({ title: "GoodToGo Backend Monitor" }));
+app.use(require('express-status-monitor')({
+    title: "GoodToGo Backend Monitor"
+}));
 
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
 
 mongoose.Promise = global.Promise;
 connectMongoDB();
-var redisClient = redis.createClient(6379, config.redisUrl, { password: config.redisPass });
+var redisClient = redis.createClient(6379, config.redisUrl, {
+    password: config.redisPass
+});
 regisRedisEvent(redisClient);
 app.set('redis', redisClient);
 
@@ -66,8 +72,12 @@ app.set('redis', redisClient);
 app.use('/manager', manager);
 app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime/.well-known/acme-challenge')));
 app.use(timeout('10s'));
-app.use('/lottery', function(req, res) { res.redirect('http://goodtogo.tw'); });
-app.use('/usage', function(req, res) { res.redirect('http://goodtogo.tw'); });
+app.use('/lottery', function(req, res) {
+    res.redirect('http://goodtogo.tw');
+});
+app.use('/usage', function(req, res) {
+    res.redirect('http://goodtogo.tw');
+});
 
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
@@ -96,14 +106,27 @@ app.use(function(err, req, res, next) {
         debugError(JSON.stringify(err));
         req._errorLevel = 3;
         res.status(500);
-        res.json({ code: 'Z002', type: 'globalError', message: 'Unexpect Error', data: err });
+        res.json({
+            code: 'Z002',
+            type: 'globalError',
+            message: 'Unexpect Error',
+            data: err
+        });
     } else if (err.status === 404) {
         res.status(err.status);
-        res.json({ code: 'Z001', type: 'globalError', message: err.message });
+        res.json({
+            code: 'Z001',
+            type: 'globalError',
+            message: err.message
+        });
     } else {
         req._errorLevel = 3;
         res.status(err.status);
-        res.json({ code: 'Z003', type: 'globalError', message: err.message });
+        res.json({
+            code: 'Z003',
+            type: 'globalError',
+            message: err.message
+        });
     }
 });
 
@@ -111,7 +134,9 @@ module.exports = app;
 
 // GA
 function GAtrigger() {
-    var visitor = ua(config.GA_TRACKING_ID, { https: true });
+    var visitor = ua(config.GA_TRACKING_ID, {
+        https: true
+    });
 
     return function GAtrigger(req, res, next) {
         visitor.set('ua', req.headers['user-agent']);
@@ -128,7 +153,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/changeUserStruc.js')
+        // require('./tmp/listUnreturnedContainer')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV === "testing") {

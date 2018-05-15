@@ -23,14 +23,15 @@ var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 
 const historyDays = 14;
+var getImageUrl;
 
 if (process.env.NODE_ENV === "testing") {
-    function getImageUrl(src, token) {
+    getImageUrl = function(src, token) {
         var index = src.indexOf('images/');
         return src.slice(0, index) + 'test/' + src.slice(index) + "/" + token;
     }
 } else {
-    function getImageUrl(src, token) {
+    getImageUrl = function(src, token) {
         return src + "/" + token;
     }
 }
@@ -46,15 +47,28 @@ router.get('/list', validateDefault, function(req, res, next) {
     }
     var tmpArr = [];
     process.nextTick(function() {
-        Store.find({ "project": { "$ne": "測試用" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
+        Store.find({
+            "project": {
+                "$ne": "測試用"
+            }
+        }, {}, {
+            sort: {
+                id: 1
+            }
+        }, function(err, storeList) {
             if (err) return next(err);
-            Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+            Trade.count({
+                "tradeType.action": "Rent"
+            }, function(err, count) {
                 if (err) return next(err);
                 jsonData.globalAmount = count;
                 keys.serverSecretKey((err, key) => {
                     if (err) return next(err);
                     var date = new Date();
-                    var payload = { 'iat': Date.now(), 'exp': date.setMinutes(date.getMinutes() + 5) };
+                    var payload = {
+                        'iat': Date.now(),
+                        'exp': date.setMinutes(date.getMinutes() + 5)
+                    };
                     var token = jwt.encode(payload, key);
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
@@ -66,7 +80,9 @@ router.get('/list', validateDefault, function(req, res, next) {
                                     close: storeList[i].opening_hours[j].close,
                                     open: storeList[i].opening_hours[j].open
                                 });
-                            tmpOpening.sort((a, b) => { return a.close.day - b.close.day; });
+                            tmpOpening.sort((a, b) => {
+                                return a.close.day - b.close.day;
+                            });
                             tmpArr.push({
                                 id: storeList[i].id,
                                 name: storeList[i].name,
@@ -91,7 +107,15 @@ router.get('/list', validateDefault, function(req, res, next) {
 router.get('/list.js', function(req, res, next) {
     var tmpArr = [];
     process.nextTick(function() {
-        Place.find({ "project": { "$ne": "測試用帳號" } }, {}, { sort: { id: 1 } }, function(err, storeList) {
+        Place.find({
+            "project": {
+                "$ne": "測試用帳號"
+            }
+        }, {}, {
+            sort: {
+                id: 1
+            }
+        }, function(err, storeList) {
             if (err) return next(err);
             for (var i = 0; i < storeList.length; i++) {
                 tmpArr.push({
@@ -113,10 +137,14 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
     var condition = {};
     switch (dbUser.role.typeCode) {
         case 'admin':
-            condition = { 'role.typeCode': 'admin' };
+            condition = {
+                'role.typeCode': 'admin'
+            };
             break;
         case 'clerk':
-            condition = { 'role.storeID': dbUser.role.storeID };
+            condition = {
+                'role.storeID': dbUser.role.storeID
+            };
             break;
         default:
             next();
@@ -128,9 +156,14 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
                 clerkList: []
             };
             for (var i = 0; i < list.length; i++) {
-                resJson.clerkList.push({ phone: list[i].user.phone, isManager: list[i].role.manager });
+                resJson.clerkList.push({
+                    phone: list[i].user.phone,
+                    isManager: list[i].role.manager
+                });
             }
-            resJson.clerkList.sort((a, b) => { return (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1; });
+            resJson.clerkList.sort((a, b) => {
+                return (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1;
+            });
             res.json(resJson);
         });
     });
@@ -140,18 +173,32 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
     var dbStore = req._user;
     var toLayoff = req.params.id;
     process.nextTick(function() {
-        User.findOne({ 'user.phone': toLayoff }, function(err, clerk) {
+        User.findOne({
+            'user.phone': toLayoff
+        }, function(err, clerk) {
             if (err) return next(err);
             if (!clerk)
-                return res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + toLayoff + "] Found", data: toLayoff });
+                return res.status(403).json({
+                    code: 'E001',
+                    type: "userSearchingError",
+                    message: "No User: [" + toLayoff + "] Found",
+                    data: toLayoff
+                });
             else if (clerk.user.phone === dbStore.user.phone)
-                return res.status(403).json({ code: 'E002', type: "layoffError", message: "Don't lay off yourself" });
+                return res.status(403).json({
+                    code: 'E002',
+                    type: "layoffError",
+                    message: "Don't lay off yourself"
+                });
             clerk.role.storeID = undefined;
             clerk.role.manager = undefined;
             clerk.role.typeCode = 'customer';
             clerk.save(function(err) {
                 if (err) return next(err);
-                res.json({ type: 'LayoffMessage', message: 'Layoff succeed' });
+                res.json({
+                    type: 'LayoffMessage',
+                    message: 'Layoff succeed'
+                });
             })
         });
     });
@@ -187,9 +234,17 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     };
     var tmpTypeCode;
     process.nextTick(function() {
-        Container.find({ 'storeID': dbStore.role.storeID, 'active': true }, function(err, containers) {
+        Container.find({
+            'storeID': dbStore.role.storeID,
+            'active': true
+        }, function(err, containers) {
             if (err) return next(err);
-            Trade.find({ 'tradeTime': { '$gte': dateCheckpoint(0), '$lt': dateCheckpoint(1) } }, function(err, trades) {
+            Trade.find({
+                'tradeTime': {
+                    '$gte': dateCheckpoint(0),
+                    '$lt': dateCheckpoint(1)
+                }
+            }, function(err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
@@ -221,10 +276,16 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
 router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     process.nextTick(function() {
-        Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
+        Store.findOne({
+            'id': dbStore.role.storeID,
+            'active': true
+        }, function(err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
-            res.json({ opening_hours: store.opening_hours, isSync: !store.opening_default });
+            res.json({
+                opening_hours: store.opening_hours,
+                isSync: !store.opening_default
+            });
         });
     });
 });
@@ -232,7 +293,10 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
 router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     process.nextTick(function() {
-        Store.findOne({ 'id': dbStore.role.storeID, 'active': true }, function(err, store) {
+        Store.findOne({
+            'id': dbStore.role.storeID,
+            'active': true
+        }, function(err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
             store.opening_default = false;
@@ -249,11 +313,18 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     var id = req.params.id;
     var redis = req.app.get('redis');
     process.nextTick(function() {
-        User.findOne({ 'user.phone': new RegExp(id.toString() + '$', "i") }, function(err, user) {
+        User.findOne({
+            'user.phone': new RegExp(id.toString() + '$', "i")
+        }, function(err, user) {
             if (err)
                 return next(err);
             if (!user) {
-                res.status(403).json({ code: 'E001', type: "userSearchingError", message: "No User: [" + id + "] Found", data: id });
+                res.status(403).json({
+                    code: 'E001',
+                    type: "userSearchingError",
+                    message: "No User: [" + id + "] Found",
+                    data: id
+                });
             } else {
                 var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
                 redis.set('user_token:' + token, user.user.phone, (err, reply) => {
@@ -262,7 +333,10 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
                     redis.expire('user_token:' + token, 60 * 30, (err, replyNum) => {
                         if (err) return next(err);
                         if (replyNum !== 1) return next(replyNum);
-                        res.status(200).json({ 'phone': user.user.phone, 'apiKey': token });
+                        res.status(200).json({
+                            'phone': user.user.phone,
+                            'apiKey': token
+                        });
                     });
                 });
             }
@@ -273,24 +347,38 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
 router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     var rentedIdList = [];
-    var resJson = { data: [] };
+    var resJson = {
+        data: []
+    };
     process.nextTick(function() {
         Trade.find({
-            'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays),
+                '$lt': dateCheckpoint(1)
+            },
             'tradeType.action': "Rent",
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentedList) {
             if (err) return next(err);
-            rentedList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+            rentedList.sort(function(a, b) {
+                return b.tradeTime - a.tradeTime;
+            });
             for (var i in rentedList)
                 rentedIdList.push(rentedList[i].container.id);
             Trade.find({
-                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+                'tradeTime': {
+                    '$gte': dateCheckpoint(1 - historyDays),
+                    '$lt': dateCheckpoint(1)
+                },
                 'tradeType.action': "Return",
-                'container.id': { '$in': rentedIdList }
+                'container.id': {
+                    '$in': rentedIdList
+                }
             }, function(err, returnedList) {
                 if (err) return next(err);
-                returnedList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+                returnedList.sort(function(a, b) {
+                    return b.tradeTime - a.tradeTime;
+                });
                 for (var i in returnedList) {
                     var index = rentedList.findIndex(function(ele) {
                         return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr
@@ -323,20 +411,33 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(r
                     days[i].close.time.length === 5 && days[i].open.time.length === 5 &&
                     parseInt(days[i].close.day) < 7 && parseInt(days[i].open.day) < 7 &&
                     parseInt(days[i].close.day) >= 0 && parseInt(days[i].open.day) >= 0)) {
-                return res.status(403).json({ code: 'E003', type: "changeOpeningTimeError", message: "Data format invalid" });
+                return res.status(403).json({
+                    code: 'E003',
+                    type: "changeOpeningTimeError",
+                    message: "Data format invalid"
+                });
             }
         }
-        Store.findOne({ 'id': dbStore.role.storeID }, (err, aStore) => {
+        Store.findOne({
+            'id': dbStore.role.storeID
+        }, (err, aStore) => {
             if (err) return next(err);
             aStore.opening_hours = days;
             aStore.opening_default = true;
             aStore.save((err) => {
                 if (err) return next(err);
-                res.json({ type: "changeOpeningTime", message: "Change succeed" });
+                res.json({
+                    type: "changeOpeningTime",
+                    message: "Change succeed"
+                });
             });
         });
     } else {
-        res.status(403).json({ code: 'E003', type: "changeOpeningTimeError", message: "Data format invalid" });
+        res.status(403).json({
+            code: 'E003',
+            type: "changeOpeningTimeError",
+            message: "Data format invalid"
+        });
     }
 });
 
@@ -345,7 +446,9 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     process.nextTick(function() {
         var containerDict = req.app.get('container');
         var type = req.app.get('containerType');
-        Box.find({ 'storeID': dbStore.role.storeID }, function(err, boxList) {
+        Box.find({
+            'storeID': dbStore.role.storeID
+        }, function(err, boxList) {
             if (err) return next(err);
             var boxArr = [];
             if (boxList.length !== 0) {
@@ -385,11 +488,15 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
             Trade.find({
                 'tradeType.action': 'Sign',
                 'newUser.storeID': dbStore.role.storeID,
-                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays) }
+                'tradeTime': {
+                    '$gte': dateCheckpoint(1 - historyDays)
+                }
             }, function(err, list) {
                 if (err) return next(err);
                 if (list.length !== 0) {
-                    list.sort((a, b) => { return b.logTime - a.logTime; });
+                    list.sort((a, b) => {
+                        return b.logTime - a.logTime;
+                    });
                     var boxHistoryArr = [];
                     var boxIDArr = [];
                     var thisBoxTypeList;
@@ -454,7 +561,10 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
                     'container.typeCode': localPtr
                 }, (err, amount) => {
                     if (err) return reject(err);
-                    resolve({ typeCode: localPtr, amount: amount });
+                    resolve({
+                        typeCode: localPtr,
+                        amount: amount
+                    });
                 });
             }));
         }
@@ -482,13 +592,19 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     var type = req.app.get('containerType');
     process.nextTick(function() {
         Trade.find({
-            'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays),
+                '$lt': dateCheckpoint(1)
+            },
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
             if (err) return next(err);
             Trade.find({
-                'tradeTime': { '$gte': dateCheckpoint(1 - historyDays), '$lt': dateCheckpoint(1) },
+                'tradeTime': {
+                    '$gte': dateCheckpoint(1 - historyDays),
+                    '$lt': dateCheckpoint(1)
+                },
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
@@ -553,7 +669,9 @@ function parseHistory(data, dataType, type, callback) {
         else if (dataType === 'Return')
             lastPhone = aHistory.oriUser.phone;
     } else {
-        data.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+        data.sort(function(a, b) {
+            return b.tradeTime - a.tradeTime;
+        });
     }
     var byOrderArr = [];
     var tmpContainerList = [];
@@ -648,7 +766,9 @@ function parseHistory(data, dataType, type, callback) {
 
 function getFavorite(data, callback) {
     if (data.length === 0) return callback([]);
-    data.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+    data.sort(function(a, b) {
+        return b.tradeTime - a.tradeTime;
+    });
     var byOrderArr = [];
     var aHistory;
     var lastHistory;
@@ -674,9 +794,14 @@ function getFavorite(data, callback) {
     }
     var sortable = [];
     for (var phone in count) {
-        sortable.push({ phone: phone, times: count[phone] });
+        sortable.push({
+            phone: phone,
+            times: count[phone]
+        });
     }
-    sortable.sort(function(a, b) { return b.times - a.times; });
+    sortable.sort(function(a, b) {
+        return b.times - a.times;
+    });
     return callback(sortable);
 }
 
