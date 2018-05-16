@@ -8,12 +8,15 @@ var userSchema = mongoose.Schema({
         returnable: Boolean,
         borrowable: Boolean
     },
+    active: Boolean,
     project: String,
     type: String
 }, {
     timestamps: true
 });
 
-userSchema.index({ "ID": 1 });
+userSchema.index({
+    "ID": 1
+});
 
 module.exports = mongoose.model('PlaceID', userSchema);
