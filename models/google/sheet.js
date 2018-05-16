@@ -65,7 +65,9 @@ module.exports = {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
                             var localPtr = i;
-                            ContainerType.update({ 'typeCode': row[0] }, {
+                            ContainerType.update({
+                                'typeCode': row[0]
+                            }, {
                                 'name': row[1],
                             }, {
                                 upsert: true,
@@ -81,11 +83,15 @@ module.exports = {
                         if (!isNum.test(sheetContainerList[i][1])) continue;
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerList[i];
-                            Container.update({ 'ID': row[0] }, {
+                            Container.update({
+                                'ID': row[0]
+                            }, {
                                 'active': (row[3] === '1'),
                                 'typeCode': row[1],
                                 'checkedAt': Date.now(),
-                                '$setOnInsert': { 'conbineTo': dbAdmin.user.phone }
+                                '$setOnInsert': {
+                                    'conbineTo': dbAdmin.user.phone
+                                }
                             }, {
                                 upsert: true,
                                 setDefaultsOnInsert: true
@@ -98,7 +104,11 @@ module.exports = {
                     Promise
                         .all(funcList)
                         .then((dataList) => {
-                            Container.remove({ 'checkedAt': { '$lt': checkpoint } }, (err) => {
+                            Container.remove({
+                                'checkedAt': {
+                                    '$lt': checkpoint
+                                }
+                            }, (err) => {
                                 if (err) return debug(err);
                                 cb();
                             });
@@ -123,7 +133,7 @@ module.exports = {
                     sheets.spreadsheets.values.get({
                         auth: auth,
                         spreadsheetId: spreadsheetId,
-                        range: 'active!A2:I',
+                        range: 'active!A2:J',
                     }, function(err, response) {
                         if (err) {
                             debug('[Sheet API ERR (getStore)] Error: ' + err);
@@ -131,107 +141,120 @@ module.exports = {
                         }
                         var rows = response.values;
                         var placeArr = [];
+                        var PlaceIDFuncList = [];
                         for (var i = 0; i < rows.length; i++) {
                             var row = rows[i];
-                            var newPlace = new PlaceID();
-                            newPlace.ID = row[0];
-                            newPlace.name = row[1];
-                            newPlace.placeID = row[2];
-                            newPlace.contract = {
-                                returnable: (row[3] === 'V'),
-                                borrowable: (row[4] === 'V')
-                            };
-                            newPlace.type = row[6];
-                            newPlace.project = row[8];
-                            // console.log(newPlace);
-                            placeArr.push(newPlace);
-                        }
-                        var funcArr = [];
-                        for (var i = 0; i < placeArr.length; i++) {
-                            if (!isNum.test(placeArr[i].ID)) continue;
-                            funcArr.push(new Promise((resolve, reject) => {
-                                var localCtr = i;
-                                var dataArray = [];
-                                request
-                                    .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + placeArr[localCtr].placeID + '&key=' + placeApiKey + '&language=zh-TW')
-                                    .on('response', function(response) {
-                                        if (response.statusCode !== 200) {
-                                            debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
-                                            return reject(localCtr);
-                                        }
-                                    })
-                                    .on('error', function(err) {
-                                        debug('[Place API ERR (2)] Message : ' + err);
-                                        return reject(localCtr);
-                                    })
-                                    .on('data', function(data) {
-                                        dataArray.push(data);
-                                    })
-                                    .on('end', function() {
-                                        var dataBuffer = Buffer.concat(dataArray);
-                                        var dataObject = JSON.parse(dataBuffer.toString());
-                                        // console.log(dataObject);
-                                        var newStore = new Store();
-                                        newStore.id = placeArr[localCtr].ID;
-                                        newStore.name = placeArr[localCtr].name;
-                                        newStore.contract = placeArr[localCtr].contract;
-                                        newStore.contract.status_code = (((newStore.contract.returnable) ? 1 : 0) + ((newStore.contract.borrowable) ? 1 : 0));
-                                        newStore.project = placeArr[localCtr].project;
-                                        newStore.address = dataObject.result.formatted_address.slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('));
-                                        newStore.opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
-                                        for (var j = 0; j < newStore.opening_hours.length; j++) {
-                                            newStore.opening_hours[j].close.time = newStore.opening_hours[j].close.time.slice(0, 2) + ":" + newStore.opening_hours[j].close.time.slice(2);
-                                            newStore.opening_hours[j].open.time = newStore.opening_hours[j].open.time.slice(0, 2) + ":" + newStore.opening_hours[j].open.time.slice(2);
-                                        }
-                                        newStore.location = dataObject.result.geometry.location;
-                                        newStore.img_info = {
-                                            img_src: "https://app.goodtogo.tw/images/" + intReLength(newStore.id, 2),
-                                            img_version: 0
-                                        };
-                                        newStore.type = [];
-                                        for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
-                                            newStore.type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
-                                        }
-                                        return resolve([placeArr[localCtr], newStore]);
-                                    });
+                            PlaceIDFuncList.push(new Promise((resolve, reject) => {
+                                PlaceID.findOneAndUpdate({
+                                    'ID': row[0]
+                                }, {
+                                    'name': row[1],
+                                    'placeID': row[2],
+                                    'contract': {
+                                        'returnable': (row[3] === 'V'),
+                                        'borrowable': (row[4] === 'V')
+                                    },
+                                    'type': row[6],
+                                    'project': row[8],
+                                    'active': row[9] === 'TRUE'
+                                }, {
+                                    upsert: true,
+                                    new: true
+                                }, (err, afterUpdate) => {
+                                    if (err) return reject(err);
+                                    resolve(afterUpdate);
+                                });
                             }));
                         }
-                        var returnObject = [];
                         Promise
-                            .all(funcArr)
-                            .then((data) => {
-                                PlaceID.remove({}, (err) => {
+                            .all(PlaceIDFuncList)
+                            .then((fulfillPlace) => {
+                                Store.find({}, (err, oldList) => {
                                     if (err) return debug(err);
-                                    for (var i = 0; i < data.length; i++) {
-                                        data[i][0].save();
-                                    }
-                                    Store.find({}, (err, oldList) => {
-                                        if (err) return debug(err);
-                                        oldList.sort(function(a, b) { return a.id - b.id; });
-                                        data.sort(function(a, b) { return a[1].id - b[1].id; });
-                                        Store.remove({}, (err) => {
-                                            if (err) return debug(err);
-                                            for (var i = 0; i < data.length; i++) {
-                                                if (typeof oldList[i] !== 'undefined') {
-                                                    data[i][1].img_info.img_version = oldList[i].img_info.img_version;
-                                                    if (oldList[i].opening_default) {
-                                                        data[i][1].opening_default = oldList[i].opening_default;
-                                                        data[i][1].opening_hours = oldList[i].opening_hours;
+                                    var placeApiFuncList = [];
+                                    for (var i = 0; i < fulfillPlace.length; i++) {
+                                        if (!isNum.test(fulfillPlace[i].ID)) continue;
+                                        placeApiFuncList.push(new Promise((resolve, reject) => {
+                                            var localCtr = i;
+                                            var dataArray = [];
+                                            request
+                                                .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID + '&key=' + placeApiKey + '&language=zh-TW')
+                                                .on('response', function(response) {
+                                                    if (response.statusCode !== 200) {
+                                                        debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
+                                                        return reject(localCtr);
                                                     }
-                                                }
-                                                returnObject.push(data[i][1]);
-                                                data[i][1].save();
-                                            }
-                                            return cb(returnObject);
+                                                })
+                                                .on('error', function(err) {
+                                                    debug('[Place API ERR (2)] Message : ' + err);
+                                                    return reject(localCtr);
+                                                })
+                                                .on('data', function(data) {
+                                                    dataArray.push(data);
+                                                })
+                                                .on('end', function() {
+                                                    var dataBuffer = Buffer.concat(dataArray);
+                                                    var dataObject = JSON.parse(dataBuffer.toString());
+                                                    // console.log(dataObject);
+                                                    fulfillPlace[localCtr].contract.status_code = (((fulfillPlace[localCtr].contract.returnable) ? 1 : 0) + ((fulfillPlace[localCtr].contract.borrowable) ? 1 : 0));
+                                                    var type = [];
+                                                    for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
+                                                        type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
+                                                    }
+                                                    var aStore = oldList.find(ele => ele.id == fulfillPlace[localCtr].ID);
+                                                    var opening_hours;
+                                                    if (aStore && aStore.opening_default) {
+                                                        opening_hours = aStore.opening_hours;
+                                                    } else {
+                                                        opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
+                                                        for (var j = 0; j < opening_hours.length; j++) {
+                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
+                                                        }
+                                                    }
+                                                    Store.findOneAndUpdate({
+                                                        'id': fulfillPlace[localCtr].ID
+                                                    }, {
+                                                        'name': fulfillPlace[localCtr].name,
+                                                        'contract': fulfillPlace[localCtr].contract,
+                                                        'type': type,
+                                                        'project': fulfillPlace[localCtr].project,
+                                                        'address': dataObject.result.formatted_address
+                                                            .slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('))
+                                                            .replace('区', '區'),
+                                                        'opening_hours': opening_hours,
+                                                        'location': dataObject.result.geometry.location,
+                                                        'active': fulfillPlace[localCtr].active,
+                                                        '$setOnInsert': {
+                                                            'img_info': {
+                                                                img_src: "https://app.goodtogo.tw/images/" + intReLength(fulfillPlace[localCtr].ID, 2),
+                                                                img_version: 0
+                                                            }
+                                                        }
+                                                    }, {
+                                                        upsert: true,
+                                                        setDefaultsOnInsert: true,
+                                                        new: true
+                                                    }, (err, res) => {
+                                                        if (err) return reject(err);
+                                                        resolve(res);
+                                                    });
+                                                });
+                                        }));
+                                    }
+                                    var returnObject = [];
+                                    Promise
+                                        .all(placeApiFuncList)
+                                        .then((data) => {
+                                            return cb(data);
+                                        })
+                                        .catch((err) => {
+                                            if (err) return debug(err);
                                         });
-                                    });
                                 });
                             })
                             .catch((err) => {
-                                if (err) {
-                                    debug(err);
-                                    return;
-                                }
+                                if (err) return debug(err);
                             });
                     });
                 });
