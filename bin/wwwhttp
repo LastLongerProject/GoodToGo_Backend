@@ -8,6 +8,9 @@ var debug = require('debug')('goodtogo_backend:server');
 debug.log = console.log.bind(console);
 var http = require('http');
 
+var io = require('socket.io');
+var socketCb = require('../models/socket');
+
 /**
  * Get port from environment and store in Express.
  */
@@ -25,6 +28,9 @@ var server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+io = io(server);
+io.on('connection', socketCb.init);
 
 /**
  * Normalize a port into a number, string, or false.
