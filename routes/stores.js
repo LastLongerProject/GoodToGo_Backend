@@ -50,7 +50,8 @@ router.get('/list', validateDefault, function(req, res, next) {
         Store.find({
             "project": {
                 "$ne": "測試用"
-            }
+            },
+            "active": true
         }, {}, {
             sort: {
                 id: 1
@@ -72,29 +73,27 @@ router.get('/list', validateDefault, function(req, res, next) {
                     var token = jwt.encode(payload, key);
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
-                        if (storeList[i].active) {
-                            var tmpOpening = [];
-                            storeList[i].img_info.img_src = getImageUrl(storeList[i].img_info.img_src, token);
-                            for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                                tmpOpening.push({
-                                    close: storeList[i].opening_hours[j].close,
-                                    open: storeList[i].opening_hours[j].open
-                                });
-                            tmpOpening.sort((a, b) => {
-                                return a.close.day - b.close.day;
+                        var tmpOpening = [];
+                        storeList[i].img_info.img_src = getImageUrl(storeList[i].img_info.img_src, token);
+                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                            tmpOpening.push({
+                                close: storeList[i].opening_hours[j].close,
+                                open: storeList[i].opening_hours[j].open
                             });
-                            tmpArr.push({
-                                id: storeList[i].id,
-                                name: storeList[i].name,
-                                img_info: storeList[i].img_info,
-                                opening_hours: tmpOpening,
-                                contract: storeList[i].contract,
-                                location: storeList[i].location,
-                                address: storeList[i].address,
-                                type: storeList[i].type,
-                                testing: (storeList[i].project === '正興杯杯') ? false : true
-                            });
-                        }
+                        tmpOpening.sort((a, b) => {
+                            return a.close.day - b.close.day;
+                        });
+                        tmpArr.push({
+                            id: storeList[i].id,
+                            name: storeList[i].name,
+                            img_info: storeList[i].img_info,
+                            opening_hours: tmpOpening,
+                            contract: storeList[i].contract,
+                            location: storeList[i].location,
+                            address: storeList[i].address,
+                            type: storeList[i].type,
+                            testing: (storeList[i].project === '正興杯杯') ? false : true
+                        });
                     }
                     jsonData["shop_data"] = tmpArr;
                     res.json(jsonData);

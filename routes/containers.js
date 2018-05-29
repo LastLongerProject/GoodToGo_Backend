@@ -10,14 +10,16 @@ var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
 var sns = require('../models/SNS');
+var generateSocketToken = require('../models/socket').generateToken;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
+var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
+var validateStateChanging = require('../models/toolKit').validateStateChanging;
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var iconBaseUrl;
 if (process.env.NODE_ENV === "testing") {
@@ -618,6 +620,9 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
     });
 });
 
+
+router.get('/challenge/token', regAsStore, regAsAdmin, validateRequest, generateSocketToken);
+
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
     var dbUser = req._user;
@@ -632,7 +637,7 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
         }, function(err, theContainer) {
             if (err) return next(err);
             if (!theContainer)
-                return res.json({
+                return res.status(403).json({
                     code: 'F002',
                     type: "ChallengeMessage",
                     message: 'No container found',
@@ -920,39 +925,6 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             });
         });
     });
-}
-
-function validateStateChanging(bypass, oriState, newState, callback) {
-    if (bypass) return callback(true);
-    switch (oriState) {
-        case 0: // delivering
-            if (newState !== 1)
-                return callback(false);
-            break;
-        case 1: // readyToUse
-            if (newState <= 1 || newState === 5)
-                return callback(false);
-            break;
-        case 2: // rented
-            if (newState !== 3 && newState !== 4)
-                return callback(false);
-            break;
-        case 3: // returned
-            if (newState !== 4)
-                return callback(false);
-            break;
-        case 4: // notClean
-            if (newState !== 5)
-                return callback(false);
-            break;
-        case 5: // boxed
-            if (newState !== 0)
-                return callback(false);
-            break;
-        default:
-            return callback(false);
-    }
-    callback(true);
 }
 
 router.post('/add/:id/:type', function(req, res, next) {
