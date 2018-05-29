@@ -196,7 +196,6 @@ module.exports = {
                                                     var dataBuffer = Buffer.concat(dataArray);
                                                     var dataObject = JSON.parse(dataBuffer.toString());
                                                     // console.log(dataObject);
-                                                    fulfillPlace[localCtr].contract.status_code = (((fulfillPlace[localCtr].contract.returnable) ? 1 : 0) + ((fulfillPlace[localCtr].contract.borrowable) ? 1 : 0));
                                                     var type = [];
                                                     for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
                                                         type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
@@ -216,7 +215,11 @@ module.exports = {
                                                         'id': fulfillPlace[localCtr].ID
                                                     }, {
                                                         'name': fulfillPlace[localCtr].name,
-                                                        'contract': fulfillPlace[localCtr].contract,
+                                                        'contract': {
+                                                            returnable: fulfillPlace[localCtr].contract.returnable,
+                                                            borrowable: fulfillPlace[localCtr].contract.returnable,
+                                                            status_code: (((fulfillPlace[localCtr].contract.returnable) ? 1 : 0) + ((fulfillPlace[localCtr].contract.borrowable) ? 1 : 0))
+                                                        },
                                                         'type': type,
                                                         'project': fulfillPlace[localCtr].project,
                                                         'address': dataObject.result.formatted_address
