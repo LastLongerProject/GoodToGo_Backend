@@ -29,6 +29,7 @@ module.exports = {
     },
     auth: function(socket, next) {
         var handShakeData = socket.request;
+        debug(handShakeData.url);
         if (!handShakeData._query.token || !handShakeData._query.apikey) return next(new Error('Authentication error (Missing Something)'));
         UserKeys.findOneAndUpdate({
             'apiKey': handShakeData._query.apikey
