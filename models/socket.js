@@ -22,8 +22,7 @@ module.exports = {
             }, serverSecretKey);
             res.json({
                 uri: uri,
-                token: token,
-                fullUri: uri + "?token=" + token
+                token: token
             });
         });
     },
@@ -38,15 +37,18 @@ module.exports = {
         }, function(err, dbKey) {
             keys.serverSecretKey(function(err, serverSecretKey) {
                 var decoded;
+                var thisErr;
                 try {
                     decoded = jwt.decode(handShakeData._query.token, serverSecretKey);
                 } catch (err) {
-                    if (!decoded || !decoded.user || decoded.exp < Date.now() || decoded.user !== dbKey.phone) {
-                        return next(new Error('Authentication error'));
-                    } else {
-                        socket._user = decoded.user;
-                        next();
-                    }
+                    thisErr = err;
+                }
+                if (!decoded || !decoded.user || decoded.exp < Date.now() || decoded.user !== dbKey.phone) {
+                    if (err) debug(thisErr);
+                    return next(new Error('Authentication error'));
+                } else {
+                    socket._user = decoded.user;
+                    next();
                 }
             });
         });
