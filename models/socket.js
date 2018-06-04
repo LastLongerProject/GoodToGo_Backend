@@ -58,13 +58,13 @@ module.exports = {
         var next = nextInit(socket);
 
         socket.emit('connection', {
-            msg: 'auth succeed'
+            message: 'auth succeed'
         });
         socket.on('challenge', function(containerID, action) {
             if (typeof containerID !== 'number' || typeof action !== "string") {
                 return next({
                     code: "Err1",
-                    msg: "Request Format Error"
+                    msg: "Request Format Invalid"
                 });
             }
             var dbUser = socket._user;
@@ -78,7 +78,7 @@ module.exports = {
                     if (!theContainer)
                         return next({
                             code: 'Err2',
-                            message: 'No container found',
+                            msg: 'No Container Found',
                             data: {
                                 id: parseInt(containerID)
                             }
