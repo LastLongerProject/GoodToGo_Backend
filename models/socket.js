@@ -55,23 +55,16 @@ module.exports = {
 
     },
     init: function(socket) {
-        function next(err) {
-            if (typeof err === "undefined") err = {};
-            socket.emit('error', {
-                code: err.code || "Err0",
-                message: err.msg || "Unknown Error",
-                data: err.data || (err.code && err.msg) ? undefined : JSON.stringify(err)
-            });
-        }
+        var next = nextInit(socket);
 
         socket.emit('connection', {
-            msg: 'auth succeed'
+            message: 'auth succeed'
         });
         socket.on('challenge', function(containerID, action) {
             if (typeof containerID !== 'number' || typeof action !== "string") {
                 return next({
                     code: "Err1",
-                    msg: "Request Format Error"
+                    msg: "Request Format Invalid"
                 });
             }
             var dbUser = socket._user;
@@ -83,39 +76,35 @@ module.exports = {
                 }, function(err, theContainer) {
                     if (err) return next(err);
                     if (!theContainer)
-                        return socket.emit('failed', {
-                            id: parseInt(containerID),
+                        return next({
                             code: 'Err2',
-                            message: 'No container found',
+                            msg: 'No Container Found',
+                            data: {
+                                id: parseInt(containerID)
+                            }
                         });
                     validateStateChanging(false, theContainer.statusCode, newState, function(succeed) {
-                        if (!succeed) {
-                            return socket.emit('failed', {
-                                id: parseInt(containerID),
-                                code: 'Err3',
-                                message: "Can NOT be " + action,
-                                data: {
-                                    stateExplanation: status,
-                                    listExplanation: ["containerID", "originalState", "newState"],
-                                    errorList: [
-                                        [parseInt(containerID), theContainer.statusCode, newState]
-                                    ],
-                                    errorDict: [{
-                                        containerID: parseInt(containerID),
-                                        originalState: parseInt(theContainer.statusCode),
-                                        newState: parseInt(newState)
-                                    }]
-                                }
-                            });
-                        } else {
-                            return socket.emit('succeed', {
-                                id: parseInt(containerID),
-                                message: "Can be " + action
-                            });
-                        }
+                        return socket.emit('reply', {
+                            id: parseInt(containerID),
+                            succeed: succeed,
+                            message: "Can " + (succeed ? "" : "NOT") + " be " + action,
+                            originalState: parseInt(theContainer.statusCode),
+                            newState: parseInt(newState)
+                        });
                     });
                 });
             });
         });
     }
 };
+
+function nextInit(socket) {
+    return function next(err) {
+        if (typeof err === "undefined") err = {};
+        socket.emit('error', {
+            code: err.code || "Err0",
+            message: err.msg || "Unknown Error",
+            data: err.data || (err.code && err.msg) ? undefined : JSON.stringify(err)
+        });
+    };
+}
