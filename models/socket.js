@@ -44,7 +44,8 @@ module.exports = {
                     thisErr = err;
                 }
                 if (!decoded || !decoded.user || decoded.exp < Date.now() || decoded.user !== dbKey.phone) {
-                    if (err) debug(thisErr);
+                    if (thisErr) debug(thisErr);
+                    debug('Authentication error')
                     return next(new Error('Authentication error'));
                 } else {
                     socket._user = decoded.user;
@@ -55,9 +56,10 @@ module.exports = {
 
     },
     init: function(socket) {
+        socket.emitWithLog = addLog(socket);
         var next = nextInit(socket);
 
-        socket.emit('connection', {
+        socket.emitWithLog('connection', {
             message: 'auth succeed'
         });
         socket.on('challenge', function(containerID, action) {
@@ -84,7 +86,7 @@ module.exports = {
                             }
                         });
                     validateStateChanging(false, theContainer.statusCode, newState, function(succeed) {
-                        return socket.emit('reply', {
+                        return socket.emitWithLog('reply', {
                             id: parseInt(containerID),
                             succeed: succeed,
                             message: "Can " + (succeed ? "" : "NOT") + " be " + action,
@@ -98,10 +100,16 @@ module.exports = {
     }
 };
 
+var addLog = socket => (flag, data) => {
+    debug(flag + ": " + JSON.stringify(data));
+    return socket.emit(flag, data);
+};
+
 function nextInit(socket) {
+    socket.on("error", (args) => debug(args));
     return function next(err) {
         if (typeof err === "undefined") err = {};
-        socket.emit('error', {
+        socket.emitWithLog('error', {
             code: err.code || "Err0",
             message: err.msg || "Unknown Error",
             data: err.data || (err.code && err.msg) ? undefined : JSON.stringify(err)
