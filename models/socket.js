@@ -62,7 +62,15 @@ module.exports = {
         socket.emitWithLog('connection', {
             message: 'auth succeed'
         });
-        socket.on('challenge', function(containerID, action) {
+        socket.on('challenge', function(data) {
+            if (!data) {
+                return next({
+                    code: "Err1",
+                    msg: "Request Format Invalid (No Args)"
+                });
+            }
+            var containerID = data.containerID;
+            var action = data.action;
             debug("[" + socket._user + "] ON \"challenge\": " + containerID + ", " + action);
             if (typeof containerID !== 'number' || typeof action !== "string") {
                 return next({
