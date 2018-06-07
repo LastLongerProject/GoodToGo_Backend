@@ -29,6 +29,7 @@ var manager = require('./routes/manager');
 var containers = require('./routes/containers');
 
 var app = express();
+var esm;
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -44,10 +45,13 @@ app.use(resBodyParser);
 app.use(helmet());
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use((req, res, next) => {
-    require('express-status-monitor')({
-        title: "GoodToGo Backend Monitor",
-        websocket: app.get('socket.io')
-    })(req, res, next);
+    if (!esm) {
+        esm = require('express-status-monitor')({
+            title: "GoodToGo Backend Monitor",
+            websocket: app.get('socket.io')
+        });
+    }
+    esm(req, res, next);
 });
 
 process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
@@ -159,7 +163,7 @@ function connectMongoDB() {
         // require('./tmp/listUnreturnedContainer')
         appInit.container(app);
         appInit.store(app);
-        if (process.env.NODE_ENV === "testing" || process.env.NODE_ENV === '"testing" ') {
+        if (process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
             debug("Testing ENV no scheduler");
         } else {
             scheduler(app);
