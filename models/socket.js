@@ -14,6 +14,7 @@ module.exports = {
         var dbUser = req._user;
         var uri = "/containers/challenge/socket";
         keys.serverSecretKey(function(err, serverSecretKey) {
+            if (err) return next(err);
             var date = new Date();
             var token = jwt.encode({
                 'iat': Date.now(),
@@ -45,7 +46,6 @@ module.exports = {
                 }
                 if (!decoded || !decoded.user || decoded.exp < Date.now() || decoded.user !== dbKey.phone) {
                     if (thisErr) debug(thisErr);
-                    debug('Authentication error')
                     return next(new Error('Authentication error'));
                 } else {
                     socket._user = decoded.user;
@@ -57,19 +57,19 @@ module.exports = {
     },
     init: function(socket) {
         socket.emitWithLog = addLog(socket);
-        var next = nextInit(socket);
+        let next = nextInit(socket);
 
         socket.emitWithLog('connection', {
             message: 'auth succeed'
         });
         socket.on('challenge', function(containerID, action) {
+            debug("[" + socket._user + "] ON \"challenge\": " + containerID + ", " + action);
             if (typeof containerID !== 'number' || typeof action !== "string") {
                 return next({
                     code: "Err1",
                     msg: "Request Format Invalid"
                 });
             }
-            var dbUser = socket._user;
             var newState = actionTodo.indexOf(action);
             if (newState === -1) return next();
             process.nextTick(() => {
@@ -101,12 +101,12 @@ module.exports = {
 };
 
 var addLog = socket => (flag, data) => {
-    debug(flag + ": " + JSON.stringify(data));
+    debug("[" + socket._user + "] EMIT \"" + flag + "\": " + JSON.stringify(data));
     return socket.emit(flag, data);
 };
 
 function nextInit(socket) {
-    socket.on("error", (args) => debug(args));
+    socket.on("error", (args) => {});
     return function next(err) {
         if (typeof err === "undefined") err = {};
         socket.emitWithLog('error', {
