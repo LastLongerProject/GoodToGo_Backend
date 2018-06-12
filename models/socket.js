@@ -97,7 +97,7 @@ module.exports = {
                         return socket.emitWithLog('reply', {
                             id: parseInt(containerID),
                             succeed: succeed,
-                            message: "Can " + (succeed ? "" : "NOT") + " be " + action,
+                            message: "Can" + (succeed ? "" : " NOT") + " be " + action,
                             originalState: parseInt(theContainer.statusCode),
                             newState: parseInt(newState)
                         });

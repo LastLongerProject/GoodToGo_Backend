@@ -85,62 +85,55 @@ router.get('/get/list', validateDefault, function(req, res, next) {
 
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    var typeDict = req.app.get('containerType');
+    var containerDict = req.app.get('container');
     process.nextTick(function() {
-        Container.find(function(err, list) {
+        Box.find(function(err, boxList) {
             if (err) return next(err);
-            var containerDict = {};
-            for (var i = 0; i < list.length; i++) {
-                containerDict[list[i].ID] = typeDict[list[i].typeCode].name;
-            }
-            Box.find(function(err, boxList) {
-                if (err) return next(err);
-                if (boxList.length === 0) return res.json({
-                    toDelivery: []
-                });
-                var boxArr = [];
-                var thisBox;
-                var thisType;
-                for (var i = 0; i < boxList.length; i++) {
-                    thisBox = boxList[i].boxID;
-                    var thisBoxTypeList = [];
-                    var thisBoxContainerList = {};
-                    for (var j = 0; j < boxList[i].containerList.length; j++) {
-                        thisType = containerDict[boxList[i].containerList[j]];
-                        if (thisBoxTypeList.indexOf(thisType) < 0) {
-                            thisBoxTypeList.push(thisType);
-                            thisBoxContainerList[thisType] = [];
-                        }
-                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+            if (boxList.length === 0) return res.json({
+                toDelivery: []
+            });
+            var boxArr = [];
+            var thisBox;
+            var thisType;
+            for (var i = 0; i < boxList.length; i++) {
+                thisBox = boxList[i].boxID;
+                var thisBoxTypeList = [];
+                var thisBoxContainerList = {};
+                for (var j = 0; j < boxList[i].containerList.length; j++) {
+                    thisType = containerDict[boxList[i].containerList[j]];
+                    if (thisBoxTypeList.indexOf(thisType) < 0) {
+                        thisBoxTypeList.push(thisType);
+                        thisBoxContainerList[thisType] = [];
                     }
-                    boxArr.push({
-                        boxID: thisBox,
-                        boxTime: boxList[i].updatedAt,
-                        phone: boxList[i].user,
-                        typeList: thisBoxTypeList,
-                        containerList: thisBoxContainerList,
-                        stocking: boxList[i].stocking,
-                        isDelivering: boxList[i].delivering,
-                        destinationStore: boxList[i].storeID
+                    thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+                }
+                boxArr.push({
+                    boxID: thisBox,
+                    boxTime: boxList[i].updatedAt,
+                    phone: boxList[i].user,
+                    typeList: thisBoxTypeList,
+                    containerList: thisBoxContainerList,
+                    stocking: boxList[i].stocking,
+                    isDelivering: boxList[i].delivering,
+                    destinationStore: boxList[i].storeID
+                });
+            }
+            for (var i = 0; i < boxArr.length; i++) {
+                boxArr[i].containerOverview = [];
+                for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                    boxArr[i].containerOverview.push({
+                        containerType: boxArr[i].typeList[j],
+                        amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                     });
                 }
-                for (var i = 0; i < boxArr.length; i++) {
-                    boxArr[i].containerOverview = [];
-                    for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                        boxArr[i].containerOverview.push({
-                            containerType: boxArr[i].typeList[j],
-                            amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
-                        });
-                    }
-                }
-                boxArr.sort((a, b) => {
-                    return b.boxTime - a.boxTime;
-                });
-                var resJSON = {
-                    toDelivery: boxArr
-                };
-                res.json(resJSON);
+            }
+            boxArr.sort((a, b) => {
+                return b.boxTime - a.boxTime;
             });
+            var resJSON = {
+                toDelivery: boxArr
+            };
+            res.json(resJSON);
         });
     });
 });
