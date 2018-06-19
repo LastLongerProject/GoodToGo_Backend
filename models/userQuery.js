@@ -348,6 +348,7 @@ module.exports = {
                                 if (err) return done(err);
                                 newUserKey.save(function(err) {
                                     if (err) return done(err);
+                                    var stores = req.app.get('store');
                                     var storeName = getStoreName(stores, dbUser);
                                     var payload = {
                                         apiKey: newUserKey.apiKey,
