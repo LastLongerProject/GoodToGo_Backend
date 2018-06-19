@@ -4,19 +4,23 @@ var router = express.Router();
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
+var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
+var subscribeSNS = require('../models/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
 router.post('/signup', validateDefault, function(req, res, next) {
-    req._permission = false;
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
     userQuery.signup(req, function(err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
+        } else if (info.needCode) {
+            return res.status(205).json(info.body);
         } else {
             res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
@@ -26,8 +30,6 @@ router.post('/signup', validateDefault, function(req, res, next) {
 
 router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
     var dbUser = req._user;
-    if (dbUser.status) return next(dbUser);
-    req._permission = true;
     req.body['role'] = {
         typeCode: "clerk",
         manager: false,
@@ -47,6 +49,27 @@ router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, r
     });
 });
 
+router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function(req, res, next) {
+    req.body['active'] = true;
+    var dbUser = req._user;
+    if (dbUser.role.typeCode === "clerk") {
+        req.body['role'] = {
+            typeCode: "customer"
+        };
+    }
+    req._passCode = true;
+    userQuery.signup(req, function(err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
 router.post('/login', validateDefault, function(req, res, next) {
     userQuery.login(req, function(err, user, info) {
         if (err) {
@@ -61,7 +84,6 @@ router.post('/login', validateDefault, function(req, res, next) {
 });
 
 router.post('/modifypassword', validateRequest, function(req, res, next) {
-    if (req._user.status) return next(req._user);
     userQuery.chanpass(req, function(err, user, info) {
         if (err) {
             return next(err);
@@ -74,8 +96,22 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
     });
 });
 
+router.post('/forgotpassword', validateDefault, function(req, res, next) {
+    userQuery.forgotpass(req, function(err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else if (info.needCode) {
+            return res.status(205).json(info.body);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
 router.post('/logout', validateRequest, function(req, res, next) {
-    if (req._user.status) return next(req._user);
     userQuery.logout(req, function(err, user, info) {
         if (err) {
             return next(err);
@@ -85,15 +121,63 @@ router.post('/logout', validateRequest, function(req, res, next) {
     });
 });
 
+router.post('/subscribeSNS', validateRequest, function(req, res, next) {
+    var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
+    var type = req.body.appType;
+    var system = req.body.system;
+    if (typeof deviceToken === undefined || typeof type === undefined || typeof system === undefined) {
+        return res.status(401).json({
+            code: 'D009',
+            type: 'subscribeMessage',
+            message: 'Content not Complete'
+        });
+    } else if (!(type === "shop" || type === "customer") || !(system === "ios" || system === "android")) {
+        return res.status(401).json({
+            code: 'D010',
+            type: 'subscribeMessage',
+            message: 'Content invalid'
+        });
+    }
+    if (deviceToken === "HEYBITCH") {
+        res.json({
+            type: 'subscribeMessage',
+            message: 'Subscribe succeeded'
+        })
+    } else {
+        var dbUser = req._user;
+        subscribeSNS(system, type, deviceToken, function(err, arn) {
+            if (err) return next(err);
+            var newObject = {}
+            newObject[type + "-" + system] = arn;
+            if (dbUser.pushNotificationArn)
+                for (var key in dbUser.pushNotificationArn)
+                    newObject[key] = dbUser.pushNotificationArn[key];
+            dbUser.pushNotificationArn = newObject;
+            dbUser.save((err) => {
+                if (err) return next(err);
+                res.json({
+                    type: 'subscribeMessage',
+                    message: 'Subscribe succeeded'
+                })
+            });
+        });
+    }
+});
+
 router.get('/data', validateRequest, function(req, res, next) {
     var dbUser = req._user;
     var returned = [];
     var inUsed = [];
     var recordCollection = {};
     process.nextTick(function() {
-        Trade.find({ "tradeType.action": "Rent", "newUser.phone": dbUser.user.phone }, function(err, rentList) {
+        Trade.find({
+            "tradeType.action": "Rent",
+            "newUser.phone": dbUser.user.phone
+        }, function(err, rentList) {
             if (err) return next(err);
-            rentList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+            rentList.sort(function(a, b) {
+                return b.tradeTime - a.tradeTime;
+            });
             recordCollection.usingAmount = rentList.length;
             for (var i = 0; i < rentList.length; i++) {
                 var record = {};
@@ -106,9 +190,14 @@ router.get('/data', validateRequest, function(req, res, next) {
                 record.returned = false;
                 inUsed.push(record);
             }
-            Trade.find({ "tradeType.action": "Return", "oriUser.phone": dbUser.user.phone }, function(err, returnList) {
+            Trade.find({
+                "tradeType.action": "Return",
+                "oriUser.phone": dbUser.user.phone
+            }, function(err, returnList) {
                 if (err) return next(err);
-                returnList.sort(function(a, b) { return b.tradeTime - a.tradeTime; });
+                returnList.sort(function(a, b) {
+                    return b.tradeTime - a.tradeTime;
+                });
                 recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
                     for (var j = inUsed.length - 1; j >= 0; j--) {
@@ -127,7 +216,9 @@ router.get('/data', validateRequest, function(req, res, next) {
                 for (var i = 0; i < returned.length; i++) {
                     recordCollection.data.push(returned[i]);
                 }
-                Trade.count({ "tradeType.action": "Rent" }, function(err, count) {
+                Trade.count({
+                    "tradeType.action": "Return"
+                }, function(err, count) {
                     if (err) return next(err);
                     recordCollection.globalAmount = count;
                     res.set('etag', wetag(JSON.stringify({

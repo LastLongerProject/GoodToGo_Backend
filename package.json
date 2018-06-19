@@ -4,8 +4,9 @@
     "description": "GoodToGo Backend Server",
     "main": "index.js",
     "scripts": {
-        "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & set NODE_DEBUG=redis & nodemon bin/wwwhttp",
-        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & nodemon bin/wwwhttp",
+        "socketDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:*,socket.io:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon bin/wwwhttp",
+        "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=testing & set NODE_DEBUG=redis & nodemon bin/wwwhttp",
+        "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon bin/wwwhttp",
         "test": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & nodemon bin/www",
         "start": "nodemon bin/www --ignore tmp/"
     },
@@ -35,16 +36,19 @@
         "ejs": "~2.5.7",
         "express": "^4.15.4",
         "express-session": "^1.15.6",
-        "express-status-monitor": "^1.0.0",
+        "express-status-monitor": "^1.0.1",
         "google-auth-library": "https://registry.npmjs.org/google-auth-library/-/google-auth-library-0.12.0.tgz",
         "googleapis": "^23.0.0",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.1",
         "mongoose": "^4.13.7",
-        "morgan": "~1.8.2",
+        "morgan": "^1.8.2",
+        "on-finished": "^2.3.0",
+        "on-headers": "^1.0.1",
         "redis": "^2.8.0",
         "serve-favicon": "~2.4.3",
         "sharp": "^0.18.4",
+        "socket.io": "^2.1.0",
         "universal-analytics": "^0.4.16"
     },
     "bugs": {

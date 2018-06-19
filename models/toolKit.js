@@ -31,5 +31,37 @@ module.exports = {
             }
         }
         return str;
+    },
+    validateStateChanging: function(bypass, oriState, newState, callback) {
+        if (bypass) return callback(true);
+        switch (oriState) {
+            case 0: // delivering
+                if (newState !== 1)
+                    return callback(false);
+                break;
+            case 1: // readyToUse
+                if (newState <= 1 || newState === 5)
+                    return callback(false);
+                break;
+            case 2: // rented
+                if (newState !== 3 && newState !== 4)
+                    return callback(false);
+                break;
+            case 3: // returned
+                if (newState !== 4)
+                    return callback(false);
+                break;
+            case 4: // notClean
+                if (newState !== 5)
+                    return callback(false);
+                break;
+            case 5: // boxed
+                if (newState !== 0)
+                    return callback(false);
+                break;
+            default:
+                return callback(false);
+        }
+        callback(true);
     }
 };

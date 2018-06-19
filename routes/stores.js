@@ -14,6 +14,7 @@ var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
@@ -22,6 +23,18 @@ var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 
 const historyDays = 14;
+var getImageUrl;
+
+if (process.env.NODE_ENV === "testing") {
+    getImageUrl = function(src, token) {
+        var index = src.indexOf('images/');
+        return src.slice(0, index) + 'test/' + src.slice(index) + "/" + token;
+    }
+} else {
+    getImageUrl = function(src, token) {
+        return src + "/" + token;
+    }
+}
 
 router.get('/list', validateDefault, function(req, res, next) {
     var jsonData = {
@@ -37,7 +50,8 @@ router.get('/list', validateDefault, function(req, res, next) {
         Store.find({
             "project": {
                 "$ne": "測試用"
-            }
+            },
+            "active": true
         }, {}, {
             sort: {
                 id: 1
@@ -59,29 +73,27 @@ router.get('/list', validateDefault, function(req, res, next) {
                     var token = jwt.encode(payload, key);
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
-                        if (storeList[i].active) {
-                            var tmpOpening = [];
-                            storeList[i].img_info.img_src += ("/" + token);
-                            for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                                tmpOpening.push({
-                                    close: storeList[i].opening_hours[j].close,
-                                    open: storeList[i].opening_hours[j].open
-                                });
-                            tmpOpening.sort((a, b) => {
-                                return a.close.day - b.close.day;
+                        var tmpOpening = [];
+                        storeList[i].img_info.img_src = getImageUrl(storeList[i].img_info.img_src, token);
+                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                            tmpOpening.push({
+                                close: storeList[i].opening_hours[j].close,
+                                open: storeList[i].opening_hours[j].open
                             });
-                            tmpArr.push({
-                                id: storeList[i].id,
-                                name: storeList[i].name,
-                                img_info: storeList[i].img_info,
-                                opening_hours: tmpOpening,
-                                contract: storeList[i].contract,
-                                location: storeList[i].location,
-                                address: storeList[i].address,
-                                type: storeList[i].type,
-                                testing: (storeList[i].project === '正興杯杯') ? false : true
-                            });
-                        }
+                        tmpOpening.sort((a, b) => {
+                            return a.close.day - b.close.day;
+                        });
+                        tmpArr.push({
+                            id: storeList[i].id,
+                            name: storeList[i].name,
+                            img_info: storeList[i].img_info,
+                            opening_hours: tmpOpening,
+                            contract: storeList[i].contract,
+                            location: storeList[i].location,
+                            address: storeList[i].address,
+                            type: storeList[i].type,
+                            testing: (storeList[i].project === '正興杯杯') ? false : true
+                        });
                     }
                     jsonData["shop_data"] = tmpArr;
                     res.json(jsonData);
@@ -119,19 +131,38 @@ router.get('/list.js', function(req, res, next) {
     });
 });
 
-router.get('/clerkList', regAsStoreManager, validateRequest, function(req, res, next) {
-    var dbStore = req._user;
+router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
+    var dbUser = req._user;
+    var condition = {};
+    switch (dbUser.role.typeCode) {
+        case 'admin':
+            condition = {
+                'role.typeCode': 'admin'
+            };
+            break;
+        case 'clerk':
+            condition = {
+                'role.storeID': dbUser.role.storeID
+            };
+            break;
+        default:
+            next();
+    }
     process.nextTick(function() {
-        User.find({
-            'role.storeID': dbStore.role.storeID
-        }, function(err, list) {
+        User.find(condition, function(err, list) {
             if (err) return next(err);
             var resJson = {
                 clerkList: []
             };
             for (var i = 0; i < list.length; i++) {
-                resJson.clerkList.push(list[i].user.phone)
+                resJson.clerkList.push({
+                    phone: list[i].user.phone,
+                    isManager: list[i].role.manager
+                });
             }
+            resJson.clerkList.sort((a, b) => {
+                return (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1;
+            });
             res.json(resJson);
         });
     });
@@ -174,11 +205,11 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
 
 router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = req.app.get('containerType');
-    for (var i = 0; i < type.length; i++) {
+    var forLoopLength = (dbStore.role.storeID === 17) ? type.length : ((type.length < 2) ? type.length : 2);
+    for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
             name: type[i].name,
@@ -217,6 +248,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
+                        if (tmpTypeCode >= 2 && dbStore.role.storeID !== 17) continue;
                         if (containers[i].statusCode === 1) {
                             resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
                             resJson['containers'][tmpTypeCode]['amount']++;
@@ -242,7 +274,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Store.findOne({
             'id': dbStore.role.storeID,
@@ -260,7 +291,6 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
 
 router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Store.findOne({
             'id': dbStore.role.storeID,
@@ -279,7 +309,6 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(re
 
 router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var id = req.params.id;
     var redis = req.app.get('redis');
     process.nextTick(function() {
@@ -314,9 +343,64 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     });
 });
 
-router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
+    var rentedIdList = [];
+    var resJson = {
+        data: []
+    };
+    process.nextTick(function() {
+        Trade.find({
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays),
+                '$lt': dateCheckpoint(1)
+            },
+            'tradeType.action': "Rent",
+            'oriUser.storeID': dbStore.role.storeID
+        }, function(err, rentedList) {
+            if (err) return next(err);
+            rentedList.sort(function(a, b) {
+                return b.tradeTime - a.tradeTime;
+            });
+            for (var i in rentedList)
+                rentedIdList.push(rentedList[i].container.id);
+            Trade.find({
+                'tradeTime': {
+                    '$gte': dateCheckpoint(1 - historyDays),
+                    '$lt': dateCheckpoint(1)
+                },
+                'tradeType.action': "Return",
+                'container.id': {
+                    '$in': rentedIdList
+                }
+            }, function(err, returnedList) {
+                if (err) return next(err);
+                returnedList.sort(function(a, b) {
+                    return b.tradeTime - a.tradeTime;
+                });
+                for (var i in returnedList) {
+                    var index = rentedList.findIndex(function(ele) {
+                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr
+                    });
+                    if (index !== -1) {
+                        rentedList.splice(index, 1);
+                    }
+                }
+                for (var i in rentedList) {
+                    resJson.data.push({
+                        id: rentedList[i].container.id,
+                        phone: rentedList[i].newUser.phone,
+                        rentedTime: rentedList[i].tradeTime.getTime()
+                    });
+                }
+                res.json(resJson);
+            });
+        });
+    });
+});
+
+router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
     var newData = req.body;
     var days = newData.opening_hours;
     if (Array.isArray(days)) {
@@ -358,7 +442,6 @@ router.post('/changeOpeningTime', regAsStore, validateRequest, function(req, res
 
 router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         var containerDict = req.app.get('container');
         var type = req.app.get('containerType');
@@ -465,7 +548,6 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         var funcList = [];
         var type = req.app.get('containerType');
@@ -489,7 +571,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
             .all(funcList)
             .then((data) => {
                 Trade.count({
-                    'tradeType.action': 'Rent'
+                    'tradeType.action': 'Return'
                 }, (err, totalAmount) => {
                     if (err) return next(err);
                     res.json({
@@ -506,7 +588,6 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
 
 router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     var type = req.app.get('containerType');
     process.nextTick(function() {
         Trade.find({
@@ -517,6 +598,7 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
+            if (err) return next(err);
             Trade.find({
                 'tradeTime': {
                     '$gte': dateCheckpoint(1 - historyDays),
@@ -525,6 +607,7 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             }, function(err, returnTrades) {
+                if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
                     parseHistory(rentTrades, 'Rent', type, function(parsedRent) {
                         resJson = {
@@ -549,12 +632,12 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
 
 router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
-    if (dbStore.status) return next(dbStore);
     process.nextTick(function() {
         Trade.find({
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
         }, function(err, rentTrades) {
+            if (err) return next(err);
             if (typeof rentTrades !== 'undefined') {
                 getFavorite(rentTrades, function(userList) {
                     resJson = {};
@@ -710,10 +793,13 @@ function getFavorite(data, callback) {
     }
     var sortable = [];
     for (var phone in count) {
-        sortable.push([phone, count[phone]]);
+        sortable.push({
+            phone: phone,
+            times: count[phone]
+        });
     }
     sortable.sort(function(a, b) {
-        return b[1] - a[1];
+        return b.times - a.times;
     });
     return callback(sortable);
 }

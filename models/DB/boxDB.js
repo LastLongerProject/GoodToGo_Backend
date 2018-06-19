@@ -9,7 +9,8 @@ var userSchema = mongoose.Schema({
     },
     containerList: Array,
     delivering: { type: Boolean, default: false },
-    storeID: Number
+    storeID: Number,
+    stocking: { type: Boolean, default: false }
 }, {
     timestamps: true
 });
