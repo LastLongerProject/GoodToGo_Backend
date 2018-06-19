@@ -147,7 +147,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         var dbUser = req._user;
         subscribeSNS(system, type, deviceToken, function(err, arn) {
             if (err) return next(err);
-            var newObject = {}
+            var newObject = {};
             newObject[type + "-" + system] = arn;
             if (dbUser.pushNotificationArn)
                 for (var key in dbUser.pushNotificationArn)
@@ -169,6 +169,8 @@ router.get('/data', validateRequest, function(req, res, next) {
     var returned = [];
     var inUsed = [];
     var recordCollection = {};
+    var containerType = req.app.get('containerType');
+    var store = req.app.get('store');
     process.nextTick(function() {
         Trade.find({
             "tradeType.action": "Rent",
@@ -178,14 +180,13 @@ router.get('/data', validateRequest, function(req, res, next) {
             rentList.sort(function(a, b) {
                 return b.tradeTime - a.tradeTime;
             });
-            recordCollection.usingAmount = rentList.length;
             for (var i = 0; i < rentList.length; i++) {
                 var record = {};
                 record.container = '#' + intReLength(rentList[i].container.id, 3);
                 record.containerCode = rentList[i].container.id;
                 record.time = rentList[i].tradeTime;
-                record.type = req.app.get('containerType')[rentList[i].container.typeCode].name;
-                record.store = req.app.get('store')[(rentList[i].oriUser.storeID)].name;
+                record.type = containerType[rentList[i].container.typeCode].name;
+                record.store = store[(rentList[i].oriUser.storeID)].name;
                 record.cycle = (typeof rentList[i].container.cycleCtr === 'undefined') ? 0 : rentList[i].container.cycleCtr;
                 record.returned = false;
                 inUsed.push(record);
@@ -198,7 +199,6 @@ router.get('/data', validateRequest, function(req, res, next) {
                 returnList.sort(function(a, b) {
                     return b.tradeTime - a.tradeTime;
                 });
-                recordCollection.usingAmount -= returnList.length;
                 for (var i = 0; i < returnList.length; i++) {
                     for (var j = inUsed.length - 1; j >= 0; j--) {
                         var returnCycle = (typeof returnList[i].container.cycleCtr === 'undefined') ? 0 : returnList[i].container.cycleCtr;
@@ -212,10 +212,8 @@ router.get('/data', validateRequest, function(req, res, next) {
                         }
                     }
                 }
-                recordCollection.data = inUsed;
-                for (var i = 0; i < returned.length; i++) {
-                    recordCollection.data.push(returned[i]);
-                }
+                recordCollection.usingAmount = inUsed.length;
+                recordCollection.data = inUsed.concat(returned);
                 Trade.count({
                     "tradeType.action": "Return"
                 }, function(err, count) {
