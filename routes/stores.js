@@ -109,7 +109,8 @@ router.get('/list.js', function(req, res, next) {
         Place.find({
             "project": {
                 "$ne": "測試用帳號"
-            }
+            },
+            "active": true
         }, {}, {
             sort: {
                 id: 1
