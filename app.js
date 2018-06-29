@@ -163,7 +163,7 @@ function connectMongoDB() {
         // require('./tmp/listUnreturnedContainer')
         appInit.container(app);
         appInit.store(app);
-        if (process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
+        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
             debug("Testing ENV no scheduler");
         } else {
             scheduler(app);

@@ -144,6 +144,7 @@ module.exports = {
                         var PlaceIDFuncList = [];
                         for (var i = 0; i < rows.length; i++) {
                             var row = rows[i];
+                            if (row[1] == "" || row[2] == "") break;
                             PlaceIDFuncList.push(new Promise((resolve, reject) => {
                                 PlaceID.findOneAndUpdate({
                                     'ID': row[0]
@@ -195,7 +196,6 @@ module.exports = {
                                                 .on('end', function() {
                                                     var dataBuffer = Buffer.concat(dataArray);
                                                     var dataObject = JSON.parse(dataBuffer.toString());
-                                                    // console.log(dataObject);
                                                     var type = [];
                                                     for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
                                                         type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
@@ -207,6 +207,10 @@ module.exports = {
                                                     } else {
                                                         opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
                                                         for (var j = 0; j < opening_hours.length; j++) {
+                                                            if (!opening_hours[j].close || opening_hours[j].close.time || opening_hours[j].open || opening_hours[j].open.time) {
+                                                                opening_hours = defaultPeriods;
+                                                                break;
+                                                            }
                                                             opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
                                                             opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                         }
