@@ -4,6 +4,7 @@
     "description": "GoodToGo Backend Server",
     "main": "index.js",
     "scripts": {
+        "googleDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & nodemon bin/wwwhttp",
         "socketDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:*,socket.io:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon bin/wwwhttp",
         "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=testing & set NODE_DEBUG=redis & nodemon bin/wwwhttp",
         "localTest": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon bin/wwwhttp",
