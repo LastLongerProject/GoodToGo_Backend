@@ -12,7 +12,7 @@ var intReLength = require('../models/toolKit').intReLength;
 var subscribeSNS = require('../models/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
-router.post('/signup', validateDefault, function(req, res, next) {
+router.post('/signup', validateDefault, function(req, res, next) { // for CUSTOMER
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
     userQuery.signup(req, function(err, user, info) {
         if (err) {
@@ -28,7 +28,7 @@ router.post('/signup', validateDefault, function(req, res, next) {
     });
 });
 
-router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) { // for CLERK
     var dbUser = req._user;
     req.body['role'] = {
         typeCode: "clerk",
@@ -49,7 +49,7 @@ router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, r
     });
 });
 
-router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function(req, res, next) {
+router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function(req, res, next) { // for ADMIN and CLERK
     req.body['active'] = true;
     var dbUser = req._user;
     if (dbUser.role.typeCode === "clerk") {
@@ -64,7 +64,8 @@ router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, func
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            res.header('Authorization', info.headers.Authorization);
+            if (info.headers)
+                res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });

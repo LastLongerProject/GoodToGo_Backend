@@ -10,125 +10,157 @@ module.exports = {
         var role = req.body['role'] || {
             typeCode: 'customer'
         };
+        var roles = req.body['roles'];
         var phone = req.body['phone'];
         var password = req.body['password'];
         var code = req.body['verification_code'];
         var redis = req.app.get('redis');
-        if (typeof phone === 'undefined' || (typeof password === 'undefined' && !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
+        if (typeof phone === 'undefined' ||
+            (typeof password === 'undefined' &&
+                !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
+        } else if (!(typeof phone === 'string' && phone.length === 10 && isMobilePhone(phone))) {
+            return done(null, false, {
+                code: 'D009',
+                type: 'signupMessage',
+                message: 'Phone is not valid'
+            });
+        } else if (
+            typeof roles === 'undefined' &&
+            ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            return done(null, false, {
+                code: 'D003',
+                type: 'signupMessage',
+                message: 'Role structure invalid'
+            });
         }
-        var stores = req.app.get('store');
-        process.nextTick(function() {
-            User.findOne({
-                'user.phone': phone
-            }, function(err, dbUser) {
-                if (err)
-                    return done(err);
-                if (dbUser) {
-                    if (dbUser.role.typeCode === 'customer' && role.typeCode === 'clerk') {
-                        dbUser.role = role;
-                        dbUser.save(function(err) {
-                            if (err) return done(err);
-                            return done(null, dbUser, {
-                                body: {
-                                    type: 'signupMessage',
-                                    message: 'Authentication succeeded'
-                                }
-                            });
-                        });
-                    } else {
-                        return done(null, false, {
-                            code: 'D002',
-                            type: 'signupMessage',
-                            message: 'That phone is already taken'
-                        });
+        User.findOne({
+            'user.phone': phone
+        }, function(err, dbUser) {
+            if (err)
+                return done(err);
+            if (dbUser) {
+                if ((role.typeCode === 'clerk' || role.typeCode === 'admin') && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                    dbUser.role = role;
+                    switch (role.typeCode) {
+                        case "clerk":
+                            dbUser.roles.typeList.push("clerk");
+                            dbUser.roles.clerk = {
+                                storeID: role.storeID,
+                                manager: role.manager
+                            };
+                            break;
+                        case "admin":
+                            dbUser.roles.typeList.push("admin");
+                            dbUser.roles.admin = {
+                                stationID: role.stationID,
+                                manager: role.manager
+                            };
+                            break;
                     }
+                    dbUser.save(function(err) {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            body: {
+                                type: 'signupMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
                 } else {
-                    if (req._passCode !== true && typeof code === 'undefined') {
-                        if (typeof phone === 'string' && phone.length === 10) {
-                            var newCode = keys.getVerificationCode();
-                            sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    return done(null, false, {
+                        code: 'D002',
+                        type: 'signupMessage',
+                        message: 'That phone is already taken'
+                    });
+                }
+            } else {
+                if (req._passCode !== true && typeof code === 'undefined') {
+                    var newCode = keys.getVerificationCode();
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                        if (err) return done(err);
+                        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
+                            if (err) return done(err);
+                            if (reply !== 'OK') return done(reply);
+                            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
                                 if (err) return done(err);
-                                redis.set('user_verifying:' + phone, newCode, (err, reply) => {
-                                    if (err) return done(err);
-                                    if (reply !== 'OK') return done(reply);
-                                    redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
-                                        if (err) return done(err);
-                                        if (reply !== 1) return done(reply);
-                                        done(null, true, {
-                                            needCode: true,
-                                            body: {
-                                                type: 'signupMessage',
-                                                message: 'Send Again With Verification Code'
-                                            }
-                                        });
-                                    });
+                                if (reply !== 1) return done(reply);
+                                done(null, true, {
+                                    needCode: true,
+                                    body: {
+                                        type: 'signupMessage',
+                                        message: 'Send Again With Verification Code'
+                                    }
                                 });
                             });
-                        } else {
-                            done(null, false, {
-                                code: 'D009',
-                                type: 'signupMessage',
-                                message: 'Phone is not valid'
-                            });
-                        }
-                    } else {
-                        redis.get('user_verifying:' + phone, (err, reply) => {
-                            if (reply === null && req._passCode !== true) return done(null, false, {
-                                code: 'D010',
-                                type: 'signupMessage',
-                                message: 'Verification Code expired'
-                            });
-                            else if (reply !== code && req._passCode !== true) return done(null, false, {
-                                code: 'D011',
-                                type: 'signupMessage',
-                                message: "Verification Code isn't correct"
-                            });
-                            keys.apiKey(function(err, returnKeys) {
-                                if (err) return done(err);
-                                if ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID === 'undefined')) ||
-                                    (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined')) ||
-                                    (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined'))) {
-                                    return done(null, false, {
-                                        code: 'D003',
-                                        type: 'signupMessage',
-                                        message: 'Role structure invalid'
-                                    });
-                                }
-                                var newUser = new User();
-                                newUser.user.phone = phone;
-                                newUser.user.password = newUser.generateHash(password);
-                                newUser.active = req.body['active'];
-                                var newUserKey = new UserKeys();
-                                newUserKey.phone = phone;
-                                newUserKey.userAgent = req.headers['user-agent'];
-                                newUserKey.apiKey = returnKeys.apiKey;
-                                newUserKey.secretKey = returnKeys.secretKey;
-                                newUserKey.user = newUser._id;
-                                newUser.role = role;
-                                newUser.save(function(err) {
-                                    if (err) return done(err);
-                                    newUserKey.save(function(err) {
-                                        if (err) return done(err);
-                                        var storeName = getStoreName(stores, newUser);
-                                        var payload = {
-                                            apiKey: returnKeys.apiKey,
-                                            secretKey: returnKeys.secretKey,
-                                            role: {
-                                                typeCode: newUser.role.typeCode,
-                                                storeID: newUser.role.storeID,
-                                                storeName: storeName,
-                                                manager: newUser.role.manager
-                                            }
+                        });
+                    });
+                } else {
+                    redis.get('user_verifying:' + phone, (err, reply) => {
+                        if (err) return done(err);
+                        if (reply === null && req._passCode !== true) return done(null, false, {
+                            code: 'D010',
+                            type: 'signupMessage',
+                            message: 'Verification Code expired'
+                        });
+                        else if (reply !== code && req._passCode !== true) return done(null, false, {
+                            code: 'D011',
+                            type: 'signupMessage',
+                            message: "Verification Code isn't correct"
+                        });
+                        keys.apiKey(function(err, returnKeys) {
+                            if (err) return done(err);
+                            var newUser = new User();
+                            newUser.user.phone = phone;
+                            newUser.user.password = newUser.generateHash(password);
+                            newUser.active = req.body['active'];
+                            if (typeof roles !== 'undefined') { // v2 api
+                                newUser.roles = roles;
+                                newUser.role = roles[roles.typeList[0]];
+                                newUser.role.typeCode = roles.typeList[0];
+                            } else {
+                                switch (role.typeCode) { // v1 api
+                                    case "clerk":
+                                        newUser.roles.typeList.push("clerk");
+                                        newUser.roles.clerk = {
+                                            storeID: role.storeID,
+                                            manager: role.manager || false
                                         };
-                                        var token = jwt.encode(payload, returnKeys.serverSecretKey);
+                                        break;
+                                    case "admin":
+                                        newUser.roles.typeList.push("admin");
+                                        newUser.roles.admin = {
+                                            stationID: role.stationID,
+                                            manager: role.manager || false
+                                        };
+                                        break;
+                                }
+                                newUser.roles.typeList.push("customer");
+                                newUser.role = role;
+                            }
+                            var newUserKey = new UserKeys();
+                            newUserKey.phone = phone;
+                            newUserKey.userAgent = req.headers['user-agent'];
+                            newUserKey.apiKey = returnKeys.apiKey;
+                            newUserKey.secretKey = returnKeys.secretKey;
+                            newUserKey.user = newUser._id;
+                            newUserKey.roleType = newUser.roles.typeList[0];
+                            newUser.save(function(err) {
+                                if (err) return done(err);
+                                newUserKey.save(function(err) {
+                                    if (err) return done(err);
+                                    redis.del('user_verifying:' + phone, (err, delReply) => {
+                                        if (err && req._passCode !== true) return done(err);
+                                        if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
                                         return done(null, true, {
                                             headers: {
-                                                Authorization: token
+                                                Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, newUser)
                                             },
                                             body: {
                                                 type: 'signupMessage',
@@ -136,14 +168,76 @@ module.exports = {
                                             }
                                         });
                                     });
+
                                 });
                             });
                         });
-                    }
+                    });
                 }
-            });
+            }
         });
     },
+    // login_backup: function(req, done) {
+    //     var phone = req.body['phone'];
+    //     var password = req.body['password'];
+    //     if (typeof phone === 'undefined' || typeof password === 'undefined') {
+    //         return done(null, false, {
+    //             code: 'D004',
+    //             type: 'loginMessage',
+    //             message: 'Content not Complete'
+    //         });
+    //     }
+    //     process.nextTick(function() {
+    //         keys.apiKey(function(err, returnKeys) {
+    //             if (err) return done(err);
+    //             User.findOne({
+    //                 'user.phone': phone
+    //             }, function(err, dbUser) {
+    //                 if (err)
+    //                     return done(err);
+    //                 if (!dbUser)
+    //                     return done(null, false, {
+    //                         code: 'D005',
+    //                         type: 'loginMessage',
+    //                         message: 'No user found'
+    //                     });
+    //                 if (!dbUser.validPassword(password))
+    //                     return done(null, false, {
+    //                         code: 'D006',
+    //                         type: 'loginMessage',
+    //                         message: 'Wrong password'
+    //                     });
+    //                 var newSecretKey = returnKeys.secretKey;
+    //                 UserKeys.findOneAndUpdate({
+    //                     'phone': phone,
+    //                     'userAgent': req.headers['user-agent']
+    //                 }, {
+    //                     'secretKey': newSecretKey,
+    //                     '$setOnInsert': {
+    //                         'apiKey': returnKeys.apiKey,
+    //                         'user': dbUser._id,
+    //                         'userAgent': req.headers['user-agent']
+    //                     }
+    //                 }, {
+    //                     new: true,
+    //                     upsert: true,
+    //                     setDefaultsOnInsert: true
+    //                 }, (err, keyPair) => {
+    //                     if (err) return done(err);
+    //                     return done(null, dbUser, {
+    //                         headers: {
+    //                             Authorization: tokenBuilder(req, returnKeys.serverSecretKey, keyPair, dbUser)
+    //                         },
+    //                         body: {
+    //                             type: 'loginMessage',
+    //                             message: 'Authentication succeeded'
+    //                         }
+    //                     });
+    //                 });
+    //             });
+    //         });
+    //     });
+    // },
     login: function(req, done) {
         var phone = req.body['phone'];
         var password = req.body['password'];
@@ -154,61 +248,62 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        var stores = req.app.get('store');
         process.nextTick(function() {
-            keys.apiKey(function(err, returnKeys) {
-                if (err) return done(err);
-                User.findOne({
-                    'user.phone': phone
-                }, function(err, dbUser) {
-                    if (err)
-                        return done(err);
-                    if (!dbUser)
-                        return done(null, false, {
-                            code: 'D005',
-                            type: 'loginMessage',
-                            message: 'No user found'
-                        });
-                    if (!dbUser.validPassword(password))
-                        return done(null, false, {
-                            code: 'D006',
-                            type: 'loginMessage',
-                            message: 'Wrong password'
-                        });
-                    var newSecretKey = returnKeys.secretKey;
-                    UserKeys.findOneAndUpdate({
-                        'phone': phone,
-                        'userAgent': req.headers['user-agent']
-                    }, {
-                        'secretKey': newSecretKey,
-                        '$setOnInsert': {
-                            'apiKey': returnKeys.apiKey,
-                            'user': dbUser._id,
-                            'userAgent': req.headers['user-agent']
-                        }
-                    }, {
-                        upsert: true,
-                        setDefaultsOnInsert: true
-                    }, (err, keyPair) => {
-                        if (err) return done(err);
-                        dbUser.save(function(err) {
-                            if (err) return done(err);
-                            var storeName = getStoreName(stores, dbUser);
-                            var apiKey = (!keyPair) ? returnKeys.apiKey : keyPair.apiKey;
-                            var payload = {
-                                apiKey: apiKey,
-                                secretKey: newSecretKey,
-                                role: {
-                                    typeCode: dbUser.role.typeCode,
-                                    storeID: dbUser.role.storeID,
-                                    storeName: storeName,
-                                    manager: dbUser.role.manager
+            User.findOne({
+                'user.phone': phone
+            }, function(err, dbUser) {
+                if (err)
+                    return done(err);
+                if (!dbUser)
+                    return done(null, false, {
+                        code: 'D005',
+                        type: 'loginMessage',
+                        message: 'No user found'
+                    });
+                if (!dbUser.validPassword(password))
+                    return done(null, false, {
+                        code: 'D006',
+                        type: 'loginMessage',
+                        message: 'Wrong password'
+                    });
+                var funcList = [];
+                var typeList = dbUser.roles.typeList;
+                for (var i = 0; i < typeList.length; i++) {
+                    funcList.push(new Promise((resolve, reject) => {
+                        var thisCtr = i;
+                        keys.keyPair(function(err, returnKeys) {
+                            if (err) return reject(err);
+                            var newSecretKey = returnKeys.secretKey;
+                            UserKeys.findOneAndUpdate({
+                                'phone': phone,
+                                'userAgent': req.headers['user-agent'],
+                                'roleType': typeList[thisCtr]
+                            }, {
+                                'secretKey': newSecretKey,
+                                '$setOnInsert': {
+                                    'apiKey': returnKeys.apiKey,
+                                    'user': dbUser._id,
+                                    'userAgent': req.headers['user-agent']
                                 }
-                            };
-                            var token = jwt.encode(payload, returnKeys.serverSecretKey);
+                            }, {
+                                new: true,
+                                upsert: true,
+                                setDefaultsOnInsert: true
+                            }, (err, keyPair) => {
+                                if (err) return reject(err);
+                                resolve(keyPair);
+                            });
+                        });
+                    }));
+                }
+                Promise
+                    .all(funcList)
+                    .then((keyPairList) => {
+                        keys.serverSecretKey((err, serverSecretKey) => {
+                            if (err) return done(err);
                             return done(null, dbUser, {
                                 headers: {
-                                    Authorization: token
+                                    Authorization: tokenBuilder(req, serverSecretKey, keyPairList, dbUser)
                                 },
                                 body: {
                                     type: 'loginMessage',
@@ -216,8 +311,10 @@ module.exports = {
                                 }
                             });
                         });
+                    })
+                    .catch((err) => {
+                        if (err) return done(err);
                     });
-                });
             });
         });
     },
@@ -231,7 +328,6 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        var stores = req.app.get('store');
         var dbUser = req._user;
         var dbKey = req._key;
         if (!dbUser.validPassword(oriPassword))
@@ -247,21 +343,9 @@ module.exports = {
                 if (err) return done(err);
                 dbKey.save(function(err) {
                     if (err) return done(err);
-                    var storeName = getStoreName(stores, dbUser);
-                    var payload = {
-                        apiKey: dbKey.apiKey,
-                        secretKey: dbKey.secretKey,
-                        role: {
-                            typeCode: dbUser.role.typeCode,
-                            storeID: dbUser.role.storeID,
-                            storeName: storeName,
-                            manager: dbUser.role.manager
-                        }
-                    };
-                    var token = jwt.encode(payload, returnKeys.serverSecretKey);
                     return done(null, dbUser, {
                         headers: {
-                            Authorization: token
+                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, dbKey, dbUser)
                         },
                         body: {
                             type: 'chanPassMessage',
@@ -348,27 +432,18 @@ module.exports = {
                                 if (err) return done(err);
                                 newUserKey.save(function(err) {
                                     if (err) return done(err);
-                                    var stores = req.app.get('store');
-                                    var storeName = getStoreName(stores, dbUser);
-                                    var payload = {
-                                        apiKey: newUserKey.apiKey,
-                                        secretKey: newUserKey.secretKey,
-                                        role: {
-                                            typeCode: dbUser.role.typeCode,
-                                            storeID: dbUser.role.storeID,
-                                            storeName: storeName,
-                                            manager: dbUser.role.manager
-                                        }
-                                    };
-                                    var token = jwt.encode(payload, returnKeys.serverSecretKey);
-                                    return done(null, dbUser, {
-                                        headers: {
-                                            Authorization: token
-                                        },
-                                        body: {
-                                            type: 'forgotPassMessage',
-                                            message: 'Change Password succeeded'
-                                        }
+                                    redis.del('newPass_verifying:' + phone, (err, delReply) => {
+                                        if (err) return done(err);
+                                        if (delReply !== 1) return done("delReply: " + delReply);
+                                        return done(null, dbUser, {
+                                            headers: {
+                                                Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, dbUser)
+                                            },
+                                            body: {
+                                                type: 'forgotPassMessage',
+                                                message: 'Change Password succeeded'
+                                            }
+                                        });
                                     });
                                 });
                             });
@@ -391,6 +466,12 @@ module.exports = {
     }
 };
 
+function isMobilePhone(phone) {
+    var reg = /^[09]{2}[0-9]{8}$/;
+
+    return reg.test(phone);
+}
+
 function getStoreName(storeList, dbUser) {
     if (typeof dbUser.role.storeID === 'undefined') return undefined;
     var theStore = storeList.find((aStore) => {
@@ -398,4 +479,68 @@ function getStoreName(storeList, dbUser) {
     });
     if (theStore) return theStore.name;
     else return "找不到店家";
+}
+
+function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
+    var stores = req.app.get('store');
+    var storeName = getStoreName(stores, dbUser);
+    var payload;
+    if (Array.isArray(userKey)) {
+        var keyDict = {};
+        for (var i in userKey) {
+            keyDict[userKey[i].roleType] = userKey[i];
+        }
+        payload = {
+            apiKey: keyDict[dbUser.role.typeCode].apiKey,
+            secretKey: keyDict[dbUser.role.typeCode].secretKey,
+            role: {
+                typeCode: dbUser.role.typeCode,
+                storeID: dbUser.role.storeID,
+                storeName: storeName,
+                manager: dbUser.role.manager
+            },
+            roles: {
+                typeList: dbUser.roles.typeList,
+                customer: {
+                    apiKey: keyDict.customer.apiKey,
+                    secretKey: keyDict.customer.secretKey,
+                }
+            }
+        };
+        if (keyDict.clerk) {
+            payload.roles.clerk = {
+                storeID: dbUser.roles.clerk.storeID,
+                manager: dbUser.roles.clerk.manager,
+                apiKey: keyDict.clerk.apiKey,
+                secretKey: keyDict.clerk.secretKey,
+                storeName: storeName
+            };
+        }
+        if (keyDict.admin) {
+            payload.roles.admin = {
+                stationID: dbUser.roles.admin.stationID,
+                manager: dbUser.roles.admin.manager,
+                apiKey: keyDict.admin.apiKey,
+                secretKey: keyDict.admin.secretKey,
+            };
+        }
+    } else {
+        payload = {
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+            role: {
+                typeCode: dbUser.role.typeCode,
+                storeID: dbUser.role.storeID,
+                stationID: dbUser.role.stationID,
+                storeName: storeName,
+                manager: dbUser.role.manager
+            },
+            roles: dbUser.roles
+        };
+        if (payload.roles && payload.roles.clerk) {
+            payload.roles.clerk.storeName = storeName;
+        }
+    }
+    var token = jwt.encode(payload, serverSecretKey);
+    return token;
 }

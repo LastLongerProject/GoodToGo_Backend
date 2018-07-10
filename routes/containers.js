@@ -823,7 +823,6 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     });
                 }
             }
-            var userQuery = {};
             User.findOne({
                 'user.phone': (action === 'Rent') ? key : container.conbineTo
             }, function(err, dbOri) {
@@ -852,7 +851,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                 } else if (action === 'ReadyToClean') {
                     if (typeof tmpStoreId !== 'undefined' && tmpStoreId !== -1) {
                         dbOri.role.storeID = tmpStoreId;
-                    } else if (container.statusCode === 1 && dbOri.role.typeCode === 'admin') { // 乾淨回收
+                    } else if (container.statusCode === 1 && dbOri.roles.typeList.indexOf('admin') >= 0) { // 乾淨回收
                         dbOri.role.storeID = container.storeID;
                     }
                 }

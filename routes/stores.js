@@ -134,7 +134,7 @@ router.get('/list.js', function(req, res, next) {
 
 router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
     var dbUser = req._user;
-    var condition = {};
+    var condition;
     switch (dbUser.role.typeCode) {
         case 'admin':
             condition = {
@@ -193,6 +193,8 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
             clerk.role.storeID = undefined;
             clerk.role.manager = undefined;
             clerk.role.typeCode = 'customer';
+            clerk.roles.clerk = null;
+            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf("clerk"), 1);
             clerk.save(function(err) {
                 if (err) return next(err);
                 res.json({
@@ -381,7 +383,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
                 });
                 for (var i in returnedList) {
                     var index = rentedList.findIndex(function(ele) {
-                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr
+                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
                     });
                     if (index !== -1) {
                         rentedList.splice(index, 1);
