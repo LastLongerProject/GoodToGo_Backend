@@ -22,7 +22,7 @@ var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 
-const historyDays = 14;
+const historyDays = 30;
 var getImageUrl;
 
 if (process.env.NODE_ENV === "testing") {
@@ -623,10 +623,105 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
                             resJson.returnHistory = {
                                 amount: parsedReturn.length,
                                 dataList: parsedReturn
-                            }
+                            };
                             res.json(resJson);
                         });
                     });
+                }
+            });
+        });
+    });
+});
+
+router.get('/history/byContainerType', regAsStore, validateRequest, function(req, res, next) {
+    var dbStore = req._user;
+    var type = req.app.get('containerType');
+    var tradeTimeQuery = (req.query['days']) ? {
+        '$gte': dateCheckpoint(1 - parseInt(req.query['days'])),
+        '$lt': dateCheckpoint(1)
+    } : undefined;
+    process.nextTick(function() {
+        Trade.find({
+            'tradeTime': tradeTimeQuery,
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.role.storeID
+        }, {}, {
+            sort: {
+                tradeTime: -1
+            }
+        }, function(err, rentTrades) {
+            if (err) return next(err);
+            Trade.find({
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Return',
+                'newUser.storeID': dbStore.role.storeID
+            }, {}, {
+                sort: {
+                    tradeTime: -1
+                }
+            }, function(err, returnTrades) {
+                if (err) return next(err);
+                if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
+                    var newTypeArrGenerator = function() {
+                        var tmpArr = [];
+                        for (var i = 0; i < type.length; i++) {
+                            tmpArr.push({
+                                typeCode: type[i].typeCode,
+                                name: type[i].name,
+                                IdList: [],
+                                amount: 0
+                            });
+                        }
+                        return tmpArr;
+                    };
+                    var dateCtr = 1;
+                    var checkpoint = dateCheckpoint(dateCtr);
+                    var resJson = {
+                        usedHistory: [],
+                        reloadedHistory: []
+                    };
+                    var tmpDateKey = fullDateString(checkpoint);
+                    for (var i in resJson) {
+                        resJson[i].push({
+                            date: tmpDateKey,
+                            amount: 0,
+                            data: newTypeArrGenerator()
+                        });
+                    }
+                    var tmpTypeCode;
+                    for (var i = 0; i < rentTrades.length; i++) {
+                        if (checkpoint - rentTrades[i].tradeTime > 0) {
+                            checkpoint = dateCheckpoint(--dateCtr);
+                            resJson.usedHistory.push({
+                                date: fullDateString(checkpoint),
+                                amount: 0,
+                                data: newTypeArrGenerator()
+                            });
+                            i--;
+                        } else {
+                            tmpTypeCode = rentTrades[i].container.typeCode;
+                            resJson.usedHistory[resJson.usedHistory.length - 1].data[tmpTypeCode].IdList.push(rentTrades[i].container.id);
+                            resJson.usedHistory[resJson.usedHistory.length - 1].data[tmpTypeCode].amount++;
+                        }
+                    }
+                    dateCtr = 1;
+                    checkpoint = dateCheckpoint(dateCtr);
+                    for (var i = 0; i < returnTrades.length; i++) {
+                        if (checkpoint - returnTrades[i].tradeTime > 0) {
+                            checkpoint = dateCheckpoint(--dateCtr);
+                            resJson.reloadedHistory.push({
+                                date: fullDateString(checkpoint),
+                                amount: 0,
+                                data: newTypeArrGenerator()
+                            });
+                            i--;
+                        } else {
+                            tmpTypeCode = returnTrades[i].container.typeCode;
+                            resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].IdList.push(returnTrades[i].container.id);
+                            resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].amount++;
+                        }
+                    }
+                    res.json(resJson);
                 }
             });
         });
@@ -714,11 +809,8 @@ function parseHistory(data, dataType, type, callback) {
     // console.log(dateCheckpoint(date))
     // console.log(byOrderArr[0].time)
     while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > (-1 * historyDays)) {
-        dateFormatted = dateCheckpoint(date);
-        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         byDateArr.push({
-            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+            date: fullDateString(dateCheckpoint(date)),
             orderAmount: tmpOrderAmount,
             orderList: tmpOrderList
         });
@@ -734,15 +826,12 @@ function parseHistory(data, dataType, type, callback) {
         aOrder.time = hoursFormatted + ":" + minutesFormatted;
         tmpOrderList.push(aOrder);
         if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
-            dateFormatted = dateCheckpoint(date);
-            dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-            monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
             tmpOrderAmount = 0;
             for (var j = 0; j < tmpOrderList.length; j++) {
                 tmpOrderAmount += tmpOrderList[j].containerAmount;
             }
             byDateArr.push({
-                date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+                date: fullDateString(dateCheckpoint(date)),
                 orderAmount: tmpOrderAmount,
                 orderList: tmpOrderList
             });
@@ -752,11 +841,8 @@ function parseHistory(data, dataType, type, callback) {
     }
     tmpOrderAmount = 0;
     while (date > (-1 * historyDays)) {
-        dateFormatted = dateCheckpoint(date);
-        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         byDateArr.push({
-            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+            date: fullDateString(dateCheckpoint(date)),
             orderAmount: tmpOrderAmount,
             orderList: tmpOrderList
         });
@@ -805,6 +891,12 @@ function getFavorite(data, callback) {
         return b.times - a.times;
     });
     return callback(sortable);
+}
+
+function fullDateString(date) {
+    dayFormatted = intReLength(dayFormatter(date), 2);
+    monthFormatted = intReLength((date.getMonth() + 1), 2);
+    return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
 }
 
 module.exports = router;
