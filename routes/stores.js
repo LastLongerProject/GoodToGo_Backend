@@ -712,6 +712,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                         console.log(checkpoint, returnTrades[i].tradeTime, checkpoint - returnTrades[i].tradeTime);
                         if (checkpoint - returnTrades[i].tradeTime > 1000 * 60 * 60 * 24) {
                             checkpoint = dateCheckpoint(--dateCtr);
+                            console.log(fullDateString(checkpoint));
                             resJson.reloadedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
