@@ -680,23 +680,15 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                         usedHistory: [],
                         reloadedHistory: []
                     };
-                    var tmpDateKey = fullDateString(checkpoint);
-                    for (var i in resJson) {
-                        resJson[i].push({
-                            date: tmpDateKey,
-                            amount: 0,
-                            data: newTypeArrGenerator()
-                        });
-                    }
                     var tmpTypeCode;
                     for (var i = 0; i < rentTrades.length; i++) {
                         if (checkpoint - rentTrades[i].tradeTime > 0) {
-                            checkpoint = dateCheckpoint(--dateCtr);
                             resJson.usedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
                                 data: newTypeArrGenerator()
                             });
+                            checkpoint = dateCheckpoint(--dateCtr);
                             i--;
                         } else {
                             tmpTypeCode = rentTrades[i].container.typeCode;
@@ -708,12 +700,12 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                     checkpoint = dateCheckpoint(dateCtr);
                     for (var i = 0; i < returnTrades.length; i++) {
                         if (checkpoint - returnTrades[i].tradeTime > 0) {
-                            checkpoint = dateCheckpoint(--dateCtr);
                             resJson.reloadedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
                                 data: newTypeArrGenerator()
                             });
+                            checkpoint = dateCheckpoint(--dateCtr);
                             i--;
                         } else {
                             tmpTypeCode = returnTrades[i].container.typeCode;
