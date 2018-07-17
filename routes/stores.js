@@ -8,6 +8,7 @@ var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dayFormatter = require('../models/toolKit').dayFormatter;
+var monthFormatter = require('../models/toolKit').monthFormatter;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var validateDefault = require('../models/validation/validateDefault');
@@ -900,7 +901,7 @@ function getFavorite(data, callback) {
 
 function fullDateString(date) {
     dayFormatted = intReLength(dayFormatter(date), 2);
-    monthFormatted = intReLength((date.getMonth() + 1), 2);
+    monthFormatted = intReLength(monthFormatter(date), 2);
     return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
 }
 

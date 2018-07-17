@@ -24,6 +24,12 @@ module.exports = {
             localDate.setDate(localDate.getDate() + 1);
         return localDate.getDate();
     },
+    monthFormatter: function(dateToFormat) {
+        var localDate = new Date(dateToFormat);
+        if (localDate.getHours() >= 16)
+            localDate.setDate(localDate.getDate() + 1);
+        return localDate.getMonth() + 1;
+    },
     intReLength: function(data, length) {
         var str = data.toString();
         if (length - str.length) {
@@ -76,6 +82,9 @@ if (process.env.OS === 'Windows_NT') {
     };
     module.exports.dayFormatter = function(dateToFormat) {
         return dateToFormat.getDate();
+    };
+    module.exports.monthFormatter = function(dateToFormat) {
+        return dateToFormat.getMonth() + 1;
     };
 }
 console.log(module.exports.dateCheckpoint(0));
