@@ -675,58 +675,42 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                         }
                         return tmpArr;
                     };
-                    var dateCtr = 0;
-                    var checkpoint = dateCheckpoint(dateCtr);
                     var resJson = {
                         usedHistory: [],
                         reloadedHistory: []
                     };
-                    var tmpDateKey = fullDateString(checkpoint);
                     var ctr = 0;
                     for (var i in resJson) {
                         if (([rentTrades, returnTrades])[ctr++].length > 0)
                             resJson[i].push({
-                                date: tmpDateKey,
+                                date: fullDateString(dateCheckpoint(0)),
                                 amount: 0,
                                 data: newTypeArrGenerator()
                             });
                     }
-                    var tmpTypeCode;
-                    for (var i = 0; i < rentTrades.length; i++) {
-                        if (checkpoint - rentTrades[i].tradeTime > 0) {
-                            checkpoint = dateCheckpoint(--dateCtr);
-                            resJson.usedHistory.push({
-                                date: fullDateString(checkpoint),
-                                amount: 0,
-                                data: newTypeArrGenerator()
-                            });
-                            i--;
-                        } else {
-                            tmpTypeCode = rentTrades[i].container.typeCode;
-                            resJson.usedHistory[resJson.usedHistory.length - 1].data[tmpTypeCode].IdList.push(rentTrades[i].container.id);
-                            resJson.usedHistory[resJson.usedHistory.length - 1].data[tmpTypeCode].amount++;
+                    var usageByDateByTypeGenerator = function(arrToParse, resultArr) {
+                        var tmpTypeCode;
+                        var dateCtr = 0;
+                        var checkpoint = dateCheckpoint(dateCtr);
+                        for (var i = 0; i < arrToParse.length; i++) {
+                            if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
+                                checkpoint = dateCheckpoint(--dateCtr);
+                                resultArr.push({
+                                    date: fullDateString(checkpoint),
+                                    amount: 0,
+                                    data: newTypeArrGenerator()
+                                });
+                                i--;
+                            } else {
+                                tmpTypeCode = arrToParse[i].container.typeCode;
+                                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
+                                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                                resultArr[resultArr.length - 1].amount++;
+                            }
                         }
-                    }
-                    dateCtr = 0;
-                    checkpoint = dateCheckpoint(dateCtr);
-                    for (var i = 0; i < returnTrades.length; i++) {
-                        if (returnTrades[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || returnTrades[i].tradeTime - checkpoint < 0) {
-                            dateCtr--;
-                            checkpoint = dateCheckpoint(dateCtr);
-                            console.log(fullDateString(checkpoint), checkpoint, returnTrades[i].tradeTime, returnTrades[i].tradeTime - checkpoint, returnTrades[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24);
-                            resJson.reloadedHistory.push({
-                                date: fullDateString(checkpoint),
-                                amount: 0,
-                                data: newTypeArrGenerator()
-                            });
-                            i--;
-                        } else {
-                            console.log(checkpoint, returnTrades[i].tradeTime, returnTrades[i].tradeTime - checkpoint);
-                            tmpTypeCode = returnTrades[i].container.typeCode;
-                            resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].IdList.push(returnTrades[i].container.id);
-                            resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].amount++;
-                        }
-                    }
+                    };
+                    usageByDateByTypeGenerator(rentTrades, resJson.usedHistory);
+                    usageByDateByTypeGenerator(returnTrades, resJson.reloadedHistory);
                     res.json(resJson);
                 }
             });

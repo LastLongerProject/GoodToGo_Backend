@@ -338,7 +338,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                                 data.forEach(element => {
                                     if (element[1] === 'err')
                                         element.forEach((ele) => {
-                                            console.log(ele);
+                                            debug(ele);
                                         });
                                 });
                             })

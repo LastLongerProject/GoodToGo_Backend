@@ -87,5 +87,3 @@ if (process.env.OS === 'Windows_NT') {
         return dateToFormat.getMonth() + 1;
     };
 }
-console.log(module.exports.dateCheckpoint(0));
-console.log(module.exports.dayFormatter(module.exports.dateCheckpoint(0)));
