@@ -709,7 +709,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                     dateCtr = 0;
                     checkpoint = dateCheckpoint(dateCtr);
                     for (var i = 0; i < returnTrades.length; i++) {
-                        if (checkpoint - returnTrades[i].tradeTime > 0) {
+                        if (checkpoint - returnTrades[i].tradeTime > 1000 * 60 * 60 * 24) {
                             checkpoint = dateCheckpoint(--dateCtr);
                             resJson.reloadedHistory.push({
                                 date: fullDateString(checkpoint),
