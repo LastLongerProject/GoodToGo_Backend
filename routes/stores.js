@@ -674,21 +674,31 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                         }
                         return tmpArr;
                     };
-                    var dateCtr = 1;
+                    var dateCtr = 0;
                     var checkpoint = dateCheckpoint(dateCtr);
                     var resJson = {
                         usedHistory: [],
                         reloadedHistory: []
                     };
+                    var tmpDateKey = fullDateString(checkpoint);
+                    var ctr = 0;
+                    for (var i in resJson) {
+                        if (([rentTrades, returnTrades])[ctr++].length > 0)
+                            resJson[i].push({
+                                date: tmpDateKey,
+                                amount: 0,
+                                data: newTypeArrGenerator()
+                            });
+                    }
                     var tmpTypeCode;
                     for (var i = 0; i < rentTrades.length; i++) {
                         if (checkpoint - rentTrades[i].tradeTime > 0) {
+                            checkpoint = dateCheckpoint(--dateCtr);
                             resJson.usedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
                                 data: newTypeArrGenerator()
                             });
-                            checkpoint = dateCheckpoint(--dateCtr);
                             i--;
                         } else {
                             tmpTypeCode = rentTrades[i].container.typeCode;
@@ -696,16 +706,16 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                             resJson.usedHistory[resJson.usedHistory.length - 1].data[tmpTypeCode].amount++;
                         }
                     }
-                    dateCtr = 1;
+                    dateCtr = 0;
                     checkpoint = dateCheckpoint(dateCtr);
                     for (var i = 0; i < returnTrades.length; i++) {
                         if (checkpoint - returnTrades[i].tradeTime > 0) {
+                            checkpoint = dateCheckpoint(--dateCtr);
                             resJson.reloadedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
                                 data: newTypeArrGenerator()
                             });
-                            checkpoint = dateCheckpoint(--dateCtr);
                             i--;
                         } else {
                             tmpTypeCode = returnTrades[i].container.typeCode;
