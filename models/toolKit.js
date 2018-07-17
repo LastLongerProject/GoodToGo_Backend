@@ -65,3 +65,17 @@ module.exports = {
         callback(true);
     }
 };
+
+if (process.env.OS === 'Windows_NT') {
+    debug("Windows Version toolkit");
+    module.exports.dateCheckpoint = function(checkpoint) {
+        var dateNow = new Date();
+        var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, 0, 0, 0, 0);
+        return date;
+    };
+    module.exports.dayFormatter = function(dateToFormat) {
+        return dateToFormat.getDate();
+    };
+}
+console.log(module.exports.dateCheckpoint(0));
+console.log(module.exports.dayFormatter(module.exports.dateCheckpoint(0)));
