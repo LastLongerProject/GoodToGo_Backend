@@ -709,10 +709,10 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                     dateCtr = 0;
                     checkpoint = dateCheckpoint(dateCtr);
                     for (var i = 0; i < returnTrades.length; i++) {
-                        if (parseInt(checkpoint - returnTrades[i].tradeTime) > 1000 * 60 * 60 * 24) {
+                        if (returnTrades[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || returnTrades[i].tradeTime - checkpoint < 0) {
                             dateCtr--;
                             checkpoint = dateCheckpoint(dateCtr);
-                            console.log(fullDateString(checkpoint), checkpoint, returnTrades[i].tradeTime, checkpoint - returnTrades[i].tradeTime, checkpoint - returnTrades[i].tradeTime > 1000 * 60 * 60 * 24);
+                            console.log(fullDateString(checkpoint), checkpoint, returnTrades[i].tradeTime, returnTrades[i].tradeTime - checkpoint, returnTrades[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24);
                             resJson.reloadedHistory.push({
                                 date: fullDateString(checkpoint),
                                 amount: 0,
@@ -720,7 +720,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
                             });
                             i--;
                         } else {
-                            console.log(checkpoint, returnTrades[i].tradeTime, checkpoint - returnTrades[i].tradeTime);
+                            console.log(checkpoint, returnTrades[i].tradeTime, returnTrades[i].tradeTime - checkpoint);
                             tmpTypeCode = returnTrades[i].container.typeCode;
                             resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].IdList.push(returnTrades[i].container.id);
                             resJson.reloadedHistory[resJson.reloadedHistory.length - 1].data[tmpTypeCode].amount++;

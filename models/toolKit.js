@@ -19,9 +19,10 @@ module.exports = {
         return date;
     },
     dayFormatter: function(dateToFormat) {
-        if (dateToFormat.getHours() >= 16)
-            dateToFormat.setDate(dateToFormat.getDate() + 1);
-        return dateToFormat.getDate();
+        var localDate = new Date(dateToFormat);
+        if (localDate.getHours() >= 16)
+            localDate.setDate(localDate.getDate() + 1);
+        return localDate.getDate();
     },
     intReLength: function(data, length) {
         var str = data.toString();
