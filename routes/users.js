@@ -152,8 +152,8 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
             if (dbUser.pushNotificationArn)
                 for (var key in dbUser.pushNotificationArn)
                     newObject[key] = dbUser.pushNotificationArn[key];
+            newObject[type + "-" + system] = arn;
             dbUser.pushNotificationArn = newObject;
-            dbUser.pushNotificationArn[type + "-" + system] = arn;
             dbUser.save((err) => {
                 if (err) return next(err);
                 res.json({

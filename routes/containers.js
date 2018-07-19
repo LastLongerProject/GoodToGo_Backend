@@ -315,7 +315,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                 aBox.save(function(err) {
                     if (err) return next(err);
                     User.find({
-                        'role.storeID': storeID
+                        'roles.clerk.storeID': storeID
                     }, function(err, userList) {
                         var funcList = [];
                         for (var i in userList) {
