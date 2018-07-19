@@ -149,11 +149,11 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         subscribeSNS(system, type, deviceToken, function(err, arn) {
             if (err) return next(err);
             var newObject = {};
-            newObject[type + "-" + system] = arn;
             if (dbUser.pushNotificationArn)
                 for (var key in dbUser.pushNotificationArn)
                     newObject[key] = dbUser.pushNotificationArn[key];
             dbUser.pushNotificationArn = newObject;
+            newObject[type + "-" + system] = arn;
             dbUser.save((err) => {
                 if (err) return next(err);
                 res.json({
