@@ -309,6 +309,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
             });
             promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, null, aBox.containerList, () => {
                 aBox.delivering = true;
+                aBox.stocking = false;
                 aBox.storeID = storeID;
                 aBox.user.delivery = dbAdmin.user.phone;
                 aBox.save(function(err) {
