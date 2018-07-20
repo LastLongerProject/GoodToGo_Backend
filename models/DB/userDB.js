@@ -15,14 +15,8 @@ var userSchema = mongoose.Schema({
     },
     roles: {
         typeList: [],
-        clerk: {
-            type: Object,
-            default: null
-        },
-        admin: {
-            type: Object,
-            default: null
-        }
+        clerk: Object,
+        admin: Object
     },
     pushNotificationArn: Object,
     registerTime: {

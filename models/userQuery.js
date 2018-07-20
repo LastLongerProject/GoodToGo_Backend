@@ -473,9 +473,9 @@ function isMobilePhone(phone) {
 }
 
 function getStoreName(storeList, dbUser) {
-    if (typeof dbUser.role.storeID === 'undefined') return undefined;
+    if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
     var theStore = storeList.find((aStore) => {
-        return aStore.ID === dbUser.role.storeID;
+        return aStore.ID === dbUser.roles.clerk.storeID;
     });
     if (theStore) return theStore.name;
     else return "找不到店家";
