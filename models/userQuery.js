@@ -496,7 +496,7 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
             role: {
                 typeCode: dbUser.role.typeCode,
                 storeID: dbUser.role.storeID,
-                storeName: storeName,
+                storeName: (dbUser.role.typeCode === "clerk") ? storeName : undefined,
                 manager: dbUser.role.manager
             },
             roles: {
