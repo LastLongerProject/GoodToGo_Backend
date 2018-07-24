@@ -44,7 +44,7 @@ module.exports = {
                 } catch (err) {
                     thisErr = err;
                 }
-                if (!decoded || !decoded.user || decoded.exp < Date.now() || decoded.user !== dbKey.phone) {
+                if (!decoded || !decoded.user || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
                     if (thisErr) debug(thisErr);
                     return next(new Error('Authentication error'));
                 } else {
