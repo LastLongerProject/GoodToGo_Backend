@@ -177,67 +177,6 @@ module.exports = {
             }
         });
     },
-    // login_backup: function(req, done) {
-    //     var phone = req.body['phone'];
-    //     var password = req.body['password'];
-    //     if (typeof phone === 'undefined' || typeof password === 'undefined') {
-    //         return done(null, false, {
-    //             code: 'D004',
-    //             type: 'loginMessage',
-    //             message: 'Content not Complete'
-    //         });
-    //     }
-    //     process.nextTick(function() {
-    //         keys.apiKey(function(err, returnKeys) {
-    //             if (err) return done(err);
-    //             User.findOne({
-    //                 'user.phone': phone
-    //             }, function(err, dbUser) {
-    //                 if (err)
-    //                     return done(err);
-    //                 if (!dbUser)
-    //                     return done(null, false, {
-    //                         code: 'D005',
-    //                         type: 'loginMessage',
-    //                         message: 'No user found'
-    //                     });
-    //                 if (!dbUser.validPassword(password))
-    //                     return done(null, false, {
-    //                         code: 'D006',
-    //                         type: 'loginMessage',
-    //                         message: 'Wrong password'
-    //                     });
-    //                 var newSecretKey = returnKeys.secretKey;
-    //                 UserKeys.findOneAndUpdate({
-    //                     'phone': phone,
-    //                     'userAgent': req.headers['user-agent']
-    //                 }, {
-    //                     'secretKey': newSecretKey,
-    //                     '$setOnInsert': {
-    //                         'apiKey': returnKeys.apiKey,
-    //                         'user': dbUser._id,
-    //                         'userAgent': req.headers['user-agent']
-    //                     }
-    //                 }, {
-    //                     new: true,
-    //                     upsert: true,
-    //                     setDefaultsOnInsert: true
-    //                 }, (err, keyPair) => {
-    //                     if (err) return done(err);
-    //                     return done(null, dbUser, {
-    //                         headers: {
-    //                             Authorization: tokenBuilder(req, returnKeys.serverSecretKey, keyPair, dbUser)
-    //                         },
-    //                         body: {
-    //                             type: 'loginMessage',
-    //                             message: 'Authentication succeeded'
-    //                         }
-    //                     });
-    //                 });
-    //             });
-    //         });
-    //     });
-    // },
     login: function(req, done) {
         var phone = req.body['phone'];
         var password = req.body['password'];
@@ -338,11 +277,16 @@ module.exports = {
         dbUser.user.password = dbUser.generateHash(newPassword);
         dbUser.save(function(err) {
             if (err) return done(err);
-            return done(null, dbUser, {
-                body: {
-                    type: 'chanPassMessage',
-                    message: 'Change succeeded'
-                }
+            UserKeys.deleteMany({
+                'phone': phone
+            }, (err) => {
+                if (err) return done(err);
+                return done(null, dbUser, {
+                    body: {
+                        type: 'chanPassMessage',
+                        message: 'Change succeeded'
+                    }
+                });
             });
         });
     },
@@ -406,38 +350,24 @@ module.exports = {
                         type: 'forgotPassMessage',
                         message: "Verification Code isn't correct"
                     });
-                    UserKeys.remove({
+                    UserKeys.deleteMany({
                         'phone': phone
-                    }, function(err) {
+                    }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        // keys.apiKey(function(err, returnKeys) {
-                        //     var newUserKey = new UserKeys();
-                        //     newUserKey.phone = phone;
-                        //     newUserKey.userAgent = req.headers['user-agent'];
-                        //     newUserKey.apiKey = returnKeys.apiKey;
-                        //     newUserKey.secretKey = returnKeys.secretKey;
-                        //     newUserKey.user = dbUser._id;
                         dbUser.save(function(err) {
                             if (err) return done(err);
-                            // newUserKey.save(function(err) {
-                            //     if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
                                 if (delReply !== 1) return done("delReply: " + delReply);
                                 return done(null, dbUser, {
-                                    // headers: {
-                                    //     Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, dbUser)
-                                    // },
                                     body: {
                                         type: 'forgotPassMessage',
                                         message: 'Change Password succeeded'
                                     }
                                 });
                             });
-                            // });
                         });
-                        // });
                     });
                 });
             }
@@ -446,7 +376,10 @@ module.exports = {
     logout: function(req, done) {
         var dbKey = req._key;
         var dbUser = req._user;
-        dbKey.remove(function(err, updatedUser) {
+        UserKeys.deleteMany({
+            'phone': phone,
+            'userAgent': req.headers['user-agent']
+        }, (err) => {
             if (err) return done(err);
             return done(null, dbKey, {
                 type: 'logoutMessage',
@@ -458,7 +391,6 @@ module.exports = {
 
 function isMobilePhone(phone) {
     var reg = /^[09]{2}[0-9]{8}$/;
-
     return reg.test(phone);
 }
 
