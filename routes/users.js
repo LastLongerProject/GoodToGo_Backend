@@ -28,13 +28,21 @@ router.post('/signup', validateDefault, function(req, res, next) { // for CUSTOM
     });
 });
 
-router.post('/signup/clerk', regAsStoreManager, validateRequest, function(req, res, next) { // for CLERK
+router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) { // for CLERK
     var dbUser = req._user;
-    req.body['role'] = {
-        typeCode: "clerk",
-        manager: false,
-        storeID: dbUser.role.storeID
-    };
+    if (dbUser.role.typeCode === "clerk") {
+        req.body['role'] = {
+            typeCode: "clerk",
+            manager: false,
+            storeID: dbUser.role.storeID
+        };
+    } else if (dbUser.role.typeCode === "admin") {
+        req.body['role'] = {
+            typeCode: "admin",
+            manager: false,
+            stationID: dbUser.role.stationID
+        };
+    }
     req.body['active'] = true;
     userQuery.signup(req, function(err, user, info) {
         if (err) {
@@ -91,7 +99,6 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -106,7 +113,6 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
         } else if (info.needCode) {
             return res.status(205).json(info.body);
         } else {
-            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });

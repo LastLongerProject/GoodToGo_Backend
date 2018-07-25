@@ -329,7 +329,6 @@ module.exports = {
             });
         }
         var dbUser = req._user;
-        var dbKey = req._key;
         if (!dbUser.validPassword(oriPassword))
             return done(null, false, {
                 code: 'D008',
@@ -337,22 +336,13 @@ module.exports = {
                 message: 'Wrong password'
             });
         dbUser.user.password = dbUser.generateHash(newPassword);
-        keys.secretKey(function(err, returnKeys) {
-            dbKey.secretKey = returnKeys.secretKey;
-            dbUser.save(function(err) {
-                if (err) return done(err);
-                dbKey.save(function(err) {
-                    if (err) return done(err);
-                    return done(null, dbUser, {
-                        headers: {
-                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, dbKey, dbUser)
-                        },
-                        body: {
-                            type: 'chanPassMessage',
-                            message: 'Change succeeded'
-                        }
-                    });
-                });
+        dbUser.save(function(err) {
+            if (err) return done(err);
+            return done(null, dbUser, {
+                body: {
+                    type: 'chanPassMessage',
+                    message: 'Change succeeded'
+                }
             });
         });
     },
@@ -421,33 +411,33 @@ module.exports = {
                     }, function(err) {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        keys.apiKey(function(err, returnKeys) {
-                            var newUserKey = new UserKeys();
-                            newUserKey.phone = phone;
-                            newUserKey.userAgent = req.headers['user-agent'];
-                            newUserKey.apiKey = returnKeys.apiKey;
-                            newUserKey.secretKey = returnKeys.secretKey;
-                            newUserKey.user = dbUser._id;
-                            dbUser.save(function(err) {
+                        // keys.apiKey(function(err, returnKeys) {
+                        //     var newUserKey = new UserKeys();
+                        //     newUserKey.phone = phone;
+                        //     newUserKey.userAgent = req.headers['user-agent'];
+                        //     newUserKey.apiKey = returnKeys.apiKey;
+                        //     newUserKey.secretKey = returnKeys.secretKey;
+                        //     newUserKey.user = dbUser._id;
+                        dbUser.save(function(err) {
+                            if (err) return done(err);
+                            // newUserKey.save(function(err) {
+                            //     if (err) return done(err);
+                            redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
-                                newUserKey.save(function(err) {
-                                    if (err) return done(err);
-                                    redis.del('newPass_verifying:' + phone, (err, delReply) => {
-                                        if (err) return done(err);
-                                        if (delReply !== 1) return done("delReply: " + delReply);
-                                        return done(null, dbUser, {
-                                            headers: {
-                                                Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, dbUser)
-                                            },
-                                            body: {
-                                                type: 'forgotPassMessage',
-                                                message: 'Change Password succeeded'
-                                            }
-                                        });
-                                    });
+                                if (delReply !== 1) return done("delReply: " + delReply);
+                                return done(null, dbUser, {
+                                    // headers: {
+                                    //     Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, dbUser)
+                                    // },
+                                    body: {
+                                        type: 'forgotPassMessage',
+                                        message: 'Change Password succeeded'
+                                    }
                                 });
                             });
+                            // });
                         });
+                        // });
                     });
                 });
             }
