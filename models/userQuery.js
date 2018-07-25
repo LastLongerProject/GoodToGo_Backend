@@ -1,5 +1,4 @@
 var jwt = require('jwt-simple');
-var validateRequest = require('../models/validation/validateRequest').JWT;
 var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
@@ -278,7 +277,7 @@ module.exports = {
         dbUser.save(function(err) {
             if (err) return done(err);
             UserKeys.deleteMany({
-                'phone': phone
+                'phone': dbUser.user.phone
             }, (err) => {
                 if (err) return done(err);
                 return done(null, dbUser, {
@@ -351,7 +350,7 @@ module.exports = {
                         message: "Verification Code isn't correct"
                     });
                     UserKeys.deleteMany({
-                        'phone': phone
+                        'phone': dbUser.user.phone
                     }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
@@ -377,11 +376,11 @@ module.exports = {
         var dbKey = req._key;
         var dbUser = req._user;
         UserKeys.deleteMany({
-            'phone': phone,
+            'phone': dbUser.user.phone,
             'userAgent': req.headers['user-agent']
         }, (err) => {
             if (err) return done(err);
-            return done(null, dbKey, {
+            return done(null, null, {
                 type: 'logoutMessage',
                 message: 'Logout succeeded.'
             });
