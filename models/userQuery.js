@@ -432,7 +432,7 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
             payload.roles.clerk = {
                 storeID: dbUser.roles.clerk.storeID,
                 manager: dbUser.roles.clerk.manager,
-                apiKey: keyDict.clerk.apiKey,
+                // apiKey: keyDict.clerk.apiKey,
                 secretKey: keyDict.clerk.secretKey,
                 storeName: storeName
             };
