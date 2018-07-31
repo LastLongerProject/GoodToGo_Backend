@@ -8,6 +8,7 @@ var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dayFormatter = require('../models/toolKit').dayFormatter;
+var timeFormatter = require('../models/toolKit').timeFormatter;
 var monthFormatter = require('../models/toolKit').monthFormatter;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
@@ -23,7 +24,7 @@ var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 
-const historyDays = 30;
+const historyDays = 14;
 var getImageUrl;
 
 if (process.env.NODE_ENV === "testing") {
@@ -773,7 +774,8 @@ function parseHistory(data, dataType, type, callback) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
-        if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100 || lastPhone !== thisPhone) {
+        // if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100 || lastPhone !== thisPhone) {
+        if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
                 time: lastHistory.tradeTime,
@@ -792,30 +794,25 @@ function parseHistory(data, dataType, type, callback) {
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
     });
+    // console.log(byOrderArr)
     var byDateArr = [];
     var tmpOrderList = [];
     var tmpOrderAmount = 0;
     var date = 0;
-    // console.log(dateCheckpoint(date))
-    // console.log(byOrderArr[0].time)
-    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > (-1 * historyDays)) {
-        byDateArr.push({
-            date: fullDateString(dateCheckpoint(date)),
-            orderAmount: tmpOrderAmount,
-            orderList: tmpOrderList
-        });
-        tmpOrderList = [];
-        date--;
-    }
     for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
         nextOrder = byOrderArr[i + 1];
-        tmpHour = aOrder.time.getHours() + 8;
-        hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
-        minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
-        aOrder.time = hoursFormatted + ":" + minutesFormatted;
-        tmpOrderList.push(aOrder);
-        if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
+        // console.log('i', i)
+        // console.log('date', fullDateString(dateCheckpoint(date)))
+        // console.log('this', aOrder)
+        // console.log('next', nextOrder)
+        if (aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date)) {
+            aOrder.time = timeFormatter(aOrder.time);
+            tmpOrderList.push(aOrder);
+        } else {
+            i--;
+        }
+        if (!nextOrder || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
             tmpOrderAmount = 0;
             for (var j = 0; j < tmpOrderList.length; j++) {
                 tmpOrderAmount += tmpOrderList[j].containerAmount;
@@ -829,14 +826,12 @@ function parseHistory(data, dataType, type, callback) {
             date--;
         }
     }
-    tmpOrderAmount = 0;
     while (date > (-1 * historyDays)) {
         byDateArr.push({
             date: fullDateString(dateCheckpoint(date)),
-            orderAmount: tmpOrderAmount,
-            orderList: tmpOrderList
+            orderAmount: 0,
+            orderList: []
         });
-        tmpOrderList = [];
         date--;
     }
     return callback(byDateArr);

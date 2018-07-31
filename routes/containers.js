@@ -829,7 +829,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             }, function(err, dbOri) {
                 if (err) return next(err);
                 if (!dbOri) {
-                    debug('Return unexpect err. Data : ' + JSON.stringify(container) +
+                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(container) +
                         ' ID in uri : ' + id);
                     return res.status(403).json({
                         code: 'F004',

@@ -18,6 +18,12 @@ module.exports = {
         var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint + timezoneFix, 16, 0, 0, 0);
         return date;
     },
+    timeFormatter: function(dateToFormat) {
+        var tmpHour = dateToFormat.getHours() + 8;
+        var hoursFormatted = this.intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
+        var minutesFormatted = this.intReLength(dateToFormat.getMinutes(), 2);
+        return hoursFormatted + ":" + minutesFormatted;
+    },
     dayFormatter: function(dateToFormat) {
         var localDate = new Date(dateToFormat);
         if (localDate.getHours() >= 16)
@@ -85,5 +91,10 @@ if (process.env.OS === 'Windows_NT') {
     };
     module.exports.monthFormatter = function(dateToFormat) {
         return dateToFormat.getMonth() + 1;
+    };
+    module.exports.timeFormatter = function(dateToFormat) {
+        var hoursFormatted = module.exports.intReLength(dateToFormat.getHours(), 2);
+        var minutesFormatted = module.exports.intReLength(dateToFormat.getMinutes(), 2);
+        return hoursFormatted + ":" + minutesFormatted;
     };
 }
