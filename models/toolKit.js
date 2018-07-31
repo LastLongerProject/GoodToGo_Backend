@@ -20,8 +20,8 @@ module.exports = {
     },
     timeFormatter: function(dateToFormat) {
         var tmpHour = dateToFormat.getHours() + 8;
-        var hoursFormatted = this.intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
-        var minutesFormatted = this.intReLength(dateToFormat.getMinutes(), 2);
+        var hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
+        var minutesFormatted = intReLength(dateToFormat.getMinutes(), 2);
         return hoursFormatted + ":" + minutesFormatted;
     },
     dayFormatter: function(dateToFormat) {
@@ -36,15 +36,7 @@ module.exports = {
             localDate.setDate(localDate.getDate() + 1);
         return localDate.getMonth() + 1;
     },
-    intReLength: function(data, length) {
-        var str = data.toString();
-        if (length - str.length) {
-            for (j = 0; j <= length - str.length; j++) {
-                str = "0" + str;
-            }
-        }
-        return str;
-    },
+    intReLength: intReLength,
     validateStateChanging: function(bypass, oriState, newState, callback) {
         if (bypass) return callback(true);
         switch (oriState) {
@@ -93,8 +85,18 @@ if (process.env.OS === 'Windows_NT') {
         return dateToFormat.getMonth() + 1;
     };
     module.exports.timeFormatter = function(dateToFormat) {
-        var hoursFormatted = module.exports.intReLength(dateToFormat.getHours(), 2);
-        var minutesFormatted = module.exports.intReLength(dateToFormat.getMinutes(), 2);
+        var hoursFormatted = intReLength(dateToFormat.getHours(), 2);
+        var minutesFormatted = intReLength(dateToFormat.getMinutes(), 2);
         return hoursFormatted + ":" + minutesFormatted;
     };
+}
+
+function intReLength(data, length) {
+    var str = data.toString();
+    if (length - str.length) {
+        for (j = 0; j <= length - str.length; j++) {
+            str = "0" + str;
+        }
+    }
+    return str;
 }
