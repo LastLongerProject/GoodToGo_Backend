@@ -555,31 +555,41 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
     var dbStore = req._user;
     process.nextTick(function() {
         var type = req.app.get('containerType');
-        Trade.find({
-            'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.storeID
-        }, (err, tradeList) => {
-            if (err) return next(err);
-            var dataList = [];
-            for (var i = 0; i < type.length; i++) {
-                dataList.push({
-                    typeCode: i,
-                    amount: 0
-                });
-            }
-            for (var j = 0; j < tradeList.length; j++) {
-                dataList[tradeList[j].container.typeCode].amount++;
-            }
-            Trade.count({
-                'tradeType.action': 'Return'
-            }, (err, totalAmount) => {
-                if (err) return next(err);
+        Promise
+            .all([new Promise((resolve, reject) => {
+                    Trade.find({
+                        'tradeType.action': 'Rent',
+                        'oriUser.storeID': dbStore.role.storeID
+                    }, (err, tradeList) => {
+                        if (err) return reject(err);
+                        var dataList = [];
+                        for (var i = 0; i < type.length; i++) {
+                            dataList.push({
+                                typeCode: i,
+                                amount: 0
+                            });
+                        }
+                        for (var j = 0; j < tradeList.length; j++) {
+                            dataList[tradeList[j].container.typeCode].amount++;
+                        }
+                        resolve(dataList);
+                    });
+                }),
+                new Promise((resolve, reject) => {
+                    Trade.count({
+                        'tradeType.action': 'Return'
+                    }, (err, totalAmount) => {
+                        if (err) return reject(err);
+                        resolve(totalAmount);
+                    });
+                })
+            ])
+            .then((data) => {
                 res.json({
-                    store: dataList,
-                    total: totalAmount
+                    store: data[0],
+                    total: data[1]
                 });
-            });
-        });
+            }).catch(err => next(err));
     });
 });
 
