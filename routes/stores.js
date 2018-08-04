@@ -554,40 +554,32 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
 router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     process.nextTick(function() {
-        var funcList = [];
         var type = req.app.get('containerType');
-        for (var i = 0; i < type.length; i++) {
-            funcList.push(new Promise((resolve, reject) => {
-                var localPtr = i;
-                Trade.count({
-                    'tradeType.action': 'Rent',
-                    'oriUser.storeID': dbStore.role.storeID,
-                    'container.typeCode': localPtr
-                }, (err, amount) => {
-                    if (err) return reject(err);
-                    resolve({
-                        typeCode: localPtr,
-                        amount: amount
-                    });
+        Trade.find({
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.role.storeID
+        }, (err, tradeList) => {
+            if (err) return next(err);
+            var dataList = [];
+            for (var i = 0; i < type.length; i++) {
+                dataList.push({
+                    typeCode: i,
+                    amount: 0
                 });
-            }));
-        }
-        Promise
-            .all(funcList)
-            .then((data) => {
-                Trade.count({
-                    'tradeType.action': 'Return'
-                }, (err, totalAmount) => {
-                    if (err) return next(err);
-                    res.json({
-                        store: data,
-                        total: totalAmount
-                    });
-                });
-            })
-            .catch((err) => {
+            }
+            for (var j = 0; j < tradeList.length; j++) {
+                dataList[tradeList[j].container.typeCode].amount++;
+            }
+            Trade.count({
+                'tradeType.action': 'Return'
+            }, (err, totalAmount) => {
                 if (err) return next(err);
+                res.json({
+                    store: dataList,
+                    total: totalAmount
+                });
             });
+        });
     });
 });
 
