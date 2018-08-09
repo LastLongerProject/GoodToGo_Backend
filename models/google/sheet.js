@@ -19,17 +19,17 @@ for (var i = 0; i < 7; i++) {
     defaultPeriods.push({
         "close": {
             "day": i,
-            "time": "2100"
+            "time": "21:00"
         },
         "open": {
             "day": i,
-            "time": "1200"
+            "time": "12:00"
         }
     });
 }
 
 function googleAuth(callback) {
-    authFactory.getApplicationDefault(function(err, authClient) {
+    authFactory.getApplicationDefault(function (err, authClient) {
         if (err) {
             debug('Authentication failed because of ', err);
             return;
@@ -43,8 +43,8 @@ function googleAuth(callback) {
 }
 
 module.exports = {
-    getContainer: function(dbAdmin, cb) {
-        fs.readFile("./assets/json/googleContent.json", 'utf8', function(err, data) {
+    getContainer: function (dbAdmin, cb) {
+        fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
             if (err) throw err;
             var spreadsheetId = JSON.parse(data).container_sheet_ID;
             googleAuth(function getSheet(auth) {
@@ -52,7 +52,7 @@ module.exports = {
                     auth: auth,
                     spreadsheetId: spreadsheetId,
                     ranges: ['container!A2:F', 'container_type!A2:C'],
-                }, function(err, response) {
+                }, function (err, response) {
                     if (err) {
                         debug('The API returned an error: ' + err);
                         return;
@@ -120,11 +120,11 @@ module.exports = {
             });
         });
     },
-    getStore: function(cb) {
-        fs.readFile("./config/config.json", 'utf8', function(err, data) {
+    getStore: function (cb) {
+        fs.readFile("./config/config.json", 'utf8', function (err, data) {
             if (err) throw err;
             var placeApiKey = JSON.parse(data).google_place;
-            fs.readFile("./assets/json/googleContent.json", 'utf8', function(err, data) {
+            fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
                 if (err) throw err;
                 var dataToObject = JSON.parse(data);
                 var spreadsheetId = dataToObject.store_sheet_ID;
@@ -134,7 +134,7 @@ module.exports = {
                         auth: auth,
                         spreadsheetId: spreadsheetId,
                         range: 'active!A2:J',
-                    }, function(err, response) {
+                    }, function (err, response) {
                         if (err) {
                             debug('[Sheet API ERR (getStore)] Error: ' + err);
                             return;
@@ -180,20 +180,20 @@ module.exports = {
                                             var dataArray = [];
                                             request
                                                 .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID + '&key=' + placeApiKey + '&language=zh-TW')
-                                                .on('response', function(response) {
+                                                .on('response', function (response) {
                                                     if (response.statusCode !== 200) {
                                                         debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
                                                         return reject(localCtr);
                                                     }
                                                 })
-                                                .on('error', function(err) {
+                                                .on('error', function (err) {
                                                     debug('[Place API ERR (2)] Message : ' + err);
                                                     return reject(localCtr);
                                                 })
-                                                .on('data', function(data) {
+                                                .on('data', function (data) {
                                                     dataArray.push(data);
                                                 })
-                                                .on('end', function() {
+                                                .on('end', function () {
                                                     var dataBuffer = Buffer.concat(dataArray);
                                                     var dataObject = JSON.parse(dataBuffer.toString());
                                                     var type = [];
