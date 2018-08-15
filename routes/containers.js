@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:containers');
+var redis = require("../models/redis");
 
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
@@ -31,10 +32,10 @@ if (process.env.NODE_ENV === "testing") {
 const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
-router.get('/globalUsedAmount', function(req, res, next) {
+router.get('/globalUsedAmount', function (req, res, next) {
     Trade.count({
         "tradeType.action": "Return"
-    }, function(err, count) {
+    }, function (err, count) {
         if (err) return next(err);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.send(new String(count + 14642));
@@ -42,7 +43,7 @@ router.get('/globalUsedAmount', function(req, res, next) {
     });
 });
 
-router.all('/:id', function(req, res) {
+router.all('/:id', function (req, res) {
     // debug("Redirect to official website.");
     res.writeHead(301, {
         Location: 'http://goodtogo.tw'
@@ -50,7 +51,7 @@ router.all('/:id', function(req, res) {
     res.end();
 });
 
-router.get('/get/list', validateDefault, function(req, res, next) {
+router.get('/get/list', validateDefault, function (req, res, next) {
     var typeDict = req.app.get('containerType');
     var containerDict = req.app.get('container');
     var tmpIcon = {};
@@ -83,11 +84,11 @@ router.get('/get/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/get/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var containerDict = req.app.get('container');
-    process.nextTick(function() {
-        Box.find(function(err, boxList) {
+    process.nextTick(function () {
+        Box.find(function (err, boxList) {
             if (err) return next(err);
             if (boxList.length === 0) return res.json({
                 toDelivery: []
@@ -138,7 +139,7 @@ router.get('/get/toDelivery', regAsAdmin, validateRequest, function(req, res, ne
     });
 });
 
-router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var typeDict = req.app.get('containerType');
     Trade.find({
@@ -146,7 +147,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
-    }, function(err, list) {
+    }, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             pastDelivery: []
@@ -204,7 +205,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function(req, re
     });
 });
 
-router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
+router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var typeDict = req.app.get('containerType');
     var queryCond = {
@@ -214,7 +215,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         }
     };
     if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
-    Trade.find(queryCond, function(err, list) {
+    Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
@@ -268,13 +269,13 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     });
 });
 
-router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/stock/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
-        }, function(err, aBox) {
+        }, function (err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(403).json({
                 code: 'F007',
@@ -282,7 +283,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) 
                 message: "Can't Find The Box"
             });
             aBox.stocking = true;
-            aBox.save(function(err) {
+            aBox.save(function (err) {
                 if (err) return next(err);
                 return res.json({
                     type: "stockBoxMessage",
@@ -293,14 +294,14 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(req, res, next) 
     });
 });
 
-router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
     var storeID = req.params.store;
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
-        }, function(err, aBox) {
+        }, function (err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(403).json({
                 code: 'F007',
@@ -312,11 +313,11 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
                 aBox.stocking = false;
                 aBox.storeID = storeID;
                 aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function(err) {
+                aBox.save(function (err) {
                     if (err) return next(err);
                     User.find({
                         'roles.clerk.storeID': storeID
-                    }, function(err, userList) {
+                    }, function (err, userList) {
                         var funcList = [];
                         for (var i in userList) {
                             if (typeof userList[i].pushNotificationArn !== "undefined")
@@ -357,13 +358,13 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(req, r
     });
 });
 
-router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
-        }, function(err, aBox) {
+        }, function (err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(403).json({
                 code: 'F007',
@@ -374,7 +375,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.user.delivery = undefined;
-                aBox.save(function(err) {
+                aBox.save(function (err) {
                     if (err) return next(err);
                     return res.json({
                         type: "CancelDeliveryMessage",
@@ -386,7 +387,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(req, re
     });
 });
 
-router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var boxID = req.params.id;
     var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
@@ -394,7 +395,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, 
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
-        }, function(err, aDelivery) {
+        }, function (err, aDelivery) {
             if (err) return next(err);
             if (!aDelivery)
                 return res.status(403).json({
@@ -414,7 +415,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, 
             }, aDelivery.containerList, () => {
                 Box.remove({
                     'boxID': boxID
-                }, function(err) {
+                }, function (err) {
                     if (err) return next(err);
                     return res.json({
                         type: "SignMessage",
@@ -426,7 +427,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(req, 
     });
 });
 
-router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
+router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var key = req.headers['userapikey'];
     if (typeof key === 'undefined' || typeof key === null || key.length === 0) {
@@ -443,7 +444,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var redis = req.app.get('redis');
     redis.get('user_token:' + key, (err, reply) => {
         if (err) return next(err);
         if (!reply) return res.status(403).json({
@@ -455,7 +455,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
-router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     if (!res._payload.orderTime) return res.status(403).json({
         code: 'F006',
@@ -467,7 +467,7 @@ router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function(req
     process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, storeId));
 });
 
-router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     if (!res._payload.orderTime) return res.status(403).json({
         code: 'F006',
@@ -479,7 +479,7 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(req, res,
     process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next, storeId));
 });
 
-router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var body = req.body;
     if (!body.containerList || !body.boxId)
@@ -491,7 +491,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
     process.nextTick(() => {
         Box.findOne({
             'boxID': body.boxId
-        }, function(err, aBox) {
+        }, function (err, aBox) {
             if (err) return next(err);
             if (aBox) return res.status(403).json({
                 code: 'F012',
@@ -503,7 +503,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
                 newBox.boxID = body.boxId;
                 newBox.user.box = dbAdmin.user.phone;
                 newBox.containerList = body.containerList;
-                newBox.save(function(err) {
+                newBox.save(function (err) {
                     if (err) return next(err);
                     return res.status(200).json({
                         type: 'BoxingMessage',
@@ -515,13 +515,13 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function(req, res,
     });
 });
 
-router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req, res, next) {
+router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
-        }, function(err, aBox) {
+        }, function (err, aBox) {
             if (err) return next(err);
             if (!aBox) return res.status(403).json({
                 code: 'F007',
@@ -531,7 +531,7 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function(req
             promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
                 Box.remove({
                     'boxID': boxID
-                }, function(err) {
+                }, function (err) {
                     if (err) return next(err);
                     return res.json({
                         type: "UnboxingMessage",
@@ -547,7 +547,7 @@ var actionCanUndo = {
     'Return': 3,
     'ReadyToClean': 4
 };
-router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(req, res, next) {
+router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var action = req.params.action;
     var containerID = req.params.id;
@@ -560,11 +560,11 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
             sort: {
                 logTime: -1
             }
-        }, function(err, theTrade) {
+        }, function (err, theTrade) {
             if (err) return next(err);
             Container.findOne({
                 'ID': containerID
-            }, function(err, theContainer) {
+            }, function (err, theContainer) {
                 if (err) return next(err);
                 if (!theContainer || !theTrade)
                     return res.json({
@@ -618,7 +618,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(re
 router.get('/challenge/token', regAsStore, regAsAdmin, validateRequest, generateSocketToken);
 
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
-router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var action = req.params.action;
     var containerID = req.params.id;
@@ -628,7 +628,7 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
     process.nextTick(() => {
         Container.findOne({
             'ID': containerID
-        }, function(err, theContainer) {
+        }, function (err, theContainer) {
             if (err) return next(err);
             if (!theContainer)
                 return res.status(403).json({
@@ -637,7 +637,7 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
                     message: 'No container found',
                     data: containerID
                 });
-            validateStateChanging(false, theContainer.statusCode, newState, function(succeed) {
+            validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
                 if (!succeed) {
                     return res.status(403).json({
                         code: 'F001',
@@ -727,7 +727,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
     var tmpStoreId;
     Container.findOne({
         'ID': id
-    }, function(err, container) {
+    }, function (err, container) {
         if (err)
             return next(err);
         if (!container) {
@@ -758,9 +758,9 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         } else if (action === 'Return' && key !== null) {
             if (container.statusCode === 3) // 髒杯回收時已經被歸還過
                 return res.json({
-                type: "ReturnMessage",
-                message: "Already Return"
-            });
+                    type: "ReturnMessage",
+                    message: "Already Return"
+                });
             else // 髒杯回收
                 tmpStoreId = key;
         } else if (action === 'ReadyToClean' && key !== null) { // 髒杯回收
@@ -768,7 +768,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
         } else if (action === 'Sign' && typeof key.storeID !== 'undefined') { // 正興街配送
             tmpStoreId = key.storeID;
         }
-        validateStateChanging(bypass, container.statusCode, newState, function(succeed) {
+        validateStateChanging(bypass, container.statusCode, newState, function (succeed) {
             if (!succeed) {
                 var oriState = container.statusCode;
                 if (oriState === 0 || oriState === 1) {
@@ -776,7 +776,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         'containerList': {
                             '$all': [id]
                         }
-                    }, function(err, aBox) {
+                    }, function (err, aBox) {
                         if (err) return next(err);
                         id = parseInt(id);
                         container.statusCode = parseInt(container.statusCode);
@@ -826,7 +826,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
             }
             User.findOne({
                 'user.phone': (action === 'Rent') ? key : container.conbineTo
-            }, function(err, dbOri) {
+            }, function (err, dbOri) {
                 if (err) return next(err);
                 if (!dbOri) {
                     debug('Containers state changing unexpect err. Data : ' + JSON.stringify(container) +
@@ -890,10 +890,10 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         container.storeID = undefined;
                     }
 
-                    function saveAll(callback, callback2, tmpTrade) {
-                        tmpTrade.save(function(err) {
+                    const saveAll = function (callback, callback2, tmpTrade) {
+                        tmpTrade.save(function (err) {
                             if (err) return callback2(err);
-                            container.save(function(err) {
+                            container.save(function (err) {
                                 if (err) return callback2(err);
                                 return callback();
                             });
@@ -907,7 +907,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         }), next, newTrade);
                     } else {
                         var tmpTrade = new Object(newTrade);
-                        resolve([true, function(cb, cb2) {
+                        resolve([true, function (cb, cb2) {
                             saveAll(cb, cb2, tmpTrade);
                         }, tmpTrade]);
                     }
@@ -920,13 +920,13 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
     });
 }
 
-router.post('/add/:id/:type', function(req, res, next) {
+router.post('/add/:id/:type', function (req, res, next) {
     var id = req.params.id;
     var typeCode = req.params.type;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Container.findOne({
             'ID': id
-        }, function(err, container) {
+        }, function (err, container) {
             if (err)
                 return next(err);
             if (container) {
@@ -940,7 +940,7 @@ router.post('/add/:id/:type', function(req, res, next) {
                 newContainer.typeCode = typeCode;
                 newContainer.statusCode = 4;
                 newContainer.conbineTo = '0936111000';
-                newContainer.save(function(err) { // save the container
+                newContainer.save(function (err) { // save the container
                     if (err) return next(err);
                     res.status(200).json({
                         type: 'addContainerMessage',

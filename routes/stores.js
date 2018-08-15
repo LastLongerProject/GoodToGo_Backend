@@ -3,6 +3,7 @@ var router = express.Router();
 var jwt = require('jwt-simple');
 var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:stores');
+var redis = require("../models/redis");
 
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
@@ -315,7 +316,6 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
 router.get('/getUser/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
-    var redis = req.app.get('redis');
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")

@@ -1,11 +1,12 @@
 var jwt = require('jwt-simple');
+var redis = require("../models/redis");
 var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 var sendCode = require('../models/SNS').sms_now;
 
 module.exports = {
-    signup: function(req, done) {
+    signup: function (req, done) {
         var role = req.body['role'] || {
             typeCode: 'customer'
         };
@@ -13,7 +14,6 @@ module.exports = {
         var phone = req.body['phone'];
         var password = req.body['password'];
         var code = req.body['verification_code'];
-        var redis = req.app.get('redis');
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
                 !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
@@ -41,7 +41,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (err)
                 return done(err);
             if (dbUser) {
@@ -63,7 +63,7 @@ module.exports = {
                             };
                             break;
                     }
-                    dbUser.save(function(err) {
+                    dbUser.save(function (err) {
                         if (err) return done(err);
                         return done(null, dbUser, {
                             body: {
@@ -82,7 +82,7 @@ module.exports = {
             } else {
                 if (req._passCode !== true && typeof code === 'undefined') {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
                         redis.set('user_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -113,7 +113,7 @@ module.exports = {
                             type: 'signupMessage',
                             message: "Verification Code isn't correct"
                         });
-                        keys.apiKey(function(err, returnKeys) {
+                        keys.apiKey(function (err, returnKeys) {
                             if (err) return done(err);
                             var newUser = new User();
                             newUser.user.phone = phone;
@@ -150,9 +150,9 @@ module.exports = {
                             newUserKey.secretKey = returnKeys.secretKey;
                             newUserKey.user = newUser._id;
                             newUserKey.roleType = newUser.roles.typeList[0];
-                            newUser.save(function(err) {
+                            newUser.save(function (err) {
                                 if (err) return done(err);
-                                newUserKey.save(function(err) {
+                                newUserKey.save(function (err) {
                                     if (err) return done(err);
                                     redis.del('user_verifying:' + phone, (err, delReply) => {
                                         if (err && req._passCode !== true) return done(err);
@@ -176,7 +176,7 @@ module.exports = {
             }
         });
     },
-    login: function(req, done) {
+    login: function (req, done) {
         var phone = req.body['phone'];
         var password = req.body['password'];
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -186,10 +186,10 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function() {
+        process.nextTick(function () {
             User.findOne({
                 'user.phone': phone
-            }, function(err, dbUser) {
+            }, function (err, dbUser) {
                 if (err)
                     return done(err);
                 if (!dbUser)
@@ -209,7 +209,7 @@ module.exports = {
                 for (var i = 0; i < typeList.length; i++) {
                     funcList.push(new Promise((resolve, reject) => {
                         var thisCtr = i;
-                        keys.keyPair(function(err, returnKeys) {
+                        keys.keyPair(function (err, returnKeys) {
                             if (err) return reject(err);
                             var newSecretKey = returnKeys.secretKey;
                             UserKeys.findOneAndUpdate({
@@ -256,7 +256,7 @@ module.exports = {
             });
         });
     },
-    chanpass: function(req, done) {
+    chanpass: function (req, done) {
         var oriPassword = req.body['oriPassword'];
         var newPassword = req.body['newPassword'];
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
@@ -274,7 +274,7 @@ module.exports = {
                 message: 'Wrong password'
             });
         dbUser.user.password = dbUser.generateHash(newPassword);
-        dbUser.save(function(err) {
+        dbUser.save(function (err) {
             if (err) return done(err);
             UserKeys.deleteMany({
                 'phone': dbUser.user.phone
@@ -289,11 +289,10 @@ module.exports = {
             });
         });
     },
-    forgotpass: function(req, done) {
+    forgotpass: function (req, done) {
         var phone = req.body['phone'];
         var code = req.body['verification_code'];
         var newPassword = req.body['new_password'];
-        var redis = req.app.get('redis');
         if (typeof phone === 'undefined') {
             return done(null, false, {
                 code: 'D012',
@@ -303,7 +302,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (!dbUser) return done(null, false, {
                 code: 'D013',
                 type: 'forgotPassMessage',
@@ -312,7 +311,7 @@ module.exports = {
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
                 if (typeof phone === 'string' && phone.length === 10) {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
                         redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -354,7 +353,7 @@ module.exports = {
                     }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        dbUser.save(function(err) {
+                        dbUser.save(function (err) {
                             if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
@@ -372,7 +371,7 @@ module.exports = {
             }
         });
     },
-    logout: function(req, done) {
+    logout: function (req, done) {
         var dbKey = req._key;
         var dbUser = req._user;
         UserKeys.deleteMany({

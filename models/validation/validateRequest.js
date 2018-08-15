@@ -1,4 +1,5 @@
 var jwt = require('jwt-simple');
+var redis = require("../redis");
 var User = require('../DB/userDB'); // load up the user model
 var UserKeys = require('../DB/userKeysDB');
 
@@ -22,18 +23,17 @@ function isAuthorized(condition, userRoles, thisRole) {
 }
 
 module.exports = {
-    JWT: function(req, res, next) {
+    JWT: function (req, res, next) {
         var jwtToken = req.headers['authorization'];
         var key = req.headers['apikey'];
-        var redis = req.app.get('redis');
 
         if (jwtToken && key) {
-            process.nextTick(function() {
+            process.nextTick(function () {
                 UserKeys.findOneAndUpdate({
                     'apiKey': key
                 }, {
                     'updatedAt': Date.now()
-                }, function(err, dbKey) {
+                }, function (err, dbKey) {
                     if (err)
                         return next(err);
                     if (!dbKey)
@@ -42,7 +42,7 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has logout'
                         });
-                    User.findById(dbKey.user, function(err, dbUser) {
+                    User.findById(dbKey.user, function (err, dbUser) {
                         if (err)
                             return next(err);
                         if (!dbUser)
@@ -144,7 +144,7 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: function(req, res, next) {
+    regAsStoreManager: function (req, res, next) {
         if (!req._role) {
             req._role = {
                 txt: 'clerk',
@@ -164,7 +164,7 @@ module.exports = {
         }
         next();
     },
-    regAsStore: function(req, res, next) {
+    regAsStore: function (req, res, next) {
         if (!req._role) {
             req._role = {
                 txt: 'clerk',
@@ -180,7 +180,7 @@ module.exports = {
         }
         next();
     },
-    regAsAdminManager: function(req, res, next) {
+    regAsAdminManager: function (req, res, next) {
         if (!req._role) {
             req._role = {
                 txt: 'admin',
@@ -200,7 +200,7 @@ module.exports = {
         }
         next();
     },
-    regAsAdmin: function(req, res, next) {
+    regAsAdmin: function (req, res, next) {
         if (!req._role) {
             req._role = {
                 txt: 'admin',
