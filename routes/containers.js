@@ -38,7 +38,7 @@ router.get('/globalUsedAmount', function (req, res, next) {
     }, function (err, count) {
         if (err) return next(err);
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(new String(count + 14642));
+        res.send((count + 14642).toString());
         res.end();
     });
 });
