@@ -18,7 +18,9 @@ const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 
 router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
-    Store.find(function (err, storeDataList) {
+    Store.find({
+        active: true
+    }, function (err, storeDataList) {
         if (err) return next(err);
         var storeIdDict = {};
         storeDataList.forEach(function (aStoreData) {
@@ -68,16 +70,19 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
             tradeList.forEach(function (aTrade) {
                 var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                 if (aTrade.tradeType.action === "Sign") {
+                    if (!storeIdDict[aTrade.newUser.storeID]) return;
                     unusedContainer[containerKey] = {
                         time: aTrade.tradeTime,
                         storeID: aTrade.newUser.storeID
                     };
-                } else if (aTrade.tradeType.action === "ReadyToClean") {
+                } else if (aTrade.tradeType.action === "ReadyToClean" && unusedContainer[containerKey]) {
+                    if (!storeIdDict[aTrade.oriUser.storeID]) return;
                     if (aTrade.tradeType.oriState === 3) {
                         usedContainer[containerKey] = {
                             time: aTrade.tradeTime,
                             storeID: unusedContainer[containerKey].storeID
                         };
+
                     }
                     delete unusedContainer[containerKey];
                 }
@@ -89,16 +94,14 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 
             var weeklyAmountByStore = {};
 
-            storeDataList.forEach(function (aStoreData) {
-                weeklyAmountByStore[aStoreData.id] = {};
-            });
             var weekCheckpoint = getWeekCheckpoint(Object.entries(usedContainer)[0][1].time);
             var todayCheckpoint = dateCheckpoint(0);
-            for (var aStore in weeklyAmountByStore) { // init
-                weeklyAmountByStore[aStore][weekCheckpoint] = 0;
-            }
             for (var usedContainerKey in usedContainer) {
                 var usedContainerRecord = usedContainer[usedContainerKey];
+                if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
+                    weeklyAmountByStore[usedContainerRecord.storeID] = {};
+                    weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
+                }
                 if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                     weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                     for (var aStore in weeklyAmountByStore) {
@@ -114,7 +117,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
             }
 
             var now = Date.now();
-            while (weekCheckpoint - now >= MILLISECONDS_OF_A_WEEK) {
+            while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                 weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                 for (var aStore in weeklyAmountByStore) {
                     weeklyAmountByStore[aStore][weekCheckpoint] = 0;
