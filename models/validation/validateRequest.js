@@ -78,6 +78,8 @@ module.exports = {
                             decoded.exp *= 1000;
                         if (decoded.iat.toString().length == 10)
                             decoded.iat *= 1000;
+                        if (decoded.orderTime && decoded.orderTime.toString().length == 10)
+                            decoded.orderTime *= 1000;
                         if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1)) {
                             return res.status(401).json({
                                 code: 'B007',
