@@ -10,10 +10,10 @@ var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'box
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
 
 module.exports = {
-    generateToken: function(req, res, next) {
+    generateToken: function (req, res, next) {
         var dbUser = req._user;
         var uri = "/containers/challenge/socket";
-        keys.serverSecretKey(function(err, serverSecretKey) {
+        keys.serverSecretKey(function (err, serverSecretKey) {
             if (err) return next(err);
             var date = new Date();
             var token = jwt.encode({
@@ -27,7 +27,7 @@ module.exports = {
             });
         });
     },
-    auth: function(socket, next) {
+    auth: function (socket, next) {
         var handShakeData = socket.request;
         debug(handShakeData.url);
         if (!handShakeData._query.token || !handShakeData._query.apikey) return next(new Error('Authentication error (Missing Something)'));
@@ -35,8 +35,8 @@ module.exports = {
             'apiKey': handShakeData._query.apikey
         }, {
             'updatedAt': Date.now()
-        }, function(err, dbKey) {
-            keys.serverSecretKey(function(err, serverSecretKey) {
+        }, function (err, dbKey) {
+            keys.serverSecretKey(function (err, serverSecretKey) {
                 var decoded;
                 var thisErr;
                 try {
@@ -55,14 +55,14 @@ module.exports = {
         });
 
     },
-    init: function(socket) {
+    init: function (socket) {
         socket.emitWithLog = addLog(socket);
         let next = nextInit(socket);
 
         socket.emitWithLog('connection', {
             message: 'auth succeed'
         });
-        socket.on('challenge', function(data) {
+        socket.on('challenge', function (data) {
             if (!data) {
                 return next({
                     code: "Err1",
@@ -83,7 +83,7 @@ module.exports = {
             process.nextTick(() => {
                 Container.findOne({
                     'ID': containerID
-                }, function(err, theContainer) {
+                }, function (err, theContainer) {
                     if (err) return next(err);
                     if (!theContainer)
                         return next({
@@ -93,7 +93,7 @@ module.exports = {
                                 id: parseInt(containerID)
                             }
                         });
-                    validateStateChanging(false, theContainer.statusCode, newState, function(succeed) {
+                    validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
                         return socket.emitWithLog('reply', {
                             id: parseInt(containerID),
                             succeed: succeed,
@@ -117,7 +117,7 @@ function nextInit(socket) {
     socket.on("error", (args) => {});
     return function next(err) {
         if (typeof err === "undefined") err = {};
-        socket.emitWithLog('error', {
+        socket.emitWithLog('request_error', {
             code: err.code || "Err0",
             message: err.msg || "Unknown Error",
             data: err.data || (err.code && err.msg) ? undefined : JSON.stringify(err)
