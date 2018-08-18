@@ -141,7 +141,7 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
     switch (dbUser.role.typeCode) {
         case 'admin':
             condition = {
-                'role.typeCode': 'admin'
+                'roles.admin.stationID': dbUser.role.stationID
             };
             break;
         case 'clerk':
