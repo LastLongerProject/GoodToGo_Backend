@@ -146,7 +146,7 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
             break;
         case 'clerk':
             condition = {
-                'role.storeID': dbUser.role.storeID
+                'roles.clerk.storeID': dbUser.role.storeID
             };
             break;
         default:

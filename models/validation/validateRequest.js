@@ -95,21 +95,6 @@ module.exports = {
                                     message: 'Not Authorized for this URI'
                                 });
                         }
-                        // if (req._role) {
-                        //     if (req._role.txt.indexOf(dbUser.role.typeCode) === -1)
-                        //         return res.status(401).json({
-                        //             code: 'B008',
-                        //             type: 'validatingUser',
-                        //             message: 'Not Authorized for this URI'
-                        //         });
-                        //     if (req._role.manager)
-                        //         if (dbUser.role.manager !== req._role.manager)
-                        //             return res.status(401).json({
-                        //                 code: 'B008',
-                        //                 type: 'validatingUser',
-                        //                 message: 'Not Authorized for this URI'
-                        //             });
-                        // }
                         redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
                             if (reply !== null) {
                                 return res.status(401).json({

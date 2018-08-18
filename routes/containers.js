@@ -482,13 +482,13 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var body = req.body;
-    if (!body.containerList || !body.boxId)
+    if (!body.containerList)
         return res.status(403).json({
             code: 'F011',
             type: 'BoxingMessage',
             message: 'Boxing req body incomplete'
         });
-    process.nextTick(() => {
+    var task = function (response) {
         Box.findOne({
             'boxID': body.boxId
         }, function (err, aBox) {
@@ -505,12 +505,38 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                 newBox.containerList = body.containerList;
                 newBox.save(function (err) {
                     if (err) return next(err);
-                    return res.status(200).json({
-                        type: 'BoxingMessage',
-                        message: 'Boxing Succeeded'
+                    return response(newBox);
+                });
+            });
+        });
+    };
+    if (!body.boxId) {
+        redis.get("boxCtr", (err, boxCtr) => {
+            if (err) return next(err);
+            if (boxCtr == null) boxCtr = 1;
+            else boxCtr++;
+            redis.set("boxCtr", boxCtr, (err, reply) => {
+                if (err) return next(err);
+                if (reply !== "OK") return next(reply);
+                redis.expire("boxCtr", dateCheckpoint(1) - Date.now(), (err, reply) => {
+                    if (err) return next(err);
+                    if (reply !== 1) return next(reply);
+                    var today = new Date();
+                    body.boxId = (today.getMonth() + 1) + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
+                    task((newBox) => {
+                        res.status(200).json({
+                            type: 'BoxingMessage',
+                            message: 'Boxing Succeeded',
+                            data: newBox
+                        });
                     });
                 });
             });
+        });
+    } else task(() => {
+        res.status(200).json({
+            type: 'BoxingMessage',
+            message: 'Boxing Succeeded'
         });
     });
 });
