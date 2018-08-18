@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var debug = require('debug')('goodtogo_backend:users');
 
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validation/validateDefault');
@@ -12,9 +13,9 @@ var intReLength = require('../models/toolKit').intReLength;
 var subscribeSNS = require('../models/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
-router.post('/signup', validateDefault, function(req, res, next) { // for CUSTOMER
+router.post('/signup', validateDefault, function (req, res, next) { // for CUSTOMER
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
-    userQuery.signup(req, function(err, user, info) {
+    userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -28,7 +29,7 @@ router.post('/signup', validateDefault, function(req, res, next) { // for CUSTOM
     });
 });
 
-router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) { // for CLERK
+router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) { // for CLERK
     var dbUser = req._user;
     if (dbUser.role.typeCode === "clerk") {
         req.body['role'] = {
@@ -44,7 +45,7 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
         };
     }
     req.body['active'] = true;
-    userQuery.signup(req, function(err, user, info) {
+    userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -57,7 +58,7 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
     });
 });
 
-router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function(req, res, next) { // for ADMIN and CLERK
+router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function (req, res, next) { // for ADMIN and CLERK
     req.body['active'] = true;
     var dbUser = req._user;
     if (dbUser.role.typeCode === "clerk") {
@@ -66,7 +67,7 @@ router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, func
         };
     }
     req._passCode = true;
-    userQuery.signup(req, function(err, user, info) {
+    userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -79,8 +80,8 @@ router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, func
     });
 });
 
-router.post('/login', validateDefault, function(req, res, next) {
-    userQuery.login(req, function(err, user, info) {
+router.post('/login', validateDefault, function (req, res, next) {
+    userQuery.login(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -92,8 +93,8 @@ router.post('/login', validateDefault, function(req, res, next) {
     });
 });
 
-router.post('/modifypassword', validateRequest, function(req, res, next) {
-    userQuery.chanpass(req, function(err, user, info) {
+router.post('/modifypassword', validateRequest, function (req, res, next) {
+    userQuery.chanpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -104,8 +105,8 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
     });
 });
 
-router.post('/forgotpassword', validateDefault, function(req, res, next) {
-    userQuery.forgotpass(req, function(err, user, info) {
+router.post('/forgotpassword', validateDefault, function (req, res, next) {
+    userQuery.forgotpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -118,8 +119,8 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
     });
 });
 
-router.post('/logout', validateRequest, function(req, res, next) {
-    userQuery.logout(req, function(err, user, info) {
+router.post('/logout', validateRequest, function (req, res, next) {
+    userQuery.logout(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -128,7 +129,7 @@ router.post('/logout', validateRequest, function(req, res, next) {
     });
 });
 
-router.post('/subscribeSNS', validateRequest, function(req, res, next) {
+router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
     var type = req.body.appType;
     var system = req.body.system;
@@ -145,15 +146,14 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
             message: 'Content invalid'
         });
     }
-    if (deviceToken === "HEYBITCH") {
-        res.json({
-            type: 'subscribeMessage',
-            message: 'Subscribe succeeded'
-        })
-    } else {
+    res.json({
+        type: 'subscribeMessage',
+        message: 'Subscribe succeeded'
+    });
+    if (deviceToken !== "HEYBITCH") {
         var dbUser = req._user;
-        subscribeSNS(system, type, deviceToken, function(err, arn) {
-            if (err) return next(err);
+        subscribeSNS(system, type, deviceToken, function (err, arn) {
+            if (err) return debug(err);
             var newObject = {};
             if (dbUser.pushNotificationArn)
                 for (var key in dbUser.pushNotificationArn)
@@ -161,30 +161,26 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
             newObject[type + "-" + system] = arn;
             dbUser.pushNotificationArn = newObject;
             dbUser.save((err) => {
-                if (err) return next(err);
-                res.json({
-                    type: 'subscribeMessage',
-                    message: 'Subscribe succeeded'
-                })
+                if (err) return debug(err);
             });
         });
     }
 });
 
-router.get('/data', validateRequest, function(req, res, next) {
+router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var returned = [];
     var inUsed = [];
     var recordCollection = {};
     var containerType = req.app.get('containerType');
     var store = req.app.get('store');
-    process.nextTick(function() {
+    process.nextTick(function () {
         Trade.find({
             "tradeType.action": "Rent",
             "newUser.phone": dbUser.user.phone
-        }, function(err, rentList) {
+        }, function (err, rentList) {
             if (err) return next(err);
-            rentList.sort(function(a, b) {
+            rentList.sort(function (a, b) {
                 return b.tradeTime - a.tradeTime;
             });
             for (var i = 0; i < rentList.length; i++) {
@@ -201,9 +197,9 @@ router.get('/data', validateRequest, function(req, res, next) {
             Trade.find({
                 "tradeType.action": "Return",
                 "oriUser.phone": dbUser.user.phone
-            }, function(err, returnList) {
+            }, function (err, returnList) {
                 if (err) return next(err);
-                returnList.sort(function(a, b) {
+                returnList.sort(function (a, b) {
                     return b.tradeTime - a.tradeTime;
                 });
                 for (var i = 0; i < returnList.length; i++) {
@@ -223,7 +219,7 @@ router.get('/data', validateRequest, function(req, res, next) {
                 recordCollection.data = inUsed.concat(returned);
                 Trade.count({
                     "tradeType.action": "Return"
-                }, function(err, count) {
+                }, function (err, count) {
                     if (err) return next(err);
                     recordCollection.globalAmount = count;
                     res.set('etag', wetag(JSON.stringify({
