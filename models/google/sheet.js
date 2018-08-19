@@ -1,7 +1,9 @@
 var fs = require('fs');
 var request = require('request');
-var sheets = require('googleapis').sheets('v4');
-var GoogleAuth = require('google-auth-library');
+var {
+    google
+} = require('googleapis');
+var sheets = google.sheets('v4');
 var debug = require('debug')('goodtogo_backend:google_sheet');
 
 var intReLength = require('../toolKit').intReLength;
@@ -10,8 +12,9 @@ var Store = require('../DB/storeDB');
 var ContainerType = require('../DB/containerTypeDB');
 var Container = require('../DB/containerDB');
 
-var authFactory = new GoogleAuth();
-var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+var googleAuth = require("./auth");
+// var authFactory = new GAL.GoogleAuth();
+// var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 var isNum = /^\d+$/;
 var defaultPeriods = [];
@@ -28,19 +31,19 @@ for (var i = 0; i < 7; i++) {
     });
 }
 
-function googleAuth(callback) {
-    authFactory.getApplicationDefault(function (err, authClient) {
-        if (err) {
-            debug('Authentication failed because of ', err);
-            return;
-        }
-        if (authClient.createScopedRequired && authClient.createScopedRequired()) {
-            authClient = authClient.createScoped(SCOPES);
-        }
+// function googleAuth(callback) {
+//     authFactory.getApplicationDefault(function (err, authClient) {
+//         if (err) {
+//             debug('Authentication failed because of ', err);
+//             return;
+//         }
+//         if (authClient.createScopedRequired && authClient.createScopedRequired()) {
+//             authClient = authClient.createScoped(SCOPES);
+//         }
 
-        callback(authClient);
-    });
-}
+//         callback(authClient);
+//     });
+// }
 
 module.exports = {
     getContainer: function (dbAdmin, cb) {
@@ -54,11 +57,11 @@ module.exports = {
                     ranges: ['container!A2:F', 'container_type!A2:C'],
                 }, function (err, response) {
                     if (err) {
-                        debug('The API returned an error: ' + err);
+                        debug('[Sheet API ERR (getContainer)] Error: ' + err);
                         return;
                     }
-                    var sheetContainerList = response.valueRanges[0].values;
-                    var sheetContainerTypeList = response.valueRanges[1].values;
+                    var sheetContainerList = response.data.valueRanges[0].values;
+                    var sheetContainerTypeList = response.data.valueRanges[1].values;
                     var funcList = [];
                     var checkpoint = Date.now();
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
@@ -139,7 +142,7 @@ module.exports = {
                             debug('[Sheet API ERR (getStore)] Error: ' + err);
                             return;
                         }
-                        var rows = response.values;
+                        var rows = response.data.values;
                         var placeArr = [];
                         var PlaceIDFuncList = [];
                         for (var i = 0; i < rows.length; i++) {
