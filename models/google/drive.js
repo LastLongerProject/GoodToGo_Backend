@@ -1,59 +1,45 @@
 var fs = require('fs');
 var sharp = require('sharp');
-var drive = require('googleapis').drive('v3');
-var GoogleAuth = require('google-auth-library');
+var {
+    google
+} = require('googleapis');
+var drive = google.drive('v3');
 var debug = require('debug')('goodtogo_backend:google_drive');
 
-var intReLength = require('../toolKit').intReLength;
-var PlaceID = require('../DB/placeIdDB');
-var Store = require('../DB/storeDB');
-var ContainerType = require('../DB/containerTypeDB');
-var Container = require('../DB/containerDB');
+var googleAuth = require("./auth");
 
-var authFactory = new GoogleAuth();
-var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 var connectionCtr = 0;
 
-function googleAuth(callback) {
-    authFactory.getApplicationDefault(function(err, authClient) {
-        if (err) {
-            debug('Authentication failed because of ', err);
-            return;
-        }
-        if (authClient.createScopedRequired && authClient.createScopedRequired()) {
-            authClient = authClient.createScoped(SCOPES);
-        }
-
-        callback(authClient);
-    });
-}
-
 module.exports = {
-    getContainer: function(forceRenew, cb) {
+    getContainer: function (forceRenew, cb) {
         var googleContent;
-        fs.readFile("./assets/json/googleContent.json", 'utf8', function(err, data) {
+        fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
-            googleAuth(function(auth) {
+            googleAuth(function (auth) {
                 drive.files.list({
                     auth: auth,
                     q: "'" + googleContent.container_icon_folderID + "' in parents",
                     fields: "files(id, name, modifiedTime)"
-                }, (err, response) => { resFromGoogle(err, response, googleContent, forceRenew, 'icon', cb); });
+                }, (err, response) => {
+                    resFromGoogle(err, response, googleContent, forceRenew, 'icon', cb);
+                });
             });
         });
     },
-    getStore: function(forceRenew, cb) {
+    getStore: function (forceRenew, cb) {
         var googleContent;
-        fs.readFile("./assets/json/googleContent.json", 'utf8', function(err, data) {
+        fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
-            googleAuth(function(auth) {
+            googleAuth(function (auth) {
                 drive.files.list({
                     auth: auth,
                     q: "'" + googleContent.store_img_folderID + "' in parents",
                     fields: "files(id, name, modifiedTime)"
-                }, (err, response) => { resFromGoogle(err, response, googleContent, forceRenew, 'shop', cb); });
+                }, (err, response) => {
+                    resFromGoogle(err, response, googleContent, forceRenew, 'shop', cb);
+                });
             });
         });
 
@@ -65,7 +51,7 @@ function resFromGoogle(err, response, googleContent, forceRenew, type, cb) {
         debug('The API returned an error: ' + err);
         return;
     }
-    var files = response.files;
+    var files = response.data.files;
     var fileIdList = [];
     for (var i = 0; i < files.length; i++) {
         fileIdList.push(files[i].id);
@@ -108,7 +94,7 @@ function resFromGoogle(err, response, googleContent, forceRenew, type, cb) {
                 }
             }
             googleContent.file_watchList = newWatchList;
-            fs.writeFile("./assets/json/googleContent.json", JSON.stringify(googleContent), 'utf8', function(err) {
+            fs.writeFile("./assets/json/googleContent.json", JSON.stringify(googleContent), 'utf8', function (err) {
                 if (err) return cb(false, err);
                 cb(true, modifiedFile);
             });
@@ -121,40 +107,42 @@ function resFromGoogle(err, response, googleContent, forceRenew, type, cb) {
 function downloadFile(aFile, type, resolve, reject) {
     if (connectionCtr < 6) {
         connectionCtr++;
-        googleAuth(function(auth) {
+        googleAuth(function (auth) {
             var fileName = aFile.name.replace('@', '_');
             var compressedFileName = fileName;
+            var bufs = [];
             if (type === 'shop') fileName = fileName.slice(0, 2) + '_ori.jpg';
             drive.files.get({
                 auth: auth,
                 fileId: aFile.id,
                 alt: 'media'
             }, {
-                encoding: null
-            }, function(err, buffer) {
-                connectionCtr--;
-                if (err) {
-                    debug('Error during downloading file: ' + aFile.name + ' err: ' + err);
-                    resolve('error');
-                    return;
-                }
-                fs.writeFile('./assets/images/' + type + '/' + fileName, buffer, 'binary', function(err) {
-                    if (err) {
-                        debug('Error during saving file: ' + aFile.name + ' err: ' + err);
-                        reject(err);
-                    } else {
+                responseType: 'stream'
+            }).then((res) => {
+                res.data
+                    .on('data', d => bufs.push(d))
+                    .on('err', err => {
+                        debug('Error during downloading file: ' + aFile.name + ' err: ' + err);
+                        resolve('error');
+                        return;
+                    })
+                    .on('end', () => {
+                        connectionCtr--;
+                        var buffer = Buffer.concat(bufs);
                         if (type === 'shop') {
                             sharp(buffer)
                                 .resize(500)
                                 .toFile('./assets/images/' + type + '/' + compressedFileName)
-                                .then(function() {
+                                .then(function () {
                                     resolve(aFile);
                                 });
                         } else {
                             resolve(aFile);
                         }
-                    }
-                });
+                    })
+                    .pipe(fs.createWriteStream('./assets/images/' + type + '/' + fileName));
+            }).catch(err => {
+                if (err) return reject(err);
             });
         });
     } else {
