@@ -54,8 +54,6 @@ app.use((req, res, next) => {
     esm(req, res, next);
 });
 
-process.env['GOOGLE_APPLICATION_CREDENTIALS'] = path.join(__dirname, 'config', 'GoodToGoTW-a98833274341.json');
-
 mongoose.Promise = global.Promise;
 connectMongoDB();
 var redisClient = redis.createClient(6379, config.redisUrl, {
@@ -79,10 +77,10 @@ app.set('redis', redisClient);
 app.use('/manager', manager);
 app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime/.well-known/acme-challenge')));
 app.use(timeout('10s'));
-app.use('/lottery', function(req, res) {
+app.use('/lottery', function (req, res) {
     res.redirect('http://goodtogo.tw');
 });
-app.use('/usage', function(req, res) {
+app.use('/usage', function (req, res) {
     res.redirect('http://goodtogo.tw');
 });
 
@@ -97,14 +95,14 @@ app.use('/containers', containers);
 app.use('/images', images);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     // set locals, only providing error in development
     res.locals.message = err.message;
     res.locals.error = req.app.get('env') === 'development' ? err : {};
@@ -147,7 +145,7 @@ function GAtrigger() {
 
     return function GAtrigger(req, res, next) {
         visitor.set('ua', req.headers['user-agent']);
-        visitor.pageview(req.url, function(err) {
+        visitor.pageview(req.url, function (err) {
             if (err !== null) {
                 debugError('Failed to trigger GA: ' + err);
             }
@@ -157,7 +155,7 @@ function GAtrigger() {
 }
 
 function connectMongoDB() {
-    mongoose.connect(config.dbUrl, config.dbOptions, function(err) {
+    mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
         // require('./tmp/listUnreturnedContainer')
@@ -172,19 +170,19 @@ function connectMongoDB() {
 }
 
 function regisRedisEvent(redisClient) {
-    redisClient.on('ready', function() {
+    redisClient.on('ready', function () {
         debug('redisDB ready');
     });
 
-    redisClient.on('connect', function() {
+    redisClient.on('connect', function () {
         debug('redisDB connect');
     });
 
-    redisClient.on('reconnecting', function(delay, attempt) {
+    redisClient.on('reconnecting', function (delay, attempt) {
         debug('redisDB reconnecting');
     });
 
-    redisClient.on('error', function(err) {
+    redisClient.on('error', function (err) {
         debugError('redisDB err ', err);
     });
 }
@@ -195,7 +193,7 @@ function resBodyParser(req, res, next) {
 
     var chunks = [];
 
-    res.write = function(chunk) {
+    res.write = function (chunk) {
         if (!Buffer.isBuffer(chunk))
             chunk = new Buffer(chunk);
         chunks.push(chunk);
@@ -203,7 +201,7 @@ function resBodyParser(req, res, next) {
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function(chunk) {
+    res.end = function (chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer(chunk);
