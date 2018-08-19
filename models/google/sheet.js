@@ -13,8 +13,6 @@ var ContainerType = require('../DB/containerTypeDB');
 var Container = require('../DB/containerDB');
 
 var googleAuth = require("./auth");
-// var authFactory = new GAL.GoogleAuth();
-// var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 var isNum = /^\d+$/;
 var defaultPeriods = [];
@@ -30,20 +28,6 @@ for (var i = 0; i < 7; i++) {
         }
     });
 }
-
-// function googleAuth(callback) {
-//     authFactory.getApplicationDefault(function (err, authClient) {
-//         if (err) {
-//             debug('Authentication failed because of ', err);
-//             return;
-//         }
-//         if (authClient.createScopedRequired && authClient.createScopedRequired()) {
-//             authClient = authClient.createScoped(SCOPES);
-//         }
-
-//         callback(authClient);
-//     });
-// }
 
 module.exports = {
     getContainer: function (dbAdmin, cb) {

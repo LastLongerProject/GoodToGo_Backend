@@ -8,23 +8,7 @@ var debug = require('debug')('goodtogo_backend:google_drive');
 
 var googleAuth = require("./auth");
 
-// var authFactory = new GAL.GoogleAuth();
-// var SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 var connectionCtr = 0;
-
-// function googleAuth(callback) {
-//     authFactory.getApplicationDefault(function (err, authClient) {
-//         if (err) {
-//             debug('Authentication failed because of ', err);
-//             return;
-//         }
-//         if (authClient.createScopedRequired && authClient.createScopedRequired()) {
-//             authClient = authClient.createScoped(SCOPES);
-//         }
-
-//         callback(authClient);
-//     });
-// }
 
 module.exports = {
     getContainer: function (forceRenew, cb) {
