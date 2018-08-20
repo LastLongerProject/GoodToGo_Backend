@@ -16,6 +16,7 @@ var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 var validateStateChanging = require('../models/toolKit').validateStateChanging;
+var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
@@ -208,31 +209,46 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function (req, r
 router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var typeDict = req.app.get('containerType');
-    var queryCond = {
-        'tradeType.action': 'ReadyToClean',
+    var queryCond;
+    if (dbStore.role.typeCode === 'clerk') queryCond = {
+        '$or': [{
+            'tradeType.action': 'ReadyToClean',
+            'oriUser.storeID': dbStore.role.storeID
+        }, {
+            'tradeType.action': 'UndoReadyToClean'
+        }],
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
     };
-    if (dbStore.role.typeCode === 'clerk') queryCond['oriUser.storeID'] = dbStore.role.storeID;
+    else queryCond = {
+        'tradeType.action': {
+            '$in': ['ReadyToClean', 'UndoReadyToClean']
+        },
+        'tradeTime': {
+            '$gte': dateCheckpoint(1 - historyDays)
+        }
+    };
     Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
         });
         list.sort((a, b) => {
-            return b.tradeTime - a.tradeTime;
+            return a.tradeTime - b.tradeTime;
         });
+        cleanUndoTrade('ReadyToClean', list);
         var boxArr = [];
         var thisBoxTypeList;
         var thisBoxContainerList;
         var lastIndex;
         var nowIndex;
         var thisType;
-        for (var i = 0; i < list.length; i++) {
+        for (var i = list.length - 1; i >= 0; i--) {
+            if (list[i].tradeType.action === 'UndoReadyToClean') continue;
             thisType = typeDict[list[i].container.typeCode].name;
             lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 1000 || list[i].oriUser.storeID !== list[i - 1].oriUser.storeID) {
+            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 1000 || list[i].oriUser.storeID !== list[i + 1].oriUser.storeID) {
                 boxArr.push({
                     boxTime: list[i].tradeTime,
                     typeList: [],
