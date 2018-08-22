@@ -4,17 +4,32 @@ var mongoose = require('mongoose');
 var userSchema = mongoose.Schema({
     ID: Number,
     typeCode: Number,
-    statusCode: { type: Number, default: 4 },
+    statusCode: {
+        type: Number,
+        default: 4
+    },
     conbineTo: String,
     storeID: Number,
-    cycleCtr: { type: Number, default: 0 },
-    active: { type: Boolean, default: true },
-    checkedAt: Date
+    cycleCtr: {
+        type: Number,
+        default: 0
+    },
+    active: {
+        type: Boolean,
+        default: true
+    },
+    checkedAt: Date,
+    lastUsedAt: {
+        type: Date,
+        default: Date.now()
+    }
 }, {
     timestamps: true
 });
 
-userSchema.index({ "ID": 1 });
+userSchema.index({
+    "ID": 1
+});
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Container', userSchema);

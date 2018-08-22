@@ -154,7 +154,7 @@ router.get('/get/deliveryHistory', regAsAdmin, validateRequest, function (req, r
             pastDelivery: []
         });
         list.sort((a, b) => {
-            return b.logTime - a.logTime;
+            return b.tradeTime - a.tradeTime;
         });
         var boxArr = [];
         var boxIDArr = [];
@@ -924,6 +924,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                     if (action === 'Sign') newTrade.container.box = key.boxID;
                     container.statusCode = newState;
                     container.conbineTo = dbNew.user.phone;
+                    container.lastUsedAt = Date.now();
                     if (action === 'Delivery') container.cycleCtr++;
                     else if (action === 'CancelDelivery') container.cycleCtr--;
                     if (action === 'Sign' || action === 'Return') {
@@ -940,7 +941,7 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                                 return callback();
                             });
                         });
-                    }
+                    };
 
                     if (resolve === false) {
                         saveAll(() => res.status(200).json({
