@@ -272,6 +272,10 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     'newUser.storeID': STORE_ID
                 },
                 {
+                    'tradeType.action': 'UndoReturn',
+                    'oriUser.storeID': STORE_ID
+                },
+                {
                     'tradeType.action': 'ReadyToClean',
                 },
                 {
@@ -290,7 +294,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
         }, function (err, tradeList) {
             if (err) return next(err);
 
-            cleanUndo('ReadyToClean', tradeList);
+            cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
             var usedContainer = {};
             var unusedContainer = {};
@@ -398,7 +402,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         userList.forEach(aUser => {
             userDict[aUser.user.phone] = {
                 id: aUser.user.phone,
-                phone: aUser.user.phone,
+                phone: phoneEncoder(aUser.user.phone, true),
                 usingAmount: 0,
                 lostAmount: 0,
                 totalUsageAmount: 0
@@ -449,12 +453,119 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                     }
                 }
             }
+            while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                weeklyAmount[weekCheckpoint] = 0;
+            }
             result.list = Object.values(userDict);
             result.totalUserAmount = userList.length;
             var arrOfWeeklyAmount = Object.values(weeklyAmount);
-            result.weeklyAverageUsage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b)) / arrOfWeeklyAmount.length, 0);
+            result.weeklyAverageUsage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length);
             res.json(result);
         });
+    });
+});
+
+router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+    const USER_ID = req.query.id;
+    var containerDict = req.app.get('containerWithDeactive');
+    var storeDict = req.app.get('store');
+    User.findOne({
+        'user.phone': USER_ID
+    }, (err, theUser) => {
+        if (err || !theUser) return next(err);
+
+        var result = {
+            userPhone: phoneEncoder(theUser.user.phone, true),
+            usingAmount: 0,
+            lostAmount: 0,
+            totalUsageAmount: 0,
+            joinedDate: 1234, // 待更新
+            joinedMethod: "店鋪 (方糖咖啡)", // 待更新
+            recentAmount: 0,
+            recentAmountPercentage: 0,
+            weekAverage: 0,
+            averageUsingDuration: 0,
+            amountOfBorrowingFromDiffPlace: 0,
+            history: []
+        };
+        var tradeQuery = {
+            '$or': [{
+                    'tradeType.action': 'Rent',
+                    'newUser.phone': theUser.user.phone
+                },
+                {
+                    'tradeType.action': 'Return',
+                    'oriUser.phone': theUser.user.phone
+                },
+                {
+                    'tradeType.action': 'UndoReturn',
+                    'newUser.phone': theUser.user.phone
+                }
+            ]
+        };
+        Trade.find(tradeQuery, (err, tradeList) => {
+            if (err) return next(err);
+            tradeList.sort((a, b) => (a.tradeTime - b.tradeTime));
+            cleanUndo('Return', tradeList);
+
+            var now = Date.now();
+            var containerKey;
+            var tradeDict = {};
+            var weeklyAmount = {};
+            var weekCheckpoint = null;
+            tradeList.forEach((aTrade) => {
+                containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                if (aTrade.tradeType.action === "Rent") {
+                    tradeDict[containerKey] = {
+                        containerType: containerDict[aTrade.container.id],
+                        containerID: "#" + aTrade.container.id,
+                        rentTime: aTrade.tradeTime,
+                        rentPlace: storeDict[aTrade.oriUser.storeID].name
+                    };
+                    if (!weekCheckpoint) {
+                        weekCheckpoint = getWeekCheckpoint(aTrade.tradeTime);
+                        weeklyAmount[weekCheckpoint] = 0;
+                    }
+                    while (aTrade.tradeTime - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                        weeklyAmount[weekCheckpoint] = 0;
+                    }
+                    weeklyAmount[weekCheckpoint]++;
+                    result.totalUsageAmount++;
+                } else if (aTrade.tradeType.action === "Return" && tradeDict[containerKey]) {
+                    tradeDict[containerKey].returnTime = aTrade.tradeTime;
+                    tradeDict[containerKey].returnPlace = storeDict[aTrade.newUser.storeID].name;
+                    tradeDict[containerKey].usingDuration = aTrade.tradeTime - tradeDict[containerKey].rentTime;
+                    result.history.unshift(tradeDict[containerKey]);
+                    if (tradeDict[containerKey].rentPlace !== tradeDict[containerKey].returnPlace) result.amountOfBorrowingFromDiffPlace++;
+                    delete tradeDict[containerKey];
+                }
+            });
+
+            var notReturnedList = Object.values(tradeDict).sort((a, b) => b.rentTime - a.rentTime);
+            notReturnedList.forEach((aNotReturnedTrade) => {
+                aNotReturnedTrade.usingDuration = now - aNotReturnedTrade.rentTime;
+                aNotReturnedTrade.returnTime = "尚未歸還";
+                aNotReturnedTrade.returnPlace = "";
+                if (aNotReturnedTrade.usingDuration > MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) result.lostAmount++;
+                else result.usingAmount++;
+            });
+
+            while (weekCheckpoint && now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                weeklyAmount[weekCheckpoint] = 0;
+            }
+
+            result.history = notReturnedList.concat(result.history);
+            var totalUsingTime = result.history.reduce((a, b) => a.usingDuration + b.usingDuration, 0);
+            result.averageUsingDuration = totalUsingTime / result.history.length;
+            var arrOfWeeklyAmount = Object.values(weeklyAmount);
+            result.weekAverage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length, 0);
+            result.recentAmount = weeklyAmount[weekCheckpoint];
+            result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
+            res.json(result);
+        })
     });
 });
 
@@ -520,8 +631,8 @@ function getWeekCheckpoint(date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, 16, 0, 0, 0);
 }
 
-function phoneEncoder(phone) {
-    return phone.slice(0, 4) + "-***-" + phone.slice(7, 10);
+function phoneEncoder(phone, expose = false) {
+    return phone.slice(0, 4) + (expose ? ("-" + phone.slice(4, 7) + "-") : "-***-") + phone.slice(7, 10);
 }
 
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
