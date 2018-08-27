@@ -106,7 +106,6 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 usedTime_recent.push(duration);
                             }
                         }
-                        if (!signedContainer[containerKey]) console.log(containerKey);
                         if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                             result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                             if (recent) {
@@ -123,9 +122,9 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     }
                 }
 
-                result.shopHistorySummary.totalDuration = usedTime.reduce((a, b) => (a + b));
-                result.shopRecentHistorySummary.totalDuration = usedTime_recent.reduce((a, b) => (a + b));
-                console.log(result)
+                result.shopHistorySummary.totalDuration = usedTime.reduce((a, b) => (a + b), 0) / usedTime.length;
+                var recentTotalDuration = usedTime_recent.reduce((a, b) => (a + b), 0) / usedTime_recent.length;
+                result.shopRecentHistorySummary.totalDuration = isNaN(recentTotalDuration) ? 0 : recentTotalDuration;
                 res.json(result);
             });
         });
@@ -229,7 +228,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 storeIdDict[aStoreID].weekAmount = weeklyAmountByStore[aStoreID][weekCheckpoint];
                 var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmountByStore[aStoreID]);
                 var weights = arrOfWeeklyUsageOfThisStore.length;
-                var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b));
+                var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                 storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
             }
 
@@ -375,7 +374,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             result.weekAmount = weeklyAmount[weekCheckpoint];
             var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
             var weights = arrOfWeeklyUsageOfThisStore.length;
-            var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b));
+            var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
             result.weekAverage = Math.round(weeklySum / weights);
             result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
 
@@ -453,7 +452,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
             result.list = Object.values(userDict);
             result.totalUserAmount = userList.length;
             var arrOfWeeklyAmount = Object.values(weeklyAmount);
-            result.weeklyAverageUsage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b)) / arrOfWeeklyAmount.length);
+            result.weeklyAverageUsage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b)) / arrOfWeeklyAmount.length, 0);
             res.json(result);
         });
     });
