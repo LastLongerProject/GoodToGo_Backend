@@ -131,6 +131,120 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
     });
 });
 
+router.get('/search', regAsAdminManager, validateRequest, function (req, res, next) {
+    var fields = req.query.fields.split(",");
+    var searchTxt = req.query.txt;
+    var txtArr = searchTxt.split(" ").filter(
+        function (ele) {
+            return ele !== "";
+        }
+    );
+    var regExpTxt = txtArr.join("|");
+    var regExp;
+    try {
+        regExp = new RegExp(regExpTxt, "gi");
+    } catch (error) {
+        return res.status(403).json({
+            code: '???',
+            type: "ManageMessage",
+            message: "Search Txt Err"
+        });
+    }
+    const fieldDict = {
+        shop: Store.find({
+            "name": regExp
+        }).select({
+            "id": 1,
+            "name": 1,
+            "_id": 0
+        }),
+        user: User.find({
+            "user.phone": regExp
+        }).select({
+            "user.phone": 1,
+            "_id": 0
+        }),
+        container: Container.find({
+            '$where': regExp.toString() + ".test(this.ID)"
+        }).select({
+            "ID": 1,
+            "typeCode": 1,
+            "_id": 0
+        })
+    };
+    var funcList = [];
+    fields.forEach((aField) => {
+        funcList.push(new Promise((resolve, reject) => {
+            var localField = aField;
+            if (fieldDict.hasOwnProperty(aField))
+                fieldDict[aField].exec((err, dataList) => {
+                    if (err) return reject(err);
+                    else return resolve([localField, dataList]);
+                });
+            else resolve([aField, []]);
+        }));
+    });
+    Promise
+        .all(funcList)
+        .then((data) => {
+            var containerDict = req.app.get('containerType');
+            var result = {
+                user: {
+                    show: true,
+                    list: []
+                },
+                container: {
+                    show: true,
+                    list: []
+                },
+                shop: {
+                    show: true,
+                    list: []
+                },
+                delivery: {
+                    show: true,
+                    list: []
+                }
+            };
+            data.forEach((aData) => {
+                var fieldName = aData[0];
+                var dataList = aData[1];
+                if (dataList.length > 0) {
+                    switch (fieldName) {
+                        case "user":
+                            dataList.forEach((aUser) => {
+                                result[fieldName].list.push({
+                                    id: aUser.user.phone,
+                                    phone: phoneEncoder(aUser.user.phone, true)
+                                });
+                            });
+                            break;
+                        case "shop":
+                            dataList.forEach((aShop) => {
+                                result[fieldName].list.push({
+                                    id: aShop.id,
+                                    name: aShop.name
+                                });
+                            });
+                            break;
+                        case "container":
+                            dataList.forEach((aContainer) => {
+                                result[fieldName].list.push({
+                                    id: aContainer.ID,
+                                    name: "#" + aContainer.ID + "　" + containerDict[aContainer.typeCode].name,
+                                    type: aContainer.typeCode
+                                });
+                            });
+                            break;
+                    }
+                }
+            });
+            res.json(result);
+        })
+        .catch((err) => {
+            if (err) return next(err);
+        });
+});
 
 router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
     Store.find({
@@ -573,10 +687,11 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
     Container.find((err, containerList) => {
         if (err) return next(err);
         var typeDict = {};
-        req.app.get('containerType').forEach((aType) => {
-            typeDict[aType.typeCode] = {
-                id: aType.typeCode,
-                type: aType.name,
+        var containerType = req.app.get('containerType');
+        for (var aType in containerType) {
+            typeDict[containerType[aType].typeCode] = {
+                id: containerType[aType].typeCode,
+                type: containerType[aType].name,
                 totalAmount: 0,
                 toUsedAmount: 0,
                 usingAmount: 0,
@@ -587,7 +702,7 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
                 inStorageAmount: 0, // need update
                 lostAmount: 0
             };
-        });
+        }
         const now = Date.now();
         containerList.forEach((aContainer) => {
             typeDict[aContainer.typeCode].totalAmount++;
@@ -636,14 +751,16 @@ function phoneEncoder(phone, expose = false) {
 }
 
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshStore(req.app, function () {
+    refreshStore(req.app, function (err) {
+        if (err) return next(err);
         res.status(204).end();
     });
 });
 
 router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    refreshContainer(req.app, dbAdmin, function () {
+    refreshContainer(req.app, dbAdmin, function (err) {
+        if (err) return next(err);
         res.status(204).end();
     });
 });

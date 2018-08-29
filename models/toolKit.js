@@ -49,7 +49,7 @@ module.exports = {
                     return callback(false);
                 break;
             case 2: // rented
-                if (newState !== 3 && newState !== 4)
+                if (newState !== 3)
                     return callback(false);
                 break;
             case 3: // returned

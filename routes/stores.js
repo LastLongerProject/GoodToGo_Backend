@@ -213,7 +213,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
-    var type = req.app.get('containerType');
+    var type = Object.values(req.app.get('containerType'));
     var forLoopLength = (dbStore.role.storeID === 17) ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
@@ -563,12 +563,12 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
                         'oriUser.storeID': dbStore.role.storeID
                     }, (err, tradeList) => {
                         if (err) return reject(err);
-                        var dataList = [];
-                        for (var i = 0; i < type.length; i++) {
-                            dataList.push({
-                                typeCode: i,
+                        var dataList = {};
+                        for (var aType in type) {
+                            dataList[type[aType].typeCode] = {
+                                typeCode: type[aType].typeCode,
                                 amount: 0
-                            });
+                            };
                         }
                         for (var j = 0; j < tradeList.length; j++) {
                             dataList[tradeList[j].container.typeCode].amount++;
@@ -587,7 +587,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
             ])
             .then((data) => {
                 res.json({
-                    store: data[0],
+                    store: Object.values(data[0]),
                     total: data[1]
                 });
             }).catch(err => next(err));
@@ -669,10 +669,10 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
                     var newTypeArrGenerator = function () {
                         var tmpArr = [];
-                        for (var i = 0; i < type.length; i++) {
+                        for (var aType in type) {
                             tmpArr.push({
-                                typeCode: type[i].typeCode,
-                                name: type[i].name,
+                                typeCode: type[aType].typeCode,
+                                name: type[aType].name,
                                 IdList: [],
                                 amount: 0
                             });

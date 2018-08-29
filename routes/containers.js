@@ -55,7 +55,7 @@ router.all('/:id', function (req, res) {
 router.get('/get/list', validateDefault, function (req, res, next) {
     var typeDict = req.app.get('containerType');
     var containerDict = req.app.get('container');
-    var tmpIcon = {};
+    var tmpIcon;
     var tmpArr = [];
     var date = new Date();
     var payload = {
@@ -65,15 +65,15 @@ router.get('/get/list', validateDefault, function (req, res, next) {
     keys.serverSecretKey((err, key) => {
         var token = jwt.encode(payload, key);
         res.set('etag', wetag([containerDict, typeDict]));
-        for (var i = 0; i < typeDict.length; i++) {
+        for (var aType in typeDict) {
             tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = iconBaseUrl + intReLength(typeDict[i].typeCode, 2) + "_" + j + "x" + "/" + token;
+                tmpIcon[j + 'x'] = iconBaseUrl + intReLength(typeDict[aType].typeCode, 2) + "_" + j + "x" + "/" + token;
             }
             tmpArr.push({
-                typeCode: typeDict[i].typeCode,
-                name: typeDict[i].name,
-                version: typeDict[i].version,
+                typeCode: typeDict[aType].typeCode,
+                name: typeDict[aType].name,
+                version: typeDict[aType].version,
                 icon: tmpIcon
             });
         }
@@ -331,6 +331,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 aBox.user.delivery = dbAdmin.user.phone;
                 aBox.save(function (err) {
                     if (err) return next(err);
+                    /*
                     User.find({
                         'roles.clerk.storeID': storeID
                     }, function (err, userList) {
@@ -363,7 +364,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                             .catch((err) => {
                                 if (err) debug(err);
                             });
-                    });
+                    });*/
                     return res.json({
                         type: "DeliveryMessage",
                         message: "Delivery Succeed"

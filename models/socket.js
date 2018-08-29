@@ -44,9 +44,23 @@ module.exports = {
                 } catch (err) {
                     thisErr = err;
                 }
-                if (!decoded || !decoded.user || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
+                if (!decoded || !decoded.user || !decoded.exp || !decoded.iat || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
                     if (thisErr) debug(thisErr);
-                    return next(new Error('Authentication error'));
+                    if (!decoded) {
+                        thisErr = "Can't Decode";
+                    } else if (!decoded.user || !decoded.exp || !decoded.iat) {
+                        thisErr = "Token Payload Missing Something";
+                    } else if (decoded.exp < Date.now()) {
+                        thisErr = "Token Expired";
+                    } else if (!dbKey) {
+                        thisErr = "Can't Find User by Apikey";
+                    } else if (decoded.user !== dbKey.phone) {
+                        thisErr = "User & Apikey Mismatch";
+                    } else {
+                        thisErr = "Unknown Err";
+                    }
+                    debug('Authentication error (' + thisErr + ')');
+                    return next(new Error('Authentication error (' + thisErr + ')'));
                 } else {
                     socket._user = decoded.user;
                     next();
