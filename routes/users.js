@@ -45,6 +45,7 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
         };
     }
     req.body['active'] = true;
+    req._passCode = true;
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
