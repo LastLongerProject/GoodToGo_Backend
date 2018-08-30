@@ -604,13 +604,12 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
         'user.phone': USER_ID
     }, (err, theUser) => {
         if (err || !theUser) return next(err);
-
         var result = {
             userPhone: phoneEncoder(theUser.user.phone, true),
             usingAmount: 0,
             lostAmount: 0,
             totalUsageAmount: 0,
-            joinedDate: 1234, // 待更新
+            joinedDate: theUser.registerTime,
             joinedMethod: "店鋪 (方糖咖啡)", // 待更新
             recentAmount: 0,
             recentAmountPercentage: 0,
@@ -695,7 +694,7 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
             result.recentAmount = weeklyAmount[weekCheckpoint] || 0;
             result.recentAmountPercentage = ((result.recentAmount - result.weekAverage) / result.weekAverage) || 0;
             res.json(result);
-        })
+        });
     });
 });
 

@@ -660,7 +660,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (r
 
 router.get('/challenge/token', regAsStore, regAsAdmin, validateRequest, generateSocketToken);
 
-var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
+var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var action = req.params.action;
