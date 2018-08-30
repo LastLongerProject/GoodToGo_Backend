@@ -19,7 +19,7 @@ var Container = require('../models/DB/containerDB');
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
-const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 7;
+const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 8;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 3;
 
 router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
@@ -210,30 +210,46 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
                 var fieldName = aData[0];
                 var dataList = aData[1];
                 if (dataList.length > 0) {
-                    switch (fieldName) {
+                    if (dataList.length > 24) {
+                        dataList = dataList.slice(0, 23);
+                        dataList.push({
+                            id: -1,
+                            name: "還有更多..."
+                        });
+                    }
+                    switch (fieldName) { // 還有更多
                         case "user":
                             dataList.forEach((aUser) => {
-                                result[fieldName].list.push({
-                                    id: aUser.user.phone,
-                                    phone: phoneEncoder(aUser.user.phone, true)
-                                });
+                                if (aUser.hasOwnProperty('id') && aUser.id === -1)
+                                    result[fieldName].list.push(aUser);
+                                else
+                                    result[fieldName].list.push({
+                                        id: aUser.user.phone,
+                                        name: phoneEncoder(aUser.user.phone, true)
+                                    });
                             });
                             break;
                         case "shop":
                             dataList.forEach((aShop) => {
-                                result[fieldName].list.push({
-                                    id: aShop.id,
-                                    name: aShop.name
-                                });
+                                if (aShop.hasOwnProperty('id') && aShop.id === -1)
+                                    result[fieldName].list.push(aShop);
+                                else
+                                    result[fieldName].list.push({
+                                        id: aShop.id,
+                                        name: aShop.name
+                                    });
                             });
                             break;
                         case "container":
                             dataList.forEach((aContainer) => {
-                                result[fieldName].list.push({
-                                    id: aContainer.ID,
-                                    name: "#" + aContainer.ID + "　" + containerDict[aContainer.typeCode].name,
-                                    type: aContainer.typeCode
-                                });
+                                if (aContainer.hasOwnProperty('id') && aContainer.id === -1)
+                                    result[fieldName].list.push(aContainer);
+                                else
+                                    result[fieldName].list.push({
+                                        id: aContainer.ID,
+                                        name: "#" + aContainer.ID + "　" + containerDict[aContainer.typeCode].name,
+                                        type: aContainer.typeCode
+                                    });
                             });
                             break;
                     }
@@ -673,11 +689,11 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
 
             result.history = notReturnedList.concat(result.history);
             var totalUsingTime = result.history.reduce((a, b) => a.usingDuration + b.usingDuration, 0);
-            result.averageUsingDuration = totalUsingTime / result.history.length;
+            result.averageUsingDuration = (totalUsingTime / result.history.length) || 0;
             var arrOfWeeklyAmount = Object.values(weeklyAmount);
-            result.weekAverage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length, 0);
-            result.recentAmount = weeklyAmount[weekCheckpoint];
-            result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
+            result.weekAverage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length) || 0;
+            result.recentAmount = weeklyAmount[weekCheckpoint] || 0;
+            result.recentAmountPercentage = ((result.recentAmount - result.weekAverage) / result.weekAverage) || 0;
             res.json(result);
         })
     });
@@ -735,6 +751,68 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
         });
         res.json({
             list: Object.values(typeDict)
+        });
+    });
+});
+
+const statusTxtDict = {
+    0: "待簽收",
+    1: "待使用",
+    2: "使用中",
+    3: "已歸還",
+    4: "庫存",
+    5: "待配送"
+};
+const actionTxtDict = {
+    "Delivery": "配送",
+    "CancelDelivery": "取消配送",
+    "Sign": "簽收",
+    "Rent": "借出",
+    "Return": "歸還",
+    "UndoReturn": "取消歸還",
+    "ReadyToClean": "回收",
+    "UndoReadyToClean": "取消回收",
+    "Boxing": "裝箱",
+    "Unboxing": "取消裝箱"
+};
+router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+    const CONTAINER_ID = req.query.id;
+    var containerDict = req.app.get('containerWithDeactive');
+    var storeDict = req.app.get('store');
+    Container.findOne({
+        "ID": CONTAINER_ID
+    }, (err, theContainer) => {
+        if (err) return next(err);
+        var result = {
+            containerID: "#" + theContainer.ID,
+            containerType: {
+                txt: containerDict[theContainer.ID],
+                code: theContainer.typeCode
+            },
+            reuseTime: theContainer.cycleCtr,
+            status: statusTxtDict[theContainer.statusCode],
+            bindedUser: phoneEncoder(theContainer.conbineTo),
+            joinedDate: theContainer.createdAt,
+            history: []
+        };
+        Trade.find({
+            "container.id": CONTAINER_ID
+        }, {}, {
+            sort: {
+                "tradeTime": -1
+            }
+        }, (err, tradeList) => {
+            if (err) return next(err);
+            tradeList.forEach((aTrade) => {
+                result.history.push({
+                    tradeTime: aTrade.tradeTime,
+                    action: actionTxtDict[aTrade.tradeType.action],
+                    newUser: phoneEncoder(aTrade.newUser.phone),
+                    oriUser: phoneEncoder(aTrade.oriUser.phone),
+                    comment: ""
+                });
+            });
+            res.json(result);
         });
     });
 });

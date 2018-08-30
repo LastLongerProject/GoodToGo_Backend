@@ -30,7 +30,10 @@ module.exports = {
     auth: function (socket, next) {
         var handShakeData = socket.request;
         debug(handShakeData.url);
-        if (!handShakeData._query.token || !handShakeData._query.apikey) return next(new Error('Authentication error (Missing Something)'));
+        if (!handShakeData._query.token || !handShakeData._query.apikey) {
+            debug('[SOCKET] EMIT "error": "Authentication error (Missing Something)"');
+            return next(new Error('Authentication error (Missing Something)'));
+        }
         UserKeys.findOneAndUpdate({
             'apiKey': handShakeData._query.apikey
         }, {
@@ -59,7 +62,7 @@ module.exports = {
                     } else {
                         thisErr = "Unknown Err";
                     }
-                    debug('Authentication error (' + thisErr + ')');
+                    debug('[SOCKET] EMIT "error": "Authentication error (' + thisErr + ')"');
                     return next(new Error('Authentication error (' + thisErr + ')'));
                 } else {
                     socket._user = decoded.user;
