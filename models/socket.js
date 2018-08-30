@@ -7,7 +7,7 @@ var Container = require('../models/DB/containerDB');
 var validateStateChanging = require('../models/toolKit').validateStateChanging;
 
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
-var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing'];
+var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 
 module.exports = {
     generateToken: function (req, res, next) {
