@@ -476,41 +476,48 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             });
 
             result.toUsedAmount = Object.keys(unusedContainer).length;
+            if (Object.keys(usedContainer).length == 0) {
+                result.todayAmount = 0;
+                result.recentAmount = 0;
+                result.weekAmount = 0;
+                result.weekAverage = 0;
+                result.recentAmountPercentage = 0;
+            } else {
+                var weeklyAmount = {};
+                var weekCheckpoint = getWeekCheckpoint(Object.entries(usedContainer)[0][1].time);
+                var todayCheckpoint = dateCheckpoint(0);
+                var recentCheckpoint = dateCheckpoint(-6);
+                weeklyAmount[weekCheckpoint] = 0;
+                for (var usedContainerKey in usedContainer) {
+                    var usedContainerRecord = usedContainer[usedContainerKey];
+                    if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                        weeklyAmount[weekCheckpoint] = 0;
+                    }
+                    if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
+                        weeklyAmount[weekCheckpoint]++;
+                    }
+                    if (usedContainerRecord.time - todayCheckpoint > 0) {
+                        result.todayAmount++;
+                    }
+                    if (usedContainerRecord.time - recentCheckpoint > 0) {
+                        result.recentAmount++;
+                    }
+                }
 
-            var weeklyAmount = {};
-            var weekCheckpoint = getWeekCheckpoint(Object.entries(usedContainer)[0][1].time);
-            var todayCheckpoint = dateCheckpoint(0);
-            var recentCheckpoint = dateCheckpoint(-6);
-            weeklyAmount[weekCheckpoint] = 0;
-            for (var usedContainerKey in usedContainer) {
-                var usedContainerRecord = usedContainer[usedContainerKey];
-                if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                var now = Date.now();
+                while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                     weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                     weeklyAmount[weekCheckpoint] = 0;
                 }
-                if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
-                    weeklyAmount[weekCheckpoint]++;
-                }
-                if (usedContainerRecord.time - todayCheckpoint > 0) {
-                    result.todayAmount++;
-                }
-                if (usedContainerRecord.time - recentCheckpoint > 0) {
-                    result.recentAmount++;
-                }
-            }
 
-            var now = Date.now();
-            while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                weeklyAmount[weekCheckpoint] = 0;
+                result.weekAmount = weeklyAmount[weekCheckpoint];
+                var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
+                var weights = arrOfWeeklyUsageOfThisStore.length;
+                var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
+                result.weekAverage = Math.round(weeklySum / weights);
+                result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
             }
-
-            result.weekAmount = weeklyAmount[weekCheckpoint];
-            var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
-            var weights = arrOfWeeklyUsageOfThisStore.length;
-            var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
-            result.weekAverage = Math.round(weeklySum / weights);
-            result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
 
             res.json(result);
         });
