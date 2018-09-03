@@ -371,6 +371,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     const STORE_ID = parseInt(req.query.id);
+    if (!STORE_ID) return res.status(404).end();
     Store.findOne({
         id: STORE_ID
     }, function (err, theStore) {
@@ -605,6 +606,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
 router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     const USER_ID = req.query.id;
+    if (!USER_ID) return res.status(404).end();
     var containerDict = req.app.get('containerWithDeactive');
     var storeDict = req.app.get('store');
     User.findOne({
@@ -783,6 +785,7 @@ const actionTxtDict = {
 };
 router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     const CONTAINER_ID = req.query.id;
+    if (!CONTAINER_ID) return res.status(404).end();
     var containerDict = req.app.get('containerWithDeactive');
     var storeDict = req.app.get('store');
     Container.findOne({
