@@ -1,7 +1,9 @@
 var express = require('express');
 var router = express.Router();
+var debugError = require('debug')('goodtogo_backend:managerERR');
 var debug = require('debug')('goodtogo_backend:manager');
 var redis = require("../models/redis");
+debug.log = console.log.bind(console);
 
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
@@ -21,6 +23,13 @@ const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 8;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 3;
+
+const CACHE = {
+    index: "manage_cache:index"
+};
+var lastCache = {
+    index: 0
+};
 
 router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
     var result = {
@@ -60,72 +69,119 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     '$in': ['Sign', 'Rent', 'Return', 'UndoReturn', 'ReadyToClean', 'UndoReadyToClean']
                 }
             };
-            if (false) // 讀快取
-                tradeQuery.tradeTime = {
-                    '$gte': dateCheckpoint(0)
-                };
-            Trade.find(tradeQuery, function (err, tradeList) {
+
+            redis.get(CACHE.index, (err, reply) => {
                 if (err) return next(err);
+                var dataCached = {};
+                if (reply !== null) dataCached = JSON.parse(reply);
 
-                tradeList.sort((a, b) => {
-                    return a.tradeTime - b.tradeTime;
-                });
-                cleanUndo(['Return', 'ReadyToClean'], tradeList);
-
-                var now = Date.now();
-                var lastUsed = {};
-                var rentedContainer = {};
-                var signedContainer = {};
-                var usedTime = [];
-                var usedTime_recent = [];
-                tradeList.forEach(function (aTrade) {
-                    var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    lastUsed[aTrade.container.id] = {
-                        time: aTrade.tradeTime,
-                        action: aTrade.tradeType.action
+                if (dataCached.timestamp)
+                    tradeQuery.tradeTime = {
+                        '$gte': new Date(dataCached.timestamp)
                     };
-                    if (aTrade.tradeType.action === "Sign") {
-                        signedContainer[containerKey] = {
-                            time: aTrade.tradeTime,
-                            storeID: aTrade.newUser.storeID
+
+                Trade.find(tradeQuery, function (err, tradeList) {
+                    if (err) return next(err);
+
+                    tradeList.sort((a, b) => {
+                        return a.tradeTime - b.tradeTime;
+                    });
+                    cleanUndo(['Return', 'ReadyToClean'], tradeList);
+
+                    var now = Date.now();
+                    var lastUsed = dataCached.lastUsed || {};
+                    var rentedContainer = dataCached.rentedContainer || {};
+                    var signedContainer = dataCached.signedContainer || {};
+                    if (dataCached.shopHistorySummary) {
+                        if (dataCached.shopHistorySummary.usedAmount) result.shopHistorySummary.usedAmount = dataCached.shopHistorySummary.usedAmount;
+                        if (dataCached.shopHistorySummary.quantityOfBorrowingFromDiffPlace) result.shopHistorySummary.quantityOfBorrowingFromDiffPlace = dataCached.shopHistorySummary.quantityOfBorrowingFromDiffPlace;
+                    }
+                    var usedTime = [];
+                    var usedTime_recent = [];
+
+                    tradeList.forEach(function (aTrade) {
+                        var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                        lastUsed[aTrade.container.id] = {
+                            time: aTrade.tradeTime.valueOf(),
+                            action: aTrade.tradeType.action
                         };
-                    } else if (aTrade.tradeType.action === "Rent") {
-                        rentedContainer[containerKey] = {
-                            time: aTrade.tradeTime
-                        };
-                    } else if (aTrade.tradeType.action === "Return") {
-                        var recent = now - aTrade.tradeTime <= MILLISECONDS_OF_A_WEEK;
-                        result.shopHistorySummary.usedAmount++;
-                        if (recent) {
-                            result.shopRecentHistorySummary.usedAmount++;
-                        }
-                        if (rentedContainer[containerKey]) {
-                            var duration = aTrade.tradeTime - rentedContainer[containerKey].time;
-                            usedTime.push(duration);
+                        if (aTrade.tradeType.action === "Sign") {
+                            signedContainer[containerKey] = {
+                                time: aTrade.tradeTime.valueOf(),
+                                storeID: aTrade.newUser.storeID
+                            };
+                        } else if (aTrade.tradeType.action === "Rent") {
+                            rentedContainer[containerKey] = {
+                                time: aTrade.tradeTime.valueOf()
+                            };
+                        } else if (aTrade.tradeType.action === "Return") {
+                            var recent = (now - aTrade.tradeTime) <= MILLISECONDS_OF_A_WEEK;
+                            result.shopHistorySummary.usedAmount++;
                             if (recent) {
-                                usedTime_recent.push(duration);
+                                result.shopRecentHistorySummary.usedAmount++;
+                            }
+                            if (rentedContainer[containerKey]) {
+                                var duration = aTrade.tradeTime - rentedContainer[containerKey].time;
+                                usedTime.push({
+                                    time: aTrade.tradeTime.valueOf(),
+                                    duration
+                                });
+                                if (recent) {
+                                    usedTime_recent.push(duration);
+                                }
+                            }
+                            if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
+                                result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
+                                if (recent) {
+                                    result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;
+                                }
                             }
                         }
-                        if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
-                            result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
-                            if (recent) {
-                                result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;
-                            }
+                    });
+
+                    for (var containerID in lastUsed) {
+                        if (lastUsed[containerID].action !== "ReadyToClean" && (now - lastUsed[containerID].time) >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                            // console.log(containerID, lastUsed[containerID])
+                            result.shopHistorySummary.lostAmount++;
                         }
+                    }
+
+                    var totalUsedTime = usedTime.reduce((a, b) => (a + b.duration), 0);
+                    var usedTimeWeight = usedTime.length;
+                    if (dataCached.usedTime) {
+                        if (dataCached.usedTime.total) totalUsedTime += dataCached.usedTime.total;
+                        if (dataCached.usedTime.weight) usedTimeWeight += dataCached.usedTime.weight;
+                    }
+                    result.shopHistorySummary.totalDuration = totalUsedTime / usedTimeWeight;
+                    var recentTotalDuration = usedTime_recent.reduce((a, b) => (a + b), 0) / usedTime_recent.length;
+                    result.shopRecentHistorySummary.totalDuration = (isNaN(recentTotalDuration) || recentTotalDuration === null) ? 0 : recentTotalDuration;
+                    res.json(result);
+
+                    if ((now - lastCache.index) > MILLISECONDS_OF_A_DAY || Object.keys(dataCached).length === 0) {
+                        var timestamp = now - MILLISECONDS_OF_A_WEEK;
+                        var historyUsedTimeArr = usedTime.filter(ele => ele.time < timestamp);
+                        var toCache = {
+                            timestamp: timestamp,
+                            lastUsed,
+                            rentedContainer,
+                            signedContainer,
+                            shopHistorySummary: {
+                                usedAmount: result.shopHistorySummary.usedAmount - result.shopRecentHistorySummary.usedAmount,
+                                quantityOfBorrowingFromDiffPlace: result.shopHistorySummary.quantityOfBorrowingFromDiffPlace - result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace
+                            },
+                            usedTime: {
+                                total: historyUsedTimeArr.reduce((a, b) => (a + b.duration), 0),
+                                weight: historyUsedTimeArr.length
+                            }
+                        };
+                        redis.set(CACHE.index, JSON.stringify(toCache), (err, reply) => {
+                            if (err) return debugError(CACHE.index, err);
+                            if (reply != "OK") return debugError(CACHE.index, reply);
+                            lastCache.index = now;
+                            debug("[" + CACHE.index + "] Cached!");
+                        });
                     }
                 });
-
-                for (var containerID in lastUsed) {
-                    if (lastUsed[containerID].action !== "ReadyToClean" && (now - lastUsed[containerID].time) >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
-                        // console.log(containerID, lastUsed[containerID])
-                        result.shopHistorySummary.lostAmount++;
-                    }
-                }
-
-                result.shopHistorySummary.totalDuration = usedTime.reduce((a, b) => (a + b), 0) / usedTime.length;
-                var recentTotalDuration = usedTime_recent.reduce((a, b) => (a + b), 0) / usedTime_recent.length;
-                result.shopRecentHistorySummary.totalDuration = isNaN(recentTotalDuration) ? 0 : recentTotalDuration;
-                res.json(result);
             });
         });
     });
@@ -370,8 +426,8 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 });
 
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+    if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
-    if (!STORE_ID) return res.status(404).end();
     Store.findOne({
         id: STORE_ID
     }, function (err, theStore) {
@@ -605,8 +661,8 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 });
 
 router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+    if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
-    if (!USER_ID) return res.status(404).end();
     var containerDict = req.app.get('containerWithDeactive');
     var storeDict = req.app.get('store');
     User.findOne({
@@ -784,8 +840,8 @@ const actionTxtDict = {
     "Unboxing": "取消裝箱"
 };
 router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+    if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
-    if (!CONTAINER_ID) return res.status(404).end();
     var containerDict = req.app.get('containerWithDeactive');
     var storeDict = req.app.get('store');
     Container.findOne({
