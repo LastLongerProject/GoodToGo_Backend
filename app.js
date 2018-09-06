@@ -3,11 +3,8 @@ var logger = require('morgan');
 var express = require('express');
 var favicon = require('serve-favicon');
 var bodyParser = require('body-parser');
-var cookieParser = require('cookie-parser');
-var redis = require('redis');
+// var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
-var session = require('express-session');
-var RedisStore = require('connect-redis')(session);
 var helmet = require('helmet');
 var timeout = require('connect-timeout');
 var ua = require('universal-analytics');
@@ -15,17 +12,15 @@ var debug = require('debug')('goodtogo_backend:app');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appERR');
 
-var keys = require('./config/keys');
 var config = require('./config/config');
 var appInit = require('./models/appInit');
 var logSystem = require('./models/logSystem');
 var logModel = require('./models/DB/logDB');
 var scheduler = require('./models/scheduler');
-var index = require('./routes/index');
 var stores = require('./routes/stores');
 var users = require('./routes/users');
 var images = require('./routes/images');
-var manager = require('./routes/manager');
+var manage = require('./routes/manage');
 var containers = require('./routes/containers');
 
 var app = express();
@@ -56,25 +51,9 @@ app.use((req, res, next) => {
 
 mongoose.Promise = global.Promise;
 connectMongoDB();
-var redisClient = redis.createClient(6379, config.redisUrl, {
-    password: config.redisPass
-});
-regisRedisEvent(redisClient);
-app.set('redis', redisClient);
+require("./models/redis");
 
-// app.use(session({
-//     store: new RedisStore({
-//         client: redisClient
-//     }),
-//     secret: keys.sessionKey()
-// }));
-// app.use(function(req, res, next) {
-//     if (!req.session) {
-//         return next(new Error('Plz retry later.'));
-//     }
-//     next();
-// })
-app.use('/manager', manager);
+app.use('/manage', manage);
 app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime/.well-known/acme-challenge')));
 app.use(timeout('10s'));
 app.use('/lottery', function (req, res) {
@@ -88,7 +67,6 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
-// app.use('/', index);
 app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
@@ -158,7 +136,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/listUnreturnedContainer')
+        // require('./tmp/getLastUsedTime')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
@@ -166,24 +144,6 @@ function connectMongoDB() {
         } else {
             scheduler(app);
         }
-    });
-}
-
-function regisRedisEvent(redisClient) {
-    redisClient.on('ready', function () {
-        debug('redisDB ready');
-    });
-
-    redisClient.on('connect', function () {
-        debug('redisDB connect');
-    });
-
-    redisClient.on('reconnecting', function (delay, attempt) {
-        debug('redisDB reconnecting');
-    });
-
-    redisClient.on('error', function (err) {
-        debugError('redisDB err ', err);
     });
 }
 

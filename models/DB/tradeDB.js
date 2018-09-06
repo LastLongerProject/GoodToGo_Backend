@@ -26,10 +26,21 @@ var userSchema = mongoose.Schema({
         cycleCtr: Number,
         box: Number
     },
-    logTime: { type: Date, default: Date.now }
+    logTime: {
+        type: Date,
+        default: Date.now
+    }
 });
 
-userSchema.index({ "logTime": -1 });
+userSchema.index({
+    "logTime": -1
+});
+userSchema.index({
+    "tradeTime": -1
+});
+userSchema.index({
+    "tradeType.action": 1
+});
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Trade', userSchema);

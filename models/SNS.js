@@ -6,7 +6,9 @@ AWS.config = {
     accessKeyId: configData.AWS.Access_Key_ID,
     secretAccessKey: configData.AWS.Secret_Access_Key,
     region: configData.AWS.region,
-    apiVersions: { sns: '2010-03-31' }
+    apiVersions: {
+        sns: '2010-03-31'
+    }
 };
 var sns = new AWS.SNS();
 
@@ -33,7 +35,12 @@ module.exports = {
         var publishParams = {
             Message: msg,
             TopicArn: configData.AWS.TopicArn.SMS,
-            MessageAttributes: { 'AWS.SNS.SMS.SMSType': { 'StringValue': 'Promotional', 'DataType': 'String' } }
+            MessageAttributes: {
+                'AWS.SNS.SMS.SMSType': {
+                    'StringValue': 'Promotional',
+                    'DataType': 'String'
+                }
+            }
         };
         sns.publish(publishParams, function(err, data) {
             if (err) callback(err, err.stack);
@@ -121,6 +128,8 @@ module.exports = {
     }
 };
 
-// module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/9e7c1219-d5d7-3a6d-9da1-65c99f00ef2f', 'TITLE', "CONTENT", { action: "BOX_DELIVERY" }, (a, b, c) => {
+// module.exports.sns_publish('arn:aws:sns:ap-northeast-1:948190058961:endpoint/APNS/GoodToGo-Shop/b9962ddb-8853-387d-9cea-c5803003d5cd', '安安', "你好阿~", {
+//     action: "BOX_DELIVERY"
+// }, (a, b, c) => {
 //     console.log(a, b, c)
 // })

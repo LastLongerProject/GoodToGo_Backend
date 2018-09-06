@@ -57,17 +57,17 @@ function logger(dbModel) {
             }
             aRecord.user = getUser(req)
             aRecord.noticeLevel = getErrorLevel(req, res)
-                /**
-                 * 0 : regular 200 204 205 404
-                 * 1 : notice(client error) 401 503
-                 * 2 : warning(unusual error) 403
-                 * 3 : error(may cause crash) 500
-                 * 4 : user-defined important message
-                 * 5 : unknown level
-                 */
+            /**
+             * 0 : regular 200 204 205 404
+             * 1 : notice(client error) 401 503
+             * 2 : warning(unusual error) 403
+             * 3 : error(may cause crash) 500
+             * 4 : user-defined important message
+             * 5 : unknown level
+             */
 
             if (aRecord.req.body) {
-                if (aRecord.req.body.password) {
+                if (typeof aRecord.req.body.password !== "undefined") {
                     aRecord.req.body.password = 'pwd'
                 }
             }

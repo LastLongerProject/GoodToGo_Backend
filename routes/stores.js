@@ -3,11 +3,14 @@ var router = express.Router();
 var jwt = require('jwt-simple');
 var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:stores');
+var redis = require("../models/redis");
 
 var keys = require('../config/keys');
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dayFormatter = require('../models/toolKit').dayFormatter;
+var timeFormatter = require('../models/toolKit').timeFormatter;
+var monthFormatter = require('../models/toolKit').monthFormatter;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var validateDefault = require('../models/validation/validateDefault');
@@ -26,17 +29,17 @@ const historyDays = 14;
 var getImageUrl;
 
 if (process.env.NODE_ENV === "testing") {
-    getImageUrl = function(src, token) {
+    getImageUrl = function (src, token) {
         var index = src.indexOf('images/');
         return src.slice(0, index) + 'test/' + src.slice(index) + "/" + token;
     }
 } else {
-    getImageUrl = function(src, token) {
+    getImageUrl = function (src, token) {
         return src + "/" + token;
     }
 }
 
-router.get('/list', validateDefault, function(req, res, next) {
+router.get('/list', validateDefault, function (req, res, next) {
     var jsonData = {
         title: "Stores list",
         contract_code_explanation: {
@@ -46,7 +49,7 @@ router.get('/list', validateDefault, function(req, res, next) {
         }
     }
     var tmpArr = [];
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.find({
             "project": {
                 "$ne": "測試用"
@@ -56,11 +59,11 @@ router.get('/list', validateDefault, function(req, res, next) {
             sort: {
                 id: 1
             }
-        }, function(err, storeList) {
+        }, function (err, storeList) {
             if (err) return next(err);
             Trade.count({
                 "tradeType.action": "Rent"
-            }, function(err, count) {
+            }, function (err, count) {
                 if (err) return next(err);
                 jsonData.globalAmount = count;
                 keys.serverSecretKey((err, key) => {
@@ -103,9 +106,9 @@ router.get('/list', validateDefault, function(req, res, next) {
     });
 });
 
-router.get('/list.js', function(req, res, next) {
+router.get('/list.js', function (req, res, next) {
     var tmpArr = [];
-    process.nextTick(function() {
+    process.nextTick(function () {
         Place.find({
             "project": {
                 "$ne": "測試用帳號"
@@ -115,7 +118,7 @@ router.get('/list.js', function(req, res, next) {
             sort: {
                 id: 1
             }
-        }, function(err, storeList) {
+        }, function (err, storeList) {
             if (err) return next(err);
             for (var i = 0; i < storeList.length; i++) {
                 tmpArr.push({
@@ -132,25 +135,25 @@ router.get('/list.js', function(req, res, next) {
     });
 });
 
-router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
+router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var condition = {};
+    var condition;
     switch (dbUser.role.typeCode) {
         case 'admin':
             condition = {
-                'role.typeCode': 'admin'
+                'roles.admin.stationID': dbUser.role.stationID
             };
             break;
         case 'clerk':
             condition = {
-                'role.storeID': dbUser.role.storeID
+                'roles.clerk.storeID': dbUser.role.storeID
             };
             break;
         default:
             next();
     }
-    process.nextTick(function() {
-        User.find(condition, function(err, list) {
+    process.nextTick(function () {
+        User.find(condition, function (err, list) {
             if (err) return next(err);
             var resJson = {
                 clerkList: []
@@ -169,13 +172,13 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
     });
 });
 
-router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var toLayoff = req.params.id;
-    process.nextTick(function() {
+    process.nextTick(function () {
         User.findOne({
             'user.phone': toLayoff
-        }, function(err, clerk) {
+        }, function (err, clerk) {
             if (err) return next(err);
             if (!clerk)
                 return res.status(403).json({
@@ -193,7 +196,9 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
             clerk.role.storeID = undefined;
             clerk.role.manager = undefined;
             clerk.role.typeCode = 'customer';
-            clerk.save(function(err) {
+            clerk.roles.clerk = null;
+            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf("clerk"), 1);
+            clerk.save(function (err) {
                 if (err) return next(err);
                 res.json({
                     type: 'LayoffMessage',
@@ -204,11 +209,11 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
     });
 });
 
-router.get('/status', regAsStore, validateRequest, function(req, res, next) {
+router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
-    var type = req.app.get('containerType');
+    var type = Object.values(req.app.get('containerType'));
     var forLoopLength = (dbStore.role.storeID === 17) ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
@@ -233,18 +238,18 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         }
     };
     var tmpTypeCode;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Container.find({
             'storeID': dbStore.role.storeID,
             'active': true
-        }, function(err, containers) {
+        }, function (err, containers) {
             if (err) return next(err);
             Trade.find({
                 'tradeTime': {
                     '$gte': dateCheckpoint(0),
                     '$lt': dateCheckpoint(1)
                 }
-            }, function(err, trades) {
+            }, function (err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
@@ -273,13 +278,13 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
-router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
+router.get('/openingTime', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.findOne({
             'id': dbStore.role.storeID,
             'active': true
-        }, function(err, store) {
+        }, function (err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
             res.json({
@@ -290,13 +295,13 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
     });
 });
 
-router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.findOne({
             'id': dbStore.role.storeID,
             'active': true
-        }, function(err, store) {
+        }, function (err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
             store.opening_default = false;
@@ -308,14 +313,13 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(re
     });
 });
 
-router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next) {
+router.get('/getUser/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
-    var redis = req.app.get('redis');
-    process.nextTick(function() {
+    process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")
-        }, function(err, user) {
+        }, function (err, user) {
             if (err)
                 return next(err);
             if (!user) {
@@ -344,13 +348,13 @@ router.get('/getUser/:id', regAsStore, validateRequest, function(req, res, next)
     });
 });
 
-router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, next) {
+router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var rentedIdList = [];
     var resJson = {
         data: []
     };
-    process.nextTick(function() {
+    process.nextTick(function () {
         Trade.find({
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays),
@@ -358,9 +362,9 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
             },
             'tradeType.action': "Rent",
             'oriUser.storeID': dbStore.role.storeID
-        }, function(err, rentedList) {
+        }, function (err, rentedList) {
             if (err) return next(err);
-            rentedList.sort(function(a, b) {
+            rentedList.sort(function (a, b) {
                 return b.tradeTime - a.tradeTime;
             });
             for (var i in rentedList)
@@ -374,14 +378,14 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
                 'container.id': {
                     '$in': rentedIdList
                 }
-            }, function(err, returnedList) {
+            }, function (err, returnedList) {
                 if (err) return next(err);
-                returnedList.sort(function(a, b) {
+                returnedList.sort(function (a, b) {
                     return b.tradeTime - a.tradeTime;
                 });
                 for (var i in returnedList) {
-                    var index = rentedList.findIndex(function(ele) {
-                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr
+                    var index = rentedList.findIndex(function (ele) {
+                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
                     });
                     if (index !== -1) {
                         rentedList.splice(index, 1);
@@ -400,17 +404,18 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
     });
 });
 
-router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var newData = req.body;
     var days = newData.opening_hours;
+    var timeFormat = /^[0-1]{1}[0-9]{1}|[2]{1}[0-3]{1}:[0-9]{2}$/;
+    var dayFormat = /^[0-6]{1}$/;
     if (Array.isArray(days)) {
         for (var i = 0; i < days.length; i++) {
             if (!(typeof days[i].close !== 'undefined' && typeof days[i].close.day !== 'undefined' && typeof days[i].close.time === 'string' &&
                     typeof days[i].open !== 'undefined' && typeof days[i].open.day !== 'undefined' && typeof days[i].open.time === 'string' &&
-                    days[i].close.time.length === 5 && days[i].open.time.length === 5 &&
-                    parseInt(days[i].close.day) < 7 && parseInt(days[i].open.day) < 7 &&
-                    parseInt(days[i].close.day) >= 0 && parseInt(days[i].open.day) >= 0)) {
+                    timeFormat.test(days[i].close.time) && timeFormat.test(days[i].open.time) &&
+                    dayFormat.test(days[i].close.day) && dayFormat.test(days[i].open.day))) {
                 return res.status(403).json({
                     code: 'E003',
                     type: "changeOpeningTimeError",
@@ -441,14 +446,14 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(r
     }
 });
 
-router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
+router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         var containerDict = req.app.get('container');
         var type = req.app.get('containerType');
         Box.find({
             'storeID': dbStore.role.storeID
-        }, function(err, boxList) {
+        }, function (err, boxList) {
             if (err) return next(err);
             var boxArr = [];
             if (boxList.length !== 0) {
@@ -491,7 +496,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                 'tradeTime': {
                     '$gte': dateCheckpoint(1 - historyDays)
                 }
-            }, function(err, list) {
+            }, function (err, list) {
                 if (err) return next(err);
                 if (list.length !== 0) {
                     list.sort((a, b) => {
@@ -547,50 +552,52 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
-router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
+router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
-        var funcList = [];
+    process.nextTick(function () {
         var type = req.app.get('containerType');
-        for (var i = 0; i < type.length; i++) {
-            funcList.push(new Promise((resolve, reject) => {
-                var localPtr = i;
-                Trade.count({
-                    'tradeType.action': 'Rent',
-                    'oriUser.storeID': dbStore.role.storeID,
-                    'container.typeCode': localPtr
-                }, (err, amount) => {
-                    if (err) return reject(err);
-                    resolve({
-                        typeCode: localPtr,
-                        amount: amount
-                    });
-                });
-            }));
-        }
         Promise
-            .all(funcList)
-            .then((data) => {
-                Trade.count({
-                    'tradeType.action': 'Return'
-                }, (err, totalAmount) => {
-                    if (err) return next(err);
-                    res.json({
-                        store: data,
-                        total: totalAmount
+            .all([new Promise((resolve, reject) => {
+                    Trade.find({
+                        'tradeType.action': 'Rent',
+                        'oriUser.storeID': dbStore.role.storeID
+                    }, (err, tradeList) => {
+                        if (err) return reject(err);
+                        var dataList = {};
+                        for (var aType in type) {
+                            dataList[type[aType].typeCode] = {
+                                typeCode: type[aType].typeCode,
+                                amount: 0
+                            };
+                        }
+                        for (var j = 0; j < tradeList.length; j++) {
+                            dataList[tradeList[j].container.typeCode].amount++;
+                        }
+                        resolve(dataList);
                     });
+                }),
+                new Promise((resolve, reject) => {
+                    Trade.count({
+                        'tradeType.action': 'Return'
+                    }, (err, totalAmount) => {
+                        if (err) return reject(err);
+                        resolve(totalAmount);
+                    });
+                })
+            ])
+            .then((data) => {
+                res.json({
+                    store: Object.values(data[0]),
+                    total: data[1]
                 });
-            })
-            .catch((err) => {
-                if (err) return next(err);
-            });
+            }).catch(err => next(err));
     });
 });
 
-router.get('/history', regAsStore, validateRequest, function(req, res, next) {
+router.get('/history', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = req.app.get('containerType');
-    process.nextTick(function() {
+    process.nextTick(function () {
         Trade.find({
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays),
@@ -598,7 +605,7 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
             },
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
-        }, function(err, rentTrades) {
+        }, function (err, rentTrades) {
             if (err) return next(err);
             Trade.find({
                 'tradeTime': {
@@ -607,21 +614,21 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
                 },
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
-            }, function(err, returnTrades) {
+            }, function (err, returnTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                    parseHistory(rentTrades, 'Rent', type, function(parsedRent) {
+                    parseHistory(rentTrades, 'Rent', type, function (parsedRent) {
                         resJson = {
                             rentHistory: {
                                 amount: parsedRent.length,
                                 dataList: parsedRent
                             }
                         };
-                        parseHistory(returnTrades, 'Return', type, function(parsedReturn) {
+                        parseHistory(returnTrades, 'Return', type, function (parsedReturn) {
                             resJson.returnHistory = {
                                 amount: parsedReturn.length,
                                 dataList: parsedReturn
-                            }
+                            };
                             res.json(resJson);
                         });
                     });
@@ -631,16 +638,100 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
     });
 });
 
-router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
+router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    var type = req.app.get('containerType');
+    var tradeTimeQuery = (req.query['days']) ? {
+        '$gte': dateCheckpoint(1 - parseInt(req.query['days'])),
+        '$lt': dateCheckpoint(1)
+    } : undefined;
+    process.nextTick(function () {
+        Trade.find({
+            'tradeTime': tradeTimeQuery,
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.role.storeID
+        }, {}, {
+            sort: {
+                tradeTime: -1
+            }
+        }, function (err, rentTrades) {
+            if (err) return next(err);
+            Trade.find({
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Return',
+                'newUser.storeID': dbStore.role.storeID
+            }, {}, {
+                sort: {
+                    tradeTime: -1
+                }
+            }, function (err, returnTrades) {
+                if (err) return next(err);
+                if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
+                    var newTypeArrGenerator = function () {
+                        var tmpArr = [];
+                        for (var aType in type) {
+                            tmpArr.push({
+                                typeCode: type[aType].typeCode,
+                                name: type[aType].name,
+                                IdList: [],
+                                amount: 0
+                            });
+                        }
+                        return tmpArr;
+                    };
+                    var resJson = {
+                        usedHistory: [],
+                        reloadedHistory: []
+                    };
+                    var ctr = 0;
+                    for (var i in resJson) {
+                        if (([rentTrades, returnTrades])[ctr++].length > 0)
+                            resJson[i].push({
+                                date: fullDateString(dateCheckpoint(0)),
+                                amount: 0,
+                                data: newTypeArrGenerator()
+                            });
+                    }
+                    var usageByDateByTypeGenerator = function (arrToParse, resultArr) {
+                        var tmpTypeCode;
+                        var dateCtr = 0;
+                        var checkpoint = dateCheckpoint(dateCtr);
+                        for (var i = 0; i < arrToParse.length; i++) {
+                            if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
+                                checkpoint = dateCheckpoint(--dateCtr);
+                                resultArr.push({
+                                    date: fullDateString(checkpoint),
+                                    amount: 0,
+                                    data: newTypeArrGenerator()
+                                });
+                                i--;
+                            } else {
+                                tmpTypeCode = arrToParse[i].container.typeCode;
+                                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
+                                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                                resultArr[resultArr.length - 1].amount++;
+                            }
+                        }
+                    };
+                    usageByDateByTypeGenerator(rentTrades, resJson.usedHistory);
+                    usageByDateByTypeGenerator(returnTrades, resJson.reloadedHistory);
+                    res.json(resJson);
+                }
+            });
+        });
+    });
+});
+
+router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    process.nextTick(function () {
         Trade.find({
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.role.storeID
-        }, function(err, rentTrades) {
+        }, function (err, rentTrades) {
             if (err) return next(err);
             if (typeof rentTrades !== 'undefined') {
-                getFavorite(rentTrades, function(userList) {
+                getFavorite(rentTrades, function (userList) {
                     resJson = {};
                     if (userList.length > 5)
                         resJson.userList = userList.slice(0, 5);
@@ -669,7 +760,7 @@ function parseHistory(data, dataType, type, callback) {
         else if (dataType === 'Return')
             lastPhone = aHistory.oriUser.phone;
     } else {
-        data.sort(function(a, b) {
+        data.sort(function (a, b) {
             return b.tradeTime - a.tradeTime;
         });
     }
@@ -686,7 +777,8 @@ function parseHistory(data, dataType, type, callback) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
-        if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100 || lastPhone !== thisPhone) {
+        // if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100 || lastPhone !== thisPhone) {
+        if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
                 time: lastHistory.tradeTime,
@@ -705,42 +797,31 @@ function parseHistory(data, dataType, type, callback) {
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
     });
+    // console.log(byOrderArr)
     var byDateArr = [];
     var tmpOrderList = [];
     var tmpOrderAmount = 0;
     var date = 0;
-    // console.log(dateCheckpoint(date))
-    // console.log(byOrderArr[0].time)
-    while (!(byOrderArr[0].time < dateCheckpoint(date + 1) && byOrderArr[0].time >= dateCheckpoint(date)) && date > (-1 * historyDays)) {
-        dateFormatted = dateCheckpoint(date);
-        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
-        byDateArr.push({
-            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-            orderAmount: tmpOrderAmount,
-            orderList: tmpOrderList
-        });
-        tmpOrderList = [];
-        date--;
-    }
     for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
         nextOrder = byOrderArr[i + 1];
-        tmpHour = aOrder.time.getHours() + 8;
-        hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
-        minutesFormatted = intReLength(aOrder.time.getMinutes(), 2);
-        aOrder.time = hoursFormatted + ":" + minutesFormatted;
-        tmpOrderList.push(aOrder);
-        if (i === (byOrderArr.length - 1) || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
-            dateFormatted = dateCheckpoint(date);
-            dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-            monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
+        // console.log('i', i)
+        // console.log('date', fullDateString(dateCheckpoint(date)))
+        // console.log('this', aOrder)
+        // console.log('next', nextOrder)
+        if (aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date)) {
+            aOrder.time = timeFormatter(aOrder.time);
+            tmpOrderList.push(aOrder);
+        } else {
+            i--;
+        }
+        if (!nextOrder || !(nextOrder.time < dateCheckpoint(date + 1) && nextOrder.time >= dateCheckpoint(date))) {
             tmpOrderAmount = 0;
             for (var j = 0; j < tmpOrderList.length; j++) {
                 tmpOrderAmount += tmpOrderList[j].containerAmount;
             }
             byDateArr.push({
-                date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
+                date: fullDateString(dateCheckpoint(date)),
                 orderAmount: tmpOrderAmount,
                 orderList: tmpOrderList
             });
@@ -748,17 +829,12 @@ function parseHistory(data, dataType, type, callback) {
             date--;
         }
     }
-    tmpOrderAmount = 0;
     while (date > (-1 * historyDays)) {
-        dateFormatted = dateCheckpoint(date);
-        dayFormatted = intReLength(dayFormatter(dateFormatted), 2);
-        monthFormatted = intReLength((dateFormatted.getMonth() + 1), 2);
         byDateArr.push({
-            date: dateFormatted.getFullYear() + "/" + monthFormatted + "/" + dayFormatted,
-            orderAmount: tmpOrderAmount,
-            orderList: tmpOrderList
+            date: fullDateString(dateCheckpoint(date)),
+            orderAmount: 0,
+            orderList: []
         });
-        tmpOrderList = [];
         date--;
     }
     return callback(byDateArr);
@@ -766,7 +842,7 @@ function parseHistory(data, dataType, type, callback) {
 
 function getFavorite(data, callback) {
     if (data.length === 0) return callback([]);
-    data.sort(function(a, b) {
+    data.sort(function (a, b) {
         return b.tradeTime - a.tradeTime;
     });
     var byOrderArr = [];
@@ -799,10 +875,16 @@ function getFavorite(data, callback) {
             times: count[phone]
         });
     }
-    sortable.sort(function(a, b) {
+    sortable.sort(function (a, b) {
         return b.times - a.times;
     });
     return callback(sortable);
+}
+
+function fullDateString(date) {
+    dayFormatted = intReLength(dayFormatter(date), 2);
+    monthFormatted = intReLength(monthFormatter(date), 2);
+    return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
 }
 
 module.exports = router;

@@ -5,26 +5,43 @@ var bcrypt = require('bcrypt-nodejs');
 var userSchema = mongoose.Schema({
     user: {
         phone: String,
-        password: String,
-        apiKey: String,
-        secretKey: String
+        password: String
     },
     role: {
         typeCode: String,
         storeID: Number,
+        stationID: Number,
         manager: Boolean
     },
+    roles: {
+        typeList: [],
+        clerk: Object,
+        admin: Object
+    },
     pushNotificationArn: Object,
-    registerTime: { type: Date, default: Date.now },
-    active: { type: Boolean, default: false },
+    registerTime: {
+        type: Date,
+        default: Date.now
+    },
+    active: {
+        type: Boolean,
+        default: false
+    },
     purchase: [{
-        purchaseTime: { type: Date, default: Date.now },
+        purchaseTime: {
+            type: Date,
+            default: Date.now
+        },
         expiryTime: Date
     }]
 });
 
-userSchema.index({ "user.phone": 1 });
-userSchema.index({ "user.apiKey": 1 });
+userSchema.index({
+    "user.phone": 1
+});
+userSchema.index({
+    "user.apiKey": 1
+});
 
 // generating a hash
 userSchema.methods.generateHash = function(password) {
