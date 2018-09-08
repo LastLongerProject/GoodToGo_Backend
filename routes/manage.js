@@ -21,7 +21,7 @@ var Container = require('../models/DB/containerDB');
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
-const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 8;
+const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 15;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 3;
 
 const CACHE = {
@@ -43,15 +43,16 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
             lostAmount: 0,
             totalDuration: 0
         },
-        shopHistorySummary: {
+        shopRecentHistorySummary: {
             usedAmount: 0,
-            lostAmount: 0,
+            customerLostAmount: 0,
             totalDuration: 0,
             quantityOfBorrowingFromDiffPlace: 0
         },
-        shopRecentHistorySummary: {
+        shopHistorySummary: {
             usedAmount: 0,
-            lostAmount: 0,
+            shopLostAmount: 0,
+            customerLostAmount: 0,
             totalDuration: 0,
             quantityOfBorrowingFromDiffPlace: 0
         }
@@ -89,6 +90,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
                     var now = Date.now();
+                    var checkpoint = getWeekCheckpoint().valueOf();
                     var lastUsed = dataCached.lastUsed || {};
                     var rentedContainer = dataCached.rentedContainer || {};
                     var signedContainer = dataCached.signedContainer || {};
@@ -115,7 +117,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 time: aTrade.tradeTime.valueOf()
                             };
                         } else if (aTrade.tradeType.action === "Return") {
-                            var recent = (now - aTrade.tradeTime) <= MILLISECONDS_OF_A_WEEK;
+                            var recent = aTrade.tradeTime > checkpoint;
                             result.shopHistorySummary.usedAmount++;
                             if (recent) {
                                 result.shopRecentHistorySummary.usedAmount++;
@@ -140,9 +142,15 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     });
 
                     for (var containerID in lastUsed) {
-                        if (lastUsed[containerID].action !== "ReadyToClean" && (now - lastUsed[containerID].time) >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
-                            // console.log(containerID, lastUsed[containerID])
-                            result.shopHistorySummary.lostAmount++;
+                        var timeToNow = now - lastUsed[containerID].time;
+                        if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
+                            timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                            result.shopHistorySummary.shopLostAmount++;
+                        } else
+                        if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                            result.shopHistorySummary.customerLostAmount++;
+                            if (lastUsed[containerID].time > checkpoint)
+                                result.shopRecentHistorySummary.customerLostAmount++;
                         }
                     }
 
@@ -155,10 +163,11 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     result.shopHistorySummary.totalDuration = totalUsedTime / usedTimeWeight;
                     var recentTotalDuration = usedTime_recent.reduce((a, b) => (a + b), 0) / usedTime_recent.length;
                     result.shopRecentHistorySummary.totalDuration = (isNaN(recentTotalDuration) || recentTotalDuration === null) ? 0 : recentTotalDuration;
+
                     res.json(result);
 
                     if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                        var timestamp = now - MILLISECONDS_OF_A_WEEK;
+                        var timestamp = checkpoint;
                         var historyUsedTimeArr = usedTime.filter(ele => ele.time < timestamp);
                         var toCache = {
                             timestamp,
@@ -190,11 +199,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
 router.get('/search', regAsAdminManager, validateRequest, function (req, res, next) {
     var fields = req.query.fields.split(",");
     var searchTxt = req.query.txt;
-    var txtArr = searchTxt.split(" ").filter(
-        function (ele) {
-            return ele !== "";
-        }
-    );
+    var txtArr = searchTxt.split(" ").filter(ele => ele !== "");
     var regExpTxt = txtArr.join("|");
     var regExp;
     try {
@@ -321,10 +326,10 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
 router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
     Store.find({
         active: true
-    }, function (err, storeDataList) {
+    }, function (err, activeStoreList) {
         if (err) return next(err);
         var storeIdDict = {};
-        storeDataList.forEach(function (aStoreData) {
+        activeStoreList.forEach(function (aStoreData) {
             storeIdDict[aStoreData.id] = {
                 id: aStoreData.id,
                 storeName: aStoreData.name,
@@ -345,6 +350,16 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
             var dataCached = {};
             if (reply !== null) dataCached = JSON.parse(reply);
 
+            if (dataCached.activeStoreNameList) {
+                for (var aCachedStoreIndex in activeStoreList) {
+                    var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
+                    if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
+                        debug("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
+                        dataCached = {};
+                        break;
+                    }
+                }
+            }
             if (dataCached.timestamp)
                 tradeQuery.tradeTime = {
                     '$gte': new Date(dataCached.timestamp)
@@ -383,7 +398,10 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 });
 
                 for (let unusedContainerRecord in unusedContainer) {
-                    storeIdDict[unusedContainer[unusedContainerRecord].storeID].toUsedAmount++;
+                    if (storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID))
+                        storeIdDict[unusedContainer[unusedContainerRecord].storeID].toUsedAmount++;
+                    else
+                        delete unusedContainer[unusedContainerRecord];
                 }
 
                 var weeklyAmountByStore = {};
@@ -391,21 +409,25 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 var todayCheckpoint = dateCheckpoint(0);
                 for (var usedContainerKey in usedContainer) {
                     var usedContainerRecord = usedContainer[usedContainerKey];
-                    if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
-                        weeklyAmountByStore[usedContainerRecord.storeID] = {};
-                        weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
-                    }
-                    if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                        for (var aStore in weeklyAmountByStore) {
-                            weeklyAmountByStore[aStore][weekCheckpoint] = 0;
+                    if (storeIdDict.hasOwnProperty(usedContainerRecord.storeID)) {
+                        if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
+                            weeklyAmountByStore[usedContainerRecord.storeID] = {};
+                            weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
                         }
-                    }
-                    if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
-                        weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint]++;
-                    }
-                    if (usedContainerRecord.time - todayCheckpoint < MILLISECONDS_OF_A_DAY && usedContainerRecord.time - todayCheckpoint > 0) {
-                        storeIdDict[usedContainerRecord.storeID].todayAmount++;
+                        if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                            weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                            for (var aStore in weeklyAmountByStore) {
+                                weeklyAmountByStore[aStore][weekCheckpoint] = 0;
+                            }
+                        }
+                        if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
+                            weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint]++;
+                        }
+                        if (usedContainerRecord.time - todayCheckpoint < MILLISECONDS_OF_A_DAY && usedContainerRecord.time - todayCheckpoint > 0) {
+                            storeIdDict[usedContainerRecord.storeID].todayAmount++;
+                        }
+                    } else {
+                        delete usedContainer[usedContainerKey];
                     }
                 }
 
@@ -430,12 +452,14 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 });
 
                 if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
+                    activeStoreNameList = activeStoreList.map(ele => ele.name);
                     var timestamp = now - MILLISECONDS_OF_A_WEEK;
                     var toCache = {
                         timestamp,
                         cachedAt: Date.now(),
                         usedContainer,
-                        unusedContainer
+                        unusedContainer,
+                        activeStoreNameList
                     };
                     redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
                         if (err) return debugError(CACHE.shop, err);
@@ -986,10 +1010,12 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
 });
 
 function getWeekCheckpoint(date) {
+    if (!date) date = new Date();
     var timezoneFix = 0;
-    if (date.getHours() < 16 && process.env.OS !== 'Windows_NT')
+    var isWindows = process.env.OS === 'Windows_NT';
+    if (date.getHours() < 16 && !isWindows)
         timezoneFix--;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, 16, 0, 0, 0);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, isWindows ? 0 : 16, 0, 0, 0);
 }
 
 function phoneEncoder(phone, expose = false) {
