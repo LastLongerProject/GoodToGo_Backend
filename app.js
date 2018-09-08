@@ -139,10 +139,10 @@ function connectMongoDB() {
         // require('./tmp/getLastUsedTime')
         appInit.container(app);
         appInit.store(app);
-        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-            debug("Testing ENV no scheduler");
-        } else {
+        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "production") {
             scheduler(app);
+        } else {
+            debug((process.env.NODE_ENV ? process.env.NODE_ENV.replace(/"|\s/g, "") : "Unknown") + " ENV no scheduler");
         }
     });
 }
