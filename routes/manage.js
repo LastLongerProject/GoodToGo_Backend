@@ -721,7 +721,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 var containerKey;
                 var weeklyAmount = dataCached.weeklyAmount || {};
-                var weekCheckpoint = new Date(dataCached.weekCheckpoint) || null;
+                var weekCheckpoint = dataCached.weekCheckpoint ? new Date(dataCached.weekCheckpoint) : null;
                 var recentTotalUsageAmount = 0;
                 const now = Date.now();
                 if (weekCheckpoint) weeklyAmount[weekCheckpoint] = 0;
@@ -769,6 +769,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 result.list = Object.values(userDict);
                 result.totalUserAmount = userList.length;
+                delete weeklyAmount[weekCheckpoint];
                 var arrOfWeeklyAmount = Object.values(weeklyAmount);
                 result.weeklyAverageUsage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length);
 
@@ -776,7 +777,6 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
                     var timestamp = now - MILLISECONDS_OF_A_WEEK;
-                    delete weeklyAmount[weekCheckpoint];
                     var toCache = {
                         timestamp,
                         cachedAt: Date.now(),
@@ -891,9 +891,10 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
             result.history = notReturnedList.concat(result.history);
             var totalUsingTime = result.history.reduce((a, b) => a.usingDuration + b.usingDuration, 0);
             result.averageUsingDuration = (totalUsingTime / result.history.length) || 0;
+            result.recentAmount = weeklyAmount[weekCheckpoint] || 0;
+            delete weeklyAmount[weekCheckpoint];
             var arrOfWeeklyAmount = Object.values(weeklyAmount);
             result.weekAverage = Math.round(arrOfWeeklyAmount.reduce((a, b) => (a + b), 0) / arrOfWeeklyAmount.length) || 0;
-            result.recentAmount = weeklyAmount[weekCheckpoint] || 0;
             result.recentAmountPercentage = ((result.recentAmount - result.weekAverage) / result.weekAverage) || 0;
             res.json(result);
         });
