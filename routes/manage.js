@@ -14,6 +14,7 @@ var refreshContainerIcon = require('../models/appInit').refreshContainerIcon;
 var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 var cleanUndo = require('../models/toolKit').cleanUndoTrade;
 
+var Box = require('../models/DB/boxDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
@@ -904,55 +905,68 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
 router.get('/container', regAsAdminManager, validateRequest, function (req, res, next) {
     Container.find((err, containerList) => {
         if (err) return next(err);
-        var typeDict = {};
-        var containerType = req.app.get('containerType');
-        for (var aType in containerType) {
-            typeDict[containerType[aType].typeCode] = {
-                id: containerType[aType].typeCode,
-                type: containerType[aType].name,
-                totalAmount: 0,
-                toUsedAmount: 0,
-                usingAmount: 0,
-                returnedAmount: 0,
-                toCleanAmount: 0,
-                toDeliveryAmount: 0,
-                toSignAmount: 0,
-                inStorageAmount: 0, // need update
-                lostAmount: 0
-            };
-        }
-        const now = Date.now();
-        containerList.forEach((aContainer) => {
-            typeDict[aContainer.typeCode].totalAmount++;
-            switch (aContainer.statusCode) {
-                case 0: // delivering
-                    typeDict[aContainer.typeCode].toSignAmount++;
-                    break;
-                case 1: // readyToUse
-                    typeDict[aContainer.typeCode].toUsedAmount++;
-                    if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_SHOP)
-                        typeDict[aContainer.typeCode].lostAmount++;
-                    break;
-                case 2: // rented
-                    typeDict[aContainer.typeCode].usingAmount++;
-                    if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER)
-                        typeDict[aContainer.typeCode].lostAmount++;
-                    break;
-                case 3: // returned
-                    typeDict[aContainer.typeCode].returnedAmount++;
-                    if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_SHOP)
-                        typeDict[aContainer.typeCode].lostAmount++;
-                    break;
-                case 4: // notClean
-                    typeDict[aContainer.typeCode].inStorageAmount++;
-                    break;
-                case 5: // boxed
-                    typeDict[aContainer.typeCode].toDeliveryAmount++;
-                    break;
+        Box.find({
+            'stocking': true
+        }, (err, stockedBoxList) => {
+            if (err) return next(err);
+
+            var stockedContainerList = [];
+            stockedBoxList.forEach(aBox => {
+                stockedContainerList = stockedContainerList.concat(aBox.containerList);
+            });
+            var typeDict = {};
+            var containerType = req.app.get('containerType');
+            for (var aType in containerType) {
+                typeDict[containerType[aType].typeCode] = {
+                    id: containerType[aType].typeCode,
+                    type: containerType[aType].name,
+                    totalAmount: 0,
+                    toUsedAmount: 0,
+                    usingAmount: 0,
+                    returnedAmount: 0,
+                    toCleanAmount: 0,
+                    toDeliveryAmount: 0,
+                    toSignAmount: 0,
+                    inStorageAmount: 0, // need update
+                    lostAmount: 0
+                };
             }
-        });
-        res.json({
-            list: Object.values(typeDict)
+            const now = Date.now();
+            containerList.forEach((aContainer) => {
+                typeDict[aContainer.typeCode].totalAmount++;
+                switch (aContainer.statusCode) {
+                    case 0: // delivering
+                        typeDict[aContainer.typeCode].toSignAmount++;
+                        break;
+                    case 1: // readyToUse
+                        typeDict[aContainer.typeCode].toUsedAmount++;
+                        if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_SHOP)
+                            typeDict[aContainer.typeCode].lostAmount++;
+                        break;
+                    case 2: // rented
+                        typeDict[aContainer.typeCode].usingAmount++;
+                        if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER)
+                            typeDict[aContainer.typeCode].lostAmount++;
+                        break;
+                    case 3: // returned
+                        typeDict[aContainer.typeCode].returnedAmount++;
+                        if (now - aContainer.lastUsedAt > MILLISECONDS_OF_LOST_CONTAINER_SHOP)
+                            typeDict[aContainer.typeCode].lostAmount++;
+                        break;
+                    case 4: // notClean
+                        typeDict[aContainer.typeCode].toCleanAmount++;
+                        break;
+                    case 5: // boxed
+                        if (stockedContainerList.indexOf(aContainer.ID) !== -1)
+                            typeDict[aContainer.typeCode].inStorageAmount++;
+                        else
+                            typeDict[aContainer.typeCode].toDeliveryAmount++;
+                        break;
+                }
+            });
+            res.json({
+                list: Object.values(typeDict)
+            });
         });
     });
 });
