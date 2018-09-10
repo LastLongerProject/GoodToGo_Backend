@@ -184,6 +184,10 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 weight: historyUsedTimeArr.length
                             }
                         };
+                        if (dataCached.usedTime) {
+                            if (dataCached.usedTime.total) toCache.usedTime.total += dataCached.usedTime.total;
+                            if (dataCached.usedTime.weight) toCache.usedTime.weight += dataCached.usedTime.weight;
+                        }
                         redis.set(CACHE.index, JSON.stringify(toCache), (err, reply) => {
                             if (err) return debugError(CACHE.index, err);
                             if (reply != "OK") return debugError(CACHE.index, reply);
@@ -341,7 +345,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
         });
         var tradeQuery = {
             'tradeType.action': {
-                '$in': ['Sign', 'ReadyToClean', 'UndoReadyToClean']
+                '$in': ['Sign', 'Rent', 'ReadyToClean', 'UndoReadyToClean']
             }
         };
 
@@ -378,20 +382,17 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 var unusedContainer = dataCached.unusedContainer || {};
                 tradeList.forEach(function (aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === "Sign") {
-                        if (!storeIdDict[aTrade.newUser.storeID]) return;
+                    if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
                         unusedContainer[containerKey] = {
                             time: aTrade.tradeTime.valueOf(),
                             storeID: aTrade.newUser.storeID
                         };
-                    } else if (aTrade.tradeType.action === "ReadyToClean" && unusedContainer[containerKey]) {
-                        if (!storeIdDict[aTrade.oriUser.storeID]) return;
-                        if (aTrade.tradeType.oriState === 3) {
+                    } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && unusedContainer[containerKey]) {
+                        if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
                             usedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: unusedContainer[containerKey].storeID
                             };
-
                         }
                         delete unusedContainer[containerKey];
                     }
@@ -549,8 +550,8 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                             time: aTrade.tradeTime.valueOf(),
                             storeID: aTrade.newUser.storeID
                         };
-                    } else if (aTrade.tradeType.action === "ReadyToClean" && containerKey in unusedContainer) {
-                        if (aTrade.tradeType.oriState === 3) {
+                    } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
+                        if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
                             usedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: unusedContainer[containerKey].storeID
