@@ -146,8 +146,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                         if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
                             timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                             result.shopHistorySummary.shopLostAmount++;
-                        } else
-                        if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                        } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                             result.shopHistorySummary.customerLostAmount++;
                             if (lastUsed[containerID].time > checkpoint)
                                 result.shopRecentHistorySummary.customerLostAmount++;
@@ -485,12 +484,14 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             toUsedAmount: 0,
             todayAmount: 0,
             weekAmount: 0,
+            weekAmountPercentage: 0.0,
+            totalAmount: 0,
             joinedDate: 1234, // Need Update
             contactNickname: "店長", // Need Update
             contactPhone: "0988555666", // Need Update
-            recentAmount: 0,
-            recentAmountPercentage: 0.0,
             weekAverage: 0,
+            shopLostAmount: 0,
+            customerLostAmount: 0,
             history: []
         };
         var tradeQuery = {
@@ -539,12 +540,17 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
 
                 cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
+                var lastUsed = dataCached.lastUsed || {};
                 var usedContainer = dataCached.usedContainer || {};
                 var unusedContainer = dataCached.unusedContainer || {};
                 var boxSigned = dataCached.boxSigned || [];
                 result.history = dataCached.history || [];
                 tradeList.forEach(function (aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                    lastUsed[aTrade.container.id] = {
+                        time: aTrade.tradeTime.valueOf(),
+                        action: aTrade.tradeType.action
+                    };
                     if (aTrade.tradeType.action === "Sign") {
                         unusedContainer[containerKey] = {
                             time: aTrade.tradeTime.valueOf(),
@@ -590,18 +596,22 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 });
 
                 var now = Date.now();
+                for (var containerID in lastUsed) {
+                    var timeToNow = now - lastUsed[containerID].time;
+                    if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
+                        timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                        result.shopLostAmount++;
+                    } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                        result.customerLostAmount++;
+                    }
+                }
+
                 result.toUsedAmount = Object.keys(unusedContainer).length;
-                if (Object.keys(usedContainer).length == 0) {
-                    result.todayAmount = 0;
-                    result.recentAmount = 0;
-                    result.weekAmount = 0;
-                    result.weekAverage = 0;
-                    result.recentAmountPercentage = 0;
-                } else {
+                result.totalAmount = Object.keys(usedContainer).length;
+                if (result.totalAmount !== 0) {
                     var weeklyAmount = {};
                     var weekCheckpoint = getWeekCheckpoint(new Date(Object.entries(usedContainer)[0][1].time));
                     var todayCheckpoint = dateCheckpoint(0);
-                    var recentCheckpoint = dateCheckpoint(-6);
                     weeklyAmount[weekCheckpoint] = 0;
                     for (var usedContainerKey in usedContainer) {
                         var usedContainerRecord = usedContainer[usedContainerKey];
@@ -615,9 +625,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         if (usedContainerRecord.time - todayCheckpoint > 0) {
                             result.todayAmount++;
                         }
-                        if (usedContainerRecord.time - recentCheckpoint > 0) {
-                            result.recentAmount++;
-                        }
                     }
 
                     while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
@@ -626,11 +633,12 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     }
 
                     result.weekAmount = weeklyAmount[weekCheckpoint];
+                    delete weeklyAmount[weekCheckpoint];
                     var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
                     var weights = arrOfWeeklyUsageOfThisStore.length;
                     var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                     result.weekAverage = Math.round(weeklySum / weights);
-                    result.recentAmountPercentage = (result.recentAmount - result.weekAverage) / result.weekAverage;
+                    result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
                 }
 
                 res.json(result);
@@ -640,6 +648,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     var toCache = {
                         timestamp,
                         cachedAt: Date.now(),
+                        lastUsed,
                         usedContainer,
                         unusedContainer,
                         boxSigned,
