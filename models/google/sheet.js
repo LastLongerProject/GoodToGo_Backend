@@ -166,7 +166,9 @@ module.exports = {
                                             var localCtr = i;
                                             var dataArray = [];
                                             request
-                                                .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID + '&key=' + placeApiKey + '&language=zh-TW')
+                                                .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID +
+                                                    '&language=zh-TW&region=tw&key=' + placeApiKey +
+                                                    '&fields=formatted_address,opening_hours,geometry,types')
                                                 .on('response', function (response) {
                                                     if (response.statusCode !== 200) {
                                                         debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
@@ -191,16 +193,19 @@ module.exports = {
                                                     var opening_hours;
                                                     if (aStore && aStore.opening_default) {
                                                         opening_hours = aStore.opening_hours;
-                                                    } else {
-                                                        opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
+                                                    } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
+                                                        opening_hours = dataObject.result.opening_hours.periods;
                                                         for (var j = 0; j < opening_hours.length; j++) {
-                                                            if (!opening_hours[j].close || opening_hours[j].close.time || opening_hours[j].open || opening_hours[j].open.time) {
+                                                            if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
                                                                 opening_hours = defaultPeriods;
                                                                 break;
+                                                            } else {
+                                                                opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                                opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                             }
-                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                         }
+                                                    } else {
+                                                        opening_hours = defaultPeriods;
                                                     }
                                                     Store.findOneAndUpdate({
                                                         'id': fulfillPlace[localCtr].ID
