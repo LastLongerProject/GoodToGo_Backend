@@ -8,6 +8,13 @@ var debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appINIT_ERR');
 
+var datas = {
+    storeDict: null,
+    containerDict: null,
+    containerTypeDict: null,
+    containerDictOnlyActive: null
+};
+
 module.exports = {
     store: function (app) {
         storeListGenerator(app, (err) => {
@@ -124,8 +131,18 @@ module.exports = {
                 });
             }
         });
-    }
+    },
+    getConst
 };
+
+function getConst(key, cb) {
+    if (cb) {
+        if (datas[key] === null) return setTimeout(getConst, 200, key, cb);
+        else return cb(datas[key]);
+    } else {
+        return new Promise((resolve, reject) => getConst(key, resolve));
+    }
+}
 
 function storeListGenerator(app, cb) {
     PlaceID.find({}, {}, {
@@ -139,6 +156,9 @@ function storeListGenerator(app, cb) {
             storeDict[aStore.ID] = aStore;
         });
         app.set('store', storeDict);
+        Object.assign(datas, {
+            storeDict
+        });
         cb();
     });
 }
@@ -169,6 +189,11 @@ function containerListGenerator(app, cb) {
             app.set('containerWithDeactive', containerDict);
             app.set('container', containerDictOnlyActive);
             app.set('containerType', containerTypeDict);
+            Object.assign(datas, {
+                containerDict,
+                containerTypeDict,
+                containerDictOnlyActive
+            });
             cb();
         });
     });

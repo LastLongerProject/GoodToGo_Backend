@@ -5,11 +5,11 @@ var debug = require('debug')('goodtogo_backend:users');
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
-var wetag = require('../models/toolKit').wetag;
+var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 var intReLength = require('../models/toolKit').intReLength;
+var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
 var subscribeSNS = require('../models/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
@@ -170,66 +170,66 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
 
 router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var returned = [];
-    var inUsed = [];
-    var recordCollection = {};
-    var containerType = req.app.get('containerType');
     var store = req.app.get('store');
-    process.nextTick(function () {
-        Trade.find({
-            "tradeType.action": "Rent",
-            "newUser.phone": dbUser.user.phone
-        }, function (err, rentList) {
-            if (err) return next(err);
-            rentList.sort(function (a, b) {
-                return b.tradeTime - a.tradeTime;
-            });
-            for (var i = 0; i < rentList.length; i++) {
-                var record = {};
-                record.container = '#' + intReLength(rentList[i].container.id, 3);
-                record.containerCode = rentList[i].container.id;
-                record.time = rentList[i].tradeTime;
-                record.type = containerType[rentList[i].container.typeCode].name;
-                record.store = store[(rentList[i].oriUser.storeID)].name;
-                record.cycle = (typeof rentList[i].container.cycleCtr === 'undefined') ? 0 : rentList[i].container.cycleCtr;
-                record.returned = false;
-                inUsed.push(record);
+    var containerType = req.app.get('containerType');
+    Trade.find({
+        '$or': [{
+                'tradeType.action': 'Rent',
+                'newUser.phone': dbUser.user.phone
+            },
+            {
+                'tradeType.action': 'Return',
+                'oriUser.phone': dbUser.user.phone
+            },
+            {
+                'tradeType.action': 'UndoReturn',
+                'newUser.phone': dbUser.user.phone
             }
-            Trade.find({
-                "tradeType.action": "Return",
-                "oriUser.phone": dbUser.user.phone
-            }, function (err, returnList) {
-                if (err) return next(err);
-                returnList.sort(function (a, b) {
-                    return b.tradeTime - a.tradeTime;
+        ]
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        cleanUndoTrade('Return', tradeList);
+        tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
+
+        var containerKey;
+        var tmpReturnedObject;
+        var inUsedDict = {};
+        var returnedList = [];
+        tradeList.forEach(aTrade => {
+            containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+            if (aTrade.tradeType.action === "Rent") {
+                inUsedDict[containerKey] = {
+                    container: '#' + intReLength(aTrade.container.id, 3),
+                    containerCode: aTrade.container.id,
+                    time: aTrade.tradeTime,
+                    type: containerType[aTrade.container.typeCode].name,
+                    store: store[(aTrade.oriUser.storeID)].name,
+                    cycle: aTrade.container.cycleCtr,
+                    returned: false
+                };
+            } else if (aTrade.tradeType.action === "Return" && inUsedDict[containerKey]) {
+                tmpReturnedObject = {};
+                Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
+                Object.assign(tmpReturnedObject, {
+                    returned: true,
+                    returnTime: returnList[i].tradeTime
                 });
-                for (var i = 0; i < returnList.length; i++) {
-                    for (var j = inUsed.length - 1; j >= 0; j--) {
-                        var returnCycle = (typeof returnList[i].container.cycleCtr === 'undefined') ? 0 : returnList[i].container.cycleCtr;
-                        if ((inUsed[j].containerCode === returnList[i].container.id) && (inUsed[j].cycle === returnCycle)) {
-                            inUsed[j].returned = true;
-                            inUsed[j].returnTime = returnList[i].tradeTime;
-                            inUsed[j].cycle = undefined;
-                            returned.push(inUsed[j]);
-                            inUsed.splice(j, 1);
-                            break;
-                        }
-                    }
-                }
-                recordCollection.usingAmount = inUsed.length;
-                recordCollection.data = inUsed.concat(returned);
-                Trade.count({
-                    "tradeType.action": "Return"
-                }, function (err, count) {
-                    if (err) return next(err);
-                    recordCollection.globalAmount = count;
-                    res.set('etag', wetag(JSON.stringify({
-                        usingAmount: recordCollection.usingAmount,
-                        data: recordCollection.data,
-                        globalAmount: recordCollection.globalAmount
-                    })));
-                    res.json(recordCollection);
-                });
+                delete tmpReturnedObject.cycle;
+                delete inUsedDict[containerKey];
+                returnedList.unshift(tmpReturnedObject);
+            }
+        });
+
+        var inUsedList = Object.values(inUsedDict).sort((a, b) => b.time - a.time);
+        Trade.count({
+            "tradeType.action": "Return"
+        }, function (err, count) {
+            if (err) return next(err);
+            res.json({
+                usingAmount: inUsedList.length,
+                data: inUsedList.concat(returnedList),
+                globalAmount: count
             });
         });
     });

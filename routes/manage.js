@@ -7,12 +7,13 @@ debug.log = console.log.bind(console);
 
 var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
+var getConst = require('../models/appInit').getConst;
 var refreshStore = require('../models/appInit').refreshStore;
-var refreshContainer = require('../models/appInit').refreshContainer;
 var refreshStoreImg = require('../models/appInit').refreshStoreImg;
+var refreshContainer = require('../models/appInit').refreshContainer;
 var refreshContainerIcon = require('../models/appInit').refreshContainerIcon;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 var cleanUndo = require('../models/toolKit').cleanUndoTrade;
+var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var Box = require('../models/DB/boxDB');
 var User = require('../models/DB/userDB');
@@ -91,7 +92,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
                     var now = Date.now();
-                    var checkpoint = getWeekCheckpoint().valueOf();
+                    var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
                     var lastUsed = dataCached.lastUsed || {};
                     var rentedContainer = dataCached.rentedContainer || {};
                     var signedContainer = dataCached.signedContainer || {};
@@ -118,7 +119,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 time: aTrade.tradeTime.valueOf()
                             };
                         } else if (aTrade.tradeType.action === "Return") {
-                            var recent = aTrade.tradeTime > checkpoint;
+                            var recent = aTrade.tradeTime > thisWeekCheckpoint;
                             result.shopHistorySummary.usedAmount++;
                             if (recent) {
                                 result.shopRecentHistorySummary.usedAmount++;
@@ -131,12 +132,17 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 });
                                 if (recent) {
                                     usedTime_recent.push(duration);
+                                } else {
+                                    delete rentedContainer[containerKey];
                                 }
                             }
+                            if (!signedContainer[containerKey]) console.log(containerKey)
                             if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                                 result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                 if (recent) {
                                     result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;
+                                } else {
+                                    delete signedContainer[containerKey];
                                 }
                             }
                         }
@@ -149,7 +155,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                             result.shopHistorySummary.shopLostAmount++;
                         } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                             result.shopHistorySummary.customerLostAmount++;
-                            if (lastUsed[containerID].time > checkpoint)
+                            if (lastUsed[containerID].time > thisWeekCheckpoint)
                                 result.shopRecentHistorySummary.customerLostAmount++;
                         }
                     }
@@ -167,8 +173,8 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     res.json(result);
 
                     if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                        var timestamp = checkpoint;
-                        var historyUsedTimeArr = usedTime.filter(ele => ele.time < timestamp);
+                        var timestamp = thisWeekCheckpoint;
+                        var historyUsedTimeArr = usedTime.filter(ele => ele.time < thisWeekCheckpoint);
                         var toCache = {
                             timestamp,
                             cachedAt: Date.now(),
