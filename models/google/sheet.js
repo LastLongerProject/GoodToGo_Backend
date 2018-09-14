@@ -51,7 +51,6 @@ module.exports = {
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
-                            var localPtr = i;
                             ContainerType.update({
                                 'typeCode': row[0]
                             }, {
@@ -127,7 +126,6 @@ module.exports = {
                             return;
                         }
                         var rows = response.data.values;
-                        var placeArr = [];
                         var PlaceIDFuncList = [];
                         for (var i = 0; i < rows.length; i++) {
                             var row = rows[i];
@@ -219,8 +217,8 @@ module.exports = {
                                                         'type': type,
                                                         'project': fulfillPlace[localCtr].project,
                                                         'address': dataObject.result.formatted_address
-                                                            .slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('))
-                                                            .replace('区', '區'),
+                                                            // .slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('))
+                                                            .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
                                                         'opening_hours': opening_hours,
                                                         'location': dataObject.result.geometry.location,
                                                         'active': fulfillPlace[localCtr].active,
@@ -241,7 +239,6 @@ module.exports = {
                                                 });
                                         }));
                                     }
-                                    var returnObject = [];
                                     Promise
                                         .all(placeApiFuncList)
                                         .then((data) => {

@@ -493,13 +493,16 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             weekAmount: 0,
             weekAmountPercentage: 0.0,
             totalAmount: 0,
-            joinedDate: 1234, // Need Update
+            joinedDate: theStore.createdAt,
             contactNickname: "店長", // Need Update
             contactPhone: "0988555666", // Need Update
             weekAverage: 0,
             shopLostAmount: 0,
             customerLostAmount: 0,
-            history: []
+            history: [],
+            chartData: [
+                ["週", "數量"]
+            ]
         };
         var tradeQuery = {
             '$or': [{
@@ -646,6 +649,8 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                     result.weekAverage = Math.round(weeklySum / weights);
                     result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
+
+                    result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
                 }
 
                 res.json(result);
@@ -933,7 +938,7 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
                     toCleanAmount: 0,
                     toDeliveryAmount: 0,
                     toSignAmount: 0,
-                    inStorageAmount: 0, // need update
+                    inStorageAmount: 0,
                     lostAmount: 0
                 };
             }
