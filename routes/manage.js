@@ -637,7 +637,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     if (typeof theHistory.content === "object") {
                         var contentTxt = "";
                         for (var aContent in theHistory.content) {
-                            if (contentTxt !== "") contentTxt += "\n";
+                            if (contentTxt !== "") contentTxt += "、";
                             contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
                         }
                         theHistory.content = contentTxt;
