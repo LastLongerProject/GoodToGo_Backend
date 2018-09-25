@@ -33,6 +33,8 @@ const CACHE = {
     user: "manage_cache:user"
 };
 
+const BOXID = /簽收 \[BOX #(\d*)\]/i;
+
 router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
     var result = {
         summary: {
@@ -553,7 +555,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 var lastUsed = dataCached.lastUsed || {};
                 var usedContainer = dataCached.usedContainer || {};
                 var unusedContainer = dataCached.unusedContainer || {};
-                var boxSigned = dataCached.boxSigned || [];
                 result.history = dataCached.history || [];
                 tradeList.forEach(function (aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
@@ -576,34 +577,76 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         delete unusedContainer[containerKey];
                     }
                     if (aTrade.tradeType.action === "Sign") {
-                        var serial = aTrade.container.box + "-" + aTrade.tradeTime;
-                        if (boxSigned.indexOf(serial) !== -1) return;
-                        else boxSigned.push(serial);
-                        result.history.unshift({
-                            time: aTrade.tradeTime,
-                            serial: "#" + aTrade.container.box,
-                            action: "簽收",
-                            owner: theStore.name,
-                            by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
-                        });
+                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && BOXID.test(result.history[0].action) &&
+                            result.history[0].action.match(BOXID)[1] == aTrade.container.box) {
+                            addContent(result.history[0], aTrade);
+                        } else {
+                            result.history.unshift({
+                                time: aTrade.tradeTime,
+                                action: "簽收 [BOX #" + aTrade.container.box + "]",
+                                content: {
+                                    [aTrade.container.typeCode]: 1
+                                },
+                                contentDetail: {
+                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                },
+                                owner: theStore.name,
+                                by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
+                            });
+                        }
                     } else if (aTrade.tradeType.action === "Rent") {
-                        result.history.unshift({
-                            time: aTrade.tradeTime,
-                            serial: "#" + aTrade.container.id,
-                            action: "借出",
-                            owner: phoneEncoder(aTrade.newUser.phone),
-                            by: aTrade.oriUser.name || phoneEncoder(aTrade.oriUser.phone)
-                        });
+                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "借出") {
+                            addContent(result.history[0], aTrade);
+                        } else {
+                            result.history.unshift({
+                                time: aTrade.tradeTime,
+                                action: "借出",
+                                content: {
+                                    [aTrade.container.typeCode]: 1
+                                },
+                                contentDetail: {
+                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                },
+                                owner: phoneEncoder(aTrade.newUser.phone),
+                                by: aTrade.oriUser.name || phoneEncoder(aTrade.oriUser.phone)
+                            });
+                        }
                     } else if (aTrade.tradeType.action === "Return") {
-                        result.history.unshift({
-                            time: aTrade.tradeTime,
-                            serial: "#" + aTrade.container.id,
-                            action: "歸還",
-                            owner: theStore.name,
-                            by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
-                        });
+                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "歸還") {
+                            addContent(result.history[0], aTrade);
+                        } else {
+                            result.history.unshift({
+                                time: aTrade.tradeTime,
+                                action: "歸還",
+                                content: {
+                                    [aTrade.container.typeCode]: 1
+                                },
+                                contentDetail: {
+                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                },
+                                owner: theStore.name,
+                                by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
+                            });
+                        }
                     }
                 });
+
+                var containerType = req.app.get('containerType');
+                for (var index in result.history) {
+                    var theHistory = result.history[index];
+                    var contentTxt = "";
+                    for (var aContent in theHistory.content) {
+                        if (contentTxt !== "") contentTxt += "\n";
+                        contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
+                    }
+                    theHistory.content = contentTxt;
+                    var contentDetailTxt = "";
+                    for (var aContentDetail in theHistory.contentDetail) {
+                        if (contentDetailTxt !== "") contentDetailTxt += "\n\n";
+                        contentDetailTxt += `${containerType[aContentDetail].name}\n${theHistory.contentDetail[aContentDetail].join("、")}`;
+                    }
+                    theHistory.contentDetail = contentDetailTxt;
+                }
 
                 var now = Date.now();
                 for (var containerID in lastUsed) {
@@ -663,7 +706,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         lastUsed,
                         usedContainer,
                         unusedContainer,
-                        boxSigned,
                         history: result.history
                     };
                     redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
@@ -1056,6 +1098,17 @@ function getWeekCheckpoint(date) {
 
 function phoneEncoder(phone, expose = false) {
     return phone.slice(0, 4) + (expose ? ("-" + phone.slice(4, 7) + "-") : "-***-") + phone.slice(7, 10);
+}
+
+function addContent(lastHistory, newHistory) {
+    if (lastHistory.content[newHistory.container.typeCode])
+        lastHistory.content[newHistory.container.typeCode]++;
+    else
+        lastHistory.content[newHistory.container.typeCode] = 1;
+    if (lastHistory.contentDetail[newHistory.container.typeCode])
+        lastHistory.contentDetail[newHistory.container.typeCode].push("#" + newHistory.container.id);
+    else
+        lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
 
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
