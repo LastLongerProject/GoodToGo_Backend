@@ -634,18 +634,22 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 var containerType = req.app.get('containerType');
                 for (var index in result.history) {
                     var theHistory = result.history[index];
-                    var contentTxt = "";
-                    for (var aContent in theHistory.content) {
-                        if (contentTxt !== "") contentTxt += "\n";
-                        contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
+                    if (typeof theHistory.content === "object") {
+                        var contentTxt = "";
+                        for (var aContent in theHistory.content) {
+                            if (contentTxt !== "") contentTxt += "\n";
+                            contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
+                        }
+                        theHistory.content = contentTxt;
                     }
-                    theHistory.content = contentTxt;
-                    var contentDetailTxt = "";
-                    for (var aContentDetail in theHistory.contentDetail) {
-                        if (contentDetailTxt !== "") contentDetailTxt += "\n\n";
-                        contentDetailTxt += `${containerType[aContentDetail].name}\n${theHistory.contentDetail[aContentDetail].join("、")}`;
+                    if (typeof theHistory.contentDetail === "object") {
+                        var contentDetailTxt = "";
+                        for (var aContentDetail in theHistory.contentDetail) {
+                            if (contentDetailTxt !== "") contentDetailTxt += "\n\n";
+                            contentDetailTxt += `${containerType[aContentDetail].name}\n${theHistory.contentDetail[aContentDetail].join("、")}`;
+                        }
+                        theHistory.contentDetail = contentDetailTxt;
                     }
-                    theHistory.contentDetail = contentDetailTxt;
                 }
 
                 var now = Date.now();
