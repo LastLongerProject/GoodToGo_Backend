@@ -51,7 +51,6 @@ module.exports = {
                     for (var i = 0; i < sheetContainerTypeList.length; i++) {
                         funcList.push(new Promise((resolve, reject) => {
                             var row = sheetContainerTypeList[i];
-                            var localPtr = i;
                             ContainerType.update({
                                 'typeCode': row[0]
                             }, {
@@ -127,7 +126,6 @@ module.exports = {
                             return;
                         }
                         var rows = response.data.values;
-                        var placeArr = [];
                         var PlaceIDFuncList = [];
                         for (var i = 0; i < rows.length; i++) {
                             var row = rows[i];
@@ -166,7 +164,9 @@ module.exports = {
                                             var localCtr = i;
                                             var dataArray = [];
                                             request
-                                                .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID + '&key=' + placeApiKey + '&language=zh-TW')
+                                                .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID +
+                                                    '&language=zh-TW&region=tw&key=' + placeApiKey +
+                                                    '&fields=formatted_address,opening_hours,geometry,types')
                                                 .on('response', function (response) {
                                                     if (response.statusCode !== 200) {
                                                         debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
@@ -191,16 +191,19 @@ module.exports = {
                                                     var opening_hours;
                                                     if (aStore && aStore.opening_default) {
                                                         opening_hours = aStore.opening_hours;
-                                                    } else {
-                                                        opening_hours = (dataObject.result.opening_hours) ? dataObject.result.opening_hours.periods : defaultPeriods;
+                                                    } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
+                                                        opening_hours = dataObject.result.opening_hours.periods;
                                                         for (var j = 0; j < opening_hours.length; j++) {
-                                                            if (!opening_hours[j].close || opening_hours[j].close.time || opening_hours[j].open || opening_hours[j].open.time) {
+                                                            if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
                                                                 opening_hours = defaultPeriods;
                                                                 break;
+                                                            } else {
+                                                                opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                                opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                             }
-                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                         }
+                                                    } else {
+                                                        opening_hours = defaultPeriods;
                                                     }
                                                     Store.findOneAndUpdate({
                                                         'id': fulfillPlace[localCtr].ID
@@ -214,8 +217,8 @@ module.exports = {
                                                         'type': type,
                                                         'project': fulfillPlace[localCtr].project,
                                                         'address': dataObject.result.formatted_address
-                                                            .slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('))
-                                                            .replace('区', '區'),
+                                                            // .slice(dataObject.result.formatted_address.indexOf('台灣') + 2, (dataObject.result.formatted_address.indexOf('\(') < 0) ? dataObject.result.formatted_address.length : dataObject.result.formatted_address.indexOf('\('))
+                                                            .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
                                                         'opening_hours': opening_hours,
                                                         'location': dataObject.result.geometry.location,
                                                         'active': fulfillPlace[localCtr].active,
@@ -236,7 +239,6 @@ module.exports = {
                                                 });
                                         }));
                                     }
-                                    var returnObject = [];
                                     Promise
                                         .all(placeApiFuncList)
                                         .then((data) => {
