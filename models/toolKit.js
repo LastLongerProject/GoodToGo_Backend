@@ -80,9 +80,8 @@ module.exports = {
                 default:
                     return callback(false);
             }
-            callback(true);
         }
-        callback(true);
+        return callback(true);
     },
     cleanUndoTrade: function (action, tradeList) {
         var undoAction;
