@@ -6,20 +6,31 @@ var UserKeys = require('../DB/userKeysDB');
 function iatGetDate(int) {
     var tmp = new Date();
     tmp = tmp.setDate(tmp.getDate() + int);
-    return tmp;
+    return tmp.valueOf();
 }
 
-function isAuthorized(condition, userRoles, thisRole) {
-    if (condition.length === 0) return true;
-    for (var i in condition) {
-        if (userRoles[condition[i].role] && condition[i].role === thisRole) {
-            if (condition[i].manager) {
-                return userRoles[condition[i].role].manager === true;
+function isAuthorized(conditions, userRoles, thisKeyRole) {
+    if (!Array.isArray(condition) || condition.length === 0) return true; // Customer
+    conditions.forEach(aCondition => {
+        if (userRoles[aCondition.role] && aCondition.role === thisKeyRole) {
+            if (aCondition.manager) {
+                return userRoles[aCondition.role].manager === true;
             }
             return true;
         }
-    }
+    });
     return false;
+}
+
+function addRoleToCheck(req, theRole, shouldBeManager, cb) {
+    if (!req._rolesToCheck) {
+        req._rolesToCheck = [];
+    }
+    req._rolesToCheck.push({
+        role: theRole,
+        manager: shouldBeManager
+    });
+    cb();
 }
 
 module.exports = {
@@ -68,7 +79,11 @@ module.exports = {
                                 message: 'JWT Invalid or User has login on another device'
                             });
                         res._payload = decoded;
-                        if (!decoded.jti || !decoded.iat || !decoded.exp)
+                        decoded.exp = parseInt(decoded.exp);
+                        decoded.iat = parseInt(decoded.exp);
+                        if (decoded.orderTime)
+                            decoded.orderTime = parseInt(decoded.orderTime);
+                        if (isNaN(decoded.jti) || isNaN(decoded.iat) || isNaN(decoded.exp))
                             return res.status(401).json({
                                 code: 'B006',
                                 type: 'validatingUser',
@@ -80,45 +95,42 @@ module.exports = {
                             decoded.iat *= 1000;
                         if (decoded.orderTime && decoded.orderTime.toString().length == 10)
                             decoded.orderTime *= 1000;
-                        if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1)) {
+                        if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1))
                             return res.status(401).json({
                                 code: 'B007',
                                 type: 'validatingUser',
                                 message: 'JWT Expired'
                             });
-                        }
-                        if (req._role) {
-                            if (!isAuthorized(req._role.list, dbUser.roles, dbKey.roleType))
-                                return res.status(401).json({
-                                    code: 'B008',
-                                    type: 'validatingUser',
-                                    message: 'Not Authorized for this URI'
-                                });
-                        }
+                        if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
+                            return res.status(401).json({
+                                code: 'B008',
+                                type: 'validatingUser',
+                                message: 'Not Authorized for this URI'
+                            });
                         redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
+                            if (err) return next(err);
                             if (reply !== null) {
                                 return res.status(401).json({
                                     code: 'Z004',
                                     type: 'security',
                                     message: 'Token reply'
                                 });
-                            } else {
-                                redis.set('reply_check:' + decoded.jti + ':' + decoded.iat, 0, (err, reply) => {
-                                    if (err) return next(err);
-                                    if (reply !== 'OK') return next(reply);
-                                    redis.expire('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, (err, reply) => {
-                                        if (err) return next(err);
-                                        if (reply !== 1) return next(reply);
-                                        req._user = dbUser;
-                                        req._key = dbKey;
-                                        req._user.role = dbUser.roles[dbKey.roleType || dbUser.role.typeCode];
-                                        req._user.role.typeCode = dbKey.roleType || dbUser.role.typeCode;
-                                        // console.log(req._user.role);
-                                        // console.log(req._thisUserRole);
-                                        next();
-                                    });
-                                });
                             }
+                            redis.set('reply_check:' + decoded.jti + ':' + decoded.iat, 0, (err, reply) => {
+                                if (err) return next(err);
+                                if (reply !== 'OK') return next(reply);
+                                redis.expire('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, (err, reply) => {
+                                    if (err) return next(err);
+                                    if (reply !== 1) return next(reply);
+                                    req._user = dbUser;
+                                    req._key = dbKey;
+                                    req._user.role = dbUser.roles[dbKey.roleType || dbUser.role.typeCode];
+                                    req._user.role.typeCode = dbKey.roleType || dbUser.role.typeCode;
+                                    // console.log(req._user.role);
+                                    // console.log(req._thisUserRole);
+                                    next();
+                                });
+                            });
                         });
                     });
                 });
@@ -131,76 +143,9 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: function (req, res, next) {
-        if (!req._role) {
-            req._role = {
-                txt: 'clerk',
-                manager: true,
-                list: [{
-                    role: "clerk",
-                    manager: true
-                }]
-            };
-        } else {
-            req._role.txt += 'clerk';
-            req._role.manager = true;
-            req._role.list.push({
-                role: "clerk",
-                manager: true
-            });
-        }
-        next();
-    },
-    regAsStore: function (req, res, next) {
-        if (!req._role) {
-            req._role = {
-                txt: 'clerk',
-                list: [{
-                    role: "clerk"
-                }]
-            };
-        } else {
-            req._role.txt += 'clerk';
-            req._role.list.push({
-                role: "clerk"
-            });
-        }
-        next();
-    },
-    regAsAdminManager: function (req, res, next) {
-        if (!req._role) {
-            req._role = {
-                txt: 'admin',
-                manager: true,
-                list: [{
-                    role: "admin",
-                    manager: true
-                }]
-            };
-        } else {
-            req._role.txt += 'admin';
-            req._role.manager = true;
-            req._role.list.push({
-                role: "admin",
-                manager: true
-            });
-        }
-        next();
-    },
-    regAsAdmin: function (req, res, next) {
-        if (!req._role) {
-            req._role = {
-                txt: 'admin',
-                list: [{
-                    role: "admin"
-                }]
-            };
-        } else {
-            req._role.txt += 'admin';
-            req._role.list.push({
-                role: "admin"
-            });
-        }
-        next();
-    }
+    regAsStoreManager: (req, res, next) => addRoleToCheck(req, "clerk", true, next),
+    regAsStore: (req, res, next) => addRoleToCheck(req, "clerk", false, next),
+    regAsAdminManager: (req, res, next) => addRoleToCheck(req, "admin", true, next),
+    regAsAdmin: (req, res, next) => addRoleToCheck(req, "admin", false, next),
+    regAsBot: (req, res, next) => addRoleToCheck(req, "bot", false, next)
 };

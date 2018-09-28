@@ -4,6 +4,7 @@ var UserKeys = require('../models/DB/userKeysDB');
 var User = require('../models/DB/userDB');
 var keys = require('../config/keys');
 var sendCode = require('../models/SNS').sms_now;
+var intReLength = require("./toolKit").intReLength;
 
 module.exports = {
     signup: function (req, done) {
@@ -384,7 +385,75 @@ module.exports = {
                 message: 'Logout succeeded.'
             });
         });
-    }
+    },
+    addBot: function (req, done) {
+        if (typeof req.body.scopeID === "undefined" || typeof req.body.botName === "undefined") {
+            return done(null, false, {
+                code: 'D001',
+                type: 'signupMessage',
+                message: 'Content not Complete'
+            });
+        } else if (typeof req.body.scopeID !== "number" || typeof req.body.botName !== "string") {
+            return done(null, false, {
+                code: 'D003',
+                type: 'signupMessage',
+                message: 'Role structure invalid'
+            });
+        }
+        var role = {
+            typeCode: 'bot',
+            scopeID: req.body.scopeID
+        };
+        var botName = req.body.botName;
+        User.count({
+            'role.typeCode': "bot"
+        }, function (err, botAmount) {
+            if (err) return done(err);
+            var botID = `bot${intReLength(botAmount + 1, 5)}`;
+            keys.apiKey(function (err, returnKeys) {
+                if (err) return done(err);
+                var newUser = new User({
+                    user: {
+                        phone: botID,
+                        name: botName
+                    },
+                    role: role,
+                    roles: {
+                        typeList: ["bot"],
+                        bot: role
+                    },
+                    active: true
+                });
+                var newUserKey = new UserKeys({
+                    phone: botID,
+                    apiKey: returnKeys.apiKey,
+                    secretKey: returnKeys.secretKey,
+                    userAgent: req.headers['user-agent'],
+                    roleType: "bot",
+                    user: newUser._id
+                });
+                newUser.save(function (err) {
+                    if (err) return done(err);
+                    newUserKey.save(function (err) {
+                        if (err) return done(err);
+                        return done(null, true, {
+                            headers: {
+                                Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, newUser)
+                            },
+                            body: {
+                                type: 'signupMessage',
+                                message: 'Authentication succeeded',
+                                keys: {
+                                    apiKey: returnKeys.apiKey,
+                                    secretKey: returnKeys.secretKey
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        });
+    },
 };
 
 function isMobilePhone(phone) {

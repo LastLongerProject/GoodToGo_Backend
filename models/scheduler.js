@@ -18,34 +18,43 @@ function driveCb(succeed, data) {
     }
 }
 
-module.exports = function(app) {
-    User.findOne({ 'user.phone': '0900000000' }, (err, bot) => {
+module.exports = function (app) {
+    User.findOne({
+        'user.phone': '0900000000'
+    }, (err, bot) => {
         if (err) return debugError(err);
         if (!bot) return debugError('missing bot acount');
         var dateNow = new Date();
         appInit.refreshContainer(app, bot, cb);
         appInit.refreshStore(app, cb);
         var shouldWait = dateCheckpoint(1) - dateNow;
-        setTimeout(function() {
+        setTimeout(function () {
             setInterval(function tasks() {
                 debug('scheduler start');
                 setTimeout(appInit.refreshContainer, 0, app, bot, cb);
                 setTimeout(appInit.refreshStore, 1000 * 60 * 5, app, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
-                setTimeout(function() {
-                    UserKeys.remove({ 'updatedAt': { '$lt': dateCheckpoint(-14) } }, (err) => {
+                setTimeout(function () {
+                    UserKeys.remove({
+                        'updatedAt': {
+                            '$lt': dateCheckpoint(-14)
+                        },
+                        "roleType": {
+                            "$ne": "bot"
+                        }
+                    }, (err) => {
                         if (err) return debugError(err);
                         debug('remove expire login');
                     });
                 }, 1000 * 60 * 20);
-                setTimeout(function() {
-                    fs.readFile("./config/config.json", 'utf8', function(err, data) {
+                setTimeout(function () {
+                    fs.readFile("./config/config.json", 'utf8', function (err, data) {
                         if (err) return debugError(err);
                         var config = JSON.parse(data);
                         config.secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
                         config.secret_key.lastUpdate = Date.now();
-                        fs.writeFile("./config/config.json", JSON.stringify(config), 'utf8', function(err) {
+                        fs.writeFile("./config/config.json", JSON.stringify(config), 'utf8', function (err) {
                             if (err) return debugError(err);
                             debug('update server secret key');
                         });
