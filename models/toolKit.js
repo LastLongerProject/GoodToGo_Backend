@@ -145,8 +145,9 @@ if (process.env.OS === 'Windows_NT') {
 
 function intReLength(data, length) {
     var str = data.toString();
-    if (length - str.length) {
-        for (j = 0; j <= length - str.length; j++) {
+    const zeroToAppend = length - str.length;
+    if (zeroToAppend) {
+        for (let j = 0; j < zeroToAppend; j++) {
             str = "0" + str;
         }
     }

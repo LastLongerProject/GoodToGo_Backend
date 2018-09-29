@@ -11,14 +11,15 @@ function iatGetDate(int) {
 
 function isAuthorized(conditions, userRoles, thisKeyRole) {
     if (!Array.isArray(conditions) || conditions.length === 0) return true; // Customer
-    conditions.forEach(aCondition => {
+    for (let conditionIndex in conditions) {
+        let aCondition = conditions[conditionIndex];
         if (userRoles[aCondition.role] && aCondition.role === thisKeyRole) {
             if (aCondition.manager) {
                 return userRoles[aCondition.role].manager === true;
             }
             return true;
         }
-    });
+    }
     return false;
 }
 
