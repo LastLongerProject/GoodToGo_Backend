@@ -80,10 +80,10 @@ module.exports = {
                             });
                         res._payload = decoded;
                         decoded.exp = parseInt(decoded.exp);
-                        decoded.iat = parseInt(decoded.exp);
+                        decoded.iat = parseInt(decoded.iat);
                         if (decoded.orderTime)
                             decoded.orderTime = parseInt(decoded.orderTime);
-                        if (isNaN(decoded.jti) || isNaN(decoded.iat) || isNaN(decoded.exp))
+                        if (!decoded.jti || isNaN(decoded.iat) || isNaN(decoded.exp))
                             return res.status(401).json({
                                 code: 'B006',
                                 type: 'validatingUser',
