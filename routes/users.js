@@ -226,7 +226,7 @@ router.get('/data/byToken', regAsStore, validateRequest, function (req, res, nex
                         Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
                         Object.assign(tmpReturnedObject, {
                             returned: true,
-                            returnTime: returnList[i].tradeTime
+                            returnTime: aTrade.tradeTime
                         });
                         delete tmpReturnedObject.cycle;
                         delete inUsedDict[containerKey];
@@ -289,7 +289,7 @@ router.get('/data', validateRequest, function (req, res, next) {
                 Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
                 Object.assign(tmpReturnedObject, {
                     returned: true,
-                    returnTime: returnList[i].tradeTime
+                    returnTime: aTrade.tradeTime
                 });
                 delete tmpReturnedObject.cycle;
                 delete inUsedDict[containerKey];
