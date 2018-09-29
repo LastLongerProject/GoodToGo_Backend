@@ -66,7 +66,7 @@ router.get('/list', validateDefault, function (req, res, next) {
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
                         var tmpOpening = [];
-                        storeList[i].img_info.img_src = `${baseUrl}/images/store/${intReLength(storeList[i].id, 2)}/${token}`;
+                        storeList[i].img_info.img_src = `${baseUrl}/images/${intReLength(storeList[i].id, 2)}/${token}`;
                         for (var j = 0; j < storeList[i].opening_hours.length; j++)
                             tmpOpening.push({
                                 close: storeList[i].opening_hours[j].close,
