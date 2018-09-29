@@ -10,7 +10,7 @@ function iatGetDate(int) {
 }
 
 function isAuthorized(conditions, userRoles, thisKeyRole) {
-    if (!Array.isArray(condition) || condition.length === 0) return true; // Customer
+    if (!Array.isArray(conditions) || conditions.length === 0) return true; // Customer
     conditions.forEach(aCondition => {
         if (userRoles[aCondition.role] && aCondition.role === thisKeyRole) {
             if (aCondition.manager) {
