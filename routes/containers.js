@@ -941,7 +941,8 @@ function changeState(resolve, id, dbNew, action, newState, res, next, key = null
                         if (resolve === false) {
                             saveAll(() => res.status(200).json({
                                 type: messageType,
-                                message: action + ' Succeeded'
+                                message: action + ' Succeeded',
+                                oriUser: dbOri.user.phone
                             }), next, newTrade);
                         } else {
                             var tmpTrade = new Object(newTrade);

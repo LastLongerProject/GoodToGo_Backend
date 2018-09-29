@@ -168,6 +168,82 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     }
 });
 
+var redis = require("../models/redis");
+var User = require("../models/DB/userDB");
+router.get('/data/byToken', regAsStore, validateRequest, function (req, res, next) {
+    var key = req.headers.userapikey;
+    redis.get('user_token:' + key, (err, reply) => {
+        if (err) return next(err);
+        if (!reply) return res.status(403).json({
+            code: 'F013',
+            type: "borrowContainerMessage",
+            message: "Rent Request Expired"
+        });
+        User.findOne({
+            "user.phone": reply
+        }, (err, dbUser) => {
+            if (err) return next(err);
+            var store = req.app.get('store');
+            var containerType = req.app.get('containerType');
+            Trade.find({
+                '$or': [{
+                        'tradeType.action': 'Rent',
+                        'newUser.phone': dbUser.user.phone
+                    },
+                    {
+                        'tradeType.action': 'Return',
+                        'oriUser.phone': dbUser.user.phone
+                    },
+                    {
+                        'tradeType.action': 'UndoReturn',
+                        'newUser.phone': dbUser.user.phone
+                    }
+                ]
+            }, function (err, tradeList) {
+                if (err) return next(err);
+
+                cleanUndoTrade('Return', tradeList);
+                tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
+
+                var containerKey;
+                var tmpReturnedObject;
+                var inUsedDict = {};
+                var returnedList = [];
+                tradeList.forEach(aTrade => {
+                    containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                    if (aTrade.tradeType.action === "Rent") {
+                        inUsedDict[containerKey] = {
+                            container: '#' + intReLength(aTrade.container.id, 3),
+                            containerCode: aTrade.container.id,
+                            time: aTrade.tradeTime,
+                            type: containerType[aTrade.container.typeCode].name,
+                            store: store[(aTrade.oriUser.storeID)].name,
+                            cycle: aTrade.container.cycleCtr,
+                            returned: false
+                        };
+                    } else if (aTrade.tradeType.action === "Return" && inUsedDict[containerKey]) {
+                        tmpReturnedObject = {};
+                        Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
+                        Object.assign(tmpReturnedObject, {
+                            returned: true,
+                            returnTime: returnList[i].tradeTime
+                        });
+                        delete tmpReturnedObject.cycle;
+                        delete inUsedDict[containerKey];
+                        returnedList.unshift(tmpReturnedObject);
+                    }
+                });
+
+                var inUsedList = Object.values(inUsedDict).sort((a, b) => b.time - a.time);
+                res.json({
+                    usingAmount: inUsedList.length,
+                    data: inUsedList.concat(returnedList)
+                });
+            });
+        });
+    });
+});
+
 router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var store = req.app.get('store');

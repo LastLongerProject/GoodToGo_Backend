@@ -735,7 +735,11 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         totalLostAmount: 0,
         list: []
     };
-    User.find((err, userList) => {
+    User.find({
+        "roleType": {
+            "$ne": "bot"
+        }
+    }, (err, userList) => {
         if (err) return next(err);
         var userDict = {};
         var userUsingDict = {};
