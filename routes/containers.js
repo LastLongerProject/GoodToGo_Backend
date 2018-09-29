@@ -10,6 +10,7 @@ var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
+var baseUrl = require('../config/config.js').serverBaseUrl;
 var sns = require('../models/SNS');
 var generateSocketToken = require('../models/socket').generateToken;
 var wetag = require('../models/toolKit').wetag;
@@ -22,13 +23,6 @@ var validateRequest = require('../models/validation/validateRequest').JWT;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
-
-var iconBaseUrl;
-if (process.env.NODE_ENV === "testing") {
-    iconBaseUrl = "https://app.goodtogo.tw/test/images/icon/";
-} else {
-    iconBaseUrl = "https://app.goodtogo.tw/images/icon/";
-}
 
 const historyDays = 14;
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
@@ -68,7 +62,7 @@ router.get('/get/list', validateDefault, function (req, res, next) {
         for (var aType in typeDict) {
             tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = iconBaseUrl + intReLength(typeDict[aType].typeCode, 2) + "_" + j + "x" + "/" + token;
+                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}`;
             }
             tmpArr.push({
                 typeCode: typeDict[aType].typeCode,

@@ -6,6 +6,7 @@ var debug = require('debug')('goodtogo_backend:stores');
 var redis = require("../models/redis");
 
 var keys = require('../config/keys');
+var baseUrl = require('../config/config.js').serverBaseUrl;
 var wetag = require('../models/toolKit').wetag;
 var intReLength = require('../models/toolKit').intReLength;
 var dayFormatter = require('../models/toolKit').dayFormatter;
@@ -26,18 +27,6 @@ var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 
 const historyDays = 14;
-var getImageUrl;
-
-if (process.env.NODE_ENV === "testing") {
-    getImageUrl = function (src, token) {
-        var index = src.indexOf('images/');
-        return src.slice(0, index) + 'test/' + src.slice(index) + "/" + token;
-    }
-} else {
-    getImageUrl = function (src, token) {
-        return src + "/" + token;
-    }
-}
 
 router.get('/list', validateDefault, function (req, res, next) {
     var jsonData = {
@@ -77,7 +66,7 @@ router.get('/list', validateDefault, function (req, res, next) {
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
                         var tmpOpening = [];
-                        storeList[i].img_info.img_src = getImageUrl(storeList[i].img_info.img_src, token);
+                        storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
                         for (var j = 0; j < storeList[i].opening_hours.length; j++)
                             tmpOpening.push({
                                 close: storeList[i].opening_hours[j].close,

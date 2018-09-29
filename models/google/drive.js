@@ -111,7 +111,7 @@ function downloadFile(aFile, type, resolve, reject) {
             var fileName = aFile.name.replace('@', '_');
             var compressedFileName = fileName;
             var bufs = [];
-            if (type === 'shop') fileName = fileName.slice(0, 2) + '_ori.jpg';
+            if (type === 'shop') fileName = fileName.slice(0, 5) + '_ori.jpg';
             drive.files.get({
                 auth: auth,
                 fileId: aFile.id,
