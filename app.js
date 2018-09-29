@@ -139,10 +139,12 @@ function connectMongoDB() {
         // require('./tmp/findDiffToUsedContainer')
         appInit.container(app);
         appInit.store(app);
-        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "production") {
+        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
             scheduler(app);
+        } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
+            debug("Local Testing no scheduler");
         } else {
-            debug((process.env.NODE_ENV ? process.env.NODE_ENV.replace(/"|\s/g, "") : "Unknown") + " ENV no scheduler");
+            debug("Deploy Server no scheduler");
         }
     });
 }
