@@ -312,7 +312,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (req, res, next)
 router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    var storeID = req.params.store;
+    var storeID = parseInt(req.params.store);
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
@@ -323,52 +323,62 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 type: "DeliveryMessage",
                 message: "Can't Find The Box"
             });
-            promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, null, aBox.containerList, () => {
-                aBox.delivering = true;
-                aBox.stocking = false;
-                aBox.storeID = storeID;
-                aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function (err) {
-                    if (err) return next(err);
-                    /*
-                    User.find({
-                        'roles.clerk.storeID': storeID
-                    }, function (err, userList) {
-                        var funcList = [];
-                        for (var i in userList) {
-                            if (typeof userList[i].pushNotificationArn !== "undefined")
-                                for (var keys in userList[i].pushNotificationArn) {
-                                    if (keys.indexOf('shop') >= 0)
-                                        funcList.push(new Promise((resolve, reject) => {
-                                            var localCtr = i;
-                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
-                                                action: "BOX_DELIVERY"
-                                            }, (err, data, payload) => {
-                                                if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
-                                                resolve([userList[localCtr].user.phone, data, payload]);
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: "Delivery",
+                newState: 0
+            }, {
+                boxID,
+                toStoreID: storeID
+            }, {
+                res,
+                next,
+                callback: () => {
+                    aBox.delivering = true;
+                    aBox.stocking = false;
+                    aBox.storeID = storeID;
+                    aBox.user.delivery = dbAdmin.user.phone;
+                    aBox.save(function (err) {
+                        if (err) return next(err);
+                        /*
+                        User.find({
+                            'roles.clerk.storeID': storeID
+                        }, function (err, userList) {
+                            var funcList = [];
+                            for (var i in userList) {
+                                if (typeof userList[i].pushNotificationArn !== "undefined")
+                                    for (var keys in userList[i].pushNotificationArn) {
+                                        if (keys.indexOf('shop') >= 0)
+                                            funcList.push(new Promise((resolve, reject) => {
+                                                var localCtr = i;
+                                                sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
+                                                    action: "BOX_DELIVERY"
+                                                }, (err, data, payload) => {
+                                                    if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
+                                                    resolve([userList[localCtr].user.phone, data, payload]);
+                                                });
+                                            }));
+                                    }
+                            }
+                            Promise
+                                .all(funcList)
+                                .then((data) => {
+                                    data.forEach(element => {
+                                        if (element[1] === 'err')
+                                            element.forEach((ele) => {
+                                                debug(ele);
                                             });
-                                        }));
-                                }
-                        }
-                        Promise
-                            .all(funcList)
-                            .then((data) => {
-                                data.forEach(element => {
-                                    if (element[1] === 'err')
-                                        element.forEach((ele) => {
-                                            debug(ele);
-                                        });
+                                    });
+                                })
+                                .catch((err) => {
+                                    if (err) debug(err);
                                 });
-                            })
-                            .catch((err) => {
-                                if (err) debug(err);
-                            });
-                    });*/
-                    return res.json({
-                        type: "DeliveryMessage",
-                        message: "Delivery Succeed"
+                        });*/
+                        return res.json({
+                            type: "DeliveryMessage",
+                            message: "Delivery Succeed"
+                        });
                     });
-                });
+                }
             });
         });
     });
@@ -377,17 +387,24 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
 router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox) return res.status(403).json({
-                code: 'F007',
-                type: "CancelDeliveryMessage",
-                message: "Can't Find The Box"
-            });
-            promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, true, null, aBox.containerList, () => {
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox) return res.status(403).json({
+            code: 'F007',
+            type: "CancelDeliveryMessage",
+            message: "Can't Find The Box"
+        });
+        changeContainersState(aBox.containerList, dbAdmin, {
+            action: "CancelDelivery",
+            newState: 5
+        }, {
+            bypassStateValidation: true
+        }, {
+            res,
+            next,
+            callback: () => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.user.delivery = undefined;
@@ -398,7 +415,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
                         message: "CancelDelivery Succeed"
                     });
                 });
-            });
+            }
         });
     });
 });
@@ -407,28 +424,32 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
     var dbStore = req._user;
     var boxID = req.params.id;
     var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
-    res._payload.orderTime = Date.now();
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aDelivery) {
-            if (err) return next(err);
-            if (!aDelivery)
-                return res.status(403).json({
-                    code: 'F007',
-                    type: "SignMessage",
-                    message: "Can't Find The Box"
-                });
-            if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
-                return res.status(403).json({
-                    code: 'F008',
-                    type: "SignMessage",
-                    message: "Box is not belong to user's store"
-                });
-            promiseMethod(res, next, dbStore, 'Sign', 1, false, {
-                boxID: boxID,
-                storeID: (reqByAdmin) ? aDelivery.storeID : undefined
-            }, aDelivery.containerList, () => {
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aDelivery) {
+        if (err) return next(err);
+        if (!aDelivery)
+            return res.status(403).json({
+                code: 'F007',
+                type: "SignMessage",
+                message: "Can't Find The Box"
+            });
+        if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
+            return res.status(403).json({
+                code: 'F008',
+                type: "SignMessage",
+                message: "Box is not belong to user's store"
+            });
+        changeContainersState(aDelivery.containerList, dbStore, {
+            action: "Sign",
+            newState: 1
+        }, {
+            boxID,
+            signForStoreID: (reqByAdmin) ? aDelivery.storeID : undefined
+        }, {
+            res,
+            next,
+            callback: () => {
                 Box.remove({
                     'boxID': boxID
                 }, function (err) {
@@ -438,7 +459,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
                         message: "Sign Succeed"
                     });
                 });
-            });
+            }
         });
     });
 });
@@ -467,7 +488,15 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             type: "borrowContainerMessage",
             message: "Rent Request Expired"
         });
-        process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, reply));
+        changeContainersState(id, dbStore, {
+            action: "Rent",
+            newState: 2
+        }, {
+            rentToUser: reply
+        }, {
+            res,
+            next
+        });
     });
 });
 
@@ -479,8 +508,15 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
-    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, storeId));
+    changeContainersState(id, dbStore, {
+        action: "Return",
+        newState: 3
+    }, {
+        returnFromStoreID: req.body.storeId
+    }, {
+        res,
+        next
+    });
 });
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res, next) {
@@ -491,18 +527,23 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null; // ~==-1
-    process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next, storeId));
+    changeContainersState(id, dbAdmin, {
+        action: "ReadyToClean",
+        newState: 4
+    }, null, {
+        res,
+        next
+    });
 });
 
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var body = req.body;
-    if (!body.containerList)
+    if (!body.containerList || !Array.isArray(body.containerList))
         return res.status(403).json({
             code: 'F011',
             type: 'BoxingMessage',
-            message: 'Boxing req body incomplete'
+            message: 'Boxing req body invalid'
         });
     var task = function (response) {
         Box.findOne({
@@ -514,15 +555,22 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                 type: 'BoxingMessage',
                 message: 'Box is already exist'
             });
-            promiseMethod(res, next, dbAdmin, 'Boxing', 5, false, null, body.containerList, () => {
-                newBox = new Box();
-                newBox.boxID = body.boxId;
-                newBox.user.box = dbAdmin.user.phone;
-                newBox.containerList = body.containerList;
-                newBox.save(function (err) {
-                    if (err) return next(err);
-                    return response(newBox);
-                });
+            changeContainersState(body.containerList, dbAdmin, {
+                action: "Boxing",
+                newState: 5
+            }, null, {
+                res,
+                next,
+                callback: () => {
+                    newBox = new Box();
+                    newBox.boxID = body.boxId;
+                    newBox.user.box = dbAdmin.user.phone;
+                    newBox.containerList = body.containerList;
+                    newBox.save(function (err) {
+                        if (err) return next(err);
+                        return response(newBox);
+                    });
+                }
             });
         });
     };
@@ -560,47 +608,34 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
 router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox) return res.status(403).json({
-                code: 'F007',
-                type: "UnboxingMessage",
-                message: "Can't Find The Box"
-            });
-            changeContainersState(aBox.containerList, dbAdmin, {
-                action: "Unboxing",
-                newState: 4
-            }, {
-                bypassStateValidation: true
-            }, {
-                res,
-                next,
-                callback: () => {
-                    Box.remove({
-                        'boxID': boxID
-                    }, function (err) {
-                        if (err) return next(err);
-                        return res.json({
-                            type: "UnboxingMessage",
-                            message: "Unboxing Succeed"
-                        });
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox) return res.status(403).json({
+            code: 'F007',
+            type: "UnboxingMessage",
+            message: "Can't Find The Box"
+        });
+        changeContainersState(aBox.containerList, dbAdmin, {
+            action: "Unboxing",
+            newState: 4
+        }, {
+            bypassStateValidation: true
+        }, {
+            res,
+            next,
+            callback: () => {
+                Box.remove({
+                    'boxID': boxID
+                }, function (err) {
+                    if (err) return next(err);
+                    return res.json({
+                        type: "UnboxingMessage",
+                        message: "Unboxing Succeed"
                     });
-                }
-            });
-            // promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
-            //     Box.remove({
-            //         'boxID': boxID
-            //     }, function (err) {
-            //         if (err) return next(err);
-            //         return res.json({
-            //             type: "UnboxingMessage",
-            //             message: "Unboxing Succeed"
-            //         });
-            //     });
-            // });
+                });
+            }
         });
     });
 });
@@ -749,14 +784,16 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 return aResult.succeed;
             });
             if (!getErr) {
-                Promise.all(dataSavers).then(() => {
-                    if (done.callback) return done.callback();
-                    done.res.status(200).json({
-                        type: messageType,
-                        message: replyTxt || stateChanging.action + ' Succeeded',
-                        oriUser: oriUser
-                    });
-                }).catch(done.next);
+                Promise
+                    .all(dataSavers.map(aDataSaver => new Promise((resolve, reject) => aDataSaver(resolve, reject))))
+                    .then(() => {
+                        if (done.callback) return done.callback();
+                        done.res.status(200).json({
+                            type: messageType,
+                            message: replyTxt || stateChanging.action + ' Succeeded',
+                            oriUser: oriUser
+                        });
+                    }).catch(done.next);
             } else {
                 return done.res.status(403).json({
                     code: 'F001',
@@ -937,11 +974,11 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                     resolve({
                                         ID: aContainerId,
                                         oriUser: oriUser.user.phone,
-                                        dataSaver: (next, doneSave) => {
+                                        dataSaver: (doneSave, getErr) => {
                                             newTrade.save(err => {
-                                                if (err) return next(err);
+                                                if (err) return getErr(err);
                                                 theContainer.save(err => {
-                                                    if (err) return next(err);
+                                                    if (err) return getErr(err);
                                                     doneSave();
                                                 });
                                             });
@@ -958,264 +995,6 @@ function stateChangingTask(reqUser, stateChanging, option) {
             });
         });
     };
-}
-
-function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, containerList, lastFunc) {
-    var funcList = [];
-    for (var i = 0; i < containerList.length; i++) {
-        funcList.push(
-            new Promise((resolve, reject) => {
-                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, options, bypass);
-            })
-        );
-    }
-    Promise
-        .all(funcList)
-        .then((data) => {
-            var errIdList = [];
-            var errIdDict = [];
-            var saveFuncList = [];
-            var hasErr = false;
-            for (var i = 0; i < data.length; i++) {
-                if (!data[i][0]) {
-                    hasErr = true;
-                    errIdList.push([data[i][1], data[i][2], data[i][3]]);
-                    errIdDict.push({
-                        containerID: data[i][1],
-                        originalState: data[i][2],
-                        newState: data[i][3]
-                    });
-                }
-            }
-            if (!hasErr) {
-                for (var i = 0; i < data.length; i++) {
-                    saveFuncList.push(new Promise(data[i][1]));
-                }
-                Promise.all(saveFuncList).then(lastFunc).catch((err) => {
-                    next(err);
-                });
-            } else {
-                return res.status(403).json({
-                    code: 'F001',
-                    type: action + "Message",
-                    message: action + " Error",
-                    stateExplanation: status,
-                    listExplanation: ["containerID", "originalState", "newState", "boxID"],
-                    errorList: errIdList,
-                    errorDict: errIdDict
-                });
-            }
-        })
-        .catch((err) => {
-            if (err) {
-                if (typeof err.code === 'string') return res.status(403).json(err);
-                else {
-                    debug(err);
-                    return next(err);
-                }
-            }
-        });
-}
-
-function changeState(resolve, id, dbNew, action, newState, res, next, key = null, bypass = false) {
-    var messageType = action + 'Message';
-    var tmpStoreId;
-    Container.findOne({
-        'ID': id
-    }, function (err, container) {
-        if (err)
-            return next(err);
-        if (!container) {
-            var errData = {
-                code: 'F002',
-                type: messageType,
-                message: 'No container found',
-                data: id
-            };
-            if (resolve !== false) return next(errData);
-            else return res.status(403).json(errData);
-        } else if (!container.active) {
-            var errData = {
-                code: 'F003',
-                type: messageType,
-                message: 'Container not available',
-                data: id
-            };
-            if (resolve !== false) return next(errData);
-            else return res.status(403).json(errData);
-        }
-        if (action === 'Rent' && container.storeID !== dbNew.role.storeID) {
-            return res.status(403).json({
-                code: 'F010',
-                type: messageType,
-                message: "Container not belone to user's store"
-            });
-        } else if (action === 'Return' && key !== null) {
-            if (container.statusCode === 3) // 髒杯回收時已經被歸還過
-                return res.json({
-                    type: "ReturnMessage",
-                    message: "Already Return"
-                });
-            else // 髒杯回收
-                tmpStoreId = key;
-        } else if (action === 'ReadyToClean' && key !== null) { // 髒杯回收
-            tmpStoreId = key;
-        } else if (action === 'Sign' && typeof key.storeID !== 'undefined') { // 正興街配送
-            tmpStoreId = key.storeID;
-        }
-        validateStateChanging(bypass, container.statusCode, newState, function (succeed) {
-            if (!succeed) {
-                var oriState = container.statusCode;
-                if (oriState === 0 || oriState === 1) {
-                    Box.findOne({
-                        'containerList': {
-                            '$all': [id]
-                        }
-                    }, function (err, aBox) {
-                        if (err) return next(err);
-                        id = parseInt(id);
-                        container.statusCode = parseInt(container.statusCode);
-                        newState = parseInt(newState);
-                        aBox.boxID = parseInt(aBox.boxID);
-                        if (resolve !== false)
-                            return resolve([false, id, container.statusCode, newState, aBox.boxID]);
-                        return res.status(403).json({
-                            code: 'F001',
-                            type: messageType,
-                            message: action + " Error",
-                            stateExplanation: status,
-                            listExplanation: ["containerID", "originalState", "newState", "boxID"],
-                            errorList: [
-                                [id, parseInt(container.statusCode), parseInt(newState), parseInt(aBox.boxID)]
-                            ],
-                            errorDict: [{
-                                containerID: id,
-                                originalState: container.statusCode,
-                                newState: newState,
-                                boxID: aBox.boxID
-                            }]
-                        });
-                    });
-                } else {
-                    id = parseInt(id);
-                    container.statusCode = parseInt(container.statusCode);
-                    newState = parseInt(newState);
-                    if (resolve !== false)
-                        return resolve([false, id, container.statusCode, newState]);
-                    return res.status(403).json({
-                        code: 'F001',
-                        type: messageType,
-                        message: action + " Error",
-                        stateExplanation: status,
-                        listExplanation: ["containerID", "originalState", "newState"],
-                        errorList: [
-                            [id, container.statusCode, newState]
-                        ],
-                        errorDict: [{
-                            containerID: id,
-                            originalState: container.statusCode,
-                            newState: newState
-                        }]
-                    });
-                }
-            } else {
-                User.findOne({
-                    'user.phone': (action === 'Rent') ? key : container.conbineTo
-                }, function (err, dbOri) {
-                    if (err) return next(err);
-                    if (!dbOri) {
-                        debug('Containers state changing unexpect err. Data : ' + JSON.stringify(container) +
-                            ' ID in uri : ' + id);
-                        return res.status(403).json({
-                            code: 'F004',
-                            type: messageType,
-                            message: 'No user found'
-                        });
-                    } else if (!dbOri.active) {
-                        return res.status(403).json({
-                            code: 'F005',
-                            type: messageType,
-                            message: 'User has Banned'
-                        });
-                    }
-                    if (action === 'Rent') {
-                        var tmp = dbOri;
-                        dbOri = dbNew;
-                        dbNew = tmp;
-                    } else if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') {
-                        dbNew.role.storeID = tmpStoreId; // 正興街代簽收
-                    } else if (action === 'ReadyToClean') {
-                        if (typeof tmpStoreId !== 'undefined' && tmpStoreId !== -1) {
-                            dbOri.role.storeID = tmpStoreId;
-                        } else if (container.statusCode === 1 && dbOri.roles.typeList.indexOf('admin') >= 0) { // 乾淨回收
-                            dbOri.role.storeID = container.storeID;
-                        }
-                    }
-                    try {
-                        newTrade = new Trade();
-                        newTrade.tradeTime = res._payload.orderTime || Date.now();
-                        newTrade.tradeType = {
-                            action: action,
-                            oriState: container.statusCode,
-                            newState: newState
-                        };
-                        newTrade.oriUser = {
-                            type: dbOri.role.typeCode,
-                            storeID: dbOri.role.storeID || container.storeID,
-                            phone: dbOri.user.phone
-                        };
-                        newTrade.newUser = {
-                            type: dbNew.role.typeCode,
-                            storeID: dbNew.role.storeID,
-                            phone: dbNew.user.phone
-                        };
-                        newTrade.container = {
-                            id: container.ID,
-                            typeCode: container.typeCode,
-                            cycleCtr: container.cycleCtr
-                        };
-                        if (action === 'Sign') newTrade.container.box = key.boxID;
-                        container.statusCode = newState;
-                        container.conbineTo = dbNew.user.phone;
-                        container.lastUsedAt = Date.now();
-                        if (action === 'Delivery') container.cycleCtr++;
-                        else if (action === 'CancelDelivery') container.cycleCtr--;
-                        if (action === 'Sign' || action === 'Return') {
-                            container.storeID = dbNew.role.storeID;
-                        } else {
-                            container.storeID = undefined;
-                        }
-
-                        const saveAll = function (callback, callback2, tmpTrade) {
-                            tmpTrade.save(function (err) {
-                                if (err) return callback2(err);
-                                container.save(function (err) {
-                                    if (err) return callback2(err);
-                                    return callback();
-                                });
-                            });
-                        };
-
-                        if (resolve === false) {
-                            saveAll(() => res.status(200).json({
-                                type: messageType,
-                                message: action + ' Succeeded',
-                                oriUser: dbOri.user.phone
-                            }), next, newTrade);
-                        } else {
-                            var tmpTrade = new Object(newTrade);
-                            resolve([true, function (cb, cb2) {
-                                saveAll(cb, cb2, tmpTrade);
-                            }, tmpTrade]);
-                        }
-                    } catch (err) {
-                        debug('#dbNew: ', JSON.stringify(dbNew), ', #dbOri: ', JSON.stringify(dbOri), ', #newTrade: ', JSON.stringify(newTrade));
-                        next(err);
-                    }
-                });
-            }
-        });
-    });
 }
 
 router.post('/add/:id/:type', function (req, res, next) {
