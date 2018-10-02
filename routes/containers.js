@@ -3,6 +3,10 @@ var router = express.Router();
 var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:containers');
 var redis = require("../models/redis");
+var queue = require('queue')({
+    concurrency: 1,
+    autostart: true
+});
 
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
@@ -26,7 +30,7 @@ var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
 
 const historyDays = 14;
-var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
+const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
 router.get('/globalUsedAmount', function (req, res, next) {
     Trade.count({
@@ -487,7 +491,7 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
+    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null; // ~==-1
     process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next, storeId));
 });
 
@@ -566,17 +570,37 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function (re
                 type: "UnboxingMessage",
                 message: "Can't Find The Box"
             });
-            promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
-                Box.remove({
-                    'boxID': boxID
-                }, function (err) {
-                    if (err) return next(err);
-                    return res.json({
-                        type: "UnboxingMessage",
-                        message: "Unboxing Succeed"
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: "Unboxing",
+                newState: 4
+            }, {
+                bypassStateValidation: true
+            }, {
+                res,
+                next,
+                callback: () => {
+                    Box.remove({
+                        'boxID': boxID
+                    }, function (err) {
+                        if (err) return next(err);
+                        return res.json({
+                            type: "UnboxingMessage",
+                            message: "Unboxing Succeed"
+                        });
                     });
-                });
+                }
             });
+            // promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
+            //     Box.remove({
+            //         'boxID': boxID
+            //     }, function (err) {
+            //         if (err) return next(err);
+            //         return res.json({
+            //             type: "UnboxingMessage",
+            //             message: "Unboxing Succeed"
+            //         });
+            //     });
+            // });
         });
     });
 });
@@ -657,9 +681,8 @@ router.get('/challenge/token', regAsBot, regAsStore, regAsAdmin, validateRequest
 
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
-    var dbUser = req._user;
     var action = req.params.action;
-    var containerID = req.params.id;
+    var containerID = parseInt(req.params.id);
     var newState = actionTodo.indexOf(action);
     if (newState === -1) return next();
     req.headers['if-none-match'] = 'no-match-for-this';
@@ -684,12 +707,12 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
                         stateExplanation: status,
                         listExplanation: ["containerID", "originalState", "newState"],
                         errorList: [
-                            [parseInt(containerID), theContainer.statusCode, newState]
+                            [containerID, theContainer.statusCode, newState]
                         ],
                         errorDict: [{
-                            containerID: parseInt(containerID),
-                            originalState: parseInt(theContainer.statusCode),
-                            newState: parseInt(newState)
+                            containerID: containerID,
+                            originalState: theContainer.statusCode,
+                            newState: newState
                         }]
                     });
                 } else {
@@ -702,6 +725,240 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
         });
     });
 });
+
+function changeContainersState(containers, reqUser, stateChanging, options, done) {
+    if (!Array.isArray(containers))
+        containers = [containers];
+    if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
+        throw new Error("Arguments Not Complete");
+    const messageType = stateChanging.action + 'Message';
+    Promise
+        .all(containers.map(stateChangingTask(reqUser, stateChanging, options)))
+        .then(taskResults => {
+            let oriUser;
+            let replyTxt;
+            let dataSavers = [];
+            let errorListArr = [];
+            let errorDictArr = [];
+            let getErr = taskResults.every(aResult => {
+                if (aResult.txt) replyTxt = aResult.txt;
+                if (aResult.oriUser) oriUser = aResult.oriUser;
+                if (aResult.dataSaver) dataSavers.push(aResult.dataSaver);
+                if (aResult.errorList) errorListArr.push(aResult.errorList);
+                if (aResult.errorDict) errorDictArr.push(aResult.errorDict);
+                return aResult.succeed;
+            });
+            if (!getErr) {
+                Promise.all(dataSavers).then(() => {
+                    if (done.callback) return done.callback();
+                    done.res.status(200).json({
+                        type: messageType,
+                        message: replyTxt || stateChanging.action + ' Succeeded',
+                        oriUser: oriUser
+                    });
+                }).catch(done.next);
+            } else {
+                return done.res.status(403).json({
+                    code: 'F001',
+                    type: messageType,
+                    message: "State Changing Invalid",
+                    stateExplanation: status,
+                    listExplanation: ["containerID", "originalState", "newState", "boxID"],
+                    errorList: errorListArr,
+                    errorDict: errorDictArr
+                });
+            }
+        })
+        .catch(err => {
+            if (typeof err.code !== "undefined") {
+                Object.assign(err, {
+                    type: messageType
+                });
+                done.res.status(403).json(err);
+            } else {
+                done.next(err);
+            }
+        });
+}
+
+function stateChangingTask(reqUser, stateChanging, option) {
+    const action = stateChanging.action;
+    const options = option || {};
+    const boxID = options.boxID; // Sign Delivery NEED
+    const toStoreID = options.toStoreID; // Delivery NEED
+    const rentToUser = options.rentToUser; // Rent NEED
+    const signForStoreID = options.signForStoreID; // Sign
+    const returnFromStoreID = options.returnFromStoreID; // Return
+    const bypassStateValidation = options.bypassStateValidation || false;
+    return function trade(aContainer) {
+        return new Promise((oriResolve, oriReject) => {
+            queue.push(doneThisTask => {
+                const resolve = function () {
+                    doneThisTask();
+                    Object.assign(arguments[0], {
+                        succeed: true
+                    });
+                    oriResolve.apply(this, arguments);
+                };
+                const resolveWithErr = function () {
+                    doneThisTask();
+                    Object.assign(arguments[0], {
+                        succeed: false
+                    });
+                    oriResolve.apply(this, arguments);
+                };
+                const reject = function () {
+                    doneThisTask();
+                    oriReject.apply(this, arguments);
+                };
+                const aContainerId = parseInt(aContainer);
+                const newState = stateChanging.newState;
+                const oriState = theContainer.statusCode;
+                Container.findOne({
+                    'ID': aContainerId
+                }, function (err, theContainer) {
+                    if (err)
+                        return reject(err);
+                    if (!theContainer)
+                        return reject({
+                            code: 'F002',
+                            message: 'No container found',
+                            data: aContainerId
+                        });
+                    if (!theContainer.active)
+                        return reject({
+                            code: 'F003',
+                            message: 'Container not available',
+                            data: aContainerId
+                        });
+                    if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
+                        return reject({
+                            code: 'F010',
+                            message: "Container not belone to user's store"
+                        });
+                    if (action === 'Return' && theContainer.statusCode === 3) // 髒杯回收時已經被歸還過
+                        return resolve({
+                            ID: aContainerId,
+                            txt: "Already Return"
+                        });
+                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                        if (!succeed) {
+                            let errorList = [aContainerId, oriState, newState];
+                            let errorDict = {
+                                containerID: aContainerId,
+                                originalState: oriState,
+                                newState: newState
+                            };
+                            let errorMsg = {
+                                errorList,
+                                errorDict
+                            };
+                            if (oriState === 0 || oriState === 1) {
+                                Box.findOne({
+                                    'containerList': {
+                                        '$all': [aContainerId]
+                                    }
+                                }, function (err, aBox) {
+                                    if (err) return reject(err);
+                                    if (!aBox) return resolveWithErr(errorMsg);
+                                    errorList.push(aBox.boxID);
+                                    errorDict.boxID = aBox.boxID;
+                                    return resolveWithErr(errorMsg);
+                                });
+                            } else {
+                                return resolveWithErr(errorMsg);
+                            }
+                        } else {
+                            User.findOne({
+                                'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
+                            }, function (err, oriUser) {
+                                if (err)
+                                    return reject(err);
+                                if (!oriUser) {
+                                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
+                                        ' ID in uri : ' + aContainerId);
+                                    return reject({
+                                        code: 'F004',
+                                        message: 'No user found'
+                                    });
+                                }
+                                if (!oriUser.active)
+                                    return reject({
+                                        code: 'F005',
+                                        message: 'User has Banned'
+                                    });
+                                if (action === 'Rent') {
+                                    let tmp = oriUser;
+                                    oriUser = reqUser;
+                                    reqUser = tmp;
+                                } else if (action === 'Sign' && typeof signForStoreID !== 'undefined') { // 代簽收
+                                    reqUser.role.storeID = signForStoreID;
+                                } else if (action === 'Return' && typeof returnFromStoreID !== 'undefined') { // 髒杯回收代歸還
+                                    reqUser.role.storeID = returnFromStoreID;
+                                } else if (action === 'ReadyToClean' && oriState === 1 && oriUser.roles.admin) { // 乾淨回收
+                                    oriUser.role.storeID = theContainer.storeID;
+                                }
+                                try {
+
+                                    theContainer.statusCode = newState;
+                                    theContainer.conbineTo = reqUser.user.phone;
+                                    theContainer.lastUsedAt = Date.now();
+                                    if (action === 'Delivery') theContainer.cycleCtr++;
+                                    else if (action === 'CancelDelivery') theContainer.cycleCtr--;
+                                    if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID || reqUser.roles.clerk.storeID;
+                                    else theContainer.storeID = undefined;
+
+                                    let newTrade = new Trade({
+                                        tradeTime: res._payload.orderTime || Date.now(),
+                                        tradeType: {
+                                            action,
+                                            oriState,
+                                            newState
+                                        },
+                                        oriUser: {
+                                            type: oriUser.role.typeCode,
+                                            phone: oriUser.user.phone,
+                                            storeID: reqUser.role.storeID || reqUser.roles.clerk.storeID
+                                        },
+                                        newUser: {
+                                            type: reqUser.role.typeCode,
+                                            phone: reqUser.user.phone,
+                                            storeID: reqUser.role.storeID || reqUser.roles.clerk.storeID
+                                        },
+                                        container: {
+                                            id: theContainer.ID,
+                                            typeCode: theContainer.typeCode,
+                                            cycleCtr: theContainer.cycleCtr,
+                                            toStoreID,
+                                            box: boxID
+                                        }
+                                    });
+
+                                    resolve({
+                                        ID: aContainerId,
+                                        oriUser: oriUser.user.phone,
+                                        dataSaver: (next, doneSave) => {
+                                            newTrade.save(err => {
+                                                if (err) return next(err);
+                                                theContainer.save(err => {
+                                                    if (err) return next(err);
+                                                    doneSave();
+                                                });
+                                            });
+                                        }
+                                    });
+                                } catch (error) {
+                                    debug('#reqUser: ', JSON.stringify(reqUser), ', #oriUser: ', JSON.stringify(oriUser), ', #newTrade: ', JSON.stringify(newTrade));
+                                    reject(error);
+                                }
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    };
+}
 
 function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, containerList, lastFunc) {
     var funcList = [];

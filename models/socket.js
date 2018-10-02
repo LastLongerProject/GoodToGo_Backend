@@ -2,8 +2,8 @@ var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:socket');
 debug.log = console.log.bind(console);
 var keys = require('../config/keys');
-var UserKeys = require('../models/DB/userKeysDB');
-var Container = require('../models/DB/containerDB');
+var UserKeys = require('./DB/userKeysDB');
+var Container = require('./DB/containerDB');
 var validateStateChanging = require('../models/toolKit').validateStateChanging;
 
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];

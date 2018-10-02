@@ -3,12 +3,13 @@ var queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-var redis = require("../models/redis");
-var User = require('../models/DB/userDB');
-var UserKeys = require('../models/DB/userKeysDB');
-var keys = require('../config/keys');
-var sendCode = require('../models/SNS').sms_now;
+var redis = require("./redis");
+
+var sendCode = require('./SNS').sms_now;
 var intReLength = require("./toolKit").intReLength;
+var keys = require('../config/keys');
+var User = require('./DB/userDB');
+var UserKeys = require('./DB/userKeysDB');
 
 module.exports = {
     signup: function (req, done) {

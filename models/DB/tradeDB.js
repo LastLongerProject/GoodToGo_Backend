@@ -24,6 +24,7 @@ var userSchema = mongoose.Schema({
         id: Number,
         typeCode: Number,
         cycleCtr: Number,
+        toStoreID: Number,
         box: Number
     },
     logTime: {
