@@ -20,6 +20,7 @@ var validateStateChanging = require('../models/toolKit').validateStateChanging;
 var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsBot = require('../models/validation/validateRequest').regAsBot;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
@@ -466,7 +467,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
     });
 });
 
-router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
+router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     if (!res._payload.orderTime) return res.status(403).json({
         code: 'F006',
@@ -652,7 +653,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (r
 });
 
 
-router.get('/challenge/token', regAsStore, regAsAdmin, validateRequest, generateSocketToken);
+router.get('/challenge/token', regAsBot, regAsStore, regAsAdmin, validateRequest, generateSocketToken);
 
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {

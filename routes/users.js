@@ -5,6 +5,7 @@ var debug = require('debug')('goodtogo_backend:users');
 var userQuery = require('../models/userQuery');
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsBot = require('../models/validation/validateRequest').regAsBot;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
@@ -130,6 +131,16 @@ router.post('/logout', validateRequest, function (req, res, next) {
     });
 });
 
+router.post('/addbot', regAsAdminManager, validateRequest, function (req, res, next) {
+    userQuery.addBot(req, function (err, user, info) {
+        if (err) {
+            return next(err);
+        } else {
+            res.json(info.body);
+        }
+    });
+});
+
 router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
     var type = req.body.appType;
@@ -170,7 +181,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
 
 var redis = require("../models/redis");
 var User = require("../models/DB/userDB");
-router.get('/data/byToken', regAsStore, validateRequest, function (req, res, next) {
+router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (req, res, next) {
     var key = req.headers.userapikey;
     redis.get('user_token:' + key, (err, reply) => {
         if (err) return next(err);

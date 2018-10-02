@@ -16,6 +16,7 @@ var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
 
 var validateDefault = require('../models/validation/validateDefault');
 var validateRequest = require('../models/validation/validateRequest').JWT;
+var regAsBot = require('../models/validation/validateRequest').regAsBot;
 var regAsStore = require('../models/validation/validateRequest').regAsStore;
 var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
 var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
@@ -302,7 +303,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
     });
 });
 
-router.get('/getUser/:id', regAsStore, validateRequest, function (req, res, next) {
+router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
     process.nextTick(function () {
