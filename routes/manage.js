@@ -735,7 +735,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         list: []
     };
     User.find({
-        "roleType": {
+        "role.typeCode": {
             "$ne": "bot"
         }
     }, (err, userList) => {
