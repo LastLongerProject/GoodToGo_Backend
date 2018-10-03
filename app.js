@@ -1,35 +1,38 @@
-var path = require('path');
-var logger = require('morgan');
-var express = require('express');
-var favicon = require('serve-favicon');
-var bodyParser = require('body-parser');
-// var cookieParser = require('cookie-parser');
-var mongoose = require('mongoose');
-var helmet = require('helmet');
-var timeout = require('connect-timeout');
-var ua = require('universal-analytics');
-var debug = require('debug')('goodtogo_backend:app');
+const http = require('http');
+const path = require('path');
+const logger = require('morgan');
+const express = require('express');
+const favicon = require('serve-favicon');
+const bodyParser = require('body-parser');
+// const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose');
+const helmet = require('helmet');
+const timeout = require('connect-timeout');
+const ua = require('universal-analytics');
+const debug = require('debug')('goodtogo_backend:app');
 debug.log = console.log.bind(console);
-var debugError = require('debug')('goodtogo_backend:appERR');
+const debugError = require('debug')('goodtogo_backend:appERR');
 
-var config = require('./config/config');
-var appInit = require('./models/appInit');
-var logSystem = require('./models/logSystem');
-var logModel = require('./models/DB/logDB');
-var scheduler = require('./models/scheduler');
-var stores = require('./routes/stores');
-var users = require('./routes/users');
-var images = require('./routes/images');
-var manage = require('./routes/manage');
-var containers = require('./routes/containers');
+const config = require('./config/config');
+const appInit = require('./helpers/appInit');
+const scheduler = require('./helpers/scheduler');
+const logModel = require('./models/DB/logDB');
+const socketCb = require('./controllers/socket');
+const logSystem = require('./middlewares/logSystem');
+const users = require('./routes/users');
+const stores = require('./routes/stores');
+const images = require('./routes/images');
+const manage = require('./routes/manage');
+const containers = require('./routes/containers');
 
-var app = express();
-var esm;
+const app = express();
+let io = require('socket.io');
+let esm;
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(favicon(path.join(__dirname, 'assets/images/icon', 'favicon.ico')));
+app.use(favicon(path.join(__dirname, 'public/favicon.ico')));
 app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
 app.use(logSystem(logModel));
 app.use(bodyParser.json());
@@ -56,12 +59,6 @@ require("./models/redis");
 app.use('/manage', manage);
 app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime/.well-known/acme-challenge')));
 app.use(timeout('10s'));
-app.use('/lottery', function (req, res) {
-    res.redirect('http://goodtogo.tw');
-});
-app.use('/usage', function (req, res) {
-    res.redirect('http://goodtogo.tw');
-});
 
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
@@ -81,19 +78,15 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
-    // set locals, only providing error in development
-    res.locals.message = err.message;
-    res.locals.error = req.app.get('env') === 'development' ? err : {};
-
     if (!err.status) {
-        debugError(JSON.stringify(err));
+        debugError(err);
         req._errorLevel = 3;
         res.status(500);
         res.json({
             code: 'Z002',
             type: 'globalError',
             message: 'Unexpect Error',
-            data: err
+            data: (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") !== "production") ? err.toString() : undefined
         });
     } else if (err.status === 404) {
         res.status(err.status);
@@ -113,7 +106,30 @@ app.use(function (err, req, res, next) {
     }
 });
 
-module.exports = app;
+
+/**
+ * Get port from environment and store in Express.
+ */
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+io = io(server);
+io.of('/containers/challenge/socket')
+    .use(socketCb.auth)
+    .on('connection', socketCb.init);
+app.set('socket.io', io);
 
 // GA
 function GAtrigger() {
@@ -177,4 +193,61 @@ function resBodyParser(req, res, next) {
     };
 
     next();
+}
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
+
+    if (port >= 0) {
+        // port number
+        return port;
+    }
+
+    return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+function onError(error) {
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
+
+    var bind = typeof port === 'string' ?
+        'Pipe ' + port :
+        'Port ' + port;
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+function onListening() {
+    var addr = server.address();
+    var bind = typeof addr === 'string' ?
+        'pipe ' + addr :
+        'port ' + addr.port;
+    debug('Listening on ' + bind);
 }

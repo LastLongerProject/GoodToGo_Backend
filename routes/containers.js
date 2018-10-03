@@ -15,19 +15,19 @@ var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
-var sns = require('../models/SNS');
-var generateSocketToken = require('../models/socket').generateToken;
-var wetag = require('../models/toolKit').wetag;
-var intReLength = require('../models/toolKit').intReLength;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
-var validateStateChanging = require('../models/toolKit').validateStateChanging;
-var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
-var validateDefault = require('../models/validation/validateDefault');
-var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsBot = require('../models/validation/validateRequest').regAsBot;
-var regAsStore = require('../models/validation/validateRequest').regAsStore;
-var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
+var sns = require('../helpers/aws/SNS');
+var wetag = require('../helpers/toolKit').wetag;
+var intReLength = require('../helpers/toolKit').intReLength;
+var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
+var validateStateChanging = require('../helpers/toolKit').validateStateChanging;
+var generateSocketToken = require('../controllers/socket').generateToken;
+var validateDefault = require('../middlewares/validation/validateDefault');
+var validateRequest = require('../middlewares/validation/validateRequest').JWT;
+var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
+var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const historyDays = 14;
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
@@ -44,11 +44,7 @@ router.get('/globalUsedAmount', function (req, res, next) {
 });
 
 router.all('/:id', function (req, res) {
-    // debug("Redirect to official website.");
-    res.writeHead(301, {
-        Location: 'http://goodtogo.tw'
-    });
-    res.end();
+    res.redirect('http://goodtogo.tw');
 });
 
 router.get('/get/list', validateDefault, function (req, res, next) {
@@ -323,6 +319,11 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 type: "DeliveryMessage",
                 message: "Can't Find The Box"
             });
+            if (aBox.delivering) return res.status(403).json({
+                code: 'F007',
+                type: "DeliveryMessage",
+                message: "Box Already Delivering"
+            });
             changeContainersState(aBox.containerList, dbAdmin, {
                 action: "Delivery",
                 newState: 0
@@ -395,6 +396,11 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
             code: 'F007',
             type: "CancelDeliveryMessage",
             message: "Can't Find The Box"
+        });
+        if (!aBox.delivering) return res.status(403).json({
+            code: 'F007',
+            type: "DeliveryMessage",
+            message: "Box Isn't Delivering"
         });
         changeContainersState(aBox.containerList, dbAdmin, {
             action: "CancelDelivery",
@@ -492,7 +498,8 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             action: "Rent",
             newState: 2
         }, {
-            rentToUser: reply
+            rentToUser: reply,
+            orderTime: res._payload.orderTime
         }, {
             res,
             next
@@ -512,7 +519,8 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         action: "Return",
         newState: 3
     }, {
-        returnFromStoreID: req.body.storeId
+        returnFromStoreID: req.body.storeId,
+        orderTime: res._payload.orderTime
     }, {
         res,
         next
@@ -530,7 +538,9 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
     changeContainersState(id, dbAdmin, {
         action: "ReadyToClean",
         newState: 4
-    }, null, {
+    }, {
+        orderTime: res._payload.orderTime
+    }, {
         res,
         next
     });
@@ -781,7 +791,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 if (aResult.dataSaver) dataSavers.push(aResult.dataSaver);
                 if (aResult.errorList) errorListArr.push(aResult.errorList);
                 if (aResult.errorDict) errorDictArr.push(aResult.errorDict);
-                return aResult.succeed;
+                return !aResult.succeed;
             });
             if (!getErr) {
                 Promise
@@ -822,6 +832,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
     const action = stateChanging.action;
     const options = option || {};
     const boxID = options.boxID; // Sign Delivery NEED
+    const orderTime = options.orderTime; // Rent Return ReadyToClean NEED
     const toStoreID = options.toStoreID; // Delivery NEED
     const rentToUser = options.rentToUser; // Rent NEED
     const signForStoreID = options.signForStoreID; // Sign
@@ -848,9 +859,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                     doneThisTask();
                     oriReject.apply(this, arguments);
                 };
-                const aContainerId = parseInt(aContainer);
-                const newState = stateChanging.newState;
-                const oriState = theContainer.statusCode;
+                let aContainerId = parseInt(aContainer);
                 Container.findOne({
                     'ID': aContainerId
                 }, function (err, theContainer) {
@@ -868,12 +877,14 @@ function stateChangingTask(reqUser, stateChanging, option) {
                             message: 'Container not available',
                             data: aContainerId
                         });
+                    const newState = stateChanging.newState;
+                    const oriState = theContainer.statusCode;
                     if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
                         return reject({
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
-                    if (action === 'Return' && theContainer.statusCode === 3) // 髒杯回收時已經被歸還過
+                    if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
                             txt: "Already Return"
@@ -946,7 +957,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                     else theContainer.storeID = undefined;
 
                                     let newTrade = new Trade({
-                                        tradeTime: res._payload.orderTime || Date.now(),
+                                        tradeTime: orderTime || Date.now(),
                                         tradeType: {
                                             action,
                                             oriState,
@@ -985,7 +996,6 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                         }
                                     });
                                 } catch (error) {
-                                    debug('#reqUser: ', JSON.stringify(reqUser), ', #oriUser: ', JSON.stringify(oriUser), ', #newTrade: ', JSON.stringify(newTrade));
                                     reject(error);
                                 }
                             });
@@ -1016,7 +1026,7 @@ router.post('/add/:id/:type', function (req, res, next) {
                 newContainer.ID = id;
                 newContainer.typeCode = typeCode;
                 newContainer.statusCode = 4;
-                newContainer.conbineTo = '0936111000';
+                newContainer.conbineTo = '0900000000';
                 newContainer.save(function (err) { // save the container
                     if (err) return next(err);
                     res.status(200).json({

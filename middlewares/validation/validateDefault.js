@@ -1,4 +1,4 @@
-var redis = require("../redis");
+var redis = require("../../models/redis");
 
 function iatGetDate(int) {
     var tmp = new Date();

@@ -1,9 +1,10 @@
-var User = require('./DB/userDB');
-var UserKeys = require('./DB/userKeysDB');
+var User = require('../models/DB/userDB');
+var UserKeys = require('../models/DB/userKeysDB');
 var appInit = require('./appInit');
 var dateCheckpoint = require('./toolKit').dateCheckpoint;
 
 var fs = require('fs');
+var path = require("path");
 var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:scheduler');
 debug.log = console.log.bind(console);
@@ -49,12 +50,12 @@ module.exports = function (app) {
                     });
                 }, 1000 * 60 * 20);
                 setTimeout(function () {
-                    fs.readFile("./config/config.json", 'utf8', function (err, data) {
+                    fs.readFile(path.join(__dirname, "config/secret_key.json"), 'utf8', function (err, secret_key) {
                         if (err) return debugError(err);
-                        var config = JSON.parse(data);
-                        config.secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                        config.secret_key.lastUpdate = Date.now();
-                        fs.writeFile("./config/config.json", JSON.stringify(config), 'utf8', function (err) {
+                        secret_key = JSON.parse(secret_key);
+                        secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
+                        secret_key.lastUpdate = Date.now();
+                        fs.writeFile(path.join(__dirname, "config/secret_key.json"), JSON.stringify(secret_key), 'utf8', function (err) {
                             if (err) return debugError(err);
                             debug('update server secret key');
                         });

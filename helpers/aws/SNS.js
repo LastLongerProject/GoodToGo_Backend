@@ -1,5 +1,5 @@
 var AWS = require('aws-sdk');
-var configData = require('../config/config.js');
+var configData = require('../../config/config.js');
 var debug = require('debug')('goodtogo_backend:sns');
 
 AWS.config = {
@@ -13,7 +13,7 @@ AWS.config = {
 var sns = new AWS.SNS();
 
 module.exports = {
-    sms_now: function(user, msg, callback) {
+    sms_now: function (user, msg, callback) {
         var publishParams = {
             Message: msg,
             PhoneNumber: user
@@ -23,15 +23,15 @@ module.exports = {
             TopicArn: configData.AWS.TopicArn.SMS,
             Endpoint: user
         };
-        sns.publish(publishParams, function(err, data) {
+        sns.publish(publishParams, function (err, data) {
             if (err) callback(err, err.stack);
             else callback(null, data);
         });
-        sns.subscribe(subscribeParams, function(err, data) {
+        sns.subscribe(subscribeParams, function (err, data) {
             if (err) debug(err, err.stack);
         });
     },
-    sms_publish: function(msg, callback) {
+    sms_publish: function (msg, callback) {
         var publishParams = {
             Message: msg,
             TopicArn: configData.AWS.TopicArn.SMS,
@@ -42,12 +42,12 @@ module.exports = {
                 }
             }
         };
-        sns.publish(publishParams, function(err, data) {
+        sns.publish(publishParams, function (err, data) {
             if (err) callback(err, err.stack);
             else callback(null, data);
         });
     },
-    sns_subscribe: function(system, type, token, callback) {
+    sns_subscribe: function (system, type, token, callback) {
         var TargetARN = configData.AWS.TargetARN;
         var TopicArn = configData.AWS.TopicArn.SNS + type;
         var payload;
@@ -72,7 +72,7 @@ module.exports = {
             'PlatformApplicationArn': TargetARN,
             'Token': token
         };
-        sns.createPlatformEndpoint(payload, function(err, EndPointResult) {
+        sns.createPlatformEndpoint(payload, function (err, EndPointResult) {
             if (err) {
                 err.type = "createPlatformEndpoint";
                 err.payload = payload;
@@ -84,7 +84,7 @@ module.exports = {
                 TopicArn: TopicArn,
                 Endpoint: client_arn
             };
-            sns.subscribe(payload, function(err, data) {
+            sns.subscribe(payload, function (err, data) {
                 if (err) {
                     err.type = "createPlatformEndpoint";
                     err.payload = payload;
@@ -94,7 +94,7 @@ module.exports = {
             });
         });
     },
-    sns_publish: function(TargetArn, title, body, option, callback) {
+    sns_publish: function (TargetArn, title, body, option, callback) {
         var subPayload = {
             'default': title + ' : ' + body,
             'APNS': {
@@ -117,7 +117,7 @@ module.exports = {
             'MessageStructure': 'json',
             'TargetArn': TargetArn
         };
-        sns.publish(payload, function(err, data) {
+        sns.publish(payload, function (err, data) {
             if (err) {
                 err.type = "publishSNS";
                 err.payload = payload;

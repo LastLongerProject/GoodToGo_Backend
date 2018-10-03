@@ -7,13 +7,14 @@ var drive = google.drive('v3');
 var debug = require('debug')('goodtogo_backend:google_drive');
 
 var googleAuth = require("./auth");
+const GOOGLE_CONTENT_PATH = "./assets/json/googleContent.json";
 
 var connectionCtr = 0;
 
 module.exports = {
     getContainer: function (forceRenew, cb) {
         var googleContent;
-        fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
+        fs.readFile(GOOGLE_CONTENT_PATH, 'utf8', function (err, data) {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
             googleAuth(function (auth) {
@@ -29,7 +30,7 @@ module.exports = {
     },
     getStore: function (forceRenew, cb) {
         var googleContent;
-        fs.readFile("./assets/json/googleContent.json", 'utf8', function (err, data) {
+        fs.readFile(GOOGLE_CONTENT_PATH, 'utf8', function (err, data) {
             if (err) return cb(false, err);
             googleContent = JSON.parse(data);
             googleAuth(function (auth) {
@@ -94,7 +95,7 @@ function resFromGoogle(err, response, googleContent, forceRenew, type, cb) {
                 }
             }
             googleContent.file_watchList = newWatchList;
-            fs.writeFile("./assets/json/googleContent.json", JSON.stringify(googleContent), 'utf8', function (err) {
+            fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
                 if (err) return cb(false, err);
                 cb(true, modifiedFile);
             });

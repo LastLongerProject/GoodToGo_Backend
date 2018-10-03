@@ -2,16 +2,16 @@ var express = require('express');
 var router = express.Router();
 var debug = require('debug')('goodtogo_backend:users');
 
-var userQuery = require('../models/userQuery');
-var validateDefault = require('../models/validation/validateDefault');
-var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsBot = require('../models/validation/validateRequest').regAsBot;
-var regAsStore = require('../models/validation/validateRequest').regAsStore;
-var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
-var intReLength = require('../models/toolKit').intReLength;
-var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
-var subscribeSNS = require('../models/SNS').sns_subscribe;
+var userQuery = require('../controllers/userQuery');
+var validateDefault = require('../middlewares/validation/validateDefault');
+var validateRequest = require('../middlewares/validation/validateRequest').JWT;
+var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+var intReLength = require('../helpers/toolKit').intReLength;
+var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
+var subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
 
 router.post('/signup', validateDefault, function (req, res, next) { // for CUSTOMER

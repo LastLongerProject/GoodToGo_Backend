@@ -2,8 +2,8 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 
-var intReLength = require("../models/toolKit").intReLength;
-var validateToken = require('../models/validation/validateToken');
+var intReLength = require("../helpers/toolKit").intReLength;
+var validateToken = require('../middlewares/validation/validateToken');
 
 router.get('/store/:id/:a.:b.:c', function (req, res, next) {
     var token = req.params.a + "." + req.params.b + "." + req.params.c;

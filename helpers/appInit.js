@@ -1,9 +1,9 @@
-var Store = require('./DB/storeDB');
-var PlaceID = require('./DB/placeIdDB');
-var Container = require('./DB/containerDB');
-var ContainerType = require('./DB/containerTypeDB');
-var sheet = require('./google/sheet');
-var drive = require('./google/drive');
+var Store = require('../models/DB/storeDB');
+var PlaceID = require('../models/DB/placeIdDB');
+var Container = require('../models/DB/containerDB');
+var ContainerType = require('../models/DB/containerTypeDB');
+var sheet = require('./gcp/sheet');
+var drive = require('./gcp/drive');
 var debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appINIT_ERR');

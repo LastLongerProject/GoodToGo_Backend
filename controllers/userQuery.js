@@ -3,23 +3,23 @@ var queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-var redis = require("./redis");
+var redis = require("../models/redis");
 
-var sendCode = require('./SNS').sms_now;
-var intReLength = require("./toolKit").intReLength;
+var sendCode = require("../helpers/aws/SNS");
+var intReLength = require("../helpers/toolKit").intReLength;
 var keys = require('../config/keys');
-var User = require('./DB/userDB');
-var UserKeys = require('./DB/userKeysDB');
+var User = require('../models/DB/userDB');
+var UserKeys = require('../models/DB/userKeysDB');
 
 module.exports = {
     signup: function (req, done) {
-        var role = req.body['role'] || {
+        var role = req.body.role || {
             typeCode: 'customer'
         };
-        var roles = req.body['roles'];
-        var phone = req.body['phone'];
-        var password = req.body['password'];
-        var code = req.body['verification_code'];
+        var roles = req.body.roles;
+        var phone = req.body.phone;
+        var password = req.body.password;
+        var code = req.body.verification_code;
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
                 !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
@@ -124,7 +124,7 @@ module.exports = {
                             var newUser = new User();
                             newUser.user.phone = phone;
                             newUser.user.password = newUser.generateHash(password);
-                            newUser.active = req.body['active'];
+                            newUser.active = req.body.active;
                             if (typeof roles !== 'undefined') { // v2 api
                                 newUser.roles = roles;
                                 newUser.role = roles[roles.typeList[0]];
@@ -183,8 +183,8 @@ module.exports = {
         });
     },
     login: function (req, done) {
-        var phone = req.body['phone'];
-        var password = req.body['password'];
+        var phone = req.body.phone;
+        var password = req.body.password;
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
             return done(null, false, {
                 code: 'D004',
@@ -263,8 +263,8 @@ module.exports = {
         });
     },
     chanpass: function (req, done) {
-        var oriPassword = req.body['oriPassword'];
-        var newPassword = req.body['newPassword'];
+        var oriPassword = req.body.oriPassword;
+        var newPassword = req.body.newPassword;
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
             return done(null, false, {
                 code: 'D007',
@@ -296,9 +296,9 @@ module.exports = {
         });
     },
     forgotpass: function (req, done) {
-        var phone = req.body['phone'];
-        var code = req.body['verification_code'];
-        var newPassword = req.body['new_password'];
+        var phone = req.body.phone;
+        var code = req.body.verification_code;
+        var newPassword = req.body.new_password;
         if (typeof phone === 'undefined') {
             return done(null, false, {
                 code: 'D012',

@@ -5,15 +5,15 @@ var debug = require('debug')('goodtogo_backend:manager');
 var redis = require("../models/redis");
 debug.log = console.log.bind(console);
 
-var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
-var getConst = require('../models/appInit').getConst;
-var refreshStore = require('../models/appInit').refreshStore;
-var refreshStoreImg = require('../models/appInit').refreshStoreImg;
-var refreshContainer = require('../models/appInit').refreshContainer;
-var refreshContainerIcon = require('../models/appInit').refreshContainerIcon;
-var cleanUndo = require('../models/toolKit').cleanUndoTrade;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
+var validateRequest = require('../middlewares/validation/validateRequest').JWT;
+var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+var getConst = require('../helpers/appInit').getConst;
+var refreshStore = require('../helpers/appInit').refreshStore;
+var refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
+var refreshContainer = require('../helpers/appInit').refreshContainer;
+var refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
+var cleanUndo = require('../helpers/toolKit').cleanUndoTrade;
+var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
 
 var Box = require('../models/DB/boxDB');
 var User = require('../models/DB/userDB');
@@ -138,7 +138,6 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                     delete rentedContainer[containerKey];
                                 }
                             }
-                            if (!signedContainer[containerKey]) console.log(containerKey)
                             if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                                 result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                 if (recent) {
