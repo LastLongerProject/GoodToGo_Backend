@@ -61,23 +61,28 @@ function resFromGoogle(err, response, forceRenew, type, cb) {
             }
         }
         var funcList = files.map(aFile => new Promise((resolve, reject) => {
-            downloadFile(files[aFile], type, resolve, reject);
+            downloadFile(aFile, type, resolve, reject);
         }));
         Promise
             .all(funcList)
             .then((data) => {
-                var watchedID = [];
-                for (var i = 0; i < googleContent.file_watchList.length; i++) {
-                    watchedID.push(googleContent.file_watchList[i].id);
+                var watchedID;
+                var newWatchList;
+                if (googleContent) {
+                    watchedID = googleContent.file_watchList.map(aFile => aFile.id);
+                    newWatchList = googleContent.file_watchList;
+                } else {
+                    googleContent = {};
+                    watchedID = [];
+                    newWatchList = [];
                 }
                 var modifiedFile = [];
-                var newWatchList = googleContent.file_watchList;
                 var aFile;
                 for (var fileIndex in data) {
                     aFile = data[fileIndex];
                     if (aFile === 'error') continue;
                     modifiedFile.push(aFile.name);
-                    if (watchedID.indexOf(aFile.id) >= 0) {
+                    if (watchedID && watchedID.indexOf(aFile.id) >= 0) {
                         newWatchList[watchedID.indexOf(aFile.id)].modifiedTime = aFile.modifiedTime;
                     } else {
                         newWatchList.push(aFile);
@@ -85,7 +90,10 @@ function resFromGoogle(err, response, forceRenew, type, cb) {
                 }
                 googleContent.file_watchList = newWatchList;
                 fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
-                    if (err) return cb(false, err);
+                    if (err) {
+                        debug(err);
+                        return cb(false, err);
+                    }
                     cb(true, modifiedFile);
                 });
             })

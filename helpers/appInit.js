@@ -75,9 +75,13 @@ module.exports = {
                         });
                     })
                     .catch((err) => {
-                        if (err) return cb(false, err);
+                        if (err) {
+                            debugError(data);
+                            return cb(false, err);
+                        }
                     });
             } else {
+                debugError(data);
                 cb(succeed, {
                     type: 'refreshStoreImg',
                     message: 'refresh fail',
@@ -121,9 +125,13 @@ module.exports = {
                         });
                     })
                     .catch((err) => {
-                        if (err) return cb(false, err);
+                        if (err) {
+                            debugError(data);
+                            return cb(false, err);
+                        }
                     });
             } else {
+                debugError(data);
                 cb(succeed, {
                     type: 'refreshContainerIcon',
                     message: 'refresh fail',
