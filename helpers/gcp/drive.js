@@ -7,102 +7,92 @@ var drive = google.drive('v3');
 var debug = require('debug')('goodtogo_backend:google_drive');
 
 var googleAuth = require("./auth");
+const configs = require("../../config/config").google;
 const GOOGLE_CONTENT_PATH = "./assets/json/googleContent.json";
 
 var connectionCtr = 0;
 
+if (!fs.existsSync("./assets/")) fs.mkdirSync("./assets/");
+if (!fs.existsSync("./assets/json")) fs.mkdirSync("./assets/json");
+if (!fs.existsSync("./assets/images")) fs.mkdirSync("./assets/images");
+if (!fs.existsSync("./assets/images/icon")) fs.mkdirSync("./assets/images/icon");
+if (!fs.existsSync("./assets/images/shop")) fs.mkdirSync("./assets/images/shop");
+
 module.exports = {
     getContainer: function (forceRenew, cb) {
-        var googleContent;
-        fs.readFile(GOOGLE_CONTENT_PATH, 'utf8', function (err, data) {
-            if (err) return cb(false, err);
-            googleContent = JSON.parse(data);
-            googleAuth(function (auth) {
-                drive.files.list({
-                    auth: auth,
-                    q: "'" + googleContent.container_icon_folderID + "' in parents",
-                    fields: "files(id, name, modifiedTime)"
-                }, (err, response) => {
-                    resFromGoogle(err, response, googleContent, forceRenew, 'icon', cb);
-                });
+        googleAuth(function (auth) {
+            drive.files.list({
+                auth: auth,
+                q: "'" + configs.container_icon_folderID + "' in parents",
+                fields: "files(id, name, modifiedTime)"
+            }, (err, response) => {
+                resFromGoogle(err, response, forceRenew, 'icon', cb);
             });
         });
     },
     getStore: function (forceRenew, cb) {
-        var googleContent;
-        fs.readFile(GOOGLE_CONTENT_PATH, 'utf8', function (err, data) {
-            if (err) return cb(false, err);
-            googleContent = JSON.parse(data);
-            googleAuth(function (auth) {
-                drive.files.list({
-                    auth: auth,
-                    q: "'" + googleContent.store_img_folderID + "' in parents",
-                    fields: "files(id, name, modifiedTime)"
-                }, (err, response) => {
-                    resFromGoogle(err, response, googleContent, forceRenew, 'shop', cb);
-                });
+        googleAuth(function (auth) {
+            drive.files.list({
+                auth: auth,
+                q: "'" + configs.store_img_folderID + "' in parents",
+                fields: "files(id, name, modifiedTime)"
+            }, (err, response) => {
+                resFromGoogle(err, response, forceRenew, 'shop', cb);
             });
         });
-
     }
 };
 
-function resFromGoogle(err, response, googleContent, forceRenew, type, cb) {
-    if (err) {
-        debug('The API returned an error: ' + err);
-        return;
-    }
+function resFromGoogle(err, response, forceRenew, type, cb) {
+    if (err) return debug('The API returned an error: ' + err);
     var files = response.data.files;
-    var fileIdList = [];
-    for (var i = 0; i < files.length; i++) {
-        fileIdList.push(files[i].id);
-    }
-    if (!forceRenew) {
-        var index;
-        for (var aWatchedFile in googleContent.file_watchList) {
-            index = fileIdList.indexOf(googleContent.file_watchList[aWatchedFile].id);
-            if (index >= 0 && files[index].modifiedTime === googleContent.file_watchList[aWatchedFile].modifiedTime) {
-                files.splice(index, 1);
-                fileIdList.splice(index, 1);
-            }
-        }
-    }
-    var funcList = [];
-    for (var aFile in files) {
-        // if (aFile < 1)
-        funcList.push(new Promise((resolve, reject) => {
-            downloadFile(files[aFile], type, resolve, reject);
-        }));
-    }
-    Promise
-        .all(funcList)
-        .then((data) => {
-            var watchedID = [];
-            for (var i = 0; i < googleContent.file_watchList.length; i++) {
-                watchedID.push(googleContent.file_watchList[i].id);
-            }
-            var modifiedFile = [];
-            var newWatchList = googleContent.file_watchList;
-            var aFile;
-            for (var fileIndex in data) {
-                aFile = data[fileIndex];
-                if (aFile === 'error') continue;
-                modifiedFile.push(aFile.name);
-                if (watchedID.indexOf(aFile.id) >= 0) {
-                    newWatchList[watchedID.indexOf(aFile.id)].modifiedTime = aFile.modifiedTime;
-                } else {
-                    newWatchList.push(aFile);
+    var fileIdList = files.map(aFile => aFile.id);
+    fs.readFile(GOOGLE_CONTENT_PATH, (err, googleContent) => {
+        if (err) googleContent = null;
+        else googleContent = JSON.parse(googleContent);
+        if (!forceRenew && googleContent) {
+            var index;
+            for (var aWatchedFile in googleContent.file_watchList) {
+                index = fileIdList.indexOf(googleContent.file_watchList[aWatchedFile].id);
+                if (index >= 0 && files[index].modifiedTime === googleContent.file_watchList[aWatchedFile].modifiedTime) {
+                    files.splice(index, 1);
+                    fileIdList.splice(index, 1);
                 }
             }
-            googleContent.file_watchList = newWatchList;
-            fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
+        }
+        var funcList = files.map(aFile => new Promise((resolve, reject) => {
+            downloadFile(files[aFile], type, resolve, reject);
+        }));
+        Promise
+            .all(funcList)
+            .then((data) => {
+                var watchedID = [];
+                for (var i = 0; i < googleContent.file_watchList.length; i++) {
+                    watchedID.push(googleContent.file_watchList[i].id);
+                }
+                var modifiedFile = [];
+                var newWatchList = googleContent.file_watchList;
+                var aFile;
+                for (var fileIndex in data) {
+                    aFile = data[fileIndex];
+                    if (aFile === 'error') continue;
+                    modifiedFile.push(aFile.name);
+                    if (watchedID.indexOf(aFile.id) >= 0) {
+                        newWatchList[watchedID.indexOf(aFile.id)].modifiedTime = aFile.modifiedTime;
+                    } else {
+                        newWatchList.push(aFile);
+                    }
+                }
+                googleContent.file_watchList = newWatchList;
+                fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
+                    if (err) return cb(false, err);
+                    cb(true, modifiedFile);
+                });
+            })
+            .catch((err) => {
                 if (err) return cb(false, err);
-                cb(true, modifiedFile);
             });
-        })
-        .catch((err) => {
-            if (err) return cb(false, err);
-        });
+    });
 }
 
 function downloadFile(aFile, type, resolve, reject) {
