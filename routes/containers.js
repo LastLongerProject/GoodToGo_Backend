@@ -852,9 +852,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
 let containerStateCache = {};
 
 function bindFunction(doFirst, then, argToAssign) {
-    return function () {
+    return function bindedFunction() {
         doFirst();
-        Object.assign(arguments[0], argToAssign);
+        if (argToAssign && typeof arguments[0] !== "undefined") Object.assign(arguments[0], argToAssign);
         then.apply(this, arguments);
     };
 }
