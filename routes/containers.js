@@ -799,14 +799,24 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             let getErr = taskResults.every(aResult => {
                 if (aResult.txt) replyTxt = aResult.txt;
                 if (aResult.oriUser) oriUser = aResult.oriUser;
-                if (aResult.dataSaver) dataSavers.push(aResult.dataSaver);
                 if (aResult.errorList) errorListArr.push(aResult.errorList);
                 if (aResult.errorDict) errorDictArr.push(aResult.errorDict);
+                if (aResult.dataSaver) dataSavers.push({
+                    containerID: aResult.ID,
+                    saver: aResult.dataSaver
+                });
                 return !aResult.succeed;
             });
             if (!getErr) {
                 Promise
-                    .all(dataSavers.map(aDataSaver => new Promise((resolve, reject) => aDataSaver(resolve, reject))))
+                    .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
+                        const cleanStateCache = () => {
+                            delete containerStateCache[aDataSaver.containerID];
+                        };
+                        const resolve = bindFunction(cleanStateCache, oriResolve);
+                        const reject = bindFunction(cleanStateCache, oriReject);
+                        aDataSaver.saver(resolve, reject);
+                    })))
                     .then(() => {
                         if (done.callback) return done.callback();
                         done.res.status(200).json({
@@ -839,6 +849,16 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         });
 }
 
+let containerStateCache = {};
+
+function bindFunction(doFirst, then, argToAssign) {
+    return function () {
+        doFirst();
+        Object.assign(arguments[0], argToAssign);
+        then.apply(this, arguments);
+    };
+}
+
 function stateChangingTask(reqUser, stateChanging, option) {
     const action = stateChanging.action;
     const tradeTime = stateChanging.tradeTime;
@@ -852,24 +872,13 @@ function stateChangingTask(reqUser, stateChanging, option) {
     return function trade(aContainer) {
         return new Promise((oriResolve, oriReject) => {
             queue.push(doneThisTask => {
-                const resolve = function () {
-                    doneThisTask();
-                    Object.assign(arguments[0], {
-                        succeed: true
-                    });
-                    oriResolve.apply(this, arguments);
-                };
-                const resolveWithErr = function () {
-                    doneThisTask();
-                    Object.assign(arguments[0], {
-                        succeed: false
-                    });
-                    oriResolve.apply(this, arguments);
-                };
-                const reject = function () {
-                    doneThisTask();
-                    oriReject.apply(this, arguments);
-                };
+                const resolve = bindFunction(doneThisTask, oriResolve, {
+                    succeed: true
+                });
+                const resolveWithErr = bindFunction(doneThisTask, oriResolve, {
+                    succeed: false
+                });
+                const reject = bindFunction(doneThisTask, oriReject);
                 let aContainerId = parseInt(aContainer);
                 Container.findOne({
                     'ID': aContainerId
@@ -900,7 +909,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                             ID: aContainerId,
                             txt: "Already Return"
                         });
-                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                    validateStateChanging(bypassStateValidation, containerStateCache[aContainerId] || oriState, newState, function (succeed) {
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -993,6 +1002,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                         }
                                     });
 
+                                    containerStateCache[aContainerId] = newState;
                                     resolve({
                                         ID: aContainerId,
                                         oriUser: oriUser.user.phone,
