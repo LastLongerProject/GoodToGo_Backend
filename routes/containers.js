@@ -229,41 +229,44 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
         if (list.length === 0) return res.json({
             reloadHistory: []
         });
-        list.sort((a, b) => {
-            return a.tradeTime - b.tradeTime;
-        });
+        list.sort((a, b) => a.tradeTime - b.tradeTime);
         cleanUndoTrade('ReadyToClean', list);
-        var boxArr = [];
-        var thisBoxTypeList;
-        var thisBoxContainerList;
-        var lastIndex;
-        var nowIndex;
-        var thisType;
-        for (var i = list.length - 1; i >= 0; i--) {
-            if (list[i].tradeType.action === 'UndoReadyToClean') continue;
-            thisType = typeDict[list[i].container.typeCode].name;
-            lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 1000 || list[i].oriUser.storeID !== list[i + 1].oriUser.storeID) {
-                boxArr.push({
-                    boxTime: list[i].tradeTime,
-                    typeList: [],
-                    containerList: {},
-                    cleanReload: (list[i].tradeType.oriState === 1),
-                    phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
-                        reload: list[i].newUser.phone
-                    },
-                    from: (dbStore.role.typeCode === 'clerk') ? undefined : list[i].oriUser.storeID
-                });
-            }
-            nowIndex = boxArr.length - 1;
-            thisBoxTypeList = boxArr[nowIndex].typeList;
-            thisBoxContainerList = boxArr[nowIndex].containerList;
-            if (thisBoxTypeList.indexOf(thisType) < 0) {
-                thisBoxTypeList.push(thisType);
-                thisBoxContainerList[thisType] = [];
-            }
-            thisBoxContainerList[thisType].push(list[i].container.id);
+
+        var tradeTimeDict = {};
+        list.forEach(aTrade => {
+            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
+            tradeTimeDict[aTrade.tradeTime].push(aTrade);
+        });
+
+        var boxDict = {};
+        var boxDictKey;
+        var thisTypeName;
+        for (var aTradeTime in tradeTimeDict) {
+            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
+            tradeTimeDict[aTradeTime].forEach(theTrade => {
+                thisTypeName = typeDict[theTrade.container.typeCode].name;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                if (!boxDict[boxDictKey])
+                    boxDict[boxDictKey] = {
+                        boxTime: theTrade.tradeTime,
+                        typeList: [],
+                        containerList: {},
+                        cleanReload: (theTrade.tradeType.oriState === 1),
+                        phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
+                            reload: theTrade.newUser.phone
+                        },
+                        from: (dbStore.role.typeCode === 'clerk') ? undefined : theTrade.oriUser.storeID
+                    };
+                if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
+                    boxDict[boxDictKey].typeList.push(thisTypeName);
+                    boxDict[boxDictKey].containerList[thisTypeName] = [];
+                }
+                boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
+            });
         }
+
+        var boxArr = Object.values(boxDict);
+        boxArr.sort((a, b) => b.boxTime - a.boxTime);
         for (var i = 0; i < boxArr.length; i++) {
             boxArr[i].containerOverview = [];
             for (var j = 0; j < boxArr[i].typeList.length; j++) {
@@ -777,6 +780,14 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
+
+    let tradeTime;
+    if (options && options.orderTime) tradeTime = options.orderTime; // Rent Return ReadyToClean NEED
+    else tradeTime = Date.now();
+    Object.assign(stateChanging, {
+        tradeTime
+    });
+
     Promise
         .all(containers.map(stateChangingTask(reqUser, stateChanging, options)))
         .then(taskResults => {
@@ -830,9 +841,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
 
 function stateChangingTask(reqUser, stateChanging, option) {
     const action = stateChanging.action;
+    const tradeTime = stateChanging.tradeTime;
     const options = option || {};
     const boxID = options.boxID; // Sign Delivery NEED
-    const orderTime = options.orderTime; // Rent Return ReadyToClean NEED
     const toStoreID = options.toStoreID; // Delivery NEED
     const rentToUser = options.rentToUser; // Rent NEED
     const signForStoreID = options.signForStoreID; // Sign
@@ -957,7 +968,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                     else theContainer.storeID = undefined;
 
                                     let newTrade = new Trade({
-                                        tradeTime: orderTime || Date.now(),
+                                        tradeTime,
                                         tradeType: {
                                             action,
                                             oriState,
