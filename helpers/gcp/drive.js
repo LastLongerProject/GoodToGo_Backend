@@ -83,6 +83,7 @@ function resFromGoogle(err, response, forceRenew, type, cb) {
                     if (aFile === 'error') continue;
                     modifiedFile.push(aFile.name);
                     if (watchedID && watchedID.indexOf(aFile.id) >= 0) {
+                        newWatchList[watchedID.indexOf(aFile.id)].name = aFile.name;
                         newWatchList[watchedID.indexOf(aFile.id)].modifiedTime = aFile.modifiedTime;
                     } else {
                         newWatchList.push(aFile);
