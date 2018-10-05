@@ -96,7 +96,10 @@ module.exports = {
                 });
             }
             var newState = actionTodo.indexOf(action);
-            if (newState === -1) return next();
+            if (newState === -1) return next({
+                code: "Err1",
+                msg: "Request Format Invalid (Action Invalid)"
+            });
             process.nextTick(() => {
                 Container.findOne({
                     'ID': containerID
