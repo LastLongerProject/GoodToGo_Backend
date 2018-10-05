@@ -96,7 +96,7 @@ module.exports = {
                         }, (err, aType) => {
                             if (err) return debugError(err);
                             if (!aType) return resolve();
-                            aType.img_info.img_version++;
+                            aType.version++;
                             aType.save((err) => {
                                 if (err) return reject(err);
                                 resolve();
