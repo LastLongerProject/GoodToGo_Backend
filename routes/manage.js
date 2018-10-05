@@ -1094,6 +1094,10 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
     });
 });
 
+router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
+    res.json({});
+});
+
 function getWeekCheckpoint(date) {
     if (!date) date = new Date();
     var timezoneFix = 0;
@@ -1121,7 +1125,7 @@ function addContent(lastHistory, newHistory) {
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
     refreshStore(req.app, function (err) {
         if (err) return next(err);
-        res.status(204).end();
+        res.status(200).end("Done");
     });
 });
 
@@ -1129,7 +1133,7 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
     var dbAdmin = req._user;
     refreshContainer(req.app, dbAdmin, function (err) {
         if (err) return next(err);
-        res.status(204).end();
+        res.status(200).end("Done");
     });
 });
 
