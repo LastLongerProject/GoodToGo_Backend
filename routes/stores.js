@@ -244,7 +244,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
-                        if (tmpTypeCode >= 2 && dbStore.role.storeID !== 17) continue;
+                        if (tmpTypeCode >= 2 && (dbStore.role.storeID !== 17 || dbStore.role.storeID !== 21 || dbStore.role.storeID !== 22)) continue;
                         if (containers[i].statusCode === 1) {
                             resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
                             resJson['containers'][tmpTypeCode]['amount']++;
