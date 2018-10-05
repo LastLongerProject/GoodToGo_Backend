@@ -203,7 +203,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = Object.values(req.app.get('containerType'));
-    var forLoopLength = (dbStore.role.storeID === 17) ? type.length : ((type.length < 2) ? type.length : 2);
+    var forLoopLength = (dbStore.role.storeID === 17 || dbStore.role.storeID === 21 || dbStore.role.storeID === 22) ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
@@ -243,7 +243,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
-                        if (tmpTypeCode >= 2 && (dbStore.role.storeID !== 17 || dbStore.role.storeID !== 21 || dbStore.role.storeID !== 22)) continue;
+                        if (tmpTypeCode >= 2 && (dbStore.role.storeID !== 17 && dbStore.role.storeID !== 21 && dbStore.role.storeID !== 22)) continue;
                         if (containers[i].statusCode === 1) {
                             resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
                             resJson['containers'][tmpTypeCode]['amount']++;
