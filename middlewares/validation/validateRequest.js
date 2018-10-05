@@ -48,7 +48,7 @@ module.exports = {
                 }, function (err, dbKey) {
                     if (err)
                         return next(err);
-                    if (!dbKey || (dbKey.userAgent !== req.headers['user-agent'] && dbKey.roleType !== "bot"))
+                    if (!dbKey)
                         return res.status(401).json({
                             code: 'B003',
                             type: 'validatingUser',
