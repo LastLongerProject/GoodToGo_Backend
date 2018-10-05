@@ -316,7 +316,7 @@ router.get('/data', validateRequest, function (req, res, next) {
             res.json({
                 usingAmount: inUsedList.length,
                 data: inUsedList.concat(returnedList),
-                globalAmount: count
+                globalAmount: count + 14642
             });
         });
     });

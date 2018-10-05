@@ -39,7 +39,7 @@ config
 
 # IDE
 .vscode
-*.prettierignore
+.prettierrc
 
 # No need sycn
 assets
