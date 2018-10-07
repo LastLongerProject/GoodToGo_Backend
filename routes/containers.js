@@ -955,6 +955,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                         code: 'F005',
                                         message: 'User has Banned'
                                     });
+
                                 if (action === 'Rent') {
                                     let tmp = oriUser;
                                     oriUser = reqUser;
@@ -966,16 +967,16 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                 } else if (action === 'ReadyToClean' && oriState === 1 && oriUser.roles.admin) { // 乾淨回收
                                     oriUser.role.storeID = theContainer.storeID;
                                 }
+
+                                theContainer.statusCode = newState;
+                                theContainer.conbineTo = reqUser.user.phone;
+                                theContainer.lastUsedAt = Date.now();
+                                if (action === 'Delivery') theContainer.cycleCtr++;
+                                else if (action === 'CancelDelivery') theContainer.cycleCtr--;
+                                if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID || reqUser.roles.clerk.storeID;
+                                else theContainer.storeID = undefined;
+
                                 try {
-
-                                    theContainer.statusCode = newState;
-                                    theContainer.conbineTo = reqUser.user.phone;
-                                    theContainer.lastUsedAt = Date.now();
-                                    if (action === 'Delivery') theContainer.cycleCtr++;
-                                    else if (action === 'CancelDelivery') theContainer.cycleCtr--;
-                                    if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID || reqUser.roles.clerk.storeID;
-                                    else theContainer.storeID = undefined;
-
                                     let newTrade = new Trade({
                                         tradeTime,
                                         tradeType: {
@@ -986,12 +987,12 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                         oriUser: {
                                             type: oriUser.role.typeCode,
                                             phone: oriUser.user.phone,
-                                            storeID: reqUser.role.storeID || reqUser.roles.clerk.storeID
+                                            storeID: oriUser.role.storeID || (oriUser.roles.clerk ? oriUser.roles.clerk.storeID : undefined)
                                         },
                                         newUser: {
                                             type: reqUser.role.typeCode,
                                             phone: reqUser.user.phone,
-                                            storeID: reqUser.role.storeID || reqUser.roles.clerk.storeID
+                                            storeID: reqUser.role.storeID || (reqUser.roles.clerk ? reqUser.roles.clerk.storeID : undefined)
                                         },
                                         container: {
                                             id: theContainer.ID,
