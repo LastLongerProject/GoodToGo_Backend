@@ -796,7 +796,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             let dataSavers = [];
             let errorListArr = [];
             let errorDictArr = [];
-            let getErr = taskResults.every(aResult => {
+            let allSucceed = taskResults.every(aResult => {
                 if (aResult.txt) replyTxt = aResult.txt;
                 if (aResult.oriUser) oriUser = aResult.oriUser;
                 if (aResult.errorList) errorListArr.push(aResult.errorList);
@@ -805,9 +805,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                     containerID: aResult.ID,
                     saver: aResult.dataSaver
                 });
-                return !aResult.succeed;
+                return aResult.succeed;
             });
-            if (!getErr) {
+            if (allSucceed) {
                 Promise
                     .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
                         const cleanStateCache = () => {
