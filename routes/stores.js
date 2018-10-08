@@ -736,7 +736,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
                     }
                 });
                 res.json({
-                    favoriteList
+                    userList: favoriteList
                 });
             });
         } else {
@@ -749,7 +749,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
                     getFavorite(rentTrades, function (userList) {
                         let favoriteList = userList.slice(0, 5);
                         res.json({
-                            favoriteList
+                            userList: favoriteList
                         });
                         userList.map(aUser => redis.zadd(thisRedisKey, aUser.times, aUser.phone));
                     });
