@@ -21,13 +21,14 @@ var regAsStore = require('../middlewares/validation/validateRequest').regAsStore
 var regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
 var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
-var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
+var Container = require('../models/DB/containerDB');
 
 const historyDays = 14;
+const redisKey = storeID => `store_favorite:${storeID}`;
 
 router.get('/list', validateDefault, function (req, res, next) {
     var jsonData = {
@@ -306,6 +307,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
 router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
+    const thisRedisKey = redisKey(dbStore.role.storeID);
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")
@@ -331,6 +333,7 @@ router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req,
                             'phone': user.user.phone,
                             'apiKey': token
                         });
+                        redis.zincrby(thisRedisKey, 1, user.user.phone);
                     });
                 });
             }
@@ -714,25 +717,45 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
 
 router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function () {
-        Trade.find({
-            'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.storeID
-        }, function (err, rentTrades) {
-            if (err) return next(err);
-            if (typeof rentTrades !== 'undefined') {
-                getFavorite(rentTrades, function (userList) {
-                    resJson = {};
-                    if (userList.length > 5)
-                        resJson.userList = userList.slice(0, 5);
-                    else if (userList.length > 0)
-                        resJson.userList = userList;
-                    else
-                        resJson.userList = [];
-                    res.json(resJson);
+    const thisRedisKey = redisKey(dbStore.role.storeID);
+    redis.exists(thisRedisKey, (err, keyIsExists) => {
+        if (err) return next(err);
+        if (keyIsExists) {
+            redis.zrevrange(thisRedisKey, 0, 4, "withscores", (err, reply) => {
+                if (err) return next(err);
+                let favoriteList = [];
+                reply.forEach((theValue, index) => {
+                    if (index % 2 === 0) {
+                        return favoriteList.push({
+                            phone: theValue
+                        });
+                    } else {
+                        return Object.assign(favoriteList[favoriteList.length - 1], {
+                            times: parseInt(theValue)
+                        });
+                    }
                 });
-            }
-        });
+                res.json({
+                    favoriteList
+                });
+            });
+        } else {
+            Trade.find({
+                'tradeType.action': 'Rent',
+                'oriUser.storeID': dbStore.role.storeID
+            }, function (err, rentTrades) {
+                if (err) return next(err);
+                if (typeof rentTrades !== 'undefined') {
+                    getFavorite(rentTrades, function (userList) {
+                        let favoriteList = userList.slice(0, 5);
+                        res.json({
+                            favoriteList
+                        });
+                        userList.map(aUser => redis.zadd(thisRedisKey, aUser.times, aUser.phone));
+                    });
+                }
+            });
+        }
     });
 });
 
