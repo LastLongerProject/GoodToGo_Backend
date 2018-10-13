@@ -34,6 +34,7 @@ const CACHE = {
 };
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
+const baseUrl = require("../config/config").serverBaseUrl + "/manager";
 
 router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
     var result = {
@@ -105,49 +106,58 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     var usedTime = [];
                     var usedTime_recent = [];
 
-                    tradeList.forEach(function (aTrade) {
-                        var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                        lastUsed[aTrade.container.id] = {
-                            time: aTrade.tradeTime.valueOf(),
-                            action: aTrade.tradeType.action
-                        };
-                        if (aTrade.tradeType.action === "Sign") {
-                            signedContainer[containerKey] = {
+                    var gotErr = tradeList.every(function (aTrade) {
+                        try {
+                            var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                            lastUsed[aTrade.container.id] = {
                                 time: aTrade.tradeTime.valueOf(),
-                                storeID: aTrade.newUser.storeID
+                                action: aTrade.tradeType.action
                             };
-                        } else if (aTrade.tradeType.action === "Rent") {
-                            rentedContainer[containerKey] = {
-                                time: aTrade.tradeTime.valueOf()
-                            };
-                        } else if (aTrade.tradeType.action === "Return") {
-                            var recent = aTrade.tradeTime > thisWeekCheckpoint;
-                            result.shopHistorySummary.usedAmount++;
-                            if (recent) {
-                                result.shopRecentHistorySummary.usedAmount++;
-                            }
-                            if (rentedContainer[containerKey]) {
-                                var duration = aTrade.tradeTime - rentedContainer[containerKey].time;
-                                usedTime.push({
+                            if (aTrade.tradeType.action === "Sign") {
+                                signedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
-                                    duration
-                                });
+                                    storeID: aTrade.newUser.storeID
+                                };
+                            } else if (aTrade.tradeType.action === "Rent") {
+                                rentedContainer[containerKey] = {
+                                    time: aTrade.tradeTime.valueOf()
+                                };
+                            } else if (aTrade.tradeType.action === "Return") {
+                                var recent = aTrade.tradeTime > thisWeekCheckpoint;
+                                result.shopHistorySummary.usedAmount++;
                                 if (recent) {
-                                    usedTime_recent.push(duration);
-                                } else {
-                                    delete rentedContainer[containerKey];
+                                    result.shopRecentHistorySummary.usedAmount++;
+                                }
+                                if (rentedContainer[containerKey]) {
+                                    var duration = aTrade.tradeTime - rentedContainer[containerKey].time;
+                                    usedTime.push({
+                                        time: aTrade.tradeTime.valueOf(),
+                                        duration
+                                    });
+                                    if (recent) {
+                                        usedTime_recent.push(duration);
+                                    } else {
+                                        delete rentedContainer[containerKey];
+                                    }
+                                }
+                                if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
+                                    result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
+                                    if (recent) {
+                                        result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;
+                                    } else {
+                                        delete signedContainer[containerKey];
+                                    }
                                 }
                             }
-                            if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
-                                result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
-                                if (recent) {
-                                    result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;
-                                } else {
-                                    delete signedContainer[containerKey];
-                                }
-                            }
+                            return true;
+                        } catch (error) {
+                            redis.del(CACHE.index);
+                            debugError(error);
+                            return false;
                         }
                     });
+
+                    if (gotErr) return res.redirect(301, baseUrl + "/index");
 
                     for (var containerID in lastUsed) {
                         var timeToNow = now - lastUsed[containerID].time;
