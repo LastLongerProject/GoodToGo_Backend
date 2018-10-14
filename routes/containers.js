@@ -964,7 +964,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                     reqUser.role.storeID = signForStoreID;
                                 } else if (action === 'Return' && typeof returnFromStoreID !== 'undefined') { // 髒杯回收代歸還
                                     reqUser.role.storeID = returnFromStoreID;
-                                } else if (action === 'ReadyToClean' && oriState === 1 && oriUser.roles.admin) { // 乾淨回收
+                                } else if (action === 'ReadyToClean') {
                                     oriUser.role.storeID = theContainer.storeID;
                                 }
 
