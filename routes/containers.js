@@ -595,7 +595,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
             redis.set("boxCtr", boxCtr, (err, reply) => {
                 if (err) return next(err);
                 if (reply !== "OK") return next(reply);
-                redis.expire("boxCtr", dateCheckpoint(1) - Date.now(), (err, reply) => {
+                redis.expire("boxCtr", (dateCheckpoint(1).valueOf() - Date.now()) / 1000, (err, reply) => {
                     if (err) return next(err);
                     if (reply !== 1) return next(reply);
                     var today = new Date();
