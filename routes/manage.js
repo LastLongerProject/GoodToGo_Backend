@@ -106,7 +106,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     var usedTime = [];
                     var usedTime_recent = [];
 
-                    var gotErr = tradeList.every(function (aTrade) {
+                    var success = tradeList.every(function (aTrade) {
                         try {
                             var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                             lastUsed[aTrade.container.id] = {
@@ -157,7 +157,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                         }
                     });
 
-                    if (gotErr) return res.redirect(301, baseUrl + "/index");
+                    if (!success) return res.redirect(301, baseUrl + "/index");
 
                     for (var containerID in lastUsed) {
                         var timeToNow = now - lastUsed[containerID].time;

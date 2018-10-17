@@ -205,25 +205,27 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     var dbStore = req._user;
     var typeDict = req.app.get('containerType');
     var queryCond;
-    if (dbStore.role.typeCode === 'clerk') queryCond = {
-        '$or': [{
-            'tradeType.action': 'ReadyToClean',
-            'oriUser.storeID': dbStore.role.storeID
-        }, {
-            'tradeType.action': 'UndoReadyToClean'
-        }],
-        'tradeTime': {
-            '$gte': dateCheckpoint(1 - historyDays)
-        }
-    };
-    else queryCond = {
-        'tradeType.action': {
-            '$in': ['ReadyToClean', 'UndoReadyToClean']
-        },
-        'tradeTime': {
-            '$gte': dateCheckpoint(1 - historyDays)
-        }
-    };
+    if (dbStore.role.typeCode === 'clerk')
+        queryCond = {
+            '$or': [{
+                'tradeType.action': 'ReadyToClean',
+                'oriUser.storeID': dbStore.role.storeID
+            }, {
+                'tradeType.action': 'UndoReadyToClean'
+            }],
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        };
+    else
+        queryCond = {
+            'tradeType.action': {
+                '$in': ['ReadyToClean', 'UndoReadyToClean']
+            },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        };
     Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
