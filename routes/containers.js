@@ -782,6 +782,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
+    const consts = {
+        containerTypeDict: done.res.app.get("containerType")
+    };
 
     let tradeTime;
     if (options && options.orderTime) tradeTime = options.orderTime; // Rent Return ReadyToClean NEED
@@ -791,7 +794,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     });
 
     Promise
-        .all(containers.map(stateChangingTask(reqUser, stateChanging, options)))
+        .all(containers.map(stateChangingTask(reqUser, stateChanging, options, consts)))
         .then(taskResults => {
             let oriUser;
             let replyTxt;
@@ -862,7 +865,7 @@ function bindFunction(doFirst, then, argToAssign) {
     };
 }
 
-function stateChangingTask(reqUser, stateChanging, option) {
+function stateChangingTask(reqUser, stateChanging, option, consts) {
     const action = stateChanging.action;
     const tradeTime = stateChanging.tradeTime;
     const options = option || {};
@@ -872,6 +875,7 @@ function stateChangingTask(reqUser, stateChanging, option) {
     const signForStoreID = options.signForStoreID; // Sign
     const returnFromStoreID = options.returnFromStoreID; // Return
     const bypassStateValidation = options.bypassStateValidation || false;
+    const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
         return new Promise((oriResolve, oriReject) => {
             queue.push(doneThisTask => {
@@ -1017,7 +1021,8 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                                     if (err) return getErr(err);
                                                     doneSave({
                                                         id: theContainer.ID,
-                                                        typeCode: theContainer.typeCode
+                                                        typeCode: theContainer.typeCode,
+                                                        typeName: containerTypeDict[theContainer.typeCode].name
                                                     });
                                                 });
                                             });
