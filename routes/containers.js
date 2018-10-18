@@ -819,12 +819,13 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         const reject = bindFunction(cleanStateCache, oriReject);
                         aDataSaver.saver(resolve, reject);
                     })))
-                    .then(() => {
+                    .then((containerList) => {
                         if (done.callback) return done.callback();
                         done.res.status(200).json({
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
-                            oriUser: oriUser
+                            oriUser: oriUser,
+                            containerList: containerList
                         });
                     }).catch(done.next);
             } else {
@@ -1014,7 +1015,10 @@ function stateChangingTask(reqUser, stateChanging, option) {
                                                 if (err) return getErr(err);
                                                 theContainer.save(err => {
                                                     if (err) return getErr(err);
-                                                    doneSave();
+                                                    doneSave({
+                                                        id: theContainer.ID,
+                                                        typeCode: theContainer.typeCode
+                                                    });
                                                 });
                                             });
                                         }
