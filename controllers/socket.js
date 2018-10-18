@@ -2,6 +2,8 @@ var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:socket');
 debug.log = console.log.bind(console);
 var keys = require('../config/keys');
+var User = require('../models/DB/userDB');
+var Trade = require('../models/DB/tradeDB');
 var UserKeys = require('../models/DB/userKeysDB');
 var Container = require('../models/DB/containerDB');
 var validateStateChanging = require('../helpers/toolKit').validateStateChanging;
@@ -124,6 +126,35 @@ module.exports = {
                     });
                 });
             });
+        });
+        socket.on('data_get', function (data) {
+            debug("[" + socket._user + "] ON \"data_get\": " + data);
+            if (typeof data !== "string") {
+                return next({
+                    code: "Err1",
+                    msg: "Request Format Invalid"
+                });
+            }
+            if (data === "storeAmount") {
+                User.findOne({
+                    "user.phone": socket._user
+                }, (err, theUser) => {
+                    if (err) return next(err);
+                    Trade.count({
+                        'tradeType.action': 'Rent',
+                        "tradeType.oriState": 1,
+                        'oriUser.storeID': theUser.roles.clerk.storeID
+                    }, (err, amount) => {
+                        if (err) return next(err);
+                        return socket.emitWithLog('data_reply', amount);
+                    });
+                });
+            } else {
+                return next({
+                    code: "Err1",
+                    msg: "Request Format Invalid (Req Data Is Not Supported)"
+                });
+            }
         });
     }
 };
