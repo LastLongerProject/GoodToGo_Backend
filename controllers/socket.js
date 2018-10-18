@@ -112,16 +112,24 @@ module.exports = {
                             code: 'Err2',
                             msg: 'No Container Found',
                             data: {
-                                id: parseInt(containerID)
+                                id: containerID
+                            }
+                        });
+                    if (!theContainer.active)
+                        return next({
+                            code: 'Err3',
+                            msg: 'Container Inactive',
+                            data: {
+                                id: containerID
                             }
                         });
                     validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
                         return socket.emitWithLog('reply', {
-                            id: parseInt(containerID),
+                            id: containerID,
                             succeed: succeed,
                             message: "Can" + (succeed ? "" : " NOT") + " be " + action,
-                            originalState: parseInt(theContainer.statusCode),
-                            newState: parseInt(newState)
+                            originalState: theContainer.statusCode,
+                            newState: newState
                         });
                     });
                 });
