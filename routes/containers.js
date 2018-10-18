@@ -82,7 +82,7 @@ router.get('/get/list', validateDefault, function (req, res, next) {
 
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var containerDict = req.app.get('container');
+    var containerDict = req.app.get('containerWithDeactive');
     process.nextTick(function () {
         Box.find(function (err, boxList) {
             if (err) return next(err);
