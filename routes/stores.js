@@ -103,7 +103,7 @@ router.get('/list.js', function (req, res, next) {
     process.nextTick(function () {
         Place.find({
             "project": {
-                "$ne": "測試用帳號"
+                "$in": ["正興杯杯", "咖啡店連線"]
             },
             "active": true
         }, {}, {
@@ -206,7 +206,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = Object.values(req.app.get('containerType'));
-    var forLoopLength = (dbStore.role.storeID === 17 || dbStore.role.storeID === 21 || dbStore.role.storeID === 22 || dbStore.role.storeID === 23) ? type.length : ((type.length < 2) ? type.length : 2);
+    var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
@@ -246,22 +246,22 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
-                        if (tmpTypeCode >= 2 && (dbStore.role.storeID !== 17 && dbStore.role.storeID !== 21 && dbStore.role.storeID !== 22 && dbStore.role.storeID !== 23)) continue;
+                        if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
                         if (containers[i].statusCode === 1) {
-                            resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                            resJson['containers'][tmpTypeCode]['amount']++;
+                            resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
+                            resJson.containers[tmpTypeCode].amount++;
                         } else if (containers[i].statusCode === 3) {
-                            resJson['toReload'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                            resJson['toReload'][tmpTypeCode]['amount']++;
+                            resJson.toReload[tmpTypeCode].IdList.push(containers[i].ID);
+                            resJson.toReload[tmpTypeCode].amount++;
                         }
                     }
                 }
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
                         if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.storeID)
-                            resJson['todayData']['rent']++;
+                            resJson.todayData.rent++;
                         else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.storeID)
-                            resJson['todayData']['return']++;
+                            resJson.todayData.return++;
                     }
                 }
                 res.json(resJson);

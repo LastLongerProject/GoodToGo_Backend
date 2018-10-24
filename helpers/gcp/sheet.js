@@ -153,9 +153,10 @@ module.exports = {
                                 if (!isNum.test(fulfillPlace[i].ID)) continue;
                                 placeApiFuncList.push(new Promise((resolve, reject) => {
                                     var localCtr = i;
+                                    var aPlace = fulfillPlace[localCtr];
                                     var dataArray = [];
                                     request
-                                        .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + fulfillPlace[localCtr].placeID +
+                                        .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
                                             '&language=zh-TW&region=tw&key=' + placeApiKey +
                                             '&fields=formatted_address,opening_hours,geometry,types')
                                         .on('response', function (response) {
@@ -175,13 +176,18 @@ module.exports = {
                                             var dataBuffer = Buffer.concat(dataArray);
                                             var dataObject = JSON.parse(dataBuffer.toString());
                                             var type = [];
-                                            for (var j = 0; j < (dataObject.result.types.length - 2); j++) {
-                                                type.push(dictionary[dataObject.result.types[j]] || dataObject.result.types[j]);
+                                            if (aPlace && aPlace.type !== "") {
+                                                type = aPlace.type.replace(" ", "").split(",");
+                                            } else {
+                                                dataObject.result.types.forEach(aType => {
+                                                    var translated = dictionary[aType];
+                                                    if (translated) type.push(translated);
+                                                });
                                             }
-                                            var aStore = oldList.find(ele => ele.id == fulfillPlace[localCtr].ID);
                                             var opening_hours;
-                                            if (aStore && aStore.opening_default) {
-                                                opening_hours = aStore.opening_hours;
+                                            var aOldStore = oldList.find(ele => ele.id == aPlace.ID);
+                                            if (aOldStore && aOldStore.opening_default) {
+                                                opening_hours = aOldStore.opening_hours;
                                             } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
                                                 opening_hours = dataObject.result.opening_hours.periods;
                                                 for (var j = 0; j < opening_hours.length; j++) {
@@ -197,24 +203,24 @@ module.exports = {
                                                 opening_hours = defaultPeriods;
                                             }
                                             Store.findOneAndUpdate({
-                                                'id': fulfillPlace[localCtr].ID
+                                                'id': aPlace.ID
                                             }, {
-                                                'name': fulfillPlace[localCtr].name,
+                                                'name': aPlace.name,
                                                 'contract': {
-                                                    returnable: fulfillPlace[localCtr].contract.returnable,
-                                                    borrowable: fulfillPlace[localCtr].contract.returnable,
-                                                    status_code: (((fulfillPlace[localCtr].contract.returnable) ? 1 : 0) + ((fulfillPlace[localCtr].contract.borrowable) ? 1 : 0))
+                                                    returnable: aPlace.contract.returnable,
+                                                    borrowable: aPlace.contract.returnable,
+                                                    status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
                                                 },
                                                 'type': type,
-                                                'project': fulfillPlace[localCtr].project,
+                                                'project': aPlace.project,
                                                 'address': dataObject.result.formatted_address
                                                     .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
                                                 'opening_hours': opening_hours,
                                                 'location': dataObject.result.geometry.location,
-                                                'active': fulfillPlace[localCtr].active,
+                                                'active': aPlace.active,
                                                 '$setOnInsert': {
                                                     'img_info': {
-                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(fulfillPlace[localCtr].ID, 2),
+                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
                                                         img_version: 0
                                                     }
                                                 }
