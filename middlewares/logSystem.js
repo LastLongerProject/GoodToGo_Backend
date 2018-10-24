@@ -34,12 +34,11 @@ function logger(dbModel) {
         // record request start
         recordStartTime.call(req)
 
+        aRecord.ip = getip(req)
+        if (aRecord.ip !== '::1') req._realIp = aRecord.ip
+
         function logRequest() {
 
-            aRecord.ip = getip(req)
-            if (aRecord.ip === '::1') {
-                return
-            }
             aRecord.url = getUrlToken(req)
             aRecord.method = getMethodToken(req)
             aRecord.httpVersion = getHttpVersionToken(req)
@@ -83,7 +82,7 @@ function logger(dbModel) {
         onHeaders(res, recordStartTime)
 
         // log when response finished
-        onFinished(res, logRequest)
+        if (aRecord.ip !== '::1') onFinished(res, logRequest)
 
         next()
     }

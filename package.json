@@ -48,7 +48,8 @@
         "serve-favicon": "~2.4.3",
         "sharp": "^0.18.4",
         "socket.io": "^2.1.0",
-        "universal-analytics": "^0.4.16"
+        "universal-analytics": "^0.4.17",
+        "uuid": "^3.3.2"
     },
     "bugs": {
         "url": "https://github.com/BenjaminChenTW/GoodToGo_Backend/issues"

@@ -4,7 +4,9 @@ const logger = require('morgan');
 const express = require('express');
 const favicon = require('serve-favicon');
 const bodyParser = require('body-parser');
-// const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
+const URL = require('url');
+const uuid = require('uuid/v4');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
@@ -39,6 +41,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: false
 }));
+app.use(cookieParser(config.cookie.sign));
+app.use(cookieMid());
 app.use(resBodyParser);
 app.use(helmet());
 app.use(GAtrigger()); // Trigger Google Analytics
@@ -131,19 +135,39 @@ io.of('/containers/challenge/socket')
     .on('connection', socketCb.init);
 app.set('socket.io', io);
 
+// cookie middleware (just for identify user)
+function cookieMid() {
+    let url = URL.parse(config.serverBaseUrl);
+    if (!url.slashes) url = URL.parse(`http://${config.serverBaseUrl}`);
+    const cookieOptions = {
+        domain: url.hostname,
+        path: url.path,
+        secure: url.protocol === "https:",
+        maxAge: 1000 * 60 * 60 * 24 * 5000,
+        httpOnly: true,
+        signed: true
+    };
+
+    return function cookieMid(req, res, next) {
+        if (!req.signedCookies.uid) {
+            res.cookie("uid", uuid(), cookieOptions);
+        }
+        next();
+    };
+}
+
 // GA
 function GAtrigger() {
-    var visitor = ua(config.GA_TRACKING_ID, {
-        https: true
-    });
-
+    const gaErrHandler = err => {
+        if (err) debugError('Failed to trigger GA: ' + err);
+    };
     return function GAtrigger(req, res, next) {
-        visitor.set('ua', req.headers['user-agent']);
-        visitor.pageview(req.url, function (err) {
-            if (err !== null) {
-                debugError('Failed to trigger GA: ' + err);
-            }
-        });
+        if (req._realIp) {
+            let visitor = ua(config.GA_TRACKING_ID, req.signedCookies.uid);
+            visitor.set('ua', req.headers['user-agent']);
+            visitor.set('uip', req._realIp);
+            visitor.pageview(req.url, gaErrHandler);
+        }
         next();
     };
 }
@@ -163,6 +187,7 @@ function connectMongoDB() {
             debug("Deploy Server no scheduler");
         }
     });
+    mongoose.connection.on('error', err => debugError(`MongoDB connection error: ${err}`));
 }
 
 function resBodyParser(req, res, next) {

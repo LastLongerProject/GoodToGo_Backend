@@ -149,13 +149,15 @@ module.exports = {
                                 newUser.roles.typeList.push("customer");
                                 newUser.role = role;
                             }
-                            var newUserKey = new UserKeys();
-                            newUserKey.phone = phone;
-                            newUserKey.userAgent = req.headers['user-agent'];
-                            newUserKey.apiKey = returnKeys.apiKey;
-                            newUserKey.secretKey = returnKeys.secretKey;
-                            newUserKey.user = newUser._id;
-                            newUserKey.roleType = newUser.roles.typeList[0];
+                            var newUserKey = new UserKeys({
+                                clientId: req.signedCookies.uid,
+                                phone,
+                                userAgent: req.headers['user-agent'],
+                                apiKey: returnKeys.apiKey,
+                                secretKey: returnKeys.secretKey,
+                                user: newUser._id,
+                                roleType: roles.typeList[0]
+                            });
                             newUser.save(function (err) {
                                 if (err) return done(err);
                                 newUserKey.save(function (err) {
@@ -217,17 +219,16 @@ module.exports = {
                         var thisCtr = i;
                         keys.keyPair(function (err, returnKeys) {
                             if (err) return reject(err);
-                            var newSecretKey = returnKeys.secretKey;
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
-                                'userAgent': req.headers['user-agent'],
+                                'clientId': req.signedCookies.uid,
                                 'roleType': typeList[thisCtr]
                             }, {
-                                'secretKey': newSecretKey,
+                                'secretKey': returnKeys.secretKey,
+                                'userAgent': req.headers['user-agent'],
                                 '$setOnInsert': {
                                     'apiKey': returnKeys.apiKey,
                                     'user': dbUser._id,
-                                    'userAgent': req.headers['user-agent']
                                 }
                             }, {
                                 new: true,
@@ -309,6 +310,7 @@ module.exports = {
         User.findOne({
             'user.phone': phone
         }, function (err, dbUser) {
+            if (err) return done(err);
             if (!dbUser) return done(null, false, {
                 code: 'D013',
                 type: 'forgotPassMessage',
@@ -382,7 +384,7 @@ module.exports = {
         var dbUser = req._user;
         UserKeys.deleteMany({
             'phone': dbUser.user.phone,
-            'userAgent': req.headers['user-agent']
+            'clientId': req.signedCookies.uid
         }, (err) => {
             if (err) return done(err);
             return done(null, null, {
@@ -434,6 +436,7 @@ module.exports = {
                         phone: botID,
                         apiKey: returnKeys.apiKey,
                         secretKey: returnKeys.secretKey,
+                        clientId: req.signedCookies.uid,
                         userAgent: req.headers['user-agent'],
                         roleType: "bot",
                         user: newUser._id
