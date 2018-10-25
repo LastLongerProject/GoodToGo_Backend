@@ -308,7 +308,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
 router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
-    const thisRedisKey = redisKey(dbStore.role.storeID);
+    const thisRedisKey = redisKey(dbStore.role.storeID); // BOT??
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")

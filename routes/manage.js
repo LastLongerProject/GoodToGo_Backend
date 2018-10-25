@@ -1093,7 +1093,7 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
             tradeList.forEach((aTrade) => {
                 result.history.push({
                     tradeTime: aTrade.tradeTime,
-                    action: actionTxtDict[aTrade.tradeType.action],
+                    action: actionTxtDict[aTrade.tradeType.action] + (typeof aTrade.container.box !== "undefined" ? ` [#box${aTrade.container.box}]` : ""),
                     newUser: phoneEncoder(aTrade.newUser.phone),
                     oriUser: phoneEncoder(aTrade.oriUser.phone),
                     comment: ""
@@ -1117,8 +1117,13 @@ function getWeekCheckpoint(date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, isWindows ? 0 : 16, 0, 0, 0);
 }
 
+const isPhone = /09[0-9]{8}/;
+
 function phoneEncoder(phone, expose = false) {
-    return phone.slice(0, 4) + (expose ? ("-" + phone.slice(4, 7) + "-") : "-***-") + phone.slice(7, 10);
+    if (isPhone.test(phone))
+        return phone.slice(0, 4) + (expose ? ("-" + phone.slice(4, 7) + "-") : "-***-") + phone.slice(7, 10);
+    else
+        return phone;
 }
 
 function addContent(lastHistory, newHistory) {
