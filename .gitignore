@@ -39,10 +39,12 @@ config
 
 # IDE
 .vscode
+.prettierrc
+
+# No need sycn
+assets
 
 # Developping trash file
-dev/deprecated
 tmp
-assets/sh
 .dist
 runtime

@@ -5,18 +5,24 @@ var bcrypt = require('bcrypt-nodejs');
 var userSchema = mongoose.Schema({
     user: {
         phone: String,
-        password: String
+        password: String,
+        name: {
+            type: String,
+            default: null
+        }
     },
     role: {
         typeCode: String,
         storeID: Number,
         stationID: Number,
+        scopeID: Number,
         manager: Boolean
     },
     roles: {
         typeList: [],
         clerk: Object,
-        admin: Object
+        admin: Object,
+        bot: Object
     },
     pushNotificationArn: Object,
     registerTime: {
@@ -44,12 +50,12 @@ userSchema.index({
 });
 
 // generating a hash
-userSchema.methods.generateHash = function(password) {
+userSchema.methods.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
 // checking if password is valid
-userSchema.methods.validPassword = function(password) {
+userSchema.methods.validPassword = function (password) {
     return bcrypt.compareSync(password, this.user.password);
 };
 

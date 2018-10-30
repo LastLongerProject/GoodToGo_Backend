@@ -3,6 +3,10 @@ var router = express.Router();
 var jwt = require('jwt-simple');
 var debug = require('debug')('goodtogo_backend:containers');
 var redis = require("../models/redis");
+var queue = require('queue')({
+    concurrency: 1,
+    autostart: true
+});
 
 var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
@@ -11,20 +15,22 @@ var User = require('../models/DB/userDB');
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
-var sns = require('../models/SNS');
-var generateSocketToken = require('../models/socket').generateToken;
-var wetag = require('../models/toolKit').wetag;
-var intReLength = require('../models/toolKit').intReLength;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
-var validateStateChanging = require('../models/toolKit').validateStateChanging;
-var cleanUndoTrade = require('../models/toolKit').cleanUndoTrade;
-var validateDefault = require('../models/validation/validateDefault');
-var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsStore = require('../models/validation/validateRequest').regAsStore;
-var regAsAdmin = require('../models/validation/validateRequest').regAsAdmin;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
+var sns = require('../helpers/aws/SNS');
+var wetag = require('../helpers/toolKit').wetag;
+var intReLength = require('../helpers/toolKit').intReLength;
+var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
+var validateStateChanging = require('../helpers/toolKit').validateStateChanging;
+var generateSocketToken = require('../controllers/socket').generateToken;
+var validateDefault = require('../middlewares/validation/validateDefault');
+var validateRequest = require('../middlewares/validation/validateRequest').JWT;
+var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
+var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+
 const historyDays = 14;
-var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
+const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
 router.get('/globalUsedAmount', function (req, res, next) {
     Trade.count({
@@ -38,11 +44,7 @@ router.get('/globalUsedAmount', function (req, res, next) {
 });
 
 router.all('/:id', function (req, res) {
-    // debug("Redirect to official website.");
-    res.writeHead(301, {
-        Location: 'http://goodtogo.tw'
-    });
-    res.end();
+    res.redirect('http://goodtogo.tw');
 });
 
 router.get('/get/list', validateDefault, function (req, res, next) {
@@ -80,7 +82,7 @@ router.get('/get/list', validateDefault, function (req, res, next) {
 
 router.get('/get/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var containerDict = req.app.get('container');
+    var containerDict = req.app.get('containerWithDeactive');
     process.nextTick(function () {
         Box.find(function (err, boxList) {
             if (err) return next(err);
@@ -203,65 +205,70 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     var dbStore = req._user;
     var typeDict = req.app.get('containerType');
     var queryCond;
-    if (dbStore.role.typeCode === 'clerk') queryCond = {
-        '$or': [{
-            'tradeType.action': 'ReadyToClean',
-            'oriUser.storeID': dbStore.role.storeID
-        }, {
-            'tradeType.action': 'UndoReadyToClean'
-        }],
-        'tradeTime': {
-            '$gte': dateCheckpoint(1 - historyDays)
-        }
-    };
-    else queryCond = {
-        'tradeType.action': {
-            '$in': ['ReadyToClean', 'UndoReadyToClean']
-        },
-        'tradeTime': {
-            '$gte': dateCheckpoint(1 - historyDays)
-        }
-    };
+    if (dbStore.role.typeCode === 'clerk')
+        queryCond = {
+            '$or': [{
+                'tradeType.action': 'ReadyToClean',
+                'oriUser.storeID': dbStore.role.storeID
+            }, {
+                'tradeType.action': 'UndoReadyToClean'
+            }],
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        };
+    else
+        queryCond = {
+            'tradeType.action': {
+                '$in': ['ReadyToClean', 'UndoReadyToClean']
+            },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        };
     Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
         });
-        list.sort((a, b) => {
-            return a.tradeTime - b.tradeTime;
-        });
+        list.sort((a, b) => a.tradeTime - b.tradeTime);
         cleanUndoTrade('ReadyToClean', list);
-        var boxArr = [];
-        var thisBoxTypeList;
-        var thisBoxContainerList;
-        var lastIndex;
-        var nowIndex;
-        var thisType;
-        for (var i = list.length - 1; i >= 0; i--) {
-            if (list[i].tradeType.action === 'UndoReadyToClean') continue;
-            thisType = typeDict[list[i].container.typeCode].name;
-            lastIndex = boxArr.length - 1;
-            if (lastIndex < 0 || Math.abs(boxArr[lastIndex].boxTime - list[i].tradeTime) > 1000 || list[i].oriUser.storeID !== list[i + 1].oriUser.storeID) {
-                boxArr.push({
-                    boxTime: list[i].tradeTime,
-                    typeList: [],
-                    containerList: {},
-                    cleanReload: (list[i].tradeType.oriState === 1),
-                    phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
-                        reload: list[i].newUser.phone
-                    },
-                    from: (dbStore.role.typeCode === 'clerk') ? undefined : list[i].oriUser.storeID
-                });
-            }
-            nowIndex = boxArr.length - 1;
-            thisBoxTypeList = boxArr[nowIndex].typeList;
-            thisBoxContainerList = boxArr[nowIndex].containerList;
-            if (thisBoxTypeList.indexOf(thisType) < 0) {
-                thisBoxTypeList.push(thisType);
-                thisBoxContainerList[thisType] = [];
-            }
-            thisBoxContainerList[thisType].push(list[i].container.id);
+
+        var tradeTimeDict = {};
+        list.forEach(aTrade => {
+            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
+            tradeTimeDict[aTrade.tradeTime].push(aTrade);
+        });
+
+        var boxDict = {};
+        var boxDictKey;
+        var thisTypeName;
+        for (var aTradeTime in tradeTimeDict) {
+            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
+            tradeTimeDict[aTradeTime].forEach(theTrade => {
+                thisTypeName = typeDict[theTrade.container.typeCode].name;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                if (!boxDict[boxDictKey])
+                    boxDict[boxDictKey] = {
+                        boxTime: theTrade.tradeTime,
+                        typeList: [],
+                        containerList: {},
+                        cleanReload: (theTrade.tradeType.oriState === 1),
+                        phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
+                            reload: theTrade.newUser.phone
+                        },
+                        from: (dbStore.role.typeCode === 'clerk') ? undefined : theTrade.oriUser.storeID
+                    };
+                if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
+                    boxDict[boxDictKey].typeList.push(thisTypeName);
+                    boxDict[boxDictKey].containerList[thisTypeName] = [];
+                }
+                boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
+            });
         }
+
+        var boxArr = Object.values(boxDict);
+        boxArr.sort((a, b) => b.boxTime - a.boxTime);
         for (var i = 0; i < boxArr.length; i++) {
             boxArr[i].containerOverview = [];
             for (var j = 0; j < boxArr[i].typeList.length; j++) {
@@ -306,7 +313,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (req, res, next)
 router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    var storeID = req.params.store;
+    var storeID = parseInt(req.params.store);
     process.nextTick(() => {
         Box.findOne({
             'boxID': boxID
@@ -317,52 +324,67 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 type: "DeliveryMessage",
                 message: "Can't Find The Box"
             });
-            promiseMethod(res, next, dbAdmin, 'Delivery', 0, false, null, aBox.containerList, () => {
-                aBox.delivering = true;
-                aBox.stocking = false;
-                aBox.storeID = storeID;
-                aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function (err) {
-                    if (err) return next(err);
-                    /*
-                    User.find({
-                        'roles.clerk.storeID': storeID
-                    }, function (err, userList) {
-                        var funcList = [];
-                        for (var i in userList) {
-                            if (typeof userList[i].pushNotificationArn !== "undefined")
-                                for (var keys in userList[i].pushNotificationArn) {
-                                    if (keys.indexOf('shop') >= 0)
-                                        funcList.push(new Promise((resolve, reject) => {
-                                            var localCtr = i;
-                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
-                                                action: "BOX_DELIVERY"
-                                            }, (err, data, payload) => {
-                                                if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
-                                                resolve([userList[localCtr].user.phone, data, payload]);
+            if (aBox.delivering) return res.status(403).json({
+                code: 'F007',
+                type: "DeliveryMessage",
+                message: "Box Already Delivering"
+            });
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: "Delivery",
+                newState: 0
+            }, {
+                boxID,
+                toStoreID: storeID
+            }, {
+                res,
+                next,
+                callback: () => {
+                    aBox.delivering = true;
+                    aBox.stocking = false;
+                    aBox.storeID = storeID;
+                    aBox.user.delivery = dbAdmin.user.phone;
+                    aBox.save(function (err) {
+                        if (err) return next(err);
+                        /*
+                        User.find({
+                            'roles.clerk.storeID': storeID
+                        }, function (err, userList) {
+                            var funcList = [];
+                            for (var i in userList) {
+                                if (typeof userList[i].pushNotificationArn !== "undefined")
+                                    for (var keys in userList[i].pushNotificationArn) {
+                                        if (keys.indexOf('shop') >= 0)
+                                            funcList.push(new Promise((resolve, reject) => {
+                                                var localCtr = i;
+                                                sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
+                                                    action: "BOX_DELIVERY"
+                                                }, (err, data, payload) => {
+                                                    if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
+                                                    resolve([userList[localCtr].user.phone, data, payload]);
+                                                });
+                                            }));
+                                    }
+                            }
+                            Promise
+                                .all(funcList)
+                                .then((data) => {
+                                    data.forEach(element => {
+                                        if (element[1] === 'err')
+                                            element.forEach((ele) => {
+                                                debug(ele);
                                             });
-                                        }));
-                                }
-                        }
-                        Promise
-                            .all(funcList)
-                            .then((data) => {
-                                data.forEach(element => {
-                                    if (element[1] === 'err')
-                                        element.forEach((ele) => {
-                                            debug(ele);
-                                        });
+                                    });
+                                })
+                                .catch((err) => {
+                                    if (err) debug(err);
                                 });
-                            })
-                            .catch((err) => {
-                                if (err) debug(err);
-                            });
-                    });*/
-                    return res.json({
-                        type: "DeliveryMessage",
-                        message: "Delivery Succeed"
+                        });*/
+                        return res.json({
+                            type: "DeliveryMessage",
+                            message: "Delivery Succeed"
+                        });
                     });
-                });
+                }
             });
         });
     });
@@ -371,17 +393,29 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
 router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox) return res.status(403).json({
-                code: 'F007',
-                type: "CancelDeliveryMessage",
-                message: "Can't Find The Box"
-            });
-            promiseMethod(res, next, dbAdmin, 'CancelDelivery', 5, true, null, aBox.containerList, () => {
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox) return res.status(403).json({
+            code: 'F007',
+            type: "CancelDeliveryMessage",
+            message: "Can't Find The Box"
+        });
+        if (!aBox.delivering) return res.status(403).json({
+            code: 'F007',
+            type: "DeliveryMessage",
+            message: "Box Isn't Delivering"
+        });
+        changeContainersState(aBox.containerList, dbAdmin, {
+            action: "CancelDelivery",
+            newState: 5
+        }, {
+            bypassStateValidation: true
+        }, {
+            res,
+            next,
+            callback: () => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.user.delivery = undefined;
@@ -392,7 +426,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
                         message: "CancelDelivery Succeed"
                     });
                 });
-            });
+            }
         });
     });
 });
@@ -401,28 +435,32 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
     var dbStore = req._user;
     var boxID = req.params.id;
     var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
-    res._payload.orderTime = Date.now();
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aDelivery) {
-            if (err) return next(err);
-            if (!aDelivery)
-                return res.status(403).json({
-                    code: 'F007',
-                    type: "SignMessage",
-                    message: "Can't Find The Box"
-                });
-            if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
-                return res.status(403).json({
-                    code: 'F008',
-                    type: "SignMessage",
-                    message: "Box is not belong to user's store"
-                });
-            promiseMethod(res, next, dbStore, 'Sign', 1, false, {
-                boxID: boxID,
-                storeID: (reqByAdmin) ? aDelivery.storeID : undefined
-            }, aDelivery.containerList, () => {
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aDelivery) {
+        if (err) return next(err);
+        if (!aDelivery)
+            return res.status(403).json({
+                code: 'F007',
+                type: "SignMessage",
+                message: "Can't Find The Box"
+            });
+        if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
+            return res.status(403).json({
+                code: 'F008',
+                type: "SignMessage",
+                message: "Box is not belong to user's store"
+            });
+        changeContainersState(aDelivery.containerList, dbStore, {
+            action: "Sign",
+            newState: 1
+        }, {
+            boxID,
+            signForStoreID: (reqByAdmin) ? aDelivery.storeID : undefined
+        }, {
+            res,
+            next,
+            callback: () => {
                 Box.remove({
                     'boxID': boxID
                 }, function (err) {
@@ -432,7 +470,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
                         message: "Sign Succeed"
                     });
                 });
-            });
+            }
         });
     });
 });
@@ -461,11 +499,20 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             type: "borrowContainerMessage",
             message: "Rent Request Expired"
         });
-        process.nextTick(() => changeState(false, id, dbStore, 'Rent', 2, res, next, reply));
+        changeContainersState(id, dbStore, {
+            action: "Rent",
+            newState: 2
+        }, {
+            rentToUser: reply,
+            orderTime: res._payload.orderTime
+        }, {
+            res,
+            next
+        });
     });
 });
 
-router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
+router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     if (!res._payload.orderTime) return res.status(403).json({
         code: 'F006',
@@ -473,8 +520,16 @@ router.post('/return/:id', regAsStore, regAsAdmin, validateRequest, function (re
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
-    process.nextTick(() => changeState(false, id, dbStore, 'Return', 3, res, next, storeId));
+    changeContainersState(id, dbStore, {
+        action: "Return",
+        newState: 3
+    }, {
+        returnFromStoreID: req.body.storeId,
+        orderTime: res._payload.orderTime
+    }, {
+        res,
+        next
+    });
 });
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res, next) {
@@ -485,18 +540,25 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
         message: "Missing Order Time"
     });
     var id = req.params.id;
-    var storeId = (typeof req.body['storeId'] !== 'undefined') ? req.body['storeId'] : null;
-    process.nextTick(() => changeState(false, id, dbAdmin, 'ReadyToClean', 4, res, next, storeId));
+    changeContainersState(id, dbAdmin, {
+        action: "ReadyToClean",
+        newState: 4
+    }, {
+        orderTime: res._payload.orderTime
+    }, {
+        res,
+        next
+    });
 });
 
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var body = req.body;
-    if (!body.containerList)
+    if (!body.containerList || !Array.isArray(body.containerList))
         return res.status(403).json({
             code: 'F011',
             type: 'BoxingMessage',
-            message: 'Boxing req body incomplete'
+            message: 'Boxing req body invalid'
         });
     var task = function (response) {
         Box.findOne({
@@ -508,15 +570,22 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                 type: 'BoxingMessage',
                 message: 'Box is already exist'
             });
-            promiseMethod(res, next, dbAdmin, 'Boxing', 5, false, null, body.containerList, () => {
-                newBox = new Box();
-                newBox.boxID = body.boxId;
-                newBox.user.box = dbAdmin.user.phone;
-                newBox.containerList = body.containerList;
-                newBox.save(function (err) {
-                    if (err) return next(err);
-                    return response(newBox);
-                });
+            changeContainersState(body.containerList, dbAdmin, {
+                action: "Boxing",
+                newState: 5
+            }, null, {
+                res,
+                next,
+                callback: () => {
+                    newBox = new Box();
+                    newBox.boxID = body.boxId;
+                    newBox.user.box = dbAdmin.user.phone;
+                    newBox.containerList = body.containerList;
+                    newBox.save(function (err) {
+                        if (err) return next(err);
+                        return response(newBox);
+                    });
+                }
             });
         });
     };
@@ -528,7 +597,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
             redis.set("boxCtr", boxCtr, (err, reply) => {
                 if (err) return next(err);
                 if (reply !== "OK") return next(reply);
-                redis.expire("boxCtr", dateCheckpoint(1) - Date.now(), (err, reply) => {
+                redis.expire("boxCtr", Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), (err, reply) => {
                     if (err) return next(err);
                     if (reply !== 1) return next(reply);
                     var today = new Date();
@@ -554,17 +623,24 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
 router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    process.nextTick(() => {
-        Box.findOne({
-            'boxID': boxID
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox) return res.status(403).json({
-                code: 'F007',
-                type: "UnboxingMessage",
-                message: "Can't Find The Box"
-            });
-            promiseMethod(res, next, dbAdmin, 'Unboxing', 4, true, null, aBox.containerList, () => {
+    Box.findOne({
+        'boxID': boxID
+    }, function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox) return res.status(403).json({
+            code: 'F007',
+            type: "UnboxingMessage",
+            message: "Can't Find The Box"
+        });
+        changeContainersState(aBox.containerList, dbAdmin, {
+            action: "Unboxing",
+            newState: 4
+        }, {
+            bypassStateValidation: true
+        }, {
+            res,
+            next,
+            callback: () => {
                 Box.remove({
                     'boxID': boxID
                 }, function (err) {
@@ -574,7 +650,7 @@ router.post('/cleanStation/unbox/:id', regAsAdmin, validateRequest, function (re
                         message: "Unboxing Succeed"
                     });
                 });
-            });
+            }
         });
     });
 });
@@ -651,13 +727,12 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (r
 });
 
 
-router.get('/challenge/token', regAsStore, regAsAdmin, validateRequest, generateSocketToken);
+router.get('/challenge/token', regAsBot, regAsStore, regAsAdmin, validateRequest, generateSocketToken);
 
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
-    var dbUser = req._user;
     var action = req.params.action;
-    var containerID = req.params.id;
+    var containerID = parseInt(req.params.id);
     var newState = actionTodo.indexOf(action);
     if (newState === -1) return next();
     req.headers['if-none-match'] = 'no-match-for-this';
@@ -682,12 +757,12 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
                         stateExplanation: status,
                         listExplanation: ["containerID", "originalState", "newState"],
                         errorList: [
-                            [parseInt(containerID), theContainer.statusCode, newState]
+                            [containerID, theContainer.statusCode, newState]
                         ],
                         errorDict: [{
-                            containerID: parseInt(containerID),
-                            originalState: parseInt(theContainer.statusCode),
-                            newState: parseInt(newState)
+                            containerID: containerID,
+                            originalState: theContainer.statusCode,
+                            newState: newState
                         }]
                     });
                 } else {
@@ -701,260 +776,268 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
     });
 });
 
-function promiseMethod(res, next, dbAdmin, action, newState, bypass, options, containerList, lastFunc) {
-    var funcList = [];
-    for (var i = 0; i < containerList.length; i++) {
-        funcList.push(
-            new Promise((resolve, reject) => {
-                changeState(resolve, containerList[i], dbAdmin, action, newState, res, reject, options, bypass);
-            })
-        );
-    }
+function changeContainersState(containers, reqUser, stateChanging, options, done) {
+    if (!Array.isArray(containers))
+        containers = [containers];
+    if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
+        throw new Error("Arguments Not Complete");
+    const messageType = stateChanging.action + 'Message';
+    const consts = {
+        containerTypeDict: done.res.app.get("containerType")
+    };
+
+    let tradeTime;
+    if (options && options.orderTime) tradeTime = options.orderTime; // Rent Return ReadyToClean NEED
+    else tradeTime = Date.now();
+    Object.assign(stateChanging, {
+        tradeTime
+    });
+
     Promise
-        .all(funcList)
-        .then((data) => {
-            var errIdList = [];
-            var errIdDict = [];
-            var saveFuncList = [];
-            var hasErr = false;
-            for (var i = 0; i < data.length; i++) {
-                if (!data[i][0]) {
-                    hasErr = true;
-                    errIdList.push([data[i][1], data[i][2], data[i][3]]);
-                    errIdDict.push({
-                        containerID: data[i][1],
-                        originalState: data[i][2],
-                        newState: data[i][3]
-                    });
-                }
-            }
-            if (!hasErr) {
-                for (var i = 0; i < data.length; i++) {
-                    saveFuncList.push(new Promise(data[i][1]));
-                }
-                Promise.all(saveFuncList).then(lastFunc).catch((err) => {
-                    next(err);
+        .all(containers.map(stateChangingTask(reqUser, stateChanging, options, consts)))
+        .then(taskResults => {
+            let oriUser;
+            let replyTxt;
+            let dataSavers = [];
+            let errorListArr = [];
+            let errorDictArr = [];
+            taskResults.forEach(aResult => {
+                if (aResult.txt) replyTxt = aResult.txt;
+                if (aResult.oriUser) oriUser = aResult.oriUser;
+                if (aResult.errorList) errorListArr.push(aResult.errorList);
+                if (aResult.errorDict) errorDictArr.push(aResult.errorDict);
+                if (aResult.dataSaver) dataSavers.push({
+                    containerID: aResult.ID,
+                    saver: aResult.dataSaver
                 });
+            });
+            let allSucceed = taskResults.every(aResult => aResult.succeed);
+            if (allSucceed) {
+                Promise
+                    .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
+                        const cleanStateCache = () => {
+                            delete containerStateCache[aDataSaver.containerID];
+                        };
+                        const resolve = bindFunction(cleanStateCache, oriResolve);
+                        const reject = bindFunction(cleanStateCache, oriReject);
+                        aDataSaver.saver(resolve, reject);
+                    })))
+                    .then((containerList) => {
+                        if (done.callback) return done.callback();
+                        done.res.status(200).json({
+                            type: messageType,
+                            message: replyTxt || stateChanging.action + ' Succeeded',
+                            oriUser: oriUser,
+                            containerList: containerList
+                        });
+                    }).catch(done.next);
             } else {
-                return res.status(403).json({
+                return done.res.status(403).json({
                     code: 'F001',
-                    type: action + "Message",
-                    message: action + " Error",
+                    type: messageType,
+                    message: "State Changing Invalid",
                     stateExplanation: status,
                     listExplanation: ["containerID", "originalState", "newState", "boxID"],
-                    errorList: errIdList,
-                    errorDict: errIdDict
+                    errorList: errorListArr,
+                    errorDict: errorDictArr
                 });
             }
         })
-        .catch((err) => {
-            if (err) {
-                if (typeof err.code === 'string') return res.status(403).json(err);
-                else {
-                    debug(err);
-                    return next(err);
-                }
+        .catch(err => {
+            if (typeof err.code !== "undefined") {
+                Object.assign(err, {
+                    type: messageType
+                });
+                done.res.status(403).json(err);
+            } else {
+                done.next(err);
             }
         });
 }
 
-function changeState(resolve, id, dbNew, action, newState, res, next, key = null, bypass = false) {
-    var messageType = action + 'Message';
-    var tmpStoreId;
-    Container.findOne({
-        'ID': id
-    }, function (err, container) {
-        if (err)
-            return next(err);
-        if (!container) {
-            var errData = {
-                code: 'F002',
-                type: messageType,
-                message: 'No container found',
-                data: id
-            };
-            if (resolve !== false) return next(errData);
-            else return res.status(403).json(errData);
-        } else if (!container.active) {
-            var errData = {
-                code: 'F003',
-                type: messageType,
-                message: 'Container not available',
-                data: id
-            };
-            if (resolve !== false) return next(errData);
-            else return res.status(403).json(errData);
-        }
-        if (action === 'Rent' && container.storeID !== dbNew.role.storeID) {
-            return res.status(403).json({
-                code: 'F010',
-                type: messageType,
-                message: "Container not belone to user's store"
-            });
-        } else if (action === 'Return' && key !== null) {
-            if (container.statusCode === 3) // 髒杯回收時已經被歸還過
-                return res.json({
-                    type: "ReturnMessage",
-                    message: "Already Return"
+let containerStateCache = {};
+
+function bindFunction(doFirst, then, argToAssign) {
+    return function bindedFunction() {
+        doFirst();
+        if (argToAssign && typeof arguments[0] !== "undefined") Object.assign(arguments[0], argToAssign);
+        then.apply(this, arguments);
+    };
+}
+
+function stateChangingTask(reqUser, stateChanging, option, consts) {
+    const action = stateChanging.action;
+    const tradeTime = stateChanging.tradeTime;
+    const options = option || {};
+    const boxID = options.boxID; // Sign Delivery NEED
+    const toStoreID = options.toStoreID; // Delivery NEED
+    const rentToUser = options.rentToUser; // Rent NEED
+    const signForStoreID = options.signForStoreID; // Sign
+    const returnFromStoreID = options.returnFromStoreID; // Return
+    const bypassStateValidation = options.bypassStateValidation || false;
+    const containerTypeDict = consts.containerTypeDict;
+    return function trade(aContainer) {
+        return new Promise((oriResolve, oriReject) => {
+            queue.push(doneThisTask => {
+                const resolve = bindFunction(doneThisTask, oriResolve, {
+                    succeed: true
                 });
-            else // 髒杯回收
-                tmpStoreId = key;
-        } else if (action === 'ReadyToClean' && key !== null) { // 髒杯回收
-            tmpStoreId = key;
-        } else if (action === 'Sign' && typeof key.storeID !== 'undefined') { // 正興街配送
-            tmpStoreId = key.storeID;
-        }
-        validateStateChanging(bypass, container.statusCode, newState, function (succeed) {
-            if (!succeed) {
-                var oriState = container.statusCode;
-                if (oriState === 0 || oriState === 1) {
-                    Box.findOne({
-                        'containerList': {
-                            '$all': [id]
-                        }
-                    }, function (err, aBox) {
-                        if (err) return next(err);
-                        id = parseInt(id);
-                        container.statusCode = parseInt(container.statusCode);
-                        newState = parseInt(newState);
-                        aBox.boxID = parseInt(aBox.boxID);
-                        if (resolve !== false)
-                            return resolve([false, id, container.statusCode, newState, aBox.boxID]);
-                        return res.status(403).json({
-                            code: 'F001',
-                            type: messageType,
-                            message: action + " Error",
-                            stateExplanation: status,
-                            listExplanation: ["containerID", "originalState", "newState", "boxID"],
-                            errorList: [
-                                [id, parseInt(container.statusCode), parseInt(newState), parseInt(aBox.boxID)]
-                            ],
-                            errorDict: [{
-                                containerID: id,
-                                originalState: container.statusCode,
-                                newState: newState,
-                                boxID: aBox.boxID
-                            }]
+                const resolveWithErr = bindFunction(doneThisTask, oriResolve, {
+                    succeed: false
+                });
+                const reject = bindFunction(doneThisTask, oriReject);
+                let aContainerId = parseInt(aContainer);
+                Container.findOne({
+                    'ID': aContainerId
+                }, function (err, theContainer) {
+                    if (err)
+                        return reject(err);
+                    if (!theContainer)
+                        return reject({
+                            code: 'F002',
+                            message: 'No container found',
+                            data: aContainerId
                         });
-                    });
-                } else {
-                    id = parseInt(id);
-                    container.statusCode = parseInt(container.statusCode);
-                    newState = parseInt(newState);
-                    if (resolve !== false)
-                        return resolve([false, id, container.statusCode, newState]);
-                    return res.status(403).json({
-                        code: 'F001',
-                        type: messageType,
-                        message: action + " Error",
-                        stateExplanation: status,
-                        listExplanation: ["containerID", "originalState", "newState"],
-                        errorList: [
-                            [id, container.statusCode, newState]
-                        ],
-                        errorDict: [{
-                            containerID: id,
-                            originalState: container.statusCode,
-                            newState: newState
-                        }]
-                    });
-                }
-            }
-            User.findOne({
-                'user.phone': (action === 'Rent') ? key : container.conbineTo
-            }, function (err, dbOri) {
-                if (err) return next(err);
-                if (!dbOri) {
-                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(container) +
-                        ' ID in uri : ' + id);
-                    return res.status(403).json({
-                        code: 'F004',
-                        type: messageType,
-                        message: 'No user found'
-                    });
-                } else if (!dbOri.active) {
-                    return res.status(403).json({
-                        code: 'F005',
-                        type: messageType,
-                        message: 'User has Banned'
-                    });
-                }
-                if (action === 'Rent') {
-                    var tmp = dbOri;
-                    dbOri = dbNew;
-                    dbNew = tmp;
-                } else if ((action === 'Return' || action === 'Sign') && typeof tmpStoreId !== 'undefined') {
-                    dbNew.role.storeID = tmpStoreId; // 正興街代簽收
-                } else if (action === 'ReadyToClean') {
-                    if (typeof tmpStoreId !== 'undefined' && tmpStoreId !== -1) {
-                        dbOri.role.storeID = tmpStoreId;
-                    } else if (container.statusCode === 1 && dbOri.roles.typeList.indexOf('admin') >= 0) { // 乾淨回收
-                        dbOri.role.storeID = container.storeID;
-                    }
-                }
-                try {
-                    newTrade = new Trade();
-                    newTrade.tradeTime = res._payload.orderTime || Date.now();
-                    newTrade.tradeType = {
-                        action: action,
-                        oriState: container.statusCode,
-                        newState: newState
-                    };
-                    newTrade.oriUser = {
-                        type: dbOri.role.typeCode,
-                        storeID: dbOri.role.storeID || container.storeID,
-                        phone: dbOri.user.phone
-                    };
-                    newTrade.newUser = {
-                        type: dbNew.role.typeCode,
-                        storeID: dbNew.role.storeID,
-                        phone: dbNew.user.phone
-                    };
-                    newTrade.container = {
-                        id: container.ID,
-                        typeCode: container.typeCode,
-                        cycleCtr: container.cycleCtr
-                    };
-                    if (action === 'Sign') newTrade.container.box = key.boxID;
-                    container.statusCode = newState;
-                    container.conbineTo = dbNew.user.phone;
-                    container.lastUsedAt = Date.now();
-                    if (action === 'Delivery') container.cycleCtr++;
-                    else if (action === 'CancelDelivery') container.cycleCtr--;
-                    if (action === 'Sign' || action === 'Return') {
-                        container.storeID = dbNew.role.storeID;
-                    } else {
-                        container.storeID = undefined;
-                    }
+                    if (!theContainer.active)
+                        return reject({
+                            code: 'F003',
+                            message: 'Container not available',
+                            data: aContainerId
+                        });
+                    const newState = stateChanging.newState;
+                    const oriState = theContainer.statusCode;
+                    if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
+                        return reject({
+                            code: 'F010',
+                            message: "Container not belone to user's store"
+                        });
+                    if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
+                        return resolve({
+                            ID: aContainerId,
+                            txt: "Already Return"
+                        });
+                    validateStateChanging(bypassStateValidation, containerStateCache[aContainerId] || oriState, newState, function (succeed) {
+                        if (!succeed) {
+                            let errorList = [aContainerId, oriState, newState];
+                            let errorDict = {
+                                containerID: aContainerId,
+                                originalState: oriState,
+                                newState: newState
+                            };
+                            let errorMsg = {
+                                errorList,
+                                errorDict
+                            };
+                            if (oriState === 0 || oriState === 1) {
+                                Box.findOne({
+                                    'containerList': {
+                                        '$all': [aContainerId]
+                                    }
+                                }, function (err, aBox) {
+                                    if (err) return reject(err);
+                                    if (!aBox) return resolveWithErr(errorMsg);
+                                    errorList.push(aBox.boxID);
+                                    errorDict.boxID = aBox.boxID;
+                                    return resolveWithErr(errorMsg);
+                                });
+                            } else {
+                                return resolveWithErr(errorMsg);
+                            }
+                        } else {
+                            User.findOne({
+                                'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
+                            }, function (err, oriUser) {
+                                if (err)
+                                    return reject(err);
+                                if (!oriUser) {
+                                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
+                                        ' ID in uri : ' + aContainerId);
+                                    return reject({
+                                        code: 'F004',
+                                        message: 'No user found'
+                                    });
+                                }
+                                if (!oriUser.active)
+                                    return reject({
+                                        code: 'F005',
+                                        message: 'User has Banned'
+                                    });
 
-                    const saveAll = function (callback, callback2, tmpTrade) {
-                        tmpTrade.save(function (err) {
-                            if (err) return callback2(err);
-                            container.save(function (err) {
-                                if (err) return callback2(err);
-                                return callback();
+                                if (action === 'Rent') {
+                                    let tmp = oriUser;
+                                    oriUser = reqUser;
+                                    reqUser = tmp;
+                                } else if (action === 'Sign' && typeof signForStoreID !== 'undefined') { // 代簽收
+                                    reqUser.role.storeID = signForStoreID;
+                                } else if (action === 'Return' && typeof returnFromStoreID !== 'undefined') { // 髒杯回收代歸還
+                                    reqUser.role.storeID = returnFromStoreID;
+                                } else if (action === 'ReadyToClean') {
+                                    oriUser.role.storeID = theContainer.storeID;
+                                }
+
+                                theContainer.statusCode = newState;
+                                theContainer.conbineTo = reqUser.user.phone;
+                                theContainer.lastUsedAt = Date.now();
+                                if (action === 'Delivery') theContainer.cycleCtr++;
+                                else if (action === 'CancelDelivery') theContainer.cycleCtr--;
+                                if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID || reqUser.roles.clerk.storeID;
+                                else theContainer.storeID = undefined;
+
+                                try {
+                                    let newTrade = new Trade({
+                                        tradeTime,
+                                        tradeType: {
+                                            action,
+                                            oriState,
+                                            newState
+                                        },
+                                        oriUser: {
+                                            type: oriUser.role.typeCode,
+                                            phone: oriUser.user.phone,
+                                            storeID: oriUser.role.storeID || (oriUser.roles.clerk ? oriUser.roles.clerk.storeID : undefined)
+                                        },
+                                        newUser: {
+                                            type: reqUser.role.typeCode,
+                                            phone: reqUser.user.phone,
+                                            storeID: reqUser.role.storeID || (reqUser.roles.clerk ? reqUser.roles.clerk.storeID : undefined)
+                                        },
+                                        container: {
+                                            id: theContainer.ID,
+                                            typeCode: theContainer.typeCode,
+                                            cycleCtr: theContainer.cycleCtr,
+                                            toStoreID,
+                                            box: boxID
+                                        }
+                                    });
+
+                                    containerStateCache[aContainerId] = newState;
+                                    resolve({
+                                        ID: aContainerId,
+                                        oriUser: oriUser.user.phone,
+                                        dataSaver: (doneSave, getErr) => {
+                                            newTrade.save(err => {
+                                                if (err) return getErr(err);
+                                                theContainer.save(err => {
+                                                    if (err) return getErr(err);
+                                                    doneSave({
+                                                        id: theContainer.ID,
+                                                        typeCode: theContainer.typeCode,
+                                                        typeName: containerTypeDict[theContainer.typeCode].name
+                                                    });
+                                                });
+                                            });
+                                        }
+                                    });
+                                } catch (error) {
+                                    reject(error);
+                                }
                             });
-                        });
-                    };
-
-                    if (resolve === false) {
-                        saveAll(() => res.status(200).json({
-                            type: messageType,
-                            message: action + ' Succeeded'
-                        }), next, newTrade);
-                    } else {
-                        var tmpTrade = new Object(newTrade);
-                        resolve([true, function (cb, cb2) {
-                            saveAll(cb, cb2, tmpTrade);
-                        }, tmpTrade]);
-                    }
-                } catch (err) {
-                    debug('#dbNew: ', JSON.stringify(dbNew), ', #dbOri: ', JSON.stringify(dbOri), ', #newTrade: ', JSON.stringify(newTrade));
-                    next(err);
-                }
+                        }
+                    });
+                });
             });
         });
-    });
+    };
 }
 
 router.post('/add/:id/:type', function (req, res, next) {
@@ -976,7 +1059,7 @@ router.post('/add/:id/:type', function (req, res, next) {
                 newContainer.ID = id;
                 newContainer.typeCode = typeCode;
                 newContainer.statusCode = 4;
-                newContainer.conbineTo = '0936111000';
+                newContainer.conbineTo = '0900000000';
                 newContainer.save(function (err) { // save the container
                     if (err) return next(err);
                     res.status(200).json({

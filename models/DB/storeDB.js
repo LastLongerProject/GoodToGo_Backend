@@ -20,15 +20,31 @@ var userSchema = mongoose.Schema({
         borrowable: Boolean
     },
     opening_hours: [{
-        open: { day: Number, time: String },
-        close: { day: Number, time: String }
+        open: {
+            day: Number,
+            time: String
+        },
+        close: {
+            day: Number,
+            time: String
+        }
     }],
     project: String,
-    opening_default: { type: Boolean, default: false },
-    active: { type: Boolean, default: true }
+    opening_default: {
+        type: Boolean,
+        default: false
+    },
+    active: {
+        type: Boolean,
+        default: true
+    }
+}, {
+    timestamps: true
 });
 
-userSchema.index({ "id": 1 });
+userSchema.index({
+    "id": 1
+});
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Store', userSchema);

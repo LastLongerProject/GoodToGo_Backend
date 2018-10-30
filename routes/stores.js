@@ -7,26 +7,29 @@ var redis = require("../models/redis");
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
-var wetag = require('../models/toolKit').wetag;
-var intReLength = require('../models/toolKit').intReLength;
-var dayFormatter = require('../models/toolKit').dayFormatter;
-var timeFormatter = require('../models/toolKit').timeFormatter;
-var monthFormatter = require('../models/toolKit').monthFormatter;
-var dateCheckpoint = require('../models/toolKit').dateCheckpoint;
+var wetag = require('../helpers/toolKit').wetag;
+var intReLength = require('../helpers/toolKit').intReLength;
+var dayFormatter = require('../helpers/toolKit').dayFormatter;
+var timeFormatter = require('../helpers/toolKit').timeFormatter;
+var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
+var monthFormatter = require('../helpers/toolKit').monthFormatter;
+var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
 
-var validateDefault = require('../models/validation/validateDefault');
-var validateRequest = require('../models/validation/validateRequest').JWT;
-var regAsStore = require('../models/validation/validateRequest').regAsStore;
-var regAsStoreManager = require('../models/validation/validateRequest').regAsStoreManager;
-var regAsAdminManager = require('../models/validation/validateRequest').regAsAdminManager;
+var validateDefault = require('../middlewares/validation/validateDefault');
+var validateRequest = require('../middlewares/validation/validateRequest').JWT;
+var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
-var Container = require('../models/DB/containerDB');
 var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
+var Container = require('../models/DB/containerDB');
 
 const historyDays = 14;
+const redisKey = storeID => `store_favorite:${storeID}`;
 
 router.get('/list', validateDefault, function (req, res, next) {
     var jsonData = {
@@ -66,7 +69,7 @@ router.get('/list', validateDefault, function (req, res, next) {
                     res.set('etag', wetag([storeList, count]));
                     for (var i = 0; i < storeList.length; i++) {
                         var tmpOpening = [];
-                        storeList[i].img_info.img_src = `${baseUrl}/images/${intReLength(storeList[i].id, 2)}/${token}`;
+                        storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
                         for (var j = 0; j < storeList[i].opening_hours.length; j++)
                             tmpOpening.push({
                                 close: storeList[i].opening_hours[j].close,
@@ -100,7 +103,7 @@ router.get('/list.js', function (req, res, next) {
     process.nextTick(function () {
         Place.find({
             "project": {
-                "$ne": "測試用帳號"
+                "$in": ["正興杯杯", "咖啡店連線"]
             },
             "active": true
         }, {}, {
@@ -193,7 +196,7 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, re
                     type: 'LayoffMessage',
                     message: 'Layoff succeed'
                 });
-            })
+            });
         });
     });
 });
@@ -203,7 +206,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     var type = Object.values(req.app.get('containerType'));
-    var forLoopLength = (dbStore.role.storeID === 17 || dbStore.role.storeID === 21 || dbStore.role.storeID === 22) ? type.length : ((type.length < 2) ? type.length : 2);
+    var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
@@ -243,22 +246,22 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
-                        if (tmpTypeCode >= 2 && (dbStore.role.storeID !== 17 && dbStore.role.storeID !== 21 && dbStore.role.storeID !== 22)) continue;
+                        if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
                         if (containers[i].statusCode === 1) {
-                            resJson['containers'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                            resJson['containers'][tmpTypeCode]['amount']++;
+                            resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
+                            resJson.containers[tmpTypeCode].amount++;
                         } else if (containers[i].statusCode === 3) {
-                            resJson['toReload'][tmpTypeCode]['IdList'].push(containers[i].ID);
-                            resJson['toReload'][tmpTypeCode]['amount']++;
+                            resJson.toReload[tmpTypeCode].IdList.push(containers[i].ID);
+                            resJson.toReload[tmpTypeCode].amount++;
                         }
                     }
                 }
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
                         if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.storeID)
-                            resJson['todayData']['rent']++;
+                            resJson.todayData.rent++;
                         else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.storeID)
-                            resJson['todayData']['return']++;
+                            resJson.todayData.return++;
                     }
                 }
                 res.json(resJson);
@@ -302,9 +305,10 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
     });
 });
 
-router.get('/getUser/:id', regAsStore, validateRequest, function (req, res, next) {
+router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
+    const thisRedisKey = redisKey(dbStore.role.storeID); // BOT??
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")
@@ -330,6 +334,7 @@ router.get('/getUser/:id', regAsStore, validateRequest, function (req, res, next
                             'phone': user.user.phone,
                             'apiKey': token
                         });
+                        redis.zincrby(thisRedisKey, 1, user.user.phone);
                     });
                 });
             }
@@ -634,104 +639,149 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         '$gte': dateCheckpoint(1 - parseInt(req.query['days'])),
         '$lt': dateCheckpoint(1)
     } : undefined;
-    process.nextTick(function () {
-        Trade.find({
-            'tradeTime': tradeTimeQuery,
-            'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.storeID
-        }, {}, {
-            sort: {
-                tradeTime: -1
-            }
-        }, function (err, rentTrades) {
-            if (err) return next(err);
-            Trade.find({
+    Trade.find({
+        '$or': [{
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Rent',
+                'oriUser.storeID': dbStore.role.storeID
+            },
+            {
                 'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
-            }, {}, {
-                sort: {
-                    tradeTime: -1
-                }
-            }, function (err, returnTrades) {
-                if (err) return next(err);
-                if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                    var newTypeArrGenerator = function () {
-                        var tmpArr = [];
-                        for (var aType in type) {
-                            tmpArr.push({
-                                typeCode: type[aType].typeCode,
-                                name: type[aType].name,
-                                IdList: [],
-                                amount: 0
-                            });
-                        }
-                        return tmpArr;
-                    };
-                    var resJson = {
-                        usedHistory: [],
-                        reloadedHistory: []
-                    };
-                    var ctr = 0;
-                    for (var i in resJson) {
-                        if (([rentTrades, returnTrades])[ctr++].length > 0)
-                            resJson[i].push({
-                                date: fullDateString(dateCheckpoint(0)),
-                                amount: 0,
-                                data: newTypeArrGenerator()
-                            });
-                    }
-                    var usageByDateByTypeGenerator = function (arrToParse, resultArr) {
-                        var tmpTypeCode;
-                        var dateCtr = 0;
-                        var checkpoint = dateCheckpoint(dateCtr);
-                        for (var i = 0; i < arrToParse.length; i++) {
-                            if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
-                                checkpoint = dateCheckpoint(--dateCtr);
-                                resultArr.push({
-                                    date: fullDateString(checkpoint),
-                                    amount: 0,
-                                    data: newTypeArrGenerator()
-                                });
-                                i--;
-                            } else {
-                                tmpTypeCode = arrToParse[i].container.typeCode;
-                                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
-                                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-                                resultArr[resultArr.length - 1].amount++;
-                            }
-                        }
-                    };
-                    usageByDateByTypeGenerator(rentTrades, resJson.usedHistory);
-                    usageByDateByTypeGenerator(returnTrades, resJson.reloadedHistory);
-                    res.json(resJson);
-                }
-            });
-        });
+            },
+            {
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'UndoReturn',
+                'oriUser.storeID': dbStore.role.storeID
+            },
+            {
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'ReadyToClean',
+                'oriUser.storeID': dbStore.role.storeID,
+                'tradeType.oriState': 1
+            },
+            {
+                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'UndoReadyToClean',
+                'newUser.storeID': dbStore.role.storeID,
+                'tradeType.newState': 1
+            }
+        ]
+    }, {}, {
+        sort: {
+            tradeTime: -1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
+
+        var rentTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Rent");
+        var returnTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Return");
+        var cleanReloadTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "ReadyToClean");
+
+        var newTypeArrGenerator = newTypeArrGeneratorFunction(type);
+
+        var resJson = {
+            usedHistory: [],
+            returnHistory: [],
+            cleanReloadHistory: []
+        };
+        var ctr = 0;
+        for (var i in resJson) {
+            if (([rentTrades, returnTrades, cleanReloadTrades])[ctr++].length > 0)
+                resJson[i].push({
+                    date: fullDateString(dateCheckpoint(0)),
+                    amount: 0,
+                    data: newTypeArrGenerator()
+                });
+        }
+        usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.usedHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, returnTrades, resJson.returnHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, cleanReloadTrades, resJson.cleanReloadHistory);
+        res.json(resJson);
     });
 });
 
+function newTypeArrGeneratorFunction(type) {
+    return function () {
+        var tmpArr = [];
+        for (var aType in type) {
+            tmpArr.push({
+                typeCode: type[aType].typeCode,
+                name: type[aType].name,
+                IdList: [],
+                amount: 0
+            });
+        }
+        return tmpArr;
+    };
+}
+
+function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) {
+    var tmpTypeCode;
+    var dateCtr = 0;
+    var checkpoint = dateCheckpoint(dateCtr);
+    for (var i = 0; i < arrToParse.length; i++) {
+        if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
+            checkpoint = dateCheckpoint(--dateCtr);
+            resultArr.push({
+                date: fullDateString(checkpoint),
+                amount: 0,
+                data: newTypeArrGenerator()
+            });
+            i--;
+        } else {
+            tmpTypeCode = arrToParse[i].container.typeCode;
+            resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
+            resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+            resultArr[resultArr.length - 1].amount++;
+        }
+    }
+}
+
 router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function () {
-        Trade.find({
-            'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.storeID
-        }, function (err, rentTrades) {
-            if (err) return next(err);
-            if (typeof rentTrades !== 'undefined') {
-                getFavorite(rentTrades, function (userList) {
-                    resJson = {};
-                    if (userList.length > 5)
-                        resJson.userList = userList.slice(0, 5);
-                    else if (userList.length > 0)
-                        resJson.userList = userList;
-                    else
-                        resJson.userList = [];
-                    res.json(resJson);
+    const thisRedisKey = redisKey(dbStore.role.storeID);
+    redis.exists(thisRedisKey, (err, keyIsExists) => {
+        if (err) return next(err);
+        if (keyIsExists) {
+            redis.zrevrange(thisRedisKey, 0, 4, "withscores", (err, reply) => {
+                if (err) return next(err);
+                let favoriteList = [];
+                reply.forEach((theValue, index) => {
+                    if (index % 2 === 0) {
+                        return favoriteList.push({
+                            phone: theValue
+                        });
+                    } else {
+                        return Object.assign(favoriteList[favoriteList.length - 1], {
+                            times: parseInt(theValue)
+                        });
+                    }
                 });
-            }
-        });
+                res.json({
+                    userList: favoriteList
+                });
+            });
+        } else {
+            Trade.find({
+                'tradeType.action': 'Rent',
+                'oriUser.storeID': dbStore.role.storeID
+            }, function (err, rentTrades) {
+                if (err) return next(err);
+                if (typeof rentTrades !== 'undefined') {
+                    getFavorite(rentTrades, function (userList) {
+                        let favoriteList = userList.slice(0, 5);
+                        res.json({
+                            userList: favoriteList
+                        });
+                        userList.map(aUser => redis.zadd(thisRedisKey, aUser.times, aUser.phone));
+                    });
+                }
+            });
+        }
     });
 });
 
