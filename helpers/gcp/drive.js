@@ -8,15 +8,16 @@ var debug = require('debug')('goodtogo_backend:google_drive');
 
 var googleAuth = require("./auth");
 const configs = require("../../config/config").google;
+const ROOT_DIR = require("../../config/config").rootDir;
 const GOOGLE_CONTENT_PATH = "./assets/json/googleContent.json";
 
 var connectionCtr = 0;
 
-if (!fs.existsSync("./assets/")) fs.mkdirSync("./assets/");
-if (!fs.existsSync("./assets/json")) fs.mkdirSync("./assets/json");
-if (!fs.existsSync("./assets/images")) fs.mkdirSync("./assets/images");
-if (!fs.existsSync("./assets/images/icon")) fs.mkdirSync("./assets/images/icon");
-if (!fs.existsSync("./assets/images/shop")) fs.mkdirSync("./assets/images/shop");
+if (!fs.existsSync(`${ROOT_DIR}/assets/`)) fs.mkdirSync(`${ROOT_DIR}/assets/`);
+if (!fs.existsSync(`${ROOT_DIR}/assets/json`)) fs.mkdirSync(`${ROOT_DIR}/assets/json`);
+if (!fs.existsSync(`${ROOT_DIR}/assets/images`)) fs.mkdirSync(`${ROOT_DIR}/assets/images`);
+if (!fs.existsSync(`${ROOT_DIR}/assets/images/icon`)) fs.mkdirSync(`${ROOT_DIR}/assets/images/icon`);
+if (!fs.existsSync(`${ROOT_DIR}/assets/images/shop`)) fs.mkdirSync(`${ROOT_DIR}/assets/images/shop`);
 
 module.exports = {
     getContainer: function (forceRenew, cb) {
@@ -132,7 +133,7 @@ function downloadFile(aFile, type, resolve, reject) {
                         if (type === 'shop') {
                             sharp(buffer)
                                 .resize(500)
-                                .toFile('./assets/images/' + type + '/' + compressedFileName)
+                                .toFile(ROOT_DIR + '/assets/images/' + type + '/' + compressedFileName)
                                 .then(function () {
                                     resolve(aFile);
                                 });
@@ -140,7 +141,7 @@ function downloadFile(aFile, type, resolve, reject) {
                             resolve(aFile);
                         }
                     })
-                    .pipe(fs.createWriteStream('./assets/images/' + type + '/' + fileName));
+                    .pipe(fs.createWriteStream(ROOT_DIR + '/assets/images/' + type + '/' + fileName));
             }).catch(err => {
                 if (err) return reject(err);
             });
