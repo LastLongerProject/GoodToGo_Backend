@@ -9,7 +9,7 @@ var debug = require('debug')('goodtogo_backend:google_drive');
 var googleAuth = require("./auth");
 const configs = require("../../config/config").google;
 const ROOT_DIR = require("../../config/config").rootDir;
-const GOOGLE_CONTENT_PATH = "./assets/json/googleContent.json";
+const GOOGLE_CONTENT_PATH = `${ROOT_DIR}/assets/json/googleContent.json`;
 
 var connectionCtr = 0;
 

@@ -1,14 +1,14 @@
-var User = require('../models/DB/userDB');
-var UserKeys = require('../models/DB/userKeysDB');
-var appInit = require('./appInit');
-var dateCheckpoint = require('./toolKit').dateCheckpoint;
+const User = require('../models/DB/userDB');
+const UserKeys = require('../models/DB/userKeysDB');
+const appInit = require('./appInit');
+const dateCheckpoint = require('./toolKit').dateCheckpoint;
 
-var fs = require('fs');
-var ROOT_DIR = require('../config/config').rootDir;
-var crypto = require('crypto');
-var debug = require('debug')('goodtogo_backend:scheduler');
+const fs = require('fs');
+const ROOT_DIR = require('../config/config').rootDir;
+const crypto = require('crypto');
+const debug = require('debug')('goodtogo_backend:scheduler');
 debug.log = console.log.bind(console);
-var debugError = require('debug')('goodtogo_backend:schedulerERR');
+const debugError = require('debug')('goodtogo_backend:schedulerERR');
 
 function cb() {} //do nothing
 function driveCb(succeed, data) {
