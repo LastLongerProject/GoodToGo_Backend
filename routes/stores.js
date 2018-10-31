@@ -14,6 +14,7 @@ var timeFormatter = require('../helpers/toolKit').timeFormatter;
 var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
 var monthFormatter = require('../helpers/toolKit').monthFormatter;
 var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var getDateCheckpoint = require('../helpers/toolKit').getDateCheckpoint;
 
 var validateDefault = require('../middlewares/validation/validateDefault');
 var validateRequest = require('../middlewares/validation/validateRequest').JWT;
@@ -635,71 +636,104 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
 router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = req.app.get('containerType');
-    var tradeTimeQuery = (req.query['days']) ? {
-        '$gte': dateCheckpoint(1 - parseInt(req.query['days'])),
-        '$lt': dateCheckpoint(1)
-    } : undefined;
-    Trade.find({
+    req.clearTimeout();
+    var tradeQuery = {
         '$or': [{
-                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Sign',
+                'newUser.storeID': dbStore.role.storeID
+            },
+            {
                 'tradeType.action': 'Rent',
                 'oriUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'UndoReturn',
                 'oriUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbStore.role.storeID,
-                'tradeType.oriState': 1
             },
             {
-                'tradeTime': tradeTimeQuery,
-                'tradeType.action': 'UndoReadyToClean',
-                'newUser.storeID': dbStore.role.storeID,
-                'tradeType.newState': 1
+                'tradeType.action': 'UndoReadyToClean'
             }
         ]
-    }, {}, {
+    };
+    if (req.query.days)
+        Object.assign(tradeQuery, {
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - parseInt(req.query.days)),
+                '$lt': dateCheckpoint(1)
+            }
+        });
+    Trade.find(tradeQuery, {}, {
         sort: {
-            tradeTime: -1
+            tradeTime: 1
         }
     }, function (err, tradeList) {
         if (err) return next(err);
 
         cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
 
-        var rentTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Rent");
-        var returnTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Return");
-        var cleanReloadTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "ReadyToClean");
+        var unusedTradesDict = {};
+        var usedTrades = [];
+        var rentTrades = [];
+        var returnTrades = [];
+        var cleanReloadTrades = [];
+        tradeList.forEach(aTrade => {
+            let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+            if (aTrade.tradeType.action === "Sign") {
+                unusedTradesDict[containerKey] = aTrade;
+            } else if (aTrade.tradeType.action === "Rent") {
+                rentTrades.push(aTrade);
+                if (unusedTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete unusedTradesDict[containerKey];
+                }
+            } else if (aTrade.tradeType.action === "Return") {
+                returnTrades.push(aTrade);
+                if (unusedTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete unusedTradesDict[containerKey];
+                }
+            } else if (aTrade.tradeType.action === "ReadyToClean") {
+                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.role.storeID) {
+                    cleanReloadTrades.push(aTrade);
+                    if (unusedTradesDict[containerKey]) {
+                        delete unusedTradesDict[containerKey];
+                    }
+                } else if (aTrade.tradeType.oriState === 3 && unusedTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete unusedTradesDict[containerKey];
+                }
+            }
+        });
 
         var newTypeArrGenerator = newTypeArrGeneratorFunction(type);
 
         var resJson = {
+            unusedHistory: [],
             usedHistory: [],
+            rentHistory: [],
             returnHistory: [],
             cleanReloadHistory: []
         };
-        var ctr = 0;
-        for (var i in resJson) {
-            if (([rentTrades, returnTrades, cleanReloadTrades])[ctr++].length > 0)
-                resJson[i].push({
-                    date: fullDateString(dateCheckpoint(0)),
-                    amount: 0,
-                    data: newTypeArrGenerator()
-                });
-        }
-        usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.usedHistory);
+        var unusedTrades = Object.values(unusedTradesDict);
+        usageByDateByTypeGenerator(newTypeArrGenerator, unusedTrades, resJson.unusedHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, usedTrades, resJson.usedHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.rentHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, returnTrades, resJson.returnHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, cleanReloadTrades, resJson.cleanReloadHistory);
+        for (let aHistoryType in resJson) {
+            let thisHistoryType = resJson[aHistoryType];
+            for (let historyArrIndex in thisHistoryType) {
+                if (thisHistoryType[historyArrIndex].amount === 0)
+                    delete thisHistoryType[historyArrIndex];
+            }
+        }
         res.json(resJson);
     });
 });
@@ -720,23 +754,30 @@ function newTypeArrGeneratorFunction(type) {
 }
 
 function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) {
-    var tmpTypeCode;
-    var dateCtr = 0;
-    var checkpoint = dateCheckpoint(dateCtr);
-    for (var i = 0; i < arrToParse.length; i++) {
-        if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
-            checkpoint = dateCheckpoint(--dateCtr);
-            resultArr.push({
-                date: fullDateString(checkpoint),
-                amount: 0,
-                data: newTypeArrGenerator()
-            });
-            i--;
-        } else {
-            tmpTypeCode = arrToParse[i].container.typeCode;
-            resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
-            resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-            resultArr[resultArr.length - 1].amount++;
+    if (arrToParse.length > 0) {
+        var tmpTypeCode;
+        var checkpoint = getDateCheckpoint(arrToParse[0].tradeTime);
+        resultArr.push({
+            date: fullDateString(checkpoint),
+            amount: 0,
+            data: newTypeArrGenerator()
+        });
+        for (var i = 0; i < arrToParse.length; i++) {
+            let theTrade = arrToParse[i];
+            if (theTrade.tradeTime - checkpoint > 1000 * 60 * 60 * 24) {
+                checkpoint = getDateCheckpoint(theTrade.tradeTime);
+                resultArr.push({
+                    date: fullDateString(checkpoint),
+                    amount: 0,
+                    data: newTypeArrGenerator()
+                });
+                i--;
+            } else {
+                tmpTypeCode = theTrade.container.typeCode;
+                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                resultArr[resultArr.length - 1].amount++;
+            }
         }
     }
 }

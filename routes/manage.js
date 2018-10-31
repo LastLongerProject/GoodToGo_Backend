@@ -14,6 +14,7 @@ var refreshContainer = require('../helpers/appInit').refreshContainer;
 var refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
 var cleanUndo = require('../helpers/toolKit').cleanUndoTrade;
 var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var getWeekCheckpoint = require('../helpers/toolKit').getWeekCheckpoint;
 
 var Box = require('../models/DB/boxDB');
 var User = require('../models/DB/userDB');
@@ -1107,15 +1108,6 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
 router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
     res.json({});
 });
-
-function getWeekCheckpoint(date) {
-    if (!date) date = new Date();
-    var timezoneFix = 0;
-    var isWindows = process.env.OS === 'Windows_NT';
-    if (date.getHours() < 16 && !isWindows)
-        timezoneFix--;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, isWindows ? 0 : 16, 0, 0, 0);
-}
 
 const isPhone = /09[0-9]{8}/;
 

@@ -18,6 +18,20 @@ module.exports = {
         var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint + timezoneFix, 16, 0, 0, 0);
         return date;
     },
+    getDateCheckpoint: function (date) {
+        if (!date) date = new Date();
+        var timezoneFix = 0;
+        if (date.getHours() < 16)
+            timezoneFix--;
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate() + timezoneFix, 16, 0, 0, 0);
+    },
+    getWeekCheckpoint: function (date) {
+        if (!date) date = new Date();
+        var timezoneFix = 0;
+        if (date.getHours() < 16)
+            timezoneFix--;
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1 + timezoneFix, 16, 0, 0, 0);
+    },
     timeFormatter: function (dateToFormat) {
         var tmpHour = dateToFormat.getHours() + 8;
         var hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
@@ -129,6 +143,14 @@ if (process.env.OS === 'Windows_NT') {
         var dateNow = new Date();
         var date = new Date(dateNow.getFullYear(), dateNow.getMonth(), dateNow.getDate() + checkpoint, 0, 0, 0, 0);
         return date;
+    };
+    module.exports.getDateCheckpoint = function (date) {
+        if (!date) date = new Date();
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+    };
+    module.exports.getWeekCheckpoint = function (date) {
+        if (!date) date = new Date();
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + 1, 0, 0, 0, 0);
     };
     module.exports.dayFormatter = function (dateToFormat) {
         return dateToFormat.getDate();
