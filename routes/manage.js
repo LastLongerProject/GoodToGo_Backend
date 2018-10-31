@@ -566,6 +566,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 var usedContainer = dataCached.usedContainer || {};
                 var unusedContainer = dataCached.unusedContainer || {};
                 result.history = dataCached.history || [];
+
                 tradeList.forEach(function (aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                     lastUsed[aTrade.container.id] = {
@@ -713,7 +714,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 res.json(result);
 
                 if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                    var timestamp = now - MILLISECONDS_OF_A_WEEK;
+                    var timestamp = tradeList.length > 0 ? tradeList[tradeList.length - 1].tradeTime.valueOf() : (dataCached.timestamp || Date.now());
                     var toCache = {
                         timestamp,
                         cachedAt: Date.now(),
