@@ -974,12 +974,15 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     oriUser.role.storeID = theContainer.storeID;
                                 }
 
+                                if (typeof reqUser.role.storeID === "undefined" && reqUser.roles.clerk) reqUser.role.storeID = reqUser.roles.clerk.storeID;
+                                if (typeof oriUser.role.storeID === "undefined" && oriUser.roles.clerk) oriUser.role.storeID = oriUser.roles.clerk.storeID;
+
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = reqUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 if (action === 'Delivery') theContainer.cycleCtr++;
                                 else if (action === 'CancelDelivery') theContainer.cycleCtr--;
-                                if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID || reqUser.roles.clerk.storeID;
+                                if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID;
                                 else theContainer.storeID = undefined;
 
                                 try {
@@ -993,12 +996,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         oriUser: {
                                             type: oriUser.role.typeCode,
                                             phone: oriUser.user.phone,
-                                            storeID: oriUser.role.storeID || (oriUser.roles.clerk ? oriUser.roles.clerk.storeID : undefined)
+                                            storeID: oriUser.role.storeID
                                         },
                                         newUser: {
                                             type: reqUser.role.typeCode,
                                             phone: reqUser.user.phone,
-                                            storeID: reqUser.role.storeID || (reqUser.roles.clerk ? reqUser.roles.clerk.storeID : undefined)
+                                            storeID: reqUser.role.storeID
                                         },
                                         container: {
                                             id: theContainer.ID,
