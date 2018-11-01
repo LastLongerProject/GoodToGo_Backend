@@ -12,6 +12,7 @@ var Box = require('../models/DB/boxDB');
 var Container = require('../models/DB/containerDB');
 var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
+var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
@@ -33,12 +34,10 @@ const historyDays = 14;
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
 router.get('/globalUsedAmount', function (req, res, next) {
-    Trade.count({
-        "tradeType.action": "Return"
-    }, function (err, count) {
+    getGlobalUsedAmount((err, count) => {
         if (err) return next(err);
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send((count + 14642).toString());
+        res.send(count.toString());
         res.end();
     });
 });

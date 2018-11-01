@@ -491,12 +491,6 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
         payload = {
             apiKey: keyDict[dbUser.role.typeCode].apiKey,
             secretKey: keyDict[dbUser.role.typeCode].secretKey,
-            role: {
-                typeCode: dbUser.role.typeCode,
-                storeID: dbUser.role.storeID,
-                storeName: (dbUser.role.typeCode === "clerk") ? storeName : undefined,
-                manager: dbUser.role.manager
-            },
             roles: {
                 typeList: dbUser.roles.typeList,
                 customer: {
@@ -526,13 +520,6 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
         payload = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
-            role: {
-                typeCode: dbUser.role.typeCode,
-                storeID: dbUser.role.storeID,
-                stationID: dbUser.role.stationID,
-                storeName: storeName,
-                manager: dbUser.role.manager
-            },
             roles: dbUser.roles
         };
         if (payload.roles && payload.roles.clerk) {

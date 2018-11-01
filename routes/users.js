@@ -13,6 +13,7 @@ var intReLength = require('../helpers/toolKit').intReLength;
 var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
 var subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 var Trade = require('../models/DB/tradeDB');
+var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 router.post('/signup', validateDefault, function (req, res, next) { // for CUSTOMER
     req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
@@ -309,14 +310,12 @@ router.get('/data', validateRequest, function (req, res, next) {
         });
 
         var inUsedList = Object.values(inUsedDict).sort((a, b) => b.time - a.time);
-        Trade.count({
-            "tradeType.action": "Return"
-        }, function (err, count) {
+        getGlobalUsedAmount((err, globalAmount) => {
             if (err) return next(err);
             res.json({
                 usingAmount: inUsedList.length,
                 data: inUsedList.concat(returnedList),
-                globalAmount: count + 14642
+                globalAmount: globalAmount + 14642
             });
         });
     });

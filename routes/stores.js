@@ -28,6 +28,7 @@ var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 var Container = require('../models/DB/containerDB');
+var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -572,11 +573,9 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    Trade.count({
-                        'tradeType.action': 'Return'
-                    }, (err, totalAmount) => {
+                    getGlobalUsedAmount((err, globalAmount) => {
                         if (err) return reject(err);
-                        resolve(totalAmount);
+                        resolve(globalAmount);
                     });
                 })
             ])
