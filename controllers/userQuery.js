@@ -156,7 +156,7 @@ module.exports = {
                                 apiKey: returnKeys.apiKey,
                                 secretKey: returnKeys.secretKey,
                                 user: newUser._id,
-                                roleType: roles.typeList[0]
+                                roleType: newUser.roles.typeList[0]
                             });
                             newUser.save(function (err) {
                                 if (err) return done(err);
