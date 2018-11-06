@@ -10,6 +10,16 @@ module.exports = {
         var len = buf.length;
         return 'W/"' + len.toString(16) + '-' + crc32.unsigned(buf) + '"';
     },
+    intReLength: function (data, length) {
+        var str = data.toString();
+        const zeroToAppend = length - str.length;
+        if (zeroToAppend) {
+            for (let j = 0; j < zeroToAppend; j++) {
+                str = "0" + str;
+            }
+        }
+        return str;
+    },
     dateCheckpoint: function (checkpoint) {
         var dateNow = new Date();
         var timezoneFix = 0;
@@ -34,8 +44,8 @@ module.exports = {
     },
     timeFormatter: function (dateToFormat) {
         var tmpHour = dateToFormat.getHours() + 8;
-        var hoursFormatted = intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
-        var minutesFormatted = intReLength(dateToFormat.getMinutes(), 2);
+        var hoursFormatted = module.exports.intReLength((tmpHour >= 24) ? tmpHour - 24 : tmpHour, 2);
+        var minutesFormatted = module.exports.intReLength(dateToFormat.getMinutes(), 2);
         return hoursFormatted + ":" + minutesFormatted;
     },
     dayFormatter: function (dateToFormat) {
@@ -50,7 +60,11 @@ module.exports = {
             localDate.setDate(localDate.getDate() + 1);
         return localDate.getMonth() + 1;
     },
-    intReLength: intReLength,
+    fullDateString: function (date) {
+        dayFormatted = module.exports.intReLength(module.exports.dayFormatter(date), 2);
+        monthFormatted = module.exports.intReLength(module.exports.monthFormatter(date), 2);
+        return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
+    },
     validateStateChanging: function (bypass, oriState, newState, callback) {
         if (bypass) {
             switch (newState) {

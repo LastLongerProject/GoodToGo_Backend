@@ -9,11 +9,10 @@ var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
 var wetag = require('../helpers/toolKit').wetag;
 var intReLength = require('../helpers/toolKit').intReLength;
-var dayFormatter = require('../helpers/toolKit').dayFormatter;
 var timeFormatter = require('../helpers/toolKit').timeFormatter;
 var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
-var monthFormatter = require('../helpers/toolKit').monthFormatter;
 var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var fullDateString = require('../helpers/toolKit').fullDateString;
 var getDateCheckpoint = require('../helpers/toolKit').getDateCheckpoint;
 
 var validateDefault = require('../middlewares/validation/validateDefault');
@@ -958,12 +957,6 @@ function getFavorite(data, callback) {
         return b.times - a.times;
     });
     return callback(sortable);
-}
-
-function fullDateString(date) {
-    dayFormatted = intReLength(dayFormatter(date), 2);
-    monthFormatted = intReLength(monthFormatter(date), 2);
-    return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
 }
 
 module.exports = router;

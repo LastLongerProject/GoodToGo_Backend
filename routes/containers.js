@@ -204,6 +204,9 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
     var dbStore = req._user;
     var typeDict = req.app.get('containerType');
     var queryCond;
+    var queryDays;
+    if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
+    else queryDays = historyDays;
     if (dbStore.role.typeCode === 'clerk')
         queryCond = {
             '$or': [{
@@ -213,7 +216,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
                 'tradeType.action': 'UndoReadyToClean'
             }],
             'tradeTime': {
-                '$gte': dateCheckpoint(1 - historyDays)
+                '$gte': dateCheckpoint(1 - queryDays)
             }
         };
     else
@@ -222,7 +225,7 @@ router.get('/get/reloadHistory', regAsAdmin, regAsStore, validateRequest, functi
                 '$in': ['ReadyToClean', 'UndoReadyToClean']
             },
             'tradeTime': {
-                '$gte': dateCheckpoint(1 - historyDays)
+                '$gte': dateCheckpoint(1 - queryDays)
             }
         };
     Trade.find(queryCond, function (err, list) {
@@ -498,7 +501,9 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             type: "borrowContainerMessage",
             message: "Rent Request Expired"
         });
-        changeContainersState(id, dbStore, {
+        var container = req.params.id;
+        if (container === "list") container = req.body.containers;
+        changeContainersState(container, dbStore, {
             action: "Rent",
             newState: 2
         }, {
@@ -518,8 +523,9 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         type: "returnContainerMessage",
         message: "Missing Order Time"
     });
-    var id = req.params.id;
-    changeContainersState(id, dbStore, {
+    var container = req.params.id;
+    if (container === "list") container = req.body.containers;
+    changeContainersState(container, dbStore, {
         action: "Return",
         newState: 3
     }, {
@@ -538,8 +544,9 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
         type: "readyToCleanMessage",
         message: "Missing Order Time"
     });
-    var id = req.params.id;
-    changeContainersState(id, dbAdmin, {
+    var container = req.params.id;
+    if (container === "list") container = req.body.containers;
+    changeContainersState(container, dbAdmin, {
         action: "ReadyToClean",
         newState: 4
     }, {

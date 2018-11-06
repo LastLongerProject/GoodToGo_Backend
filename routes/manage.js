@@ -14,7 +14,9 @@ var refreshContainer = require('../helpers/appInit').refreshContainer;
 var refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
 var cleanUndo = require('../helpers/toolKit').cleanUndoTrade;
 var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var fullDateString = require('../helpers/toolKit').fullDateString;
 var getWeekCheckpoint = require('../helpers/toolKit').getWeekCheckpoint;
+var updateSummary = require("../helpers/gcp/sheet").updateSummary;
 
 var Box = require('../models/DB/boxDB');
 var User = require('../models/DB/userDB');
@@ -433,7 +435,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                             weeklyAmountByStore[usedContainerRecord.storeID] = {};
                             weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
                         }
-                        if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                        while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                             weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                             for (var aStore in weeklyAmountByStore) {
                                 weeklyAmountByStore[aStore][weekCheckpoint] = 0;
@@ -683,7 +685,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     weeklyAmount[weekCheckpoint] = 0;
                     for (var usedContainerKey in usedContainer) {
                         var usedContainerRecord = usedContainer[usedContainerKey];
-                        if (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                        while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                             weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                             weeklyAmount[weekCheckpoint] = 0;
                         }
@@ -1067,7 +1069,6 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
     var containerDict = req.app.get('containerWithDeactive');
-    var storeDict = req.app.get('store');
     Container.findOne({
         "ID": CONTAINER_ID
     }, (err, theContainer) => {
@@ -1108,6 +1109,156 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
 
 router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
     res.json({});
+});
+
+router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
+    const storeDict = req.app.get("store");
+    let storesSummary = {};
+    let storesTmpData = {};
+    for (let aStoreKey in storeDict) {
+        let theStore = storeDict[aStoreKey];
+        Object.assign(storesSummary, {
+            [aStoreKey]: {
+                ID: theStore.ID,
+                name: theStore.name,
+                active: theStore.active,
+                dataRaws: []
+            }
+        });
+        storesTmpData[aStoreKey] = [];
+    }
+    Trade.find({
+        'tradeType.action': {
+            '$in': ['Sign', 'Rent', 'Return', 'UndoReturn', 'ReadyToClean', 'UndoReadyToClean']
+        }
+    }, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        debug("[Manage/shopSummary] Get DB Response!");
+        cleanUndo(['Return', 'ReadyToClean'], tradeList);
+
+        var lastUsed = {};
+        var unusedContainer = {};
+
+        tradeList.forEach(function (aTrade) {
+            let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+            lastUsed[aTrade.container.id] = {
+                time: aTrade.tradeTime,
+                action: aTrade.tradeType.action,
+                storeID: aTrade.newUser.storeID
+            };
+            if (aTrade.tradeType.action === "Sign") {
+                unusedContainer[containerKey] = {
+                    time: aTrade.tradeTime,
+                    storeID: aTrade.newUser.storeID
+                };
+            } else if (aTrade.tradeType.action === "Return" && containerKey in unusedContainer) {
+                let rentFromStoreID = unusedContainer[containerKey].storeID;
+                let returnFromStoreID = aTrade.newUser.storeID;
+                let storeDiff = rentFromStoreID === returnFromStoreID;
+                storesTmpData[rentFromStoreID].push({
+                    tradeType: "Rent",
+                    time: unusedContainer[containerKey].time,
+                    diffStore: storeDiff
+                });
+                storesTmpData[returnFromStoreID].push({
+                    tradeType: "Return",
+                    time: aTrade.tradeTime,
+                    diffStore: storeDiff
+                });
+                delete unusedContainer[containerKey];
+            }
+        });
+
+        unusedContainer = null;
+        var now = Date.now();
+        for (var containerID in lastUsed) {
+            var timeToNow = now - lastUsed[containerID].time;
+            if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
+                timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                storesTmpData[lastUsed[containerID].storeID].push({
+                    tradeType: "Lost",
+                    time: lastUsed[containerID].time
+                });
+            }
+        }
+        lastUsed = null;
+
+        debug("[Manage/shopSummary] Finish Parse!");
+        // trade to rawdata
+        let dataSets = [];
+        let sheetNames = [];
+        for (let aStoreKey in storesTmpData) {
+            let theStoreSummary = storesSummary[aStoreKey];
+            let theStoreTmpData = storesTmpData[aStoreKey];
+            theStoreTmpData.sort((a, b) => a.time - b.time);
+            if (theStoreTmpData.length > 0) {
+                let weekCheckpoint = getWeekCheckpoint(theStoreTmpData[0].time);
+                for (let aRecordKey in theStoreTmpData) {
+                    let theTradeRecord = theStoreTmpData[aRecordKey];
+                    let toSummaryRecord;
+                    if (theStoreSummary.dataRaws.length !== 0) toSummaryRecord = theStoreSummary.dataRaws[theStoreSummary.dataRaws.length - 1];
+                    while (!toSummaryRecord || (theTradeRecord.time - weekCheckpoint) >= MILLISECONDS_OF_A_WEEK) {
+                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                        theStoreSummary.dataRaws.push({
+                            checkPoints: fullDateString(weekCheckpoint),
+                            rent_weeklyAmount: 0,
+                            rent_returnToDiffStore: 0,
+                            rent_lostAmount: 0,
+                            return_weeklyAmount: 0,
+                            return_rentFromDiffStore: 0
+                        });
+                        toSummaryRecord = theStoreSummary.dataRaws[theStoreSummary.dataRaws.length - 1];
+                    }
+                    if ((theTradeRecord.time - weekCheckpoint) < MILLISECONDS_OF_A_WEEK) {
+                        if (theTradeRecord.tradeType === "Rent") {
+                            toSummaryRecord.rent_weeklyAmount++;
+                            if (theTradeRecord.diffStore)
+                                toSummaryRecord.rent_returnToDiffStore++;
+                        } else if (theTradeRecord.tradeType === "Return") {
+                            toSummaryRecord.return_weeklyAmount++;
+                            if (theTradeRecord.diffStore)
+                                toSummaryRecord.return_rentFromDiffStore++;
+                        } else if (theTradeRecord.tradeType === "Lost") {
+                            toSummaryRecord.rent_lostAmount++;
+                        }
+                    }
+                }
+            }
+
+            // rawdata to gsheet
+            let sheetName = `${theStoreSummary.ID}_${theStoreSummary.name}`;
+            let range = `${sheetName}!A1:F`;
+            let values = [
+                ["", "每週使用量", "歸還至不同店鋪的數量", "店鋪遺失量", "每週歸還量", "來自不同借用店鋪的數量"]
+            ];
+            theStoreSummary.dataRaws.forEach(raw => {
+                values.push([
+                    raw.checkPoints,
+                    raw.rent_weeklyAmount,
+                    raw.rent_returnToDiffStore,
+                    raw.rent_lostAmount,
+                    raw.return_weeklyAmount,
+                    raw.return_rentFromDiffStore
+                ]);
+            });
+
+            sheetNames.push(sheetName);
+            dataSets.push({
+                range,
+                values,
+                majorDimension: "ROWS"
+            });
+        }
+        updateSummary(dataSets, sheetNames, (err) => {
+            if (err) return next(err);
+            res.status(200).end("Done");
+        });
+    });
 });
 
 const isPhone = /09[0-9]{8}/;
