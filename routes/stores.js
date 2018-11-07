@@ -28,6 +28,7 @@ var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 var Container = require('../models/DB/containerDB');
 var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const DEMO_CONTAINER_ID_LIST = require('../models/variables/demoContainers');
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -233,8 +234,16 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpTypeCode;
     process.nextTick(function () {
         Container.find({
-            'storeID': dbStore.role.storeID,
-            'active': true
+            "$or": [{
+                    'storeID': dbStore.role.storeID,
+                    'active': true
+                },
+                {
+                    "ID": {
+                        "$in": DEMO_CONTAINER_ID_LIST
+                    }
+                }
+            ]
         }, function (err, containers) {
             if (err) return next(err);
             Trade.find({
@@ -248,7 +257,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
                         if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
-                        if (containers[i].statusCode === 1) {
+                        if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
                             resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
                             resJson.containers[tmpTypeCode].amount++;
                         } else if (containers[i].statusCode === 3) {
