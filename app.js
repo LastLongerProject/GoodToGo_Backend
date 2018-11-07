@@ -175,7 +175,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/changeTradeTime')
+        // require('./tmp/findUnusualRecord.js')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {

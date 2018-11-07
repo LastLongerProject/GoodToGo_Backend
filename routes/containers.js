@@ -13,6 +13,7 @@ var Container = require('../models/DB/containerDB');
 var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const DEMO_CONTAINER_ID_LIST = require('../models/variables/demoContainers');
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
@@ -742,6 +743,11 @@ router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, fu
     var newState = actionTodo.indexOf(action);
     if (newState === -1) return next();
     req.headers['if-none-match'] = 'no-match-for-this';
+    if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
+        return res.json({
+            type: "ChallengeMessage",
+            message: "Can be " + action
+        });
     process.nextTick(() => {
         Container.findOne({
             'ID': containerID
@@ -893,6 +899,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                 });
                 const reject = bindFunction(doneThisTask, oriReject);
                 let aContainerId = parseInt(aContainer);
+                if (DEMO_CONTAINER_ID_LIST.indexOf(aContainerId) !== -1)
+                    return resolve({
+                        ID: aContainerId,
+                        txt: "DEMO container"
+                    });
                 Container.findOne({
                     'ID': aContainerId
                 }, function (err, theContainer) {
@@ -911,7 +922,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = theContainer.statusCode;
+                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
                     if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
                         return reject({
                             code: 'F010',
@@ -922,7 +933,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             ID: aContainerId,
                             txt: "Already Return"
                         });
-                    validateStateChanging(bypassStateValidation, containerStateCache[aContainerId] || oriState, newState, function (succeed) {
+                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {

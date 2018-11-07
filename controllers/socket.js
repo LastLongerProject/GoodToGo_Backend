@@ -7,6 +7,7 @@ var Trade = require('../models/DB/tradeDB');
 var UserKeys = require('../models/DB/userKeysDB');
 var Container = require('../models/DB/containerDB');
 var validateStateChanging = require('../helpers/toolKit').validateStateChanging;
+const DEMO_CONTAINER_ID_LIST = require('../models/variables/demoContainers');
 
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
@@ -114,6 +115,14 @@ module.exports = {
                             data: {
                                 id: containerID
                             }
+                        });
+                    if (DEMO_CONTAINER_ID_LIST.indexOf(aContainerId) !== -1)
+                        return socket.emitWithLog('reply', {
+                            id: containerID,
+                            succeed: true,
+                            message: "Can be " + action,
+                            originalState: theContainer.statusCode,
+                            newState: newState
                         });
                     if (!theContainer.active)
                         return next({
