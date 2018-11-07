@@ -13,7 +13,7 @@ var Container = require('../models/DB/containerDB');
 var Trade = require('../models/DB/tradeDB');
 var User = require('../models/DB/userDB');
 var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
-const DEMO_CONTAINER_ID_LIST = require('../models/variables/demoContainers');
+const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;

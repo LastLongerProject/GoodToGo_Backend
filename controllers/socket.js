@@ -7,7 +7,7 @@ var Trade = require('../models/DB/tradeDB');
 var UserKeys = require('../models/DB/userKeysDB');
 var Container = require('../models/DB/containerDB');
 var validateStateChanging = require('../helpers/toolKit').validateStateChanging;
-const DEMO_CONTAINER_ID_LIST = require('../models/variables/demoContainers');
+const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
