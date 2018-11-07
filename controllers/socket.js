@@ -116,7 +116,7 @@ module.exports = {
                                 id: containerID
                             }
                         });
-                    if (DEMO_CONTAINER_ID_LIST.indexOf(aContainerId) !== -1)
+                    if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
                         return socket.emitWithLog('reply', {
                             id: containerID,
                             succeed: true,
