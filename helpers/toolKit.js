@@ -148,6 +148,13 @@ module.exports = {
                 }
             }
         }
+    },
+    bindFunction: function (doFirst, then, argToAssign) {
+        return function bindedFunction() {
+            doFirst();
+            if (argToAssign && typeof arguments[0] !== "undefined") Object.assign(arguments[0], argToAssign);
+            then.apply(this, arguments);
+        };
     }
 };
 

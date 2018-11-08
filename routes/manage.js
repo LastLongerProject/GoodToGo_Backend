@@ -1159,7 +1159,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
             } else if (aTrade.tradeType.action === "Return" && containerKey in unusedContainer) {
                 let rentFromStoreID = unusedContainer[containerKey].storeID;
                 let returnFromStoreID = aTrade.newUser.storeID;
-                let storeDiff = rentFromStoreID === returnFromStoreID;
+                let storeDiff = rentFromStoreID !== returnFromStoreID;
                 storesTmpData[rentFromStoreID].push({
                     tradeType: "Rent",
                     time: unusedContainer[containerKey].time,
