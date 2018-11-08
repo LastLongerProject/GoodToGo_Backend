@@ -96,11 +96,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const action = stateChanging.action;
     const tradeTime = stateChanging.tradeTime;
     const options = option || {};
-    const boxID = options.boxID; // Sign Delivery NEED
-    const toStoreID = options.toStoreID; // Delivery NEED
+    const boxID = options.boxID; // Delivery Sign NEED
+    const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
-    const signForStoreID = options.signForStoreID; // Sign
-    const returnFromStoreID = options.returnFromStoreID; // Return
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -189,83 +187,80 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         message: 'No user found'
                                     });
                                 }
-                                if (!oriUser.active)
+                                if (!oriUser.active && action === 'Rent')
                                     return reject({
                                         code: 'F005',
                                         message: 'User has Banned'
                                     });
 
-                                if (action === 'Rent') {
+                                let storeID_newUser, storeID_oriUser;
+                                if (action === 'Sign') {
+                                    if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 代簽收
+                                    else storeID_newUser = reqUser.roles.clerk.storeID;
+                                } else if (action === 'Rent') {
                                     let tmp = oriUser;
                                     oriUser = reqUser;
                                     reqUser = tmp;
-                                } else if (action === 'Sign' && typeof signForStoreID !== 'undefined') { // 代簽收
-                                    reqUser.role.storeID = signForStoreID;
-                                } else if (action === 'Return' && typeof returnFromStoreID !== 'undefined') { // 髒杯回收代歸還
-                                    reqUser.role.storeID = returnFromStoreID;
+                                    storeID_oriUser = oriUser.roles.clerk.storeID;
+                                } else if (action === 'Return') {
+                                    if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 髒杯回收代歸還
+                                    else storeID_newUser = reqUser.roles.clerk.storeID;
                                 } else if (action === 'ReadyToClean') {
-                                    oriUser.role.storeID = theContainer.storeID;
+                                    storeID_oriUser = theContainer.storeID;
+                                } else if (action === 'Delivery') {
+                                    storeID_newUser = storeID;
+                                    theContainer.cycleCtr++;
+                                } else if (action === 'CancelDelivery') {
+                                    theContainer.cycleCtr--;
                                 }
-
-                                if (typeof reqUser.role.storeID === "undefined" && reqUser.roles.clerk) reqUser.role.storeID = reqUser.roles.clerk.storeID;
-                                if (typeof oriUser.role.storeID === "undefined" && oriUser.roles.clerk) oriUser.role.storeID = oriUser.roles.clerk.storeID;
 
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = reqUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
-                                if (action === 'Delivery') theContainer.cycleCtr++;
-                                else if (action === 'CancelDelivery') theContainer.cycleCtr--;
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID;
                                 else theContainer.storeID = undefined;
 
-                                try {
-                                    let newTrade = new Trade({
-                                        tradeTime,
-                                        tradeType: {
-                                            action,
-                                            oriState,
-                                            newState
-                                        },
-                                        oriUser: {
-                                            type: oriUser.role.typeCode,
-                                            phone: oriUser.user.phone,
-                                            storeID: oriUser.role.storeID
-                                        },
-                                        newUser: {
-                                            type: reqUser.role.typeCode,
-                                            phone: reqUser.user.phone,
-                                            storeID: reqUser.role.storeID
-                                        },
-                                        container: {
-                                            id: theContainer.ID,
-                                            typeCode: theContainer.typeCode,
-                                            cycleCtr: theContainer.cycleCtr,
-                                            toStoreID,
-                                            box: boxID
-                                        }
-                                    });
+                                let newTrade = new Trade({
+                                    tradeTime,
+                                    tradeType: {
+                                        action,
+                                        oriState,
+                                        newState
+                                    },
+                                    oriUser: {
+                                        phone: oriUser.user.phone,
+                                        storeID: storeID_oriUser
+                                    },
+                                    newUser: {
+                                        phone: reqUser.user.phone,
+                                        storeID: storeID_newUser
+                                    },
+                                    container: {
+                                        id: theContainer.ID,
+                                        typeCode: theContainer.typeCode,
+                                        cycleCtr: theContainer.cycleCtr,
+                                        box: boxID
+                                    }
+                                });
 
-                                    containerStateCache[aContainerId] = newState;
-                                    resolve({
-                                        ID: aContainerId,
-                                        oriUser: oriUser.user.phone,
-                                        dataSaver: (doneSave, getErr) => {
-                                            newTrade.save(err => {
+                                containerStateCache[aContainerId] = newState;
+                                resolve({
+                                    ID: aContainerId,
+                                    oriUser: oriUser.user.phone,
+                                    dataSaver: (doneSave, getErr) => {
+                                        newTrade.save(err => {
+                                            if (err) return getErr(err);
+                                            theContainer.save(err => {
                                                 if (err) return getErr(err);
-                                                theContainer.save(err => {
-                                                    if (err) return getErr(err);
-                                                    doneSave({
-                                                        id: theContainer.ID,
-                                                        typeCode: theContainer.typeCode,
-                                                        typeName: containerTypeDict[theContainer.typeCode].name
-                                                    });
+                                                doneSave({
+                                                    id: theContainer.ID,
+                                                    typeCode: theContainer.typeCode,
+                                                    typeName: containerTypeDict[theContainer.typeCode].name
                                                 });
                                             });
-                                        }
-                                    });
-                                } catch (error) {
-                                    reject(error);
-                                }
+                                        });
+                                    }
+                                });
                             });
                         }
                     });
@@ -274,6 +269,5 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
         });
     };
 }
-
 
 module.exports = changeContainersState;
