@@ -40,10 +40,6 @@ router.get('/globalUsedAmount', function (req, res, next) {
     });
 });
 
-router.all('/:id', function (req, res) {
-    res.redirect('http://goodtogo.tw');
-});
-
 router.get('/get/list', validateDefault, function (req, res, next) {
     var typeDict = req.app.get('containerType');
     var containerDict = req.app.get('container');
