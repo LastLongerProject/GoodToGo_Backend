@@ -175,7 +175,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/findUnusualRecord.js')
+        // require('./tmp/listReturnedContainer.js')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
@@ -186,7 +186,6 @@ function connectMongoDB() {
             debug("Deploy Server no scheduler");
         }
     });
-    mongoose.connection.on('error', err => debugError(`MongoDB connection error: ${err}`));
 }
 
 function resBodyParser(req, res, next) {

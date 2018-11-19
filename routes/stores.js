@@ -685,7 +685,8 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
 
         cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
 
-        var unusedTradesDict = {};
+        var storeLostTradesDict = {};
+        var personalLostTradesDict = {};
         var usedTrades = [];
         var rentTrades = [];
         var returnTrades = [];
@@ -693,28 +694,35 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         tradeList.forEach(aTrade => {
             let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
             if (aTrade.tradeType.action === "Sign") {
-                unusedTradesDict[containerKey] = aTrade;
+                storeLostTradesDict[containerKey] = aTrade;
             } else if (aTrade.tradeType.action === "Rent") {
                 rentTrades.push(aTrade);
-                if (unusedTradesDict[containerKey]) {
+                personalLostTradesDict[containerKey] = aTrade;
+                if (storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
-                    delete unusedTradesDict[containerKey];
+                    delete storeLostTradesDict[containerKey];
                 }
             } else if (aTrade.tradeType.action === "Return") {
                 returnTrades.push(aTrade);
-                if (unusedTradesDict[containerKey]) {
+                if (storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
-                    delete unusedTradesDict[containerKey];
+                    delete storeLostTradesDict[containerKey];
+                }
+                if (personalLostTradesDict[containerKey]) {
+                    delete personalLostTradesDict[containerKey];
                 }
             } else if (aTrade.tradeType.action === "ReadyToClean") {
                 if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.role.storeID) {
                     cleanReloadTrades.push(aTrade);
-                    if (unusedTradesDict[containerKey]) {
-                        delete unusedTradesDict[containerKey];
+                    if (storeLostTradesDict[containerKey]) {
+                        delete storeLostTradesDict[containerKey];
                     }
-                } else if (aTrade.tradeType.oriState === 3 && unusedTradesDict[containerKey]) {
+                } else if (aTrade.tradeType.oriState === 3 && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
-                    delete unusedTradesDict[containerKey];
+                    delete storeLostTradesDict[containerKey];
+                }
+                if (personalLostTradesDict[containerKey]) {
+                    delete personalLostTradesDict[containerKey];
                 }
             }
         });
@@ -722,14 +730,17 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         var newTypeArrGenerator = newTypeArrGeneratorFunction(type);
 
         var resJson = {
-            unusedHistory: [],
+            personalLostHistory: [],
+            storeLostHistory: [],
             usedHistory: [],
             rentHistory: [],
             returnHistory: [],
             cleanReloadHistory: []
         };
-        var unusedTrades = Object.values(unusedTradesDict);
-        usageByDateByTypeGenerator(newTypeArrGenerator, unusedTrades, resJson.unusedHistory);
+        var personalLostTrades = Object.values(personalLostTradesDict);
+        var storeLostTrades = Object.values(storeLostTradesDict);
+        usageByDateByTypeGenerator(newTypeArrGenerator, personalLostTrades, resJson.personalLostHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, storeLostTrades, resJson.storeLostHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, usedTrades, resJson.usedHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.rentHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, returnTrades, resJson.returnHistory);
@@ -788,6 +799,33 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
         }
     }
 }
+
+router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    let orderBy = req.query.by;
+    Trade.find({
+        'tradeType.action': 'Rent',
+        'oriUser.storeID': dbStore.role.storeID
+    }, function (err, rentTrades) {
+        if (err) return next(err);
+        let clerkDict = {};
+        if (orderBy && orderBy === "date") {
+            rentTrades.forEach(aTrade => {
+                let dateCheckpoint = fullDateString(getDateCheckpoint(aTrade.tradeTime));
+                if (!clerkDict[aTrade.oriUser.phone]) clerkDict[aTrade.oriUser.phone] = {};
+                let aClerk = clerkDict[aTrade.oriUser.phone];
+                if (!aClerk[dateCheckpoint]) aClerk[dateCheckpoint] = 1;
+                else aClerk[dateCheckpoint]++;
+            });
+        } else {
+            rentTrades.forEach(aTrade => {
+                if (!clerkDict[aTrade.oriUser.phone]) clerkDict[aTrade.oriUser.phone] = 1;
+                else clerkDict[aTrade.oriUser.phone]++;
+            });
+        }
+        res.json(clerkDict);
+    });
+});
 
 router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
