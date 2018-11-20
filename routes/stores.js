@@ -399,6 +399,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                     resJson.data.push({
                         id: rentedList[i].container.id,
                         phone: rentedList[i].newUser.phone,
+                        by: rentedList[i].oriUser.phone,
                         rentedTime: rentedList[i].tradeTime.getTime()
                     });
                 }

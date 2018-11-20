@@ -205,6 +205,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 } else if (action === 'Return') {
                                     if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 髒杯回收代歸還
                                     else storeID_newUser = reqUser.roles.clerk.storeID;
+                                    if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
                                 } else if (action === 'ReadyToClean') {
                                     storeID_oriUser = theContainer.storeID;
                                 } else if (action === 'Delivery') {
