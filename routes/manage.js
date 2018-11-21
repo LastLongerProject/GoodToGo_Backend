@@ -143,7 +143,10 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                         delete rentedContainer[containerKey];
                                     }
                                 }
-                                // if (!signedContainer[containerKey]) console.log(containerKey)
+                                // if (!signedContainer[containerKey]) {
+                                //     console.log(containerKey);
+                                //     return true;
+                                // }
                                 if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                                     result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                     if (recent) {

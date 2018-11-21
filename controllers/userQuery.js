@@ -221,7 +221,7 @@ module.exports = {
                             if (err) return reject(err);
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
-                                'clientId': req.signedCookies.uid,
+                                'clientId': req.signedCookies.uid || req._uid,
                                 'roleType': typeList[thisCtr]
                             }, {
                                 'secretKey': returnKeys.secretKey,

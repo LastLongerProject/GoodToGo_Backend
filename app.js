@@ -149,7 +149,9 @@ function cookieMid() {
 
     return function cookieMid(req, res, next) {
         if (!req.signedCookies.uid) {
-            res.cookie("uid", uuid(), cookieOptions);
+            let uid = uuid();
+            res.cookie("uid", uid, cookieOptions);
+            req._uid = uid;
         }
         next();
     };
