@@ -233,18 +233,27 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     };
     var tmpTypeCode;
     process.nextTick(function () {
-        Container.find({
-            "$or": [{
-                    'storeID': dbStore.role.storeID,
-                    'active': true
-                },
-                {
-                    "ID": {
-                        "$in": DEMO_CONTAINER_ID_LIST
+        var containerQuery;
+        if (dbStore.role.storeID === 17) {
+            containerQuery = {
+                "$or": [{
+                        'storeID': dbStore.role.storeID,
+                        'active': true
+                    },
+                    {
+                        "ID": {
+                            "$in": DEMO_CONTAINER_ID_LIST
+                        }
                     }
-                }
-            ]
-        }, function (err, containers) {
+                ]
+            };
+        } else {
+            containerQuery = {
+                'storeID': dbStore.role.storeID,
+                'active': true
+            };
+        }
+        Container.find(containerQuery, function (err, containers) {
             if (err) return next(err);
             Trade.find({
                 'tradeTime': {
@@ -659,6 +668,10 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                 'newUser.storeID': dbStore.role.storeID
             },
             {
+                'tradeType.action': 'Return',
+                'oriUser.storeID': dbStore.role.storeID
+            },
+            {
                 'tradeType.action': 'UndoReturn',
                 'oriUser.storeID': dbStore.role.storeID
             },
@@ -705,9 +718,12 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                 }
             } else if (aTrade.tradeType.action === "Return") {
                 returnTrades.push(aTrade);
-                if (storeLostTradesDict[containerKey]) {
+                if (aTrade.oriUser.storeID === dbStore.role.storeID && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
+                }
+                if (aTrade.newUser.storeID === dbStore.role.storeID) {
+                    storeLostTradesDict[containerKey] = aTrade;
                 }
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
