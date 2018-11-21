@@ -817,6 +817,53 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
     }
 }
 
+router.get('/history/byCustomer', regAsStore, validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    let tradeQuery = {
+        "tradeType.action": "Rent",
+        'oriUser.storeID': dbStore.role.storeID
+    };
+    if (req.query.days)
+        Object.assign(tradeQuery, {
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - parseInt(req.query.days)),
+                '$lt': dateCheckpoint(1)
+            }
+        });
+    Trade.find(tradeQuery, {}, {
+        "sort": {
+            "tradeTime": 1
+        }
+    }, (err, rentTradeList) => {
+        if (err) return next(err);
+        let customerByDateDict = {};
+        let customeList = [];
+
+        rentTradeList.forEach(aTrade => {
+            let customerPhone = aTrade.newUser.phone;
+            let tradeDate = fullDateString(aTrade.tradeTime);
+            if (customeList.indexOf(customerPhone) === -1) customeList.push(customerPhone);
+            if (!customerByDateDict[tradeDate]) customerByDateDict[tradeDate] = {};
+            if (!customerByDateDict[tradeDate][customerPhone]) customerByDateDict[tradeDate][customerPhone] = [];
+            customerByDateDict[tradeDate][customerPhone].push(aTrade.container.id);
+        });
+
+        for (let aDate in customerByDateDict) {
+            let oriData = customerByDateDict[aDate];
+            customerByDateDict[aDate] = {
+                distinctCustomerAmount: Object.keys(oriData).length,
+                averageContainerUsage: Object.values(oriData).reduce((ctr, thisItem) => ctr + thisItem.length, 0) /
+                    Object.keys(oriData).length
+            };
+        }
+
+        res.json({
+            totalDistinctCustomer: customeList.length,
+            customerSummary: customerByDateDict
+        });
+    });
+});
+
 router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     let orderBy = req.query.by;
