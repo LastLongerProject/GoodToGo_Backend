@@ -96,7 +96,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const action = stateChanging.action;
     const tradeTime = stateChanging.tradeTime;
     const options = option || {};
-    const boxID = options.boxID; // Delivery Sign NEED
+    const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
     const bypassStateValidation = options.bypassStateValidation || false;
@@ -218,7 +218,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = reqUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
-                                if (action === 'Sign' || action === 'Return') theContainer.storeID = reqUser.role.storeID;
+                                if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = undefined;
 
                                 let newTrade = new Trade({

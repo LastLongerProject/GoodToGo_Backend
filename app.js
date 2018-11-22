@@ -61,8 +61,8 @@ connectMongoDB();
 require("./models/redis");
 
 app.use('/manage', manage);
-app.use(timeout('10s'));
 
+app.use(timeout('10s'));
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
@@ -177,7 +177,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/listReturnedContainer.js')
+        // require('./tmp/refactorTradeDM.js')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {

@@ -142,6 +142,16 @@ router.post('/addbot', regAsAdminManager, validateRequest, function (req, res, n
     });
 });
 
+router.post('/createBotKey', regAsAdminManager, validateRequest, function (req, res, next) {
+    userQuery.createBotKey(req, function (err, user, info) {
+        if (err) {
+            return next(err);
+        } else {
+            res.json(info.body);
+        }
+    });
+});
+
 router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     var deviceToken = req.body.deviceToken.replace(/\s/g, "").replace("<", "").replace(">", "");
     var type = req.body.appType;

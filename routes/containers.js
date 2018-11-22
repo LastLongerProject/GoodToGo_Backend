@@ -572,7 +572,9 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
             changeContainersState(body.containerList, dbAdmin, {
                 action: "Boxing",
                 newState: 5
-            }, null, {
+            }, {
+                boxID: aBox.boxID
+            }, {
                 res,
                 next,
                 callback: () => {
