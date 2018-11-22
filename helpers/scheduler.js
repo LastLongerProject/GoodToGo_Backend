@@ -41,7 +41,7 @@ module.exports = function (app) {
                         'updatedAt': {
                             '$lt': dateCheckpoint(-14)
                         },
-                        "role.typeCode": {
+                        "roleType": {
                             "$ne": "bot"
                         }
                     }, (err) => {
