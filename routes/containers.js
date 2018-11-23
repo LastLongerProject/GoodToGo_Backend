@@ -552,8 +552,9 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
 
 router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var body = req.body;
-    if (!body.containerList || !Array.isArray(body.containerList))
+    let boxID = req.body.boxId;
+    const containerList = req.body.containerList;
+    if (!containerList || !Array.isArray(containerList))
         return res.status(403).json({
             code: 'F011',
             type: 'BoxingMessage',
@@ -561,7 +562,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
         });
     var task = function (response) {
         Box.findOne({
-            'boxID': body.boxId
+            'boxID': boxID
         }, function (err, aBox) {
             if (err) return next(err);
             if (aBox) return res.status(403).json({
@@ -569,19 +570,22 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                 type: 'BoxingMessage',
                 message: 'Box is already exist'
             });
-            changeContainersState(body.containerList, dbAdmin, {
+            changeContainersState(containerList, dbAdmin, {
                 action: "Boxing",
                 newState: 5
             }, {
-                boxID: body.boxId
+                boxID
             }, {
                 res,
                 next,
                 callback: () => {
-                    newBox = new Box();
-                    newBox.boxID = body.boxId;
-                    newBox.user.box = dbAdmin.user.phone;
-                    newBox.containerList = body.containerList;
+                    const newBox = new Box({
+                        boxID,
+                        user: {
+                            box: dbAdmin.user.phone
+                        },
+                        containerList
+                    });
                     newBox.save(function (err) {
                         if (err) return next(err);
                         return response(newBox);
@@ -590,7 +594,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
             });
         });
     };
-    if (!body.boxId) {
+    if (typeof boxID === "undefined") {
         redis.get("boxCtr", (err, boxCtr) => {
             if (err) return next(err);
             if (boxCtr == null) boxCtr = 1;
@@ -602,7 +606,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                     if (err) return next(err);
                     if (reply !== 1) return next(reply);
                     var today = new Date();
-                    body.boxId = (today.getMonth() + 1) + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
+                    boxID = (today.getMonth() + 1) + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
                     task((newBox) => {
                         res.status(200).json({
                             type: 'BoxingMessage',
