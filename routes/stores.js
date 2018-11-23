@@ -19,6 +19,7 @@ var validateDefault = require('../middlewares/validation/validateDefault');
 var validateRequest = require('../middlewares/validation/validateRequest').JWT;
 var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
 var regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
 var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
@@ -41,7 +42,7 @@ router.get('/list', validateDefault, function (req, res, next) {
             1: "Only returnable",
             2: "Borrowable and returnable"
         }
-    }
+    };
     var tmpArr = [];
     process.nextTick(function () {
         Store.find({
@@ -55,47 +56,57 @@ router.get('/list', validateDefault, function (req, res, next) {
             }
         }, function (err, storeList) {
             if (err) return next(err);
-            Trade.count({
-                "tradeType.action": "Rent"
-            }, function (err, count) {
+            jsonData.globalAmount = 0;
+            keys.serverSecretKey((err, key) => {
                 if (err) return next(err);
-                jsonData.globalAmount = count;
-                keys.serverSecretKey((err, key) => {
-                    if (err) return next(err);
-                    var date = new Date();
-                    var payload = {
-                        'iat': Date.now(),
-                        'exp': date.setMinutes(date.getMinutes() + 5)
-                    };
-                    var token = jwt.encode(payload, key);
-                    res.set('etag', wetag([storeList, count]));
-                    for (var i = 0; i < storeList.length; i++) {
-                        var tmpOpening = [];
-                        storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
-                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                            tmpOpening.push({
-                                close: storeList[i].opening_hours[j].close,
-                                open: storeList[i].opening_hours[j].open
-                            });
-                        tmpOpening.sort((a, b) => {
-                            return a.close.day - b.close.day;
+                var date = new Date();
+                var payload = {
+                    'iat': Date.now(),
+                    'exp': date.setMinutes(date.getMinutes() + 5)
+                };
+                var token = jwt.encode(payload, key);
+                res.set('etag', wetag(storeList));
+                for (var i = 0; i < storeList.length; i++) {
+                    var tmpOpening = [];
+                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
+                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                        tmpOpening.push({
+                            close: storeList[i].opening_hours[j].close,
+                            open: storeList[i].opening_hours[j].open
                         });
-                        tmpArr.push({
-                            id: storeList[i].id,
-                            name: storeList[i].name,
-                            img_info: storeList[i].img_info,
-                            opening_hours: tmpOpening,
-                            contract: storeList[i].contract,
-                            location: storeList[i].location,
-                            address: storeList[i].address,
-                            type: storeList[i].type,
-                            testing: (storeList[i].project === '正興杯杯') ? false : true
-                        });
-                    }
-                    jsonData["shop_data"] = tmpArr;
-                    res.json(jsonData);
-                });
+                    tmpOpening.sort((a, b) => {
+                        return a.close.day - b.close.day;
+                    });
+                    tmpArr.push({
+                        id: storeList[i].id,
+                        name: storeList[i].name,
+                        img_info: storeList[i].img_info,
+                        opening_hours: tmpOpening,
+                        contract: storeList[i].contract,
+                        location: storeList[i].location,
+                        address: storeList[i].address,
+                        type: storeList[i].type,
+                        testing: (storeList[i].project === '正興杯杯') ? false : true
+                    });
+                }
+                jsonData.shop_data = tmpArr;
+                res.json(jsonData);
             });
+        });
+    });
+});
+
+router.get('/dict', regAsAdmin, validateRequest, function (req, res, next) {
+    process.nextTick(function () {
+        Store.find({}, {}, {
+            sort: {
+                id: 1
+            }
+        }, function (err, storeList) {
+            if (err) return next(err);
+            let storeDict = {};
+            storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
+            res.json(storeDict);
         });
     });
 });
