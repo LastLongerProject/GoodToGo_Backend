@@ -573,7 +573,7 @@ router.post('/cleanStation/box', regAsAdmin, validateRequest, function (req, res
                 action: "Boxing",
                 newState: 5
             }, {
-                boxID: aBox.boxID
+                boxID: body.boxId
             }, {
                 res,
                 next,
