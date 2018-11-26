@@ -225,7 +225,7 @@ function cors() {
     return function cors(req, res, next) {
         if (!res.headersSent) {
             res.header("Access-Control-Allow-Origin", "*");
-            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization");
+            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime");
         }
         return next();
     };
