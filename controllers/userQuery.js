@@ -461,20 +461,25 @@ module.exports = {
                 });
             keys.apiKey(function (err, returnKeys) {
                 if (err) return done(err);
-                var newUserKey = new UserKeys({
-                    phone: theBot.user.phone,
-                    apiKey: returnKeys.apiKey,
-                    secretKey: returnKeys.secretKey,
-                    clientId: req.signedCookies.uid,
-                    userAgent: req.headers['user-agent'],
-                    roleType: "bot",
-                    user: theBot._id
-                });
-                newUserKey.save(function (err) {
+                UserKeys.findOneAndUpdate({
+                    'phone': theBot.user.phone,
+                    'roleType': "bot",
+                    'user': theBot._id
+                }, {
+                    'secretKey': returnKeys.secretKey,
+                    'userAgent': req.headers['user-agent'],
+                    '$setOnInsert': {
+                        'apiKey': returnKeys.apiKey
+                    }
+                }, {
+                    new: true,
+                    upsert: true,
+                    setDefaultsOnInsert: true
+                }, (err, keyPair) => {
                     if (err) return done(err);
                     done(null, true, {
                         headers: {
-                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, theBot)
+                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, keyPair, theBot)
                         },
                         body: {
                             type: 'signupMessage',
