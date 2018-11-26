@@ -12,6 +12,7 @@ const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 
 let containerStateCache = {};
+const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
 function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))

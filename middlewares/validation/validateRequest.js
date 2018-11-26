@@ -34,11 +34,6 @@ function addRoleToCheck(req, theRole, shouldBeManager, cb) {
     cb();
 }
 
-function allowCORS(res) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-}
-
 module.exports = {
     JWT: function (req, res, next) {
         var jwtToken = req.headers['authorization'];
@@ -59,8 +54,6 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has logout'
                         });
-                    if (dbKey.roleType === "bot")
-                        allowCORS(res);
                     User.findById(dbKey.user, function (err, dbUser) {
                         if (err)
                             return next(err);

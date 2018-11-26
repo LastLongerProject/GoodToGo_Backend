@@ -45,6 +45,7 @@ app.use(cookieParser(config.cookie.sign));
 app.use(cookieMid());
 app.use(resBodyParser);
 app.use(helmet());
+app.use(cors());
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use((req, res, next) => {
     if (!esm) {
@@ -218,6 +219,16 @@ function resBodyParser(req, res, next) {
     };
 
     next();
+}
+
+function cors() {
+    return function cors(req, res, next) {
+        if (!res.headersSent) {
+            res.header("Access-Control-Allow-Origin", "*");
+            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization");
+        }
+        return next();
+    };
 }
 
 /**
