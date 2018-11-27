@@ -41,7 +41,7 @@
         "googleapis": "^32.0.0",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.1",
-        "mongoose": "^4.13.7",
+        "mongoose": "^4.13.17",
         "morgan": "^1.9.1",
         "on-finished": "^2.3.0",
         "on-headers": "^1.0.1",
@@ -50,7 +50,7 @@
         "serve-favicon": "~2.4.3",
         "sharp": "^0.18.4",
         "socket.io": "^2.1.0",
-        "universal-analytics": "^0.4.17",
+        "universal-analytics": "^0.4.20",
         "uuid": "^3.3.2"
     },
     "bugs": {
