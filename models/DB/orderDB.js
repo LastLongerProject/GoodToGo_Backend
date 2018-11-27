@@ -4,20 +4,9 @@ var mongoose = require('mongoose');
 var userSchema = mongoose.Schema({
     orderID: Number,
     storeID: Number,
-    dueDate: Date,
-    boxs: [{
-        boxName: String,
-        boxContent: [{
-            containerType: Number,
-            amount: Number
-        }],
-        containers: []
-    }],
-    error: {
-        type: Boolean,
-        Default: false
-    },
-    comment: String
+    boxs: [
+        mongoose.Schema.Types.ObjectId
+    ]
 }, {
     timestamps: true
 });
