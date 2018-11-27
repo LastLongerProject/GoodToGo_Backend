@@ -5,11 +5,12 @@ const queue = require('queue')({
 var debug = require('debug')('goodtogo_backend:containerTrade');
 
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
-const validateStateChanging = require('../helpers/toolKit').validateStateChanging;
-const bindFunction = require('../helpers/toolKit').bindFunction;
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
 const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
+const Box = require('../models/DB/boxDB');
 
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];

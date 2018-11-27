@@ -5,7 +5,7 @@ var {
 var sheets = google.sheets('v4');
 var debug = require('debug')('goodtogo_backend:google_sheet');
 
-var intReLength = require('../toolKit').intReLength;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var PlaceID = require('../../models/DB/placeIdDB');
 var Store = require('../../models/DB/storeDB');
 var ContainerType = require('../../models/DB/containerTypeDB');

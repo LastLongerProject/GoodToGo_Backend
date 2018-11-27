@@ -7,13 +7,13 @@ var redis = require("../models/redis");
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
-var wetag = require('../helpers/toolKit').wetag;
-var intReLength = require('../helpers/toolKit').intReLength;
-var timeFormatter = require('../helpers/toolKit').timeFormatter;
-var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
-var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
-var fullDateString = require('../helpers/toolKit').fullDateString;
-var getDateCheckpoint = require('../helpers/toolKit').getDateCheckpoint;
+var wetag = require('@lastlongerproject/toolkit').wetag;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
+var timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
+var cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
+var dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+var fullDateString = require('@lastlongerproject/toolkit').fullDateString;
+var getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
 
 var validateDefault = require('../middlewares/validation/validateDefault');
 var validateRequest = require('../middlewares/validation/validateRequest').JWT;

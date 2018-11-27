@@ -12,10 +12,10 @@ var refreshStore = require('../helpers/appInit').refreshStore;
 var refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
 var refreshContainer = require('../helpers/appInit').refreshContainer;
 var refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
-var cleanUndo = require('../helpers/toolKit').cleanUndoTrade;
-var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
-var fullDateString = require('../helpers/toolKit').fullDateString;
-var getWeekCheckpoint = require('../helpers/toolKit').getWeekCheckpoint;
+var cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
+var dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+var fullDateString = require('@lastlongerproject/toolkit').fullDateString;
+var getWeekCheckpoint = require('@lastlongerproject/toolkit').getWeekCheckpoint;
 var updateSummary = require("../helpers/gcp/sheet").updateSummary;
 
 var Box = require('../models/DB/boxDB');

@@ -1,7 +1,7 @@
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const appInit = require('./appInit');
-const dateCheckpoint = require('./toolKit').dateCheckpoint;
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
 const fs = require('fs');
 const ROOT_DIR = require('../config/config').rootDir;

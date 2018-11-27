@@ -6,7 +6,7 @@ var queue = require('queue')({
 var redis = require("../models/redis");
 
 var sendCode = require("../helpers/aws/SNS").sms_now;
-var intReLength = require("../helpers/toolKit").intReLength;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var keys = require('../config/keys');
 var User = require('../models/DB/userDB');
 var UserKeys = require('../models/DB/userKeysDB');
