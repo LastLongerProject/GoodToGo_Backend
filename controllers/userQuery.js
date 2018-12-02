@@ -28,7 +28,7 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (!(typeof phone === 'string' && phone.length === 10 && isMobilePhone(phone))) {
+        } else if (!(typeof phone === 'string' && (isMobilePhone(phone) || isStudentID(phone)))) {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
@@ -498,6 +498,11 @@ module.exports = {
 
 function isMobilePhone(phone) {
     var reg = /^09[0-9]{8}$/;
+    return reg.test(phone);
+}
+
+function isStudentID(phone) {
+    var reg = /^[0-9]{7}$/;
     return reg.test(phone);
 }
 
