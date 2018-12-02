@@ -114,6 +114,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                 });
                 const reject = bindFunction(doneThisTask, oriReject);
                 let aContainerId = parseInt(aContainer);
+                if (isNaN(aContainerId))
+                    return reject({
+                        code: 'F???',
+                        message: 'Container ID Type Invalid',
+                        data: aContainer
+                    });
                 if (DEMO_CONTAINER_ID_LIST.indexOf(aContainerId) !== -1)
                     return resolve({
                         ID: aContainerId,
