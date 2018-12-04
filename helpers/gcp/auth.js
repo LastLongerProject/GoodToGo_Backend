@@ -6,7 +6,7 @@ const {
 var debug = require('debug')('goodtogo_backend:google_auth');
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.readonly'];
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'];
 
 // Load client secrets from a local file.
 const credentials = require("../../config/config").google.credentials;

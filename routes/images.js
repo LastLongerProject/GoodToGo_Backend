@@ -3,7 +3,7 @@ var router = express.Router();
 var fs = require('fs');
 
 const ROOT_DIR = require("../config/config").rootDir;
-var intReLength = require("../helpers/toolKit").intReLength;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var validateToken = require('../middlewares/validation/validateToken');
 
 router.get('/store/:id/:a.:b.:c', function (req, res, next) {

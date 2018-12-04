@@ -5,7 +5,7 @@ var {
 var sheets = google.sheets('v4');
 var debug = require('debug')('goodtogo_backend:google_sheet');
 
-var intReLength = require('../toolKit').intReLength;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var PlaceID = require('../../models/DB/placeIdDB');
 var Store = require('../../models/DB/storeDB');
 var ContainerType = require('../../models/DB/containerTypeDB');
@@ -16,7 +16,7 @@ const configs = require("../../config/config").google;
 const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
 
-var isNum = /^\d+$/;
+const isNum = /^\d+$/;
 var defaultPeriods = [];
 for (var i = 0; i < 7; i++) {
     defaultPeriods.push({
@@ -32,6 +32,52 @@ for (var i = 0; i < 7; i++) {
 }
 
 module.exports = {
+    updateSummary: function (dataSets, sheetNames, cb) {
+        googleAuth(auth => {
+            sheets.spreadsheets.get({
+                auth,
+                spreadsheetId: configs.summary_sheet_ID
+            }, function (err, spreadsheetsDetail) {
+                if (err) return cb(err);
+                let existsSheets = spreadsheetsDetail.data.sheets.map(aSheet => aSheet.properties.title);
+                let sheetsToUpdate = sheetNames.filter(aSheetNames => existsSheets.indexOf(aSheetNames) === -1);
+
+                let updateValue = (err, spreadsheetsRes) => {
+                    if (err) return cb(err);
+                    sheets.spreadsheets.values.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.summary_sheet_ID,
+                        resource: {
+                            valueInputOption: "RAW",
+                            data: dataSets
+                        }
+                    }, (err, valuesRes) => {
+                        if (err) return cb(err);
+                        cb(null);
+                    });
+                };
+
+                if (sheetsToUpdate.length > 0) {
+                    let requests = sheetsToUpdate.map(aSheetToUpdate => ({
+                        "addSheet": {
+                            "properties": {
+                                "title": aSheetToUpdate
+                            }
+                        }
+                    }));
+                    sheets.spreadsheets.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.summary_sheet_ID,
+                        resource: {
+                            requests
+                        }
+                    }, updateValue);
+                } else {
+                    updateValue(null, null);
+                }
+            });
+        });
+    },
     getContainer: function (dbAdmin, cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.batchGet({

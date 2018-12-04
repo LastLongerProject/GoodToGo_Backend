@@ -45,6 +45,7 @@ app.use(cookieParser(config.cookie.sign));
 app.use(cookieMid());
 app.use(resBodyParser);
 app.use(helmet());
+app.use(cors());
 app.use(GAtrigger()); // Trigger Google Analytics
 app.use((req, res, next) => {
     if (!esm) {
@@ -61,8 +62,8 @@ connectMongoDB();
 require("./models/redis");
 
 app.use('/manage', manage);
-app.use(timeout('10s'));
 
+app.use(timeout('10s'));
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
@@ -149,7 +150,9 @@ function cookieMid() {
 
     return function cookieMid(req, res, next) {
         if (!req.signedCookies.uid) {
-            res.cookie("uid", uuid(), cookieOptions);
+            let uid = uuid();
+            res.cookie("uid", uid, cookieOptions);
+            req._uid = uid;
         }
         next();
     };
@@ -175,7 +178,7 @@ function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/changeTradeTime')
+        // require('./tmp/refactorTradeDM.js')
         appInit.container(app);
         appInit.store(app);
         if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
@@ -186,7 +189,6 @@ function connectMongoDB() {
             debug("Deploy Server no scheduler");
         }
     });
-    mongoose.connection.on('error', err => debugError(`MongoDB connection error: ${err}`));
 }
 
 function resBodyParser(req, res, next) {
@@ -217,6 +219,16 @@ function resBodyParser(req, res, next) {
     };
 
     next();
+}
+
+function cors() {
+    return function cors(req, res, next) {
+        if (!res.headersSent) {
+            res.header("Access-Control-Allow-Origin", "*");
+            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime");
+        }
+        return next();
+    };
 }
 
 /**

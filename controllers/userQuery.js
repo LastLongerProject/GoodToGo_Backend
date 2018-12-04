@@ -6,7 +6,7 @@ var queue = require('queue')({
 var redis = require("../models/redis");
 
 var sendCode = require("../helpers/aws/SNS").sms_now;
-var intReLength = require("../helpers/toolKit").intReLength;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var keys = require('../config/keys');
 var User = require('../models/DB/userDB');
 var UserKeys = require('../models/DB/userKeysDB');
@@ -119,63 +119,45 @@ module.exports = {
                             type: 'signupMessage',
                             message: "Verification Code isn't correct"
                         });
-                        keys.apiKey(function (err, returnKeys) {
-                            if (err) return done(err);
-                            var newUser = new User();
-                            newUser.user.phone = phone;
-                            newUser.user.password = newUser.generateHash(password);
-                            newUser.active = req.body.active;
-                            if (typeof roles !== 'undefined') { // v2 api
-                                newUser.roles = roles;
-                                newUser.role = roles[roles.typeList[0]];
-                                newUser.role.typeCode = roles.typeList[0];
-                            } else {
-                                switch (role.typeCode) { // v1 api
-                                    case "clerk":
-                                        newUser.roles.typeList.push("clerk");
-                                        newUser.roles.clerk = {
-                                            storeID: role.storeID,
-                                            manager: role.manager || false
-                                        };
-                                        break;
-                                    case "admin":
-                                        newUser.roles.typeList.push("admin");
-                                        newUser.roles.admin = {
-                                            stationID: role.stationID,
-                                            manager: role.manager || false
-                                        };
-                                        break;
-                                }
-                                newUser.roles.typeList.push("customer");
-                                newUser.role = role;
+                        if (err) return done(err);
+                        var newUser = new User();
+                        newUser.user.phone = phone;
+                        newUser.user.password = newUser.generateHash(password);
+                        newUser.active = req.body.active;
+                        if (typeof roles !== 'undefined') { // v2 api
+                            newUser.roles = roles;
+                            newUser.role = roles[roles.typeList[0]];
+                            newUser.role.typeCode = roles.typeList[0];
+                        } else {
+                            switch (role.typeCode) { // v1 api
+                                case "clerk":
+                                    newUser.roles.typeList.push("clerk");
+                                    newUser.roles.clerk = {
+                                        storeID: role.storeID,
+                                        manager: role.manager || false
+                                    };
+                                    break;
+                                case "admin":
+                                    newUser.roles.typeList.push("admin");
+                                    newUser.roles.admin = {
+                                        stationID: role.stationID,
+                                        manager: role.manager || false
+                                    };
+                                    break;
                             }
-                            var newUserKey = new UserKeys({
-                                clientId: req.signedCookies.uid,
-                                phone,
-                                userAgent: req.headers['user-agent'],
-                                apiKey: returnKeys.apiKey,
-                                secretKey: returnKeys.secretKey,
-                                user: newUser._id,
-                                roleType: roles.typeList[0]
-                            });
-                            newUser.save(function (err) {
-                                if (err) return done(err);
-                                newUserKey.save(function (err) {
-                                    if (err) return done(err);
-                                    redis.del('user_verifying:' + phone, (err, delReply) => {
-                                        if (err && req._passCode !== true) return done(err);
-                                        if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
-                                        return done(null, true, {
-                                            headers: {
-                                                Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, newUser)
-                                            },
-                                            body: {
-                                                type: 'signupMessage',
-                                                message: 'Authentication succeeded'
-                                            }
-                                        });
-                                    });
-
+                            newUser.roles.typeList.push("customer");
+                            newUser.role = role;
+                        }
+                        newUser.save(function (err) {
+                            if (err) return done(err);
+                            redis.del('user_verifying:' + phone, (err, delReply) => {
+                                if (err && req._passCode !== true) return done(err);
+                                if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
+                                return done(null, true, {
+                                    body: {
+                                        type: 'signupMessage',
+                                        message: 'Authentication succeeded'
+                                    }
                                 });
                             });
                         });
@@ -221,7 +203,7 @@ module.exports = {
                             if (err) return reject(err);
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
-                                'clientId': req.signedCookies.uid,
+                                'clientId': req.signedCookies.uid || req._uid,
                                 'roleType': typeList[thisCtr]
                             }, {
                                 'secretKey': returnKeys.secretKey,
@@ -465,6 +447,53 @@ module.exports = {
             });
         });
     },
+    createBotKey: function (req, done) {
+        User.findOne({
+            'user.phone': req.body.bot,
+            'role.typeCode': "bot"
+        }, function (err, theBot) {
+            if (err) return done(err);
+            if (!theBot)
+                return done(null, false, {
+                    code: 'D???',
+                    type: 'botMessage',
+                    message: 'No Bot Find'
+                });
+            keys.apiKey(function (err, returnKeys) {
+                if (err) return done(err);
+                UserKeys.findOneAndUpdate({
+                    'phone': theBot.user.phone,
+                    'roleType': "bot",
+                    'user': theBot._id
+                }, {
+                    'secretKey': returnKeys.secretKey,
+                    'userAgent': req.headers['user-agent'],
+                    '$setOnInsert': {
+                        'apiKey': returnKeys.apiKey
+                    }
+                }, {
+                    new: true,
+                    upsert: true,
+                    setDefaultsOnInsert: true
+                }, (err, keyPair) => {
+                    if (err) return done(err);
+                    done(null, true, {
+                        headers: {
+                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, keyPair, theBot)
+                        },
+                        body: {
+                            type: 'signupMessage',
+                            message: 'Authentication succeeded',
+                            keys: {
+                                apiKey: returnKeys.apiKey,
+                                secretKey: returnKeys.secretKey
+                            }
+                        }
+                    });
+                });
+            });
+        });
+    }
 };
 
 function isMobilePhone(phone) {
@@ -491,12 +520,6 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
         payload = {
             apiKey: keyDict[dbUser.role.typeCode].apiKey,
             secretKey: keyDict[dbUser.role.typeCode].secretKey,
-            role: {
-                typeCode: dbUser.role.typeCode,
-                storeID: dbUser.role.storeID,
-                storeName: (dbUser.role.typeCode === "clerk") ? storeName : undefined,
-                manager: dbUser.role.manager
-            },
             roles: {
                 typeList: dbUser.roles.typeList,
                 customer: {
@@ -526,13 +549,6 @@ function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
         payload = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
-            role: {
-                typeCode: dbUser.role.typeCode,
-                storeID: dbUser.role.storeID,
-                stationID: dbUser.role.stationID,
-                storeName: storeName,
-                manager: dbUser.role.manager
-            },
             roles: dbUser.roles
         };
         if (payload.roles && payload.roles.clerk) {

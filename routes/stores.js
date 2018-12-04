@@ -7,18 +7,19 @@ var redis = require("../models/redis");
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
-var wetag = require('../helpers/toolKit').wetag;
-var intReLength = require('../helpers/toolKit').intReLength;
-var dayFormatter = require('../helpers/toolKit').dayFormatter;
-var timeFormatter = require('../helpers/toolKit').timeFormatter;
-var cleanUndoTrade = require('../helpers/toolKit').cleanUndoTrade;
-var monthFormatter = require('../helpers/toolKit').monthFormatter;
-var dateCheckpoint = require('../helpers/toolKit').dateCheckpoint;
+var wetag = require('@lastlongerproject/toolkit').wetag;
+var intReLength = require('@lastlongerproject/toolkit').intReLength;
+var timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
+var cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
+var dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+var fullDateString = require('@lastlongerproject/toolkit').fullDateString;
+var getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
 
 var validateDefault = require('../middlewares/validation/validateDefault');
 var validateRequest = require('../middlewares/validation/validateRequest').JWT;
 var regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 var regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+var regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
 var regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
 var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 var Box = require('../models/DB/boxDB');
@@ -27,6 +28,8 @@ var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Place = require('../models/DB/placeIdDB');
 var Container = require('../models/DB/containerDB');
+var getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -39,7 +42,7 @@ router.get('/list', validateDefault, function (req, res, next) {
             1: "Only returnable",
             2: "Borrowable and returnable"
         }
-    }
+    };
     var tmpArr = [];
     process.nextTick(function () {
         Store.find({
@@ -53,47 +56,57 @@ router.get('/list', validateDefault, function (req, res, next) {
             }
         }, function (err, storeList) {
             if (err) return next(err);
-            Trade.count({
-                "tradeType.action": "Rent"
-            }, function (err, count) {
+            jsonData.globalAmount = 0;
+            keys.serverSecretKey((err, key) => {
                 if (err) return next(err);
-                jsonData.globalAmount = count;
-                keys.serverSecretKey((err, key) => {
-                    if (err) return next(err);
-                    var date = new Date();
-                    var payload = {
-                        'iat': Date.now(),
-                        'exp': date.setMinutes(date.getMinutes() + 5)
-                    };
-                    var token = jwt.encode(payload, key);
-                    res.set('etag', wetag([storeList, count]));
-                    for (var i = 0; i < storeList.length; i++) {
-                        var tmpOpening = [];
-                        storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
-                        for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                            tmpOpening.push({
-                                close: storeList[i].opening_hours[j].close,
-                                open: storeList[i].opening_hours[j].open
-                            });
-                        tmpOpening.sort((a, b) => {
-                            return a.close.day - b.close.day;
+                var date = new Date();
+                var payload = {
+                    'iat': Date.now(),
+                    'exp': date.setMinutes(date.getMinutes() + 5)
+                };
+                var token = jwt.encode(payload, key);
+                res.set('etag', wetag(storeList));
+                for (var i = 0; i < storeList.length; i++) {
+                    var tmpOpening = [];
+                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
+                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                        tmpOpening.push({
+                            close: storeList[i].opening_hours[j].close,
+                            open: storeList[i].opening_hours[j].open
                         });
-                        tmpArr.push({
-                            id: storeList[i].id,
-                            name: storeList[i].name,
-                            img_info: storeList[i].img_info,
-                            opening_hours: tmpOpening,
-                            contract: storeList[i].contract,
-                            location: storeList[i].location,
-                            address: storeList[i].address,
-                            type: storeList[i].type,
-                            testing: (storeList[i].project === '正興杯杯') ? false : true
-                        });
-                    }
-                    jsonData["shop_data"] = tmpArr;
-                    res.json(jsonData);
-                });
+                    tmpOpening.sort((a, b) => {
+                        return a.close.day - b.close.day;
+                    });
+                    tmpArr.push({
+                        id: storeList[i].id,
+                        name: storeList[i].name,
+                        img_info: storeList[i].img_info,
+                        opening_hours: tmpOpening,
+                        contract: storeList[i].contract,
+                        location: storeList[i].location,
+                        address: storeList[i].address,
+                        type: storeList[i].type,
+                        testing: (storeList[i].project === '正興杯杯') ? false : true
+                    });
+                }
+                jsonData.shop_data = tmpArr;
+                res.json(jsonData);
             });
+        });
+    });
+});
+
+router.get('/dict', regAsAdmin, validateRequest, function (req, res, next) {
+    process.nextTick(function () {
+        Store.find({}, {}, {
+            sort: {
+                id: 1
+            }
+        }, function (err, storeList) {
+            if (err) return next(err);
+            let storeDict = {};
+            storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
+            res.json(storeDict);
         });
     });
 });
@@ -231,10 +244,27 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     };
     var tmpTypeCode;
     process.nextTick(function () {
-        Container.find({
-            'storeID': dbStore.role.storeID,
-            'active': true
-        }, function (err, containers) {
+        var containerQuery;
+        if (dbStore.role.storeID === 17) {
+            containerQuery = {
+                "$or": [{
+                        'storeID': dbStore.role.storeID,
+                        'active': true
+                    },
+                    {
+                        "ID": {
+                            "$in": DEMO_CONTAINER_ID_LIST
+                        }
+                    }
+                ]
+            };
+        } else {
+            containerQuery = {
+                'storeID': dbStore.role.storeID,
+                'active': true
+            };
+        }
+        Container.find(containerQuery, function (err, containers) {
             if (err) return next(err);
             Trade.find({
                 'tradeTime': {
@@ -247,7 +277,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                     for (var i in containers) {
                         tmpTypeCode = containers[i].typeCode;
                         if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
-                        if (containers[i].statusCode === 1) {
+                        if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
                             resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
                             resJson.containers[tmpTypeCode].amount++;
                         } else if (containers[i].statusCode === 3) {
@@ -389,6 +419,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                     resJson.data.push({
                         id: rentedList[i].container.id,
                         phone: rentedList[i].newUser.phone,
+                        by: rentedList[i].oriUser.phone,
                         rentedTime: rentedList[i].tradeTime.getTime()
                     });
                 }
@@ -571,11 +602,9 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    Trade.count({
-                        'tradeType.action': 'Return'
-                    }, (err, totalAmount) => {
+                    getGlobalUsedAmount((err, globalAmount) => {
                         if (err) return reject(err);
-                        resolve(totalAmount);
+                        resolve(globalAmount);
                     });
                 })
             ])
@@ -635,71 +664,122 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
 router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = req.app.get('containerType');
-    var tradeTimeQuery = (req.query['days']) ? {
-        '$gte': dateCheckpoint(1 - parseInt(req.query['days'])),
-        '$lt': dateCheckpoint(1)
-    } : undefined;
-    Trade.find({
+    req.clearTimeout();
+    var tradeQuery = {
         '$or': [{
-                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Sign',
+                'newUser.storeID': dbStore.role.storeID
+            },
+            {
                 'tradeType.action': 'Rent',
                 'oriUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
+                'tradeType.action': 'Return',
+                'oriUser.storeID': dbStore.role.storeID
+            },
+            {
                 'tradeType.action': 'UndoReturn',
                 'oriUser.storeID': dbStore.role.storeID
             },
             {
-                'tradeTime': tradeTimeQuery,
                 'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbStore.role.storeID,
-                'tradeType.oriState': 1
             },
             {
-                'tradeTime': tradeTimeQuery,
-                'tradeType.action': 'UndoReadyToClean',
-                'newUser.storeID': dbStore.role.storeID,
-                'tradeType.newState': 1
+                'tradeType.action': 'UndoReadyToClean'
             }
         ]
-    }, {}, {
+    };
+    if (req.query.days)
+        Object.assign(tradeQuery, {
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - parseInt(req.query.days)),
+                '$lt': dateCheckpoint(1)
+            }
+        });
+    Trade.find(tradeQuery, {}, {
         sort: {
-            tradeTime: -1
+            tradeTime: 1
         }
     }, function (err, tradeList) {
         if (err) return next(err);
 
         cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
 
-        var rentTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Rent");
-        var returnTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "Return");
-        var cleanReloadTrades = tradeList.filter(aTrade => aTrade.tradeType.action === "ReadyToClean");
+        var storeLostTradesDict = {};
+        var personalLostTradesDict = {};
+        var usedTrades = [];
+        var rentTrades = [];
+        var returnTrades = [];
+        var cleanReloadTrades = [];
+        tradeList.forEach(aTrade => {
+            let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+            if (aTrade.tradeType.action === "Sign") {
+                storeLostTradesDict[containerKey] = aTrade;
+            } else if (aTrade.tradeType.action === "Rent") {
+                rentTrades.push(aTrade);
+                personalLostTradesDict[containerKey] = aTrade;
+                if (storeLostTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete storeLostTradesDict[containerKey];
+                }
+            } else if (aTrade.tradeType.action === "Return") {
+                returnTrades.push(aTrade);
+                if (aTrade.oriUser.storeID === dbStore.role.storeID && storeLostTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete storeLostTradesDict[containerKey];
+                }
+                if (aTrade.newUser.storeID === dbStore.role.storeID) {
+                    storeLostTradesDict[containerKey] = aTrade;
+                }
+                if (personalLostTradesDict[containerKey]) {
+                    delete personalLostTradesDict[containerKey];
+                }
+            } else if (aTrade.tradeType.action === "ReadyToClean") {
+                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.role.storeID) {
+                    cleanReloadTrades.push(aTrade);
+                    if (storeLostTradesDict[containerKey]) {
+                        delete storeLostTradesDict[containerKey];
+                    }
+                } else if (aTrade.tradeType.oriState === 3 && storeLostTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete storeLostTradesDict[containerKey];
+                }
+                if (personalLostTradesDict[containerKey]) {
+                    delete personalLostTradesDict[containerKey];
+                }
+            }
+        });
 
         var newTypeArrGenerator = newTypeArrGeneratorFunction(type);
 
         var resJson = {
+            personalLostHistory: [],
+            storeLostHistory: [],
             usedHistory: [],
+            rentHistory: [],
             returnHistory: [],
             cleanReloadHistory: []
         };
-        var ctr = 0;
-        for (var i in resJson) {
-            if (([rentTrades, returnTrades, cleanReloadTrades])[ctr++].length > 0)
-                resJson[i].push({
-                    date: fullDateString(dateCheckpoint(0)),
-                    amount: 0,
-                    data: newTypeArrGenerator()
-                });
-        }
-        usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.usedHistory);
+        var personalLostTrades = Object.values(personalLostTradesDict);
+        var storeLostTrades = Object.values(storeLostTradesDict);
+        usageByDateByTypeGenerator(newTypeArrGenerator, personalLostTrades, resJson.personalLostHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, storeLostTrades, resJson.storeLostHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, usedTrades, resJson.usedHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.rentHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, returnTrades, resJson.returnHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, cleanReloadTrades, resJson.cleanReloadHistory);
+        for (let aHistoryType in resJson) {
+            let thisHistoryType = resJson[aHistoryType];
+            for (let historyArrIndex in thisHistoryType) {
+                if (thisHistoryType[historyArrIndex].amount === 0)
+                    delete thisHistoryType[historyArrIndex];
+            }
+        }
         res.json(resJson);
     });
 });
@@ -720,26 +800,107 @@ function newTypeArrGeneratorFunction(type) {
 }
 
 function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) {
-    var tmpTypeCode;
-    var dateCtr = 0;
-    var checkpoint = dateCheckpoint(dateCtr);
-    for (var i = 0; i < arrToParse.length; i++) {
-        if (arrToParse[i].tradeTime - checkpoint > 1000 * 60 * 60 * 24 || arrToParse[i].tradeTime - checkpoint < 0) {
-            checkpoint = dateCheckpoint(--dateCtr);
-            resultArr.push({
-                date: fullDateString(checkpoint),
-                amount: 0,
-                data: newTypeArrGenerator()
-            });
-            i--;
-        } else {
-            tmpTypeCode = arrToParse[i].container.typeCode;
-            resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(arrToParse[i].container.id);
-            resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-            resultArr[resultArr.length - 1].amount++;
+    if (arrToParse.length > 0) {
+        var tmpTypeCode;
+        var checkpoint = getDateCheckpoint(arrToParse[0].tradeTime);
+        resultArr.push({
+            date: fullDateString(checkpoint),
+            amount: 0,
+            data: newTypeArrGenerator()
+        });
+        for (var i = 0; i < arrToParse.length; i++) {
+            let theTrade = arrToParse[i];
+            if (theTrade.tradeTime - checkpoint > 1000 * 60 * 60 * 24) {
+                checkpoint = getDateCheckpoint(theTrade.tradeTime);
+                resultArr.push({
+                    date: fullDateString(checkpoint),
+                    amount: 0,
+                    data: newTypeArrGenerator()
+                });
+                i--;
+            } else {
+                tmpTypeCode = theTrade.container.typeCode;
+                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                resultArr[resultArr.length - 1].amount++;
+            }
         }
     }
 }
+
+router.get('/history/byCustomer', regAsStore, validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    let tradeQuery = {
+        "tradeType.action": "Rent",
+        'oriUser.storeID': dbStore.role.storeID
+    };
+    if (req.query.days)
+        Object.assign(tradeQuery, {
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - parseInt(req.query.days)),
+                '$lt': dateCheckpoint(1)
+            }
+        });
+    Trade.find(tradeQuery, {}, {
+        "sort": {
+            "tradeTime": 1
+        }
+    }, (err, rentTradeList) => {
+        if (err) return next(err);
+        let customerByDateDict = {};
+        let customeList = [];
+
+        rentTradeList.forEach(aTrade => {
+            let customerPhone = aTrade.newUser.phone;
+            let tradeDate = fullDateString(aTrade.tradeTime);
+            if (customeList.indexOf(customerPhone) === -1) customeList.push(customerPhone);
+            if (!customerByDateDict[tradeDate]) customerByDateDict[tradeDate] = {};
+            if (!customerByDateDict[tradeDate][customerPhone]) customerByDateDict[tradeDate][customerPhone] = [];
+            customerByDateDict[tradeDate][customerPhone].push(aTrade.container.id);
+        });
+
+        for (let aDate in customerByDateDict) {
+            let oriData = customerByDateDict[aDate];
+            customerByDateDict[aDate] = {
+                distinctCustomerAmount: Object.keys(oriData).length,
+                averageContainerUsage: Object.values(oriData).reduce((ctr, thisItem) => ctr + thisItem.length, 0) /
+                    Object.keys(oriData).length
+            };
+        }
+
+        res.json({
+            totalDistinctCustomer: customeList.length,
+            customerSummary: customerByDateDict
+        });
+    });
+});
+
+router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    let orderBy = req.query.by;
+    Trade.find({
+        'tradeType.action': 'Rent',
+        'oriUser.storeID': dbStore.role.storeID
+    }, function (err, rentTrades) {
+        if (err) return next(err);
+        let clerkDict = {};
+        if (orderBy && orderBy === "date") {
+            rentTrades.forEach(aTrade => {
+                let dateCheckpoint = fullDateString(getDateCheckpoint(aTrade.tradeTime));
+                if (!clerkDict[aTrade.oriUser.phone]) clerkDict[aTrade.oriUser.phone] = {};
+                let aClerk = clerkDict[aTrade.oriUser.phone];
+                if (!aClerk[dateCheckpoint]) aClerk[dateCheckpoint] = 1;
+                else aClerk[dateCheckpoint]++;
+            });
+        } else {
+            rentTrades.forEach(aTrade => {
+                if (!clerkDict[aTrade.oriUser.phone]) clerkDict[aTrade.oriUser.phone] = 1;
+                else clerkDict[aTrade.oriUser.phone]++;
+            });
+        }
+        res.json(clerkDict);
+    });
+});
 
 router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
@@ -918,12 +1079,6 @@ function getFavorite(data, callback) {
         return b.times - a.times;
     });
     return callback(sortable);
-}
-
-function fullDateString(date) {
-    dayFormatted = intReLength(dayFormatter(date), 2);
-    monthFormatted = intReLength(monthFormatter(date), 2);
-    return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
 }
 
 module.exports = router;
