@@ -61,7 +61,6 @@ connectMongoDB();
 require("./models/redis");
 
 app.use('/manage', manage);
-app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, 'runtime/.well-known/acme-challenge')));
 app.use(timeout('10s'));
 
 app.use((req, res, next) => {

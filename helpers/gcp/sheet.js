@@ -1,4 +1,3 @@
-var fs = require('fs');
 var request = require('request');
 var {
     google
@@ -12,7 +11,7 @@ var Store = require('../../models/DB/storeDB');
 var ContainerType = require('../../models/DB/containerTypeDB');
 var Container = require('../../models/DB/containerDB');
 
-var googleAuth = require("./auth");
+const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
 const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
