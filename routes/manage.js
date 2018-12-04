@@ -977,7 +977,9 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
 });
 
 router.get('/container', regAsAdminManager, validateRequest, function (req, res, next) {
-    Container.find((err, containerList) => {
+    Container.find({
+        'active': true
+    }, (err, containerList) => {
         if (err) return next(err);
         Box.find({
             'stocking': true
