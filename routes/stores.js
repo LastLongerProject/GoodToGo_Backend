@@ -478,6 +478,10 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         var type = req.app.get('containerType');
         Box.find({
             'storeID': dbStore.role.storeID
+        }, {}, {
+            "sort": {
+                "updatedAt": -1
+            }
         }, function (err, boxList) {
             if (err) return next(err);
             var boxArr = [];
@@ -524,9 +528,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
             }, function (err, list) {
                 if (err) return next(err);
                 if (list.length !== 0) {
-                    list.sort((a, b) => {
-                        return b.logTime - a.logTime;
-                    });
+                    list.sort((a, b) => b.tradeTime - a.tradeTime);
                     var boxHistoryArr = [];
                     var boxIDArr = [];
                     var thisBoxTypeList;
