@@ -1286,7 +1286,9 @@ function addContent(lastHistory, newHistory) {
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
     refreshStore(req.app, function (err) {
         if (err) return next(err);
-        res.status(200).end("Done");
+        res.json({
+            "success": true
+        });
     });
 });
 
@@ -1294,7 +1296,9 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
     var dbAdmin = req._user;
     refreshContainer(req.app, dbAdmin, function (err) {
         if (err) return next(err);
-        res.status(200).end("Done");
+        res.json({
+            "success": true
+        });
     });
 });
 
