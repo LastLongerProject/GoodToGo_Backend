@@ -25,7 +25,6 @@ router.post('/signup', validateDefault, function (req, res, next) { // for CUSTO
         } else if (info.needCode) {
             return res.status(205).json(info.body);
         } else {
-            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -54,8 +53,6 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            if (info.headers)
-                res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -76,8 +73,6 @@ router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, func
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            if (info.headers)
-                res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
