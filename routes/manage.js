@@ -825,7 +825,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                                 delete userUsingDict[aTrade.oriUser.phone][containerKey];
                         }
                     } catch (error) {
-                        console.log(aTrade.newUser.phone, aTrade.oriUser.phone, error)
+                        debugError(aTrade.newUser.phone, aTrade.oriUser.phone, error);
                     }
                 });
 
