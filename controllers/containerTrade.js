@@ -144,11 +144,16 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
-                        return reject({
-                            code: 'F010',
-                            message: "Container not belone to user's store"
-                        });
+                    try {
+                        if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
+                            return reject({
+                                code: 'F010',
+                                message: "Container not belone to user's store"
+                            });
+                    } catch (error) {
+                        debug(reqUser);
+                        return reject(error);
+                    }
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
