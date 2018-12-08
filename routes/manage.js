@@ -749,9 +749,9 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         list: []
     };
     User.find({
-        "role.typeCode": {
-            "$ne": "bot"
-        }
+        // "role.typeCode": {
+        //     "$ne": "bot"
+        // }
     }, (err, userList) => {
         if (err) return next(err);
         var userDict = {};
@@ -803,25 +803,29 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 tradeList.forEach(aTrade => {
                     containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === "Rent") {
-                        userUsingDict[aTrade.newUser.phone][containerKey] = {
-                            time: aTrade.tradeTime.valueOf()
-                        };
-                        userDict[aTrade.newUser.phone].totalUsageAmount++;
-                    } else {
-                        if (!weekCheckpoint) {
-                            weekCheckpoint = getWeekCheckpoint(aTrade.tradeTime);
-                            if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
+                    try {
+                        if (aTrade.tradeType.action === "Rent") {
+                            userUsingDict[aTrade.newUser.phone][containerKey] = {
+                                time: aTrade.tradeTime.valueOf()
+                            };
+                            userDict[aTrade.newUser.phone].totalUsageAmount++;
+                        } else {
+                            if (!weekCheckpoint) {
+                                weekCheckpoint = getWeekCheckpoint(aTrade.tradeTime);
+                                if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
+                            }
+                            while (aTrade.tradeTime - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                                if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
+                            }
+                            if (aTrade.tradeTime >= weekCheckpoint) weeklyAmount[weekCheckpoint]++;
+                            result.totalUsageAmount++;
+                            if (now - aTrade.tradeTime <= MILLISECONDS_OF_A_WEEK) recentTotalUsageAmount++;
+                            if (aTrade.tradeType.oriState === 2 && userUsingDict[aTrade.oriUser.phone][containerKey])
+                                delete userUsingDict[aTrade.oriUser.phone][containerKey];
                         }
-                        while (aTrade.tradeTime - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                            weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                            if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
-                        }
-                        if (aTrade.tradeTime >= weekCheckpoint) weeklyAmount[weekCheckpoint]++;
-                        result.totalUsageAmount++;
-                        if (now - aTrade.tradeTime <= MILLISECONDS_OF_A_WEEK) recentTotalUsageAmount++;
-                        if (aTrade.tradeType.oriState === 2 && userUsingDict[aTrade.oriUser.phone][containerKey])
-                            delete userUsingDict[aTrade.oriUser.phone][containerKey];
+                    } catch (error) {
+                        console.log(aTrade.newUser.phone, aTrade.oriUser.phone, error)
                     }
                 });
 
