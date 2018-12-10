@@ -18,6 +18,12 @@ const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'b
 function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
         containers = [containers];
+    if (containers.length < 1)
+        return done.res.status(403).json({
+            code: 'F002',
+            message: 'No container found',
+            data: aContainerId
+        });
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
@@ -106,6 +112,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     return function trade(aContainer) {
         return new Promise((oriResolve, oriReject) => {
             queue.push(doneThisTask => {
+                let newUser = reqUser;
                 const resolve = bindFunction(doneThisTask, oriResolve, {
                     succeed: true
                 });
@@ -144,16 +151,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
-                    try {
-                        if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
-                            return reject({
-                                code: 'F010',
-                                message: "Container not belone to user's store"
-                            });
-                    } catch (error) {
-                        debug(reqUser);
-                        return reject(error);
-                    }
+                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
+                        return reject({
+                            code: 'F010',
+                            message: "Container not belone to user's store"
+                        });
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
@@ -209,15 +211,15 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 let storeID_newUser, storeID_oriUser;
                                 if (action === 'Sign') {
                                     if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 代簽收
-                                    else storeID_newUser = reqUser.roles.clerk.storeID;
+                                    else storeID_newUser = newUser.roles.clerk.storeID;
                                 } else if (action === 'Rent') {
                                     let tmp = oriUser;
-                                    oriUser = reqUser;
-                                    reqUser = tmp;
+                                    oriUser = newUser;
+                                    newUser = tmp;
                                     storeID_oriUser = oriUser.roles.clerk.storeID;
                                 } else if (action === 'Return') {
                                     if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 髒杯回收代歸還
-                                    else storeID_newUser = reqUser.roles.clerk.storeID;
+                                    else storeID_newUser = newUser.roles.clerk.storeID;
                                     if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
                                 } else if (action === 'ReadyToClean') {
                                     storeID_oriUser = theContainer.storeID;
@@ -229,7 +231,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 }
 
                                 theContainer.statusCode = newState;
-                                theContainer.conbineTo = reqUser.user.phone;
+                                theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = undefined;
@@ -246,7 +248,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         storeID: storeID_oriUser
                                     },
                                     newUser: {
-                                        phone: reqUser.user.phone,
+                                        phone: newUser.user.phone,
                                         storeID: storeID_newUser
                                     },
                                     container: {
