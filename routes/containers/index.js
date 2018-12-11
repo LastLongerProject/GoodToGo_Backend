@@ -257,7 +257,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                     sns.sns_publish(ARN, '借用了容器！', sns_body, {
                         action: "RELOAD_USAGE"
                     }, (err, data, payload) => {
-                        if (err) debug(`通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                        if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
                     });
                 };
                 if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
@@ -293,7 +293,7 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
                 sns.sns_publish(ARN, '歸還了容器！', sns_body, {
                     action: "RELOAD_USAGE"
                 }, (err, data, payload) => {
-                    if (err) debug(`通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                    if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
                 });
             };
             if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
