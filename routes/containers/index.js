@@ -250,13 +250,18 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
         }, {
             res,
             next,
-            callback: resJson => {
-                sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
-                    action: "RELOAD_USAGE"
-                }, (err, data, payload) => {
-                    if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
-                    resolve([userList[localCtr].user.phone, data, payload]);
-                });
+            callback: (resJson, tradeUser) => {
+                let customer = tradeUser.newUser;
+                let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+                const sendNotificationToUser = ARN => {
+                    sns.sns_publish(ARN, '借用了容器！', sns_body, {
+                        action: "RELOAD_USAGE"
+                    }, (err, data, payload) => {
+                        if (err) return debug("通知推播失敗：" + customer.user.phone);
+                    });
+                };
+                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
                 res.json(resJson);
             }
         });
@@ -280,7 +285,21 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         orderTime: res._payload.orderTime
     }, {
         res,
-        next
+        next,
+        callback: (resJson, tradeUser) => {
+            let customer = tradeUser.oriUser;
+            let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+            const sendNotificationToUser = ARN => {
+                sns.sns_publish(ARN, '歸還了容器！', sns_body, {
+                    action: "RELOAD_USAGE"
+                }, (err, data, payload) => {
+                    if (err) return debug("通知推播失敗：" + customer.user.phone);
+                });
+            };
+            if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+            if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
+            res.json(resJson);
+        }
     });
 });
 

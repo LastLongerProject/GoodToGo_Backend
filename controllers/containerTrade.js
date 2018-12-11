@@ -42,6 +42,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         .all(containers.map(stateChangingTask(reqUser, stateChanging, options, consts)))
         .then(taskResults => {
             let oriUser;
+            let tradeUser;
             let replyTxt;
             let dataSavers = [];
             let errorListArr = [];
@@ -55,6 +56,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                     containerID: aResult.ID,
                     saver: aResult.dataSaver
                 });
+                if (aResult.tradeUser) tradeUser = aResult.tradeUser;
             });
             let allSucceed = taskResults.every(aResult => aResult.succeed);
             if (allSucceed) {
@@ -72,9 +74,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
-                            containerList: containerList
+                            containerList
                         };
-                        if (done.callback) return done.callback(resJson);
+                        if (done.callback) return done.callback(resJson, tradeUser);
                         done.res.status(200).json(resJson);
                     }).catch(done.next);
             } else {
@@ -276,7 +278,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                                 });
                                             });
                                         });
-                                    }
+                                    },
+                                    tradeUser: action === "Rent" || action === "Return" ? {
+                                        oriUser,
+                                        newUser
+                                    } : null
                                 });
                             });
                         }
