@@ -237,7 +237,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
-                                else theContainer.storeID = undefined;
+                                else theContainer.storeID = null;
 
                                 let newTrade = new Trade({
                                     tradeTime,
