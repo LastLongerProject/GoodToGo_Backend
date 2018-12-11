@@ -40,6 +40,8 @@ var userSchema = mongoose.Schema({
         },
         expiryTime: Date
     }]
+}, {
+    usePushEach: true
 });
 
 userSchema.index({

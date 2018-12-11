@@ -88,7 +88,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
             }, {
                 res,
                 next,
-                callback: () => {
+                callback: resJson => {
                     aBox.delivering = true;
                     aBox.stocking = false;
                     aBox.storeID = storeID;
@@ -129,10 +129,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                                     if (err) debug(err);
                                 });
                         });*/
-                        return res.json({
-                            type: "DeliveryMessage",
-                            message: "Delivery Succeed"
-                        });
+                        return res.json(resJson);
                     });
                 }
             });
@@ -165,16 +162,13 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
         }, {
             res,
             next,
-            callback: () => {
+            callback: resJson => {
                 aBox.delivering = false;
                 aBox.storeID = undefined;
                 aBox.user.delivery = undefined;
                 aBox.save(function (err) {
                     if (err) return next(err);
-                    return res.json({
-                        type: "CancelDeliveryMessage",
-                        message: "CancelDelivery Succeed"
-                    });
+                    return res.json(resJson);
                 });
             }
         });
@@ -210,15 +204,12 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
         }, {
             res,
             next,
-            callback: () => {
+            callback: resJson => {
                 Box.remove({
                     'boxID': boxID
                 }, function (err) {
                     if (err) return next(err);
-                    return res.json({
-                        type: "SignMessage",
-                        message: "Sign Succeed"
-                    });
+                    return res.json(resJson);
                 });
             }
         });
@@ -227,7 +218,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
 
 router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var key = req.headers['userapikey'];
+    var key = req.headers.userapikey;
     if (typeof key === 'undefined' || typeof key === null || key.length === 0) {
         // debug(req.headers);
         return res.status(403).json({
@@ -258,7 +249,16 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             orderTime: res._payload.orderTime
         }, {
             res,
-            next
+            next,
+            callback: resJson => {
+                sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
+                    action: "RELOAD_USAGE"
+                }, (err, data, payload) => {
+                    if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
+                    resolve([userList[localCtr].user.phone, data, payload]);
+                });
+                res.json(resJson);
+            }
         });
     });
 });
@@ -399,15 +399,12 @@ router.post(['/cleanStation/unbox/:id', '/unbox/:id'], regAsAdmin, validateReque
         }, {
             res,
             next,
-            callback: () => {
+            callback: resJson => {
                 Box.remove({
                     'boxID': boxID
                 }, function (err) {
                     if (err) return next(err);
-                    return res.json({
-                        type: "UnboxingMessage",
-                        message: "Unboxing Succeed"
-                    });
+                    return res.json(resJson);
                 });
             }
         });

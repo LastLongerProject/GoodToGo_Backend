@@ -68,13 +68,14 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         aDataSaver.saver(resolve, reject);
                     })))
                     .then((containerList) => {
-                        if (done.callback) return done.callback();
-                        done.res.status(200).json({
+                        let resJson = {
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
                             containerList: containerList
-                        });
+                        };
+                        if (done.callback) return done.callback(resJson);
+                        done.res.status(200).json(resJson);
                     }).catch(done.next);
             } else {
                 return done.res.status(403).json({

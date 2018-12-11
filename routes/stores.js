@@ -772,9 +772,9 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         usageByDateByTypeGenerator(newTypeArrGenerator, personalLostTrades, resJson.personalLostHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, storeLostTrades, resJson.storeLostHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, usedTrades, resJson.usedHistory);
+        usageByDateByTypeGenerator(newTypeArrGenerator, cleanReloadTrades, resJson.cleanReloadHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, rentTrades, resJson.rentHistory);
         usageByDateByTypeGenerator(newTypeArrGenerator, returnTrades, resJson.returnHistory);
-        usageByDateByTypeGenerator(newTypeArrGenerator, cleanReloadTrades, resJson.cleanReloadHistory);
         for (let aHistoryType in resJson) {
             let thisHistoryType = resJson[aHistoryType];
             for (let historyArrIndex in thisHistoryType) {
@@ -793,7 +793,7 @@ function newTypeArrGeneratorFunction(type) {
             tmpArr.push({
                 typeCode: type[aType].typeCode,
                 name: type[aType].name,
-                IdList: [],
+                // IdList: [],
                 amount: 0
             });
         }
@@ -822,7 +822,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
                 i--;
             } else {
                 tmpTypeCode = theTrade.container.typeCode;
-                resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
                 resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
                 resultArr[resultArr.length - 1].amount++;
             }

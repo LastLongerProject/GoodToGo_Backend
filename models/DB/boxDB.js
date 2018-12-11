@@ -31,7 +31,8 @@ var userSchema = mongoose.Schema({
     },
     comment: String
 }, {
-    timestamps: true
+    timestamps: true,
+    usePushEach: true
 });
 
 userSchema.index({
