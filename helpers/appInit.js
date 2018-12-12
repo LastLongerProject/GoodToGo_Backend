@@ -65,21 +65,21 @@ module.exports = {
                         cb(succeed, {
                             type: 'refreshStoreImg',
                             message: 'refresh succeed',
-                            data: data
+                            data: storeIdList
                         });
                     })
                     .catch((err) => {
                         if (err) {
-                            debugError(data);
+                            debugError(storeIdList);
                             return cb(false, err);
                         }
                     });
             } else {
-                debugError(data);
+                debugError(storeIdList);
                 cb(succeed, {
                     type: 'refreshStoreImg',
                     message: 'refresh fail',
-                    data: data
+                    data: storeIdList
                 });
             }
         });
