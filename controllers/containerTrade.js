@@ -42,7 +42,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         .all(containers.map(stateChangingTask(reqUser, stateChanging, options, consts)))
         .then(taskResults => {
             let oriUser;
-            let tradeUser;
+            let tradeUser = null;
             let replyTxt;
             let dataSavers = [];
             let errorListArr = [];

@@ -251,17 +251,19 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             res,
             next,
             callback: (resJson, tradeUser) => {
-                let customer = tradeUser.newUser;
-                let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-                const sendNotificationToUser = ARN => {
-                    sns.sns_publish(ARN, '借用了容器！', sns_body, {
-                        action: "RELOAD_USAGE"
-                    }, (err, data, payload) => {
-                        if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                    });
-                };
-                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
+                if (tradeUser) {
+                    let customer = tradeUser.newUser;
+                    let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+                    const sendNotificationToUser = ARN => {
+                        sns.sns_publish(ARN, '借用了容器！', sns_body, {
+                            action: "RELOAD_USAGE"
+                        }, (err, data, payload) => {
+                            if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                        });
+                    };
+                    if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+                    if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
+                }
                 res.json(resJson);
             }
         });
@@ -287,17 +289,19 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         res,
         next,
         callback: (resJson, tradeUser) => {
-            let customer = tradeUser.oriUser;
-            let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-            const sendNotificationToUser = ARN => {
-                sns.sns_publish(ARN, '歸還了容器！', sns_body, {
-                    action: "RELOAD_USAGE"
-                }, (err, data, payload) => {
-                    if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                });
-            };
-            if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-            if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
+            if (tradeUser) {
+                let customer = tradeUser.oriUser;
+                let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+                const sendNotificationToUser = ARN => {
+                    sns.sns_publish(ARN, '歸還了容器！', sns_body, {
+                        action: "RELOAD_USAGE"
+                    }, (err, data, payload) => {
+                        if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                    });
+                };
+                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
+            }
             res.json(resJson);
         }
     });
