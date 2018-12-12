@@ -8,40 +8,35 @@ var debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
 var debugError = require('debug')('goodtogo_backend:appINIT_ERR');
 
-var datas = {
-    storeDict: null,
-    containerDict: null,
-    containerTypeDict: null,
-    containerDictOnlyActive: null
-};
+const DataCacheFactory = require("../models/DataCacheFactory");
 
 module.exports = {
-    store: function (app, cb) {
-        storeListGenerator(app, (err) => {
+    store: function (cb) {
+        storeListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debugError(err);
             debug('storeList init');
         });
     },
-    container: function (app, cb) {
-        containerListGenerator(app, (err) => {
+    container: function (cb) {
+        containerListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debugError(err);
             debug('containerList init');
         });
     },
-    refreshStore: function (app, cb) {
-        sheet.getStore((data) => {
-            storeListGenerator(app, (err) => {
+    refreshStore: function (cb) {
+        sheet.getStore(data => {
+            storeListGenerator(err => {
                 if (err) return cb(err);
                 debug('storeList refresh');
                 cb();
             });
         });
     },
-    refreshContainer: function (app, dbUser, cb) {
+    refreshContainer: function (dbUser, cb) {
         sheet.getContainer(dbUser, () => {
-            containerListGenerator(app, (err) => {
+            containerListGenerator(err => {
                 if (err) return cb(err);
                 debug('containerList refresh');
                 cb();
@@ -141,20 +136,10 @@ module.exports = {
                 });
             }
         });
-    },
-    getConst
+    }
 };
 
-function getConst(key, cb) {
-    if (cb) {
-        if (datas[key] === null) return setTimeout(getConst, 200, key, cb);
-        else return cb(datas[key]);
-    } else {
-        return new Promise((resolve, reject) => getConst(key, resolve));
-    }
-}
-
-function storeListGenerator(app, cb) {
+function storeListGenerator(cb) {
     PlaceID.find({}, {}, {
         sort: {
             ID: 1
@@ -165,15 +150,12 @@ function storeListGenerator(app, cb) {
         stores.forEach((aStore) => {
             storeDict[aStore.ID] = aStore;
         });
-        app.set('store', storeDict);
-        Object.assign(datas, {
-            storeDict
-        });
+        DataCacheFactory.set('store', storeDict);
         cb();
     });
 }
 
-function containerListGenerator(app, cb) {
+function containerListGenerator(cb) {
     ContainerType.find({}, {}, {
         sort: {
             typeCode: 1
@@ -196,14 +178,9 @@ function containerListGenerator(app, cb) {
                 containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
                 if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
             }
-            app.set('containerWithDeactive', containerDict);
-            app.set('container', containerDictOnlyActive);
-            app.set('containerType', containerTypeDict);
-            Object.assign(datas, {
-                containerDict,
-                containerTypeDict,
-                containerDictOnlyActive
-            });
+            DataCacheFactory.set('containerWithDeactive', containerDict);
+            DataCacheFactory.set('container', containerDictOnlyActive);
+            DataCacheFactory.set('containerType', containerTypeDict);
             cb();
         });
     });

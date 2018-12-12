@@ -1,15 +1,16 @@
-var jwt = require('jwt-simple');
-var queue = require('queue')({
+const jwt = require('jwt-simple');
+const queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-var redis = require("../models/redis");
 
-var sendCode = require("../helpers/aws/SNS").sms_now;
-var intReLength = require('@lastlongerproject/toolkit').intReLength;
-var keys = require('../config/keys');
-var User = require('../models/DB/userDB');
-var UserKeys = require('../models/DB/userKeysDB');
+const sendCode = require("../helpers/aws/SNS").sms_now;
+const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const keys = require('../config/keys');
+const redis = require("../models/redis");
+const User = require('../models/DB/userDB');
+const UserKeys = require('../models/DB/userKeysDB');
+const DataCacheFactory = require("../models/DataCacheFactory");
 
 module.exports = {
     signup: function (req, done) {
@@ -230,7 +231,7 @@ module.exports = {
                             if (err) return done(err);
                             return done(null, dbUser, {
                                 headers: {
-                                    Authorization: tokenBuilder(req, serverSecretKey, keyPairList, dbUser)
+                                    Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
                                 },
                                 body: {
                                     type: 'loginMessage',
@@ -429,7 +430,7 @@ module.exports = {
                             if (err) return done(err);
                             done(null, true, {
                                 headers: {
-                                    Authorization: tokenBuilder(req, returnKeys.serverSecretKey, newUserKey, newUser)
+                                    Authorization: tokenBuilder(returnKeys.serverSecretKey, newUserKey, newUser)
                                 },
                                 body: {
                                     type: 'signupMessage',
@@ -479,7 +480,7 @@ module.exports = {
                     if (err) return done(err);
                     done(null, true, {
                         headers: {
-                            Authorization: tokenBuilder(req, returnKeys.serverSecretKey, keyPair, theBot)
+                            Authorization: tokenBuilder(returnKeys.serverSecretKey, keyPair, theBot)
                         },
                         body: {
                             type: 'signupMessage',
@@ -513,8 +514,8 @@ function getStoreName(storeDict, dbUser) {
     else return "找不到店家";
 }
 
-function tokenBuilder(req, serverSecretKey, userKey, dbUser) {
-    var stores = req.app.get('store');
+function tokenBuilder(serverSecretKey, userKey, dbUser) {
+    var stores = DataCacheFactory.get('store');
     var storeName = getStoreName(stores, dbUser);
     var payload;
     if (Array.isArray(userKey)) {

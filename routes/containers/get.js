@@ -13,6 +13,7 @@ const baseUrl = require('../../config/config.js').serverBaseUrl;
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
+const DataCacheFactory = require("../../models/DataCacheFactory");
 
 const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
@@ -22,8 +23,8 @@ const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 const historyDays = 14;
 
 router.get('/list', validateDefault, function (req, res, next) {
-    var typeDict = req.app.get('containerType');
-    var containerDict = req.app.get('container');
+    var typeDict = DataCacheFactory.get('containerType');
+    var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
     var tmpArr = [];
     var date = new Date();
@@ -56,7 +57,7 @@ router.get('/list', validateDefault, function (req, res, next) {
 
 router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var containerDict = req.app.get('containerWithDeactive');
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
     process.nextTick(function () {
         Box.find(function (err, boxList) {
             if (err) return next(err);
@@ -111,7 +112,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
 
 router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var typeDict = req.app.get('containerType');
+    var typeDict = DataCacheFactory.get('containerType');
     Trade.find({
         'tradeType.action': 'Sign',
         'tradeTime': {
@@ -177,7 +178,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
 
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var typeDict = req.app.get('containerType');
+    var typeDict = DataCacheFactory.get('containerType');
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;

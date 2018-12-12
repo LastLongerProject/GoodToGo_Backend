@@ -23,6 +23,7 @@ var User = require('../models/DB/userDB');
 var Store = require('../models/DB/storeDB');
 var Trade = require('../models/DB/tradeDB');
 var Container = require('../models/DB/containerDB');
+const DataCacheFactory = require("../models/DataCacheFactory");
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
@@ -272,7 +273,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
     Promise
         .all(funcList)
         .then((data) => {
-            var containerDict = req.app.get('containerType');
+            var containerDict = DataCacheFactory.get('containerType');
             var result = {
                 user: {
                     show: true,
@@ -644,7 +645,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     }
                 });
 
-                var containerType = req.app.get('containerType');
+                var containerType = DataCacheFactory.get('containerType');
                 for (var index in result.history) {
                     var theHistory = result.history[index];
                     if (typeof theHistory.content === "object") {
@@ -879,8 +880,8 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
-    var containerDict = req.app.get('containerWithDeactive');
-    var storeDict = req.app.get('store');
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
+    var storeDict = DataCacheFactory.get('store');
     User.findOne({
         'user.phone': USER_ID
     }, (err, theUser) => {
@@ -995,7 +996,7 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
                 stockedContainerList = stockedContainerList.concat(aBox.containerList);
             });
             var typeDict = {};
-            var containerType = req.app.get('containerType');
+            var containerType = DataCacheFactory.get('containerType');
             for (var aType in containerType) {
                 typeDict[containerType[aType].typeCode] = {
                     id: containerType[aType].typeCode,
@@ -1074,7 +1075,7 @@ const actionTxtDict = {
 router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
-    var containerDict = req.app.get('containerWithDeactive');
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
     Container.findOne({
         "ID": CONTAINER_ID
     }, (err, theContainer) => {
@@ -1118,7 +1119,7 @@ router.get('/console', regAsAdminManager, validateRequest, function (req, res, n
 });
 
 router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
-    const storeDict = req.app.get("store");
+    const storeDict = DataCacheFactory.get("store");
     let storesSummary = {};
     let storesTmpData = {};
     for (let aStoreKey in storeDict) {
@@ -1288,7 +1289,7 @@ function addContent(lastHistory, newHistory) {
 }
 
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshStore(req.app, function (err) {
+    refreshStore(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
@@ -1298,7 +1299,7 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req
 
 router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    refreshContainer(req.app, dbAdmin, function (err) {
+    refreshContainer(dbAdmin, function (err) {
         if (err) return next(err);
         res.json({
             "success": true

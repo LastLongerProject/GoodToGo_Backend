@@ -4,6 +4,7 @@ var jwt = require('jwt-simple');
 var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:stores');
 var redis = require("../models/redis");
+const DataCacheFactory = require("../models/DataCacheFactory");
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
@@ -218,7 +219,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
-    var type = Object.values(req.app.get('containerType'));
+    var type = Object.values(DataCacheFactory.get('containerType'));
     var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
@@ -474,8 +475,8 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
 router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var containerDict = req.app.get('container');
-        var type = req.app.get('containerType');
+        var containerDict = DataCacheFactory.get('container');
+        var type = DataCacheFactory.get('containerType');
         Box.find({
             'storeID': dbStore.role.storeID
         }, {}, {
@@ -582,7 +583,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
 router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var type = req.app.get('containerType');
+        var type = DataCacheFactory.get('containerType');
         Promise
             .all([new Promise((resolve, reject) => {
                     Trade.find({
@@ -621,7 +622,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
 
 router.get('/history', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = req.app.get('containerType');
+    var type = DataCacheFactory.get('containerType');
     process.nextTick(function () {
         Trade.find({
             'tradeTime': {
@@ -665,7 +666,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
 
 router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = req.app.get('containerType');
+    var type = DataCacheFactory.get('containerType');
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{

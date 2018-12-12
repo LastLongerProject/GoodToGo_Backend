@@ -26,14 +26,14 @@ module.exports = function (app) {
         if (err) return debugError(err);
         if (!bot) return debugError('missing bot acount');
         var dateNow = new Date();
-        appInit.refreshContainer(app, bot, cb);
-        appInit.refreshStore(app, cb);
+        appInit.refreshContainer(bot, cb);
+        appInit.refreshStore(cb);
         var shouldWait = dateCheckpoint(1) - dateNow;
         setTimeout(function () {
             setInterval(function tasks() {
                 debug('scheduler start');
-                setTimeout(appInit.refreshContainer, 0, app, bot, cb);
-                setTimeout(appInit.refreshStore, 1000 * 60 * 5, app, cb);
+                setTimeout(appInit.refreshContainer, 0, bot, cb);
+                setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
                 setTimeout(function () {

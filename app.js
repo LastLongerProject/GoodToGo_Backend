@@ -57,10 +57,6 @@ app.use((req, res, next) => {
     esm(req, res, next);
 });
 
-mongoose.Promise = global.Promise;
-connectMongoDB();
-require("./models/redis");
-
 app.use('/manage', manage);
 
 app.use(timeout('10s'));
@@ -110,6 +106,10 @@ app.use(function (err, req, res, next) {
     }
 });
 
+mongoose.Promise = global.Promise;
+connectMongoDB();
+require("./models/redis");
+
 function connectMongoDB() {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
@@ -118,13 +118,13 @@ function connectMongoDB() {
         Promise
             .all([
                 new Promise((resolve, reject) => {
-                    appInit.container(app, err => {
+                    appInit.container(err => {
                         if (err) return reject(err);
                         resolve();
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    appInit.store(app, err => {
+                    appInit.store(err => {
                         if (err) return reject(err);
                         resolve();
                     });

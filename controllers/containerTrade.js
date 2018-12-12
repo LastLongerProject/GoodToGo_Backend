@@ -7,6 +7,7 @@ var debug = require('debug')('goodtogo_backend:containerTrade');
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
+const DataCacheFactory = require("../models/DataCacheFactory");
 const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
@@ -28,7 +29,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
     const consts = {
-        containerTypeDict: done.res.app.get("containerType")
+        containerTypeDict: DataCacheFactory.get("containerType")
     };
 
     let tradeTime;
