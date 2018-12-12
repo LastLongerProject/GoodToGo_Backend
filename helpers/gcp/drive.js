@@ -1,17 +1,19 @@
-var fs = require('fs');
-var sharp = require('sharp');
-var {
+const fs = require('fs');
+const sharp = require('sharp');
+const {
     google
 } = require('googleapis');
-var drive = google.drive('v3');
-var debug = require('debug')('goodtogo_backend:google_drive');
+const drive = google.drive('v3');
+const debug = require('debug')('goodtogo_backend:google_drive');
+debug.log = console.log.bind(console);
+const debugError = require('debug')('goodtogo_backend:google_drive_ERR');
 
-var googleAuth = require("./auth");
+const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
 const ROOT_DIR = require("../../config/config").rootDir;
 const GOOGLE_CONTENT_PATH = `${ROOT_DIR}/assets/json/googleContent.json`;
 
-var connectionCtr = 0;
+let connectionCtr = 0;
 
 if (!fs.existsSync(`${ROOT_DIR}/assets/`)) fs.mkdirSync(`${ROOT_DIR}/assets/`);
 if (!fs.existsSync(`${ROOT_DIR}/assets/json`)) fs.mkdirSync(`${ROOT_DIR}/assets/json`);
@@ -44,8 +46,22 @@ module.exports = {
     }
 };
 
+if (!fs.existsSync(GOOGLE_CONTENT_PATH)) {
+    const tmpCb = function (initType) {
+        return function tmpCb(success, data) {
+            if (!success) {
+                debugError(`[${initType}] Initial Static File Not Success: `, data);
+            } else {
+                debug(`[${initType}] Initial Static File Success!`);
+            }
+        };
+    };
+    module.exports.getContainer(true, tmpCb("Container Icon"));
+    module.exports.getStore(true, tmpCb("Store Picture"));
+}
+
 function resFromGoogle(err, response, forceRenew, type, cb) {
-    if (err) return debug('The API returned an error: ' + err);
+    if (err) return debugError('The API returned an error: ' + err);
     var files = response.data.files;
     var fileIdList = files.map(aFile => aFile.id);
     fs.readFile(GOOGLE_CONTENT_PATH, (err, googleContent) => {
@@ -93,7 +109,7 @@ function resFromGoogle(err, response, forceRenew, type, cb) {
                 googleContent.file_watchList = newWatchList;
                 fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
                     if (err) {
-                        debug(err);
+                        debugError(err);
                         return cb(false, err);
                     }
                     cb(true, modifiedFile);
@@ -123,7 +139,7 @@ function downloadFile(aFile, type, resolve, reject) {
                 res.data
                     .on('data', d => bufs.push(d))
                     .on('err', err => {
-                        debug('Error during downloading file: ' + aFile.name + ' err: ' + err);
+                        debugError('Error during downloading file: ' + aFile.name + ' err: ' + err);
                         resolve('error');
                         return;
                     })

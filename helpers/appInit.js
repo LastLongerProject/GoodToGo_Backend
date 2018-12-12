@@ -1,14 +1,15 @@
-var Store = require('../models/DB/storeDB');
-var PlaceID = require('../models/DB/placeIdDB');
-var Container = require('../models/DB/containerDB');
-var ContainerType = require('../models/DB/containerTypeDB');
-var sheet = require('./gcp/sheet');
-var drive = require('./gcp/drive');
-var debug = require('debug')('goodtogo_backend:appInit');
+const debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
-var debugError = require('debug')('goodtogo_backend:appINIT_ERR');
+const debugError = require('debug')('goodtogo_backend:appINIT_ERR');
 
 const DataCacheFactory = require("../models/DataCacheFactory");
+const Store = require('../models/DB/storeDB');
+const PlaceID = require('../models/DB/placeIdDB');
+const Container = require('../models/DB/containerDB');
+const ContainerType = require('../models/DB/containerTypeDB');
+
+const sheet = require('./gcp/sheet');
+const drive = require('./gcp/drive');
 
 module.exports = {
     store: function (cb) {
