@@ -16,14 +16,16 @@ var datas = {
 };
 
 module.exports = {
-    store: function (app) {
+    store: function (app, cb) {
         storeListGenerator(app, (err) => {
+            if (cb) return cb(err);
             if (err) return debugError(err);
             debug('storeList init');
         });
     },
-    container: function (app) {
+    container: function (app, cb) {
         containerListGenerator(app, (err) => {
+            if (cb) return cb(err);
             if (err) return debugError(err);
             debug('containerList init');
         });

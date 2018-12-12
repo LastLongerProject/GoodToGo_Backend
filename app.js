@@ -110,30 +110,66 @@ app.use(function (err, req, res, next) {
     }
 });
 
+function connectMongoDB() {
+    mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
+        if (err) throw err;
+        debug('mongoDB connect succeed');
+        // require('./tmp/removeOldLog.js')
+        Promise
+            .all([
+                new Promise((resolve, reject) => {
+                    appInit.container(app, err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
+                }),
+                new Promise((resolve, reject) => {
+                    appInit.store(app, err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
+                })
+            ])
+            .then(data => {
+                if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
+                    scheduler(app);
+                } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
+                    debug("Local Testing no scheduler");
+                } else {
+                    debug("Deploy Server no scheduler");
+                }
+                debug("Done App Initializing");
+                startServer();
+            })
+            .catch(err => debugError(err));
+    });
+}
 
-/**
- * Get port from environment and store in Express.
- */
-var port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+function startServer() {
+    /**
+     * Get port from environment and store in Express.
+     */
+    var port = normalizePort(process.env.PORT || '3000');
+    app.set('port', port);
 
-/**
- * Create HTTP server.
- */
-var server = http.createServer(app);
+    /**
+     * Create HTTP server.
+     */
+    var server = http.createServer(app);
 
-/**
- * Listen on provided port, on all network interfaces.
- */
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+    /**
+     * Listen on provided port, on all network interfaces.
+     */
+    server.listen(port);
+    server.on('error', onError());
+    server.on('listening', onListening(server));
 
-io = io(server);
-io.of('/containers/challenge/socket')
-    .use(socketCb.auth)
-    .on('connection', socketCb.init);
-app.set('socket.io', io);
+    io = io(server);
+    io.of('/containers/challenge/socket')
+        .use(socketCb.auth)
+        .on('connection', socketCb.init);
+    app.set('socket.io', io);
+}
 
 // cookie middleware (just for identify user)
 function cookieMid() {
@@ -172,23 +208,6 @@ function GAtrigger() {
         }
         next();
     };
-}
-
-function connectMongoDB() {
-    mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
-        if (err) throw err;
-        debug('mongoDB connect succeed');
-        // require('./tmp/removeOldLog.js')
-        appInit.container(app);
-        appInit.store(app);
-        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
-            scheduler(app);
-        } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-            debug("Local Testing no scheduler");
-        } else {
-            debug("Deploy Server no scheduler");
-        }
-    });
 }
 
 function resBodyParser(req, res, next) {
@@ -253,37 +272,41 @@ function normalizePort(val) {
 /**
  * Event listener for HTTP server "error" event.
  */
-function onError(error) {
-    if (error.syscall !== 'listen') {
-        throw error;
-    }
-
-    var bind = typeof port === 'string' ?
-        'Pipe ' + port :
-        'Port ' + port;
-
-    // handle specific listen errors with friendly messages
-    switch (error.code) {
-        case 'EACCES':
-            console.error(bind + ' requires elevated privileges');
-            process.exit(1);
-            break;
-        case 'EADDRINUSE':
-            console.error(bind + ' is already in use');
-            process.exit(1);
-            break;
-        default:
+function onError() {
+    return function onErrorfunction(error) {
+        if (error.syscall !== 'listen') {
             throw error;
-    }
+        }
+
+        var bind = typeof port === 'string' ?
+            'Pipe ' + port :
+            'Port ' + port;
+
+        // handle specific listen errors with friendly messages
+        switch (error.code) {
+            case 'EACCES':
+                console.error(bind + ' requires elevated privileges');
+                process.exit(1);
+                break;
+            case 'EADDRINUSE':
+                console.error(bind + ' is already in use');
+                process.exit(1);
+                break;
+            default:
+                throw error;
+        }
+    };
 }
 
 /**
  * Event listener for HTTP server "listening" event.
  */
-function onListening() {
-    var addr = server.address();
-    var bind = typeof addr === 'string' ?
-        'pipe ' + addr :
-        'port ' + addr.port;
-    debug('Listening on ' + bind);
+function onListening(server) {
+    return function onListening() {
+        var addr = server.address();
+        var bind = typeof addr === 'string' ?
+            'pipe ' + addr :
+            'port ' + addr.port;
+        debug('Listening on ' + bind);
+    };
 }
