@@ -256,22 +256,20 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
             "ID": 1,
             "typeCode": 1,
             "_id": 0
+        }).sort({
+            "ID": 1
         })
     };
-    var funcList = [];
-    fields.forEach((aField) => {
-        funcList.push(new Promise((resolve, reject) => {
-            var localField = aField;
-            if (fieldDict.hasOwnProperty(aField))
-                fieldDict[aField].exec((err, dataList) => {
-                    if (err) return reject(err);
-                    else return resolve([localField, dataList]);
-                });
-            else resolve([aField, []]);
-        }));
-    });
     Promise
-        .all(funcList)
+        .all(
+            fields.map(aField => new Promise((resolve, reject) => {
+                if (fieldDict.hasOwnProperty(aField))
+                    fieldDict[aField].exec((err, dataList) => {
+                        if (err) return reject(err);
+                        else return resolve([aField, dataList]);
+                    });
+                else resolve([aField, []]);
+            })))
         .then((data) => {
             var containerDict = DataCacheFactory.get('containerType');
             var result = {
