@@ -20,7 +20,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     if (!Array.isArray(containers))
         containers = [containers];
     if (containers.length < 1)
-        return done.res.status(403).json({
+        return done(null, false, {
             code: 'F002',
             message: 'No container found',
             data: aContainerId
@@ -70,18 +70,16 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         const reject = bindFunction(cleanStateCache, oriReject);
                         aDataSaver.saver(resolve, reject);
                     })))
-                    .then((containerList) => {
-                        let resJson = {
+                    .then(containerList => {
+                        return done(null, true, {
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
                             containerList
-                        };
-                        if (done.callback) return done.callback(resJson, tradeUser);
-                        done.res.status(200).json(resJson);
-                    }).catch(done.next);
+                        }, tradeUser);
+                    }).catch(done);
             } else {
-                return done.res.status(403).json({
+                return done(null, false, {
                     code: 'F001',
                     type: messageType,
                     message: "State Changing Invalid",
@@ -97,9 +95,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 Object.assign(err, {
                     type: messageType
                 });
-                done.res.status(403).json(err);
+                return done(null, false, err);
             } else {
-                done.next(err);
+                done(err);
             }
         });
 }

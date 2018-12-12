@@ -85,53 +85,51 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
             }, {
                 boxID,
                 storeID
-            }, {
-                res,
-                next,
-                callback: resJson => {
-                    aBox.delivering = true;
-                    aBox.stocking = false;
-                    aBox.storeID = storeID;
-                    aBox.user.delivery = dbAdmin.user.phone;
-                    aBox.save(function (err) {
-                        if (err) return next(err);
-                        /*
-                        User.find({
-                            'roles.clerk.storeID': storeID
-                        }, function (err, userList) {
-                            var funcList = [];
-                            for (var i in userList) {
-                                if (typeof userList[i].pushNotificationArn !== "undefined")
-                                    for (var keys in userList[i].pushNotificationArn) {
-                                        if (keys.indexOf('shop') >= 0)
-                                            funcList.push(new Promise((resolve, reject) => {
-                                                var localCtr = i;
-                                                sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
-                                                    action: "BOX_DELIVERY"
-                                                }, (err, data, payload) => {
-                                                    if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
-                                                    resolve([userList[localCtr].user.phone, data, payload]);
-                                                });
-                                            }));
-                                    }
-                            }
-                            Promise
-                                .all(funcList)
-                                .then((data) => {
-                                    data.forEach(element => {
-                                        if (element[1] === 'err')
-                                            element.forEach((ele) => {
-                                                debug(ele);
+            }, (err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                aBox.delivering = true;
+                aBox.stocking = false;
+                aBox.storeID = storeID;
+                aBox.user.delivery = dbAdmin.user.phone;
+                aBox.save(function (err) {
+                    if (err) return next(err);
+                    return res.json(reply);
+                    /*
+                    User.find({
+                        'roles.clerk.storeID': storeID
+                    }, function (err, userList) {
+                        var funcList = [];
+                        for (var i in userList) {
+                            if (typeof userList[i].pushNotificationArn !== "undefined")
+                                for (var keys in userList[i].pushNotificationArn) {
+                                    if (keys.indexOf('shop') >= 0)
+                                        funcList.push(new Promise((resolve, reject) => {
+                                            var localCtr = i;
+                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
+                                                action: "BOX_DELIVERY"
+                                            }, (err, data, payload) => {
+                                                if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
+                                                resolve([userList[localCtr].user.phone, data, payload]);
                                             });
-                                    });
-                                })
-                                .catch((err) => {
-                                    if (err) debug(err);
+                                        }));
+                                }
+                        }
+                        Promise
+                            .all(funcList)
+                            .then((data) => {
+                                data.forEach(element => {
+                                    if (element[1] === 'err')
+                                        element.forEach((ele) => {
+                                            debug(ele);
+                                        });
                                 });
-                        });*/
-                        return res.json(resJson);
-                    });
-                }
+                            })
+                            .catch((err) => {
+                                if (err) debug(err);
+                            });
+                    });*/
+                });
             });
         });
     });
@@ -159,18 +157,16 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
             newState: 5
         }, {
             bypassStateValidation: true
-        }, {
-            res,
-            next,
-            callback: resJson => {
-                aBox.delivering = false;
-                aBox.storeID = undefined;
-                aBox.user.delivery = undefined;
-                aBox.save(function (err) {
-                    if (err) return next(err);
-                    return res.json(resJson);
-                });
-            }
+        }, (err, tradeSuccess, reply) => {
+            if (err) return next(err);
+            if (!tradeSuccess) return res.status(403).json(reply);
+            aBox.delivering = false;
+            aBox.storeID = undefined;
+            aBox.user.delivery = undefined;
+            aBox.save(function (err) {
+                if (err) return next(err);
+                return res.json(reply);
+            });
         });
     });
 });
@@ -201,17 +197,15 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
         }, {
             boxID,
             storeID: (reqByAdmin) ? aDelivery.storeID : undefined
-        }, {
-            res,
-            next,
-            callback: resJson => {
-                Box.remove({
-                    'boxID': boxID
-                }, function (err) {
-                    if (err) return next(err);
-                    return res.json(resJson);
-                });
-            }
+        }, (err, tradeSuccess, reply) => {
+            if (err) return next(err);
+            if (!tradeSuccess) return res.status(403).json(reply);
+            Box.remove({
+                'boxID': boxID
+            }, function (err) {
+                if (err) return next(err);
+                return res.json(reply);
+            });
         });
     });
 });
@@ -232,9 +226,9 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
         type: "borrowContainerMessage",
         message: "Missing Order Time"
     });
-    redis.get('user_token:' + key, (err, reply) => {
+    redis.get('user_token:' + key, (err, userPhone) => {
         if (err) return next(err);
-        if (!reply) return res.status(403).json({
+        if (!userPhone) return res.status(403).json({
             code: 'F013',
             type: "borrowContainerMessage",
             message: "Rent Request Expired"
@@ -245,27 +239,25 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             action: "Rent",
             newState: 2
         }, {
-            rentToUser: reply,
+            rentToUser: userPhone,
             orderTime: res._payload.orderTime
-        }, {
-            res,
-            next,
-            callback: (resJson, tradeUser) => {
-                if (tradeUser) {
-                    let customer = tradeUser.newUser;
-                    let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-                    const sendNotificationToUser = ARN => {
-                        sns.sns_publish(ARN, '借用了容器！', sns_body, {
-                            action: "RELOAD_USAGE"
-                        }, (err, data, payload) => {
-                            if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                        });
-                    };
-                    if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-                    if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
-                }
-                res.json(resJson);
+        }, (err, tradeSuccess, reply, tradeUser) => {
+            if (err) return next(err);
+            if (!tradeSuccess) return res.status(403).json(reply);
+            if (tradeUser) {
+                let customer = tradeUser.newUser;
+                let sns_body = reply.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+                const sendNotificationToUser = ARN => {
+                    sns.sns_publish(ARN, '借用了容器！', sns_body, {
+                        action: "RELOAD_USAGE"
+                    }, (err, data, payload) => {
+                        if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                    });
+                };
+                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
             }
+            res.json(reply);
         });
     });
 });
@@ -285,25 +277,23 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
     }, {
         storeID: req.body.storeId,
         orderTime: res._payload.orderTime
-    }, {
-        res,
-        next,
-        callback: (resJson, tradeUser) => {
-            if (tradeUser) {
-                let customer = tradeUser.oriUser;
-                let sns_body = resJson.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-                const sendNotificationToUser = ARN => {
-                    sns.sns_publish(ARN, '歸還了容器！', sns_body, {
-                        action: "RELOAD_USAGE"
-                    }, (err, data, payload) => {
-                        if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                    });
-                };
-                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
-            }
-            res.json(resJson);
+    }, (err, tradeSuccess, reply, tradeUser) => {
+        if (err) return next(err);
+        if (!tradeSuccess) return res.status(403).json(reply);
+        if (tradeUser) {
+            let customer = tradeUser.oriUser;
+            let sns_body = reply.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
+            const sendNotificationToUser = ARN => {
+                sns.sns_publish(ARN, '歸還了容器！', sns_body, {
+                    action: "RELOAD_USAGE"
+                }, (err, data, payload) => {
+                    if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
+                });
+            };
+            if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
+            if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
         }
+        res.json(reply);
     });
 });
 
@@ -321,9 +311,10 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res
         newState: 4
     }, {
         orderTime: res._payload.orderTime
-    }, {
-        res,
-        next
+    }, (err, tradeSuccess, reply) => {
+        if (err) return next(err);
+        if (!tradeSuccess) return res.status(403).json(reply);
+        res.json(reply);
     });
 });
 
@@ -337,7 +328,7 @@ router.post(['/cleanStation/box', '/box'], regAsAdmin, validateRequest, function
             type: 'BoxingMessage',
             message: 'Boxing req body invalid'
         });
-    var task = function (response) {
+    var task = function (done) {
         Box.findOne({
             'boxID': boxID
         }, function (err, aBox) {
@@ -352,22 +343,23 @@ router.post(['/cleanStation/box', '/box'], regAsAdmin, validateRequest, function
                 newState: 5
             }, {
                 boxID
-            }, {
-                res,
-                next,
-                callback: () => {
-                    const newBox = new Box({
-                        boxID,
-                        user: {
-                            box: dbAdmin.user.phone
-                        },
-                        containerList
-                    });
-                    newBox.save(function (err) {
-                        if (err) return next(err);
-                        return response(newBox);
-                    });
-                }
+            }, (err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                const newBox = new Box({
+                    boxID,
+                    user: {
+                        box: dbAdmin.user.phone
+                    },
+                    containerList
+                });
+                Object.assign(reply, {
+                    data: newBox
+                });
+                newBox.save(function (err) {
+                    if (err) return next(err);
+                    return done(reply);
+                });
             });
         });
     };
@@ -384,12 +376,8 @@ router.post(['/cleanStation/box', '/box'], regAsAdmin, validateRequest, function
                     if (reply !== 1) return next(reply);
                     var today = new Date();
                     boxID = (today.getMonth() + 1) + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
-                    task((newBox) => {
-                        res.status(200).json({
-                            type: 'BoxingMessage',
-                            message: 'Boxing Succeeded',
-                            data: newBox
-                        });
+                    task(reply => {
+                        res.json(reply);
                     });
                 });
             });
@@ -419,17 +407,15 @@ router.post(['/cleanStation/unbox/:id', '/unbox/:id'], regAsAdmin, validateReque
             newState: 4
         }, {
             bypassStateValidation: true
-        }, {
-            res,
-            next,
-            callback: resJson => {
-                Box.remove({
-                    'boxID': boxID
-                }, function (err) {
-                    if (err) return next(err);
-                    return res.json(resJson);
-                });
-            }
+        }, (err, tradeSuccess, reply) => {
+            if (err) return next(err);
+            if (!tradeSuccess) return res.status(403).json(reply);
+            Box.remove({
+                'boxID': boxID
+            }, function (err) {
+                if (err) return next(err);
+                return res.json(reply);
+            });
         });
     });
 });
