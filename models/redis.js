@@ -1,10 +1,10 @@
-var config = require('../config/config');
+const config = require('../config/config');
 
-var debug = require('debug')('goodtogo_backend:redis');
+const debug = require('debug')('goodtogo_backend:redis');
 debug.log = console.log.bind(console);
-var debugError = require('debug')('goodtogo_backend:redisERR');
-var redis = require('redis');
-var redisClient = redis.createClient(6379, config.redisUrl, {
+const debugError = require('debug')('goodtogo_backend:redisERR');
+const redis = require('redis');
+const redisClient = redis.createClient(6379, config.redisUrl, {
     password: config.redisPass
 });
 redisClient.on('ready', function () {

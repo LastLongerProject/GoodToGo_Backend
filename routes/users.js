@@ -16,6 +16,8 @@ const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 
+const redis = require("../models/redis");
+const User = require("../models/DB/userDB");
 const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require("../models/DataCacheFactory");
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
@@ -189,9 +191,6 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
         });
     }
 });
-
-var redis = require("../models/redis");
-var User = require("../models/DB/userDB");
 router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (req, res, next) {
     var key = req.headers.userapikey;
     redis.get('user_token:' + key, (err, reply) => {

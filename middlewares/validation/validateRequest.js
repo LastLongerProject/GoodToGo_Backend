@@ -1,7 +1,7 @@
-var jwt = require('jwt-simple');
-var redis = require("../../models/redis");
-var User = require('../../models/DB/userDB'); // load up the user model
-var UserKeys = require('../../models/DB/userKeysDB');
+const jwt = require('jwt-simple');
+const redis = require("../../models/redis");
+const User = require('../../models/DB/userDB'); // load up the user model
+const UserKeys = require('../../models/DB/userKeysDB');
 
 function iatGetDate(int) {
     var tmp = new Date();

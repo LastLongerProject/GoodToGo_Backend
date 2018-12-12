@@ -7,7 +7,6 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const URL = require('url');
 const uuid = require('uuid/v4');
-const mongoose = require('mongoose');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
@@ -16,8 +15,6 @@ debug.log = console.log.bind(console);
 const debugError = require('debug')('goodtogo_backend:appERR');
 
 const config = require('./config/config');
-const appInit = require('./helpers/appInit');
-const scheduler = require('./helpers/scheduler');
 const logModel = require('./models/DB/logDB');
 const socketCb = require('./controllers/socket');
 const logSystem = require('./middlewares/logSystem');
@@ -106,44 +103,8 @@ app.use(function (err, req, res, next) {
     }
 });
 
-mongoose.Promise = global.Promise;
-connectMongoDB();
 require("./models/redis");
-
-function connectMongoDB() {
-    mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
-        if (err) throw err;
-        debug('mongoDB connect succeed');
-        // require('./tmp/removeOldLog.js')
-        Promise
-            .all([
-                new Promise((resolve, reject) => {
-                    appInit.container(err => {
-                        if (err) return reject(err);
-                        resolve();
-                    });
-                }),
-                new Promise((resolve, reject) => {
-                    appInit.store(err => {
-                        if (err) return reject(err);
-                        resolve();
-                    });
-                })
-            ])
-            .then(data => {
-                if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
-                    scheduler(app);
-                } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-                    debug("Local Testing no scheduler");
-                } else {
-                    debug("Deploy Server no scheduler");
-                }
-                debug("Done App Initializing");
-                startServer();
-            })
-            .catch(err => debugError(err));
-    });
-}
+require("./models/mongo")(startServer);
 
 function startServer() {
     /**
