@@ -220,63 +220,68 @@ module.exports = {
                                         .on('end', function () {
                                             var dataBuffer = Buffer.concat(dataArray);
                                             var dataObject = JSON.parse(dataBuffer.toString());
-                                            var type = [];
-                                            if (aPlace && aPlace.type !== "") {
-                                                type = aPlace.type.replace(" ", "").split(",");
-                                            } else {
-                                                dataObject.result.types.forEach(aType => {
-                                                    var translated = dictionary[aType];
-                                                    if (translated) type.push(translated);
+                                            try {
+                                                var type = [];
+                                                if (aPlace && aPlace.type !== "") {
+                                                    type = aPlace.type.replace(" ", "").split(",");
+                                                } else {
+                                                    dataObject.result.types.forEach(aType => {
+                                                        var translated = dictionary[aType];
+                                                        if (translated) type.push(translated);
+                                                    });
+                                                }
+                                                var opening_hours;
+                                                var aOldStore = oldList.find(ele => ele.id == aPlace.ID);
+                                                if (aOldStore && aOldStore.opening_default) {
+                                                    opening_hours = aOldStore.opening_hours;
+                                                } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
+                                                    opening_hours = dataObject.result.opening_hours.periods;
+                                                    for (var j = 0; j < opening_hours.length; j++) {
+                                                        if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
+                                                            opening_hours = defaultPeriods;
+                                                            break;
+                                                        } else {
+                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
+                                                        }
+                                                    }
+                                                } else {
+                                                    opening_hours = defaultPeriods;
+                                                }
+                                                Store.findOneAndUpdate({
+                                                    'id': aPlace.ID
+                                                }, {
+                                                    'name': aPlace.name,
+                                                    'contract': {
+                                                        returnable: aPlace.contract.returnable,
+                                                        borrowable: aPlace.contract.returnable,
+                                                        status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
+                                                    },
+                                                    'type': type,
+                                                    'project': aPlace.project,
+                                                    'address': dataObject.result.formatted_address
+                                                        .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
+                                                    'opening_hours': opening_hours,
+                                                    'location': dataObject.result.geometry.location,
+                                                    'active': aPlace.active,
+                                                    '$setOnInsert': {
+                                                        'img_info': {
+                                                            img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
+                                                            img_version: 0
+                                                        }
+                                                    }
+                                                }, {
+                                                    upsert: true,
+                                                    setDefaultsOnInsert: true,
+                                                    new: true
+                                                }, (err, res) => {
+                                                    if (err) return reject(err);
+                                                    resolve(res);
                                                 });
+                                            } catch (error) {
+                                                debug(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
+                                                reject(error);
                                             }
-                                            var opening_hours;
-                                            var aOldStore = oldList.find(ele => ele.id == aPlace.ID);
-                                            if (aOldStore && aOldStore.opening_default) {
-                                                opening_hours = aOldStore.opening_hours;
-                                            } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
-                                                opening_hours = dataObject.result.opening_hours.periods;
-                                                for (var j = 0; j < opening_hours.length; j++) {
-                                                    if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
-                                                        opening_hours = defaultPeriods;
-                                                        break;
-                                                    } else {
-                                                        opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                        opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
-                                                    }
-                                                }
-                                            } else {
-                                                opening_hours = defaultPeriods;
-                                            }
-                                            Store.findOneAndUpdate({
-                                                'id': aPlace.ID
-                                            }, {
-                                                'name': aPlace.name,
-                                                'contract': {
-                                                    returnable: aPlace.contract.returnable,
-                                                    borrowable: aPlace.contract.returnable,
-                                                    status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
-                                                },
-                                                'type': type,
-                                                'project': aPlace.project,
-                                                'address': dataObject.result.formatted_address
-                                                    .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
-                                                'opening_hours': opening_hours,
-                                                'location': dataObject.result.geometry.location,
-                                                'active': aPlace.active,
-                                                '$setOnInsert': {
-                                                    'img_info': {
-                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
-                                                        img_version: 0
-                                                    }
-                                                }
-                                            }, {
-                                                upsert: true,
-                                                setDefaultsOnInsert: true,
-                                                new: true
-                                            }, (err, res) => {
-                                                if (err) return reject(err);
-                                                resolve(res);
-                                            });
                                         });
                                 }));
                             }
