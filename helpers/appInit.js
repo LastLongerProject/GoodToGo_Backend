@@ -45,13 +45,12 @@ module.exports = {
         });
     },
     refreshStoreImg: function (forceRenew, cb) {
-        drive.getStore(forceRenew, (succeed, data) => {
+        drive.getStore(forceRenew, (succeed, storeIdList) => {
             if (succeed) {
-                var funcList = [];
-                for (var i = 0; i < data.length; i++) {
-                    funcList.push(new Promise((resolve, reject) => {
+                Promise
+                    .all(storeIdList.map(aStoreID => new Promise((resolve, reject) => {
                         Store.findOne({
-                            'id': data[i].slice(0, 2)
+                            'id': aStoreID.slice(0, 2)
                         }, (err, aStore) => {
                             if (err) return debugError(err);
                             if (!aStore) return resolve();
@@ -61,10 +60,7 @@ module.exports = {
                                 resolve();
                             });
                         });
-                    }));
-                }
-                Promise
-                    .all(funcList)
+                    })))
                     .then((returnData) => {
                         cb(succeed, {
                             type: 'refreshStoreImg',
@@ -91,17 +87,16 @@ module.exports = {
     refreshContainerIcon: function (forceRenew, cb) {
         drive.getContainer(forceRenew, (succeed, data) => {
             if (succeed) {
-                var funcList = [];
                 var typeCodeList = [];
                 for (var i = 0; i < data.length; i++) {
                     var tmpTypeCode = data[i].slice(0, 2);
                     if (typeCodeList.indexOf(tmpTypeCode) < 0)
                         typeCodeList.push(tmpTypeCode);
                 }
-                for (var i = 0; i < typeCodeList.length; i++) {
-                    funcList.push(new Promise((resolve, reject) => {
+                Promise
+                    .all(typeCodeList.map(aTypeCode => new Promise((resolve, reject) => {
                         ContainerType.findOne({
-                            'typeCode': typeCodeList[i]
+                            'typeCode': aTypeCode
                         }, (err, aType) => {
                             if (err) return debugError(err);
                             if (!aType) return resolve();
@@ -111,10 +106,7 @@ module.exports = {
                                 resolve();
                             });
                         });
-                    }));
-                }
-                Promise
-                    .all(funcList)
+                    })))
                     .then((returnData) => {
                         cb(succeed, {
                             type: 'refreshContainerIcon',
@@ -157,32 +149,42 @@ function storeListGenerator(cb) {
 }
 
 function containerListGenerator(cb) {
-    ContainerType.find({}, {}, {
-        sort: {
-            typeCode: 1
-        }
-    }, function (err, containerTypeList) {
-        if (err) return cb(err);
-        var containerTypeDict = {};
-        for (var aType in containerTypeList) {
-            containerTypeDict[containerTypeList[aType].typeCode] = containerTypeList[aType];
-        }
-        Container.find({}, {}, {
-            sort: {
-                ID: 1
-            }
-        }, function (err, containerList) {
-            var containerDict = {};
-            var containerDictOnlyActive = {};
-            if (err) return cb(err);
-            for (var i = 0; i < containerList.length; i++) {
-                containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
-                if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
-            }
-            DataCacheFactory.set('containerWithDeactive', containerDict);
-            DataCacheFactory.set('container', containerDictOnlyActive);
-            DataCacheFactory.set('containerType', containerTypeDict);
-            cb();
-        });
-    });
+    Promise
+        .all([
+            new Promise((resolve, reject) => {
+                ContainerType.find({}, {}, {
+                    sort: {
+                        typeCode: 1
+                    }
+                }, function (err, containerTypeList) {
+                    if (err) return reject(err);
+                    var containerTypeDict = {};
+                    for (var aType in containerTypeList) {
+                        containerTypeDict[containerTypeList[aType].typeCode] = containerTypeList[aType];
+                    }
+                    DataCacheFactory.set('containerType', containerTypeDict);
+                    resolve();
+                });
+            }),
+            new Promise((resolve, reject) => {
+                Container.find({}, {}, {
+                    sort: {
+                        ID: 1
+                    }
+                }, function (err, containerList) {
+                    if (err) return reject(err);
+                    var containerDict = {};
+                    var containerDictOnlyActive = {};
+                    for (var i = 0; i < containerList.length; i++) {
+                        containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                        if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                    }
+                    DataCacheFactory.set('containerWithDeactive', containerDict);
+                    DataCacheFactory.set('container', containerDictOnlyActive);
+                    resolve();
+                });
+            })
+        ])
+        .then(() => cb())
+        .catch(cb);
 }
