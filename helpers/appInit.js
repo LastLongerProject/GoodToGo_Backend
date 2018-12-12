@@ -149,42 +149,32 @@ function storeListGenerator(cb) {
 }
 
 function containerListGenerator(cb) {
-    Promise
-        .all([
-            new Promise((resolve, reject) => {
-                ContainerType.find({}, {}, {
-                    sort: {
-                        typeCode: 1
-                    }
-                }, function (err, containerTypeList) {
-                    if (err) return reject(err);
-                    var containerTypeDict = {};
-                    for (var aType in containerTypeList) {
-                        containerTypeDict[containerTypeList[aType].typeCode] = containerTypeList[aType];
-                    }
-                    DataCacheFactory.set('containerType', containerTypeDict);
-                    resolve();
-                });
-            }),
-            new Promise((resolve, reject) => {
-                Container.find({}, {}, {
-                    sort: {
-                        ID: 1
-                    }
-                }, function (err, containerList) {
-                    if (err) return reject(err);
-                    var containerDict = {};
-                    var containerDictOnlyActive = {};
-                    for (var i = 0; i < containerList.length; i++) {
-                        containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
-                        if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
-                    }
-                    DataCacheFactory.set('containerWithDeactive', containerDict);
-                    DataCacheFactory.set('container', containerDictOnlyActive);
-                    resolve();
-                });
-            })
-        ])
-        .then(() => cb())
-        .catch(cb);
+    ContainerType.find({}, {}, {
+        sort: {
+            typeCode: 1
+        }
+    }, function (err, containerTypeList) {
+        if (err) return cb(err);
+        var containerTypeDict = {};
+        for (var aType in containerTypeList) {
+            containerTypeDict[containerTypeList[aType].typeCode] = containerTypeList[aType];
+        }
+        Container.find({}, {}, {
+            sort: {
+                ID: 1
+            }
+        }, function (err, containerList) {
+            var containerDict = {};
+            var containerDictOnlyActive = {};
+            if (err) return cb(err);
+            for (var i = 0; i < containerList.length; i++) {
+                containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+                if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
+            }
+            DataCacheFactory.set('containerWithDeactive', containerDict);
+            DataCacheFactory.set('container', containerDictOnlyActive);
+            DataCacheFactory.set('containerType', containerTypeDict);
+            cb();
+        });
+    });
 }
