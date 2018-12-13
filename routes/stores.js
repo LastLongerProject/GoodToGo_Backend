@@ -142,31 +142,20 @@ router.get('/list.js', function (req, res, next) {
 });
 
 router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
-    var dbUser = req._user;
-    var condition;
-    switch (dbUser.role.typeCode) {
-        case 'admin':
-            condition = {
-                'roles.admin.stationID': dbUser.role.stationID
-            };
-            break;
-        case 'clerk':
-            condition = {
-                'roles.clerk.storeID': dbUser.role.storeID
-            };
-            break;
-        default:
-            next();
-    }
+    const dbUser = req._user;
+    const TYPE_CODE = dbUser.role.typeCode;
+    const condition = {
+        [`roles.${TYPE_CODE}.stationID`]: dbUser.role.stationID
+    };
     process.nextTick(function () {
         User.find(condition, function (err, dbClerks) {
             if (err) return next(err);
-            dbClerks.sort((a, b) => (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1);
+            dbClerks.sort((a, b) => (a.roles[TYPE_CODE].manager === b.roles[TYPE_CODE].manager) ? 0 : a.roles[TYPE_CODE].manager ? -1 : 1);
             res.json({
                 clerkList: dbClerks.map(aClerk => ({
                     phone: aClerk.user.phone,
                     name: aClerk.user.name,
-                    isManager: aClerk.roles.clerk.manager
+                    isManager: aClerk.roles[TYPE_CODE].manager
                 }))
             });
         });
