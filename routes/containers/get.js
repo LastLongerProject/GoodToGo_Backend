@@ -13,7 +13,7 @@ const baseUrl = require('../../config/config.js').serverBaseUrl;
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
-const DataCacheFactory = require("../../models/DataCacheFactory");
+const DataCacheFactory = require("../../models/dataCacheFactory");
 
 const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;

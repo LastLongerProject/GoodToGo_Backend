@@ -2,12 +2,12 @@ const queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-var debug = require('debug')('goodtogo_backend:containerTrade');
+const debug = require('debug')('goodtogo_backend:containerTrade');
 
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
-const DataCacheFactory = require("../models/DataCacheFactory");
+const DataCacheFactory = require("../models/dataCacheFactory");
 const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');

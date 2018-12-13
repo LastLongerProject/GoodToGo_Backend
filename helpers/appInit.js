@@ -2,7 +2,7 @@ const debug = require('debug')('goodtogo_backend:appInit');
 debug.log = console.log.bind(console);
 const debugError = require('debug')('goodtogo_backend:appINIT_ERR');
 
-const DataCacheFactory = require("../models/DataCacheFactory");
+const DataCacheFactory = require("../models/dataCacheFactory");
 const Store = require('../models/DB/storeDB');
 const PlaceID = require('../models/DB/placeIdDB');
 const Container = require('../models/DB/containerDB');

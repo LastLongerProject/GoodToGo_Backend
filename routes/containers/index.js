@@ -13,7 +13,6 @@ const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
-const sns = require('../../helpers/aws/SNS');
 const NotificationCenter = require('../../helpers/notificationCenter');
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');

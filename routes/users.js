@@ -19,11 +19,11 @@ const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 const redis = require("../models/redis");
 const User = require("../models/DB/userDB");
 const Trade = require('../models/DB/tradeDB');
-const DataCacheFactory = require("../models/DataCacheFactory");
+const DataCacheFactory = require("../models/dataCacheFactory");
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 router.post('/signup', validateDefault, function (req, res, next) { // for CUSTOMER
-    req.body['active'] = true; // !!! Need to send by client when need purchasing !!!
+    req.body.active = true; // !!! Need to send by client when need purchasing !!!
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -40,19 +40,19 @@ router.post('/signup', validateDefault, function (req, res, next) { // for CUSTO
 router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) { // for CLERK
     var dbUser = req._user;
     if (dbUser.role.typeCode === "clerk") {
-        req.body['role'] = {
+        req.body.role = {
             typeCode: "clerk",
             manager: false,
             storeID: dbUser.role.storeID
         };
     } else if (dbUser.role.typeCode === "admin") {
-        req.body['role'] = {
+        req.body.role = {
             typeCode: "admin",
             manager: false,
             stationID: dbUser.role.stationID
         };
     }
-    req.body['active'] = true;
+    req.body.active = true;
     req._passCode = true;
     userQuery.signup(req, function (err, user, info) {
         if (err) {
@@ -66,10 +66,10 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
 });
 
 router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function (req, res, next) { // for ADMIN and CLERK
-    req.body['active'] = true;
+    req.body.active = true;
     var dbUser = req._user;
     if (dbUser.role.typeCode === "clerk") {
-        req.body['role'] = {
+        req.body.role = {
             typeCode: "customer"
         };
     }

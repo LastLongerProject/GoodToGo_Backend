@@ -10,7 +10,7 @@ const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
-const DataCacheFactory = require("../models/DataCacheFactory");
+const DataCacheFactory = require("../models/dataCacheFactory");
 
 module.exports = {
     signup: function (req, done) {

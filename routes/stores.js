@@ -4,7 +4,7 @@ var jwt = require('jwt-simple');
 var crypto = require('crypto');
 var debug = require('debug')('goodtogo_backend:stores');
 var redis = require("../models/redis");
-const DataCacheFactory = require("../models/DataCacheFactory");
+const DataCacheFactory = require("../models/dataCacheFactory");
 
 var keys = require('../config/keys');
 var baseUrl = require('../config/config.js').serverBaseUrl;
