@@ -159,21 +159,16 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
             next();
     }
     process.nextTick(function () {
-        User.find(condition, function (err, list) {
+        User.find(condition, function (err, dbClerks) {
             if (err) return next(err);
-            var resJson = {
-                clerkList: []
-            };
-            for (var i = 0; i < list.length; i++) {
-                resJson.clerkList.push({
-                    phone: list[i].user.phone,
-                    isManager: list[i].role.manager
-                });
-            }
-            resJson.clerkList.sort((a, b) => {
-                return (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1;
+            dbClerks.sort((a, b) => (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1);
+            res.json({
+                clerkList: dbClerks.map(aClerk => ({
+                    phone: aClerk.user.phone,
+                    name: aClerk.user.name,
+                    isManager: aClerk.roles.clerk.manager
+                }))
             });
-            res.json(resJson);
         });
     });
 });
