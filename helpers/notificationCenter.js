@@ -19,7 +19,7 @@ const pushBy = {
     sns: function (user, appType, content, errMsgPrefix) {
         let sendSns = notificationHandler.sns(content, errMsgPrefix);
         if (user.pushNotificationArn[`${appType}-ios`]) sendSns(user.pushNotificationArn[`${appType}-ios`]);
-        if (user.pushNotificationArn[`${appType}-android`]) sendSns(user.pushNotificationArn[`${appType}-android`]);
+        // if (user.pushNotificationArn[`${appType}-android`]) sendSns(user.pushNotificationArn[`${appType}-android`]);
     },
     webhook: function (event, para) {
 
