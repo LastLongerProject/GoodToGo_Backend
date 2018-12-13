@@ -144,9 +144,21 @@ router.get('/list.js', function (req, res, next) {
 router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
     const dbUser = req._user;
     const TYPE_CODE = dbUser.role.typeCode;
-    const condition = {
-        [`roles.${TYPE_CODE}.stationID`]: dbUser.role.stationID
-    };
+    let condition;
+    switch (TYPE_CODE) {
+        case 'admin':
+            condition = {
+                'roles.admin.stationID': dbUser.role.stationID
+            };
+            break;
+        case 'clerk':
+            condition = {
+                'roles.clerk.storeID': dbUser.role.storeID
+            };
+            break;
+        default:
+            next();
+    }
     process.nextTick(function () {
         User.find(condition, function (err, dbClerks) {
             if (err) return next(err);
