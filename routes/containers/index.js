@@ -14,6 +14,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const sns = require('../../helpers/aws/SNS');
+const NotificationCenter = require('../../helpers/notificationCenter');
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
@@ -94,41 +95,19 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 aBox.user.delivery = dbAdmin.user.phone;
                 aBox.save(function (err) {
                     if (err) return next(err);
-                    return res.json(reply);
+                    res.json(reply);
                     /*
                     User.find({
                         'roles.clerk.storeID': storeID
                     }, function (err, userList) {
-                        var funcList = [];
-                        for (var i in userList) {
-                            if (typeof userList[i].pushNotificationArn !== "undefined")
-                                for (var keys in userList[i].pushNotificationArn) {
-                                    if (keys.indexOf('shop') >= 0)
-                                        funcList.push(new Promise((resolve, reject) => {
-                                            var localCtr = i;
-                                            sns.sns_publish(userList[localCtr].pushNotificationArn[keys], '新容器送到囉！', '點我簽收 #' + boxID, {
-                                                action: "BOX_DELIVERY"
-                                            }, (err, data, payload) => {
-                                                if (err) return resolve([userList[localCtr].user.phone, 'err', err]);
-                                                resolve([userList[localCtr].user.phone, data, payload]);
-                                            });
-                                        }));
-                                }
-                        }
-                        Promise
-                            .all(funcList)
-                            .then((data) => {
-                                data.forEach(element => {
-                                    if (element[1] === 'err')
-                                        element.forEach((ele) => {
-                                            debug(ele);
-                                        });
-                                });
-                            })
-                            .catch((err) => {
-                                if (err) debug(err);
-                            });
-                    });*/
+                        if (err) return debug(err);
+                        userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
+                            clerk: aClerk
+                        }, {
+                            boxID
+                        }));
+                    });
+                    */
                 });
             });
         });
@@ -213,19 +192,18 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
 router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var key = req.headers.userapikey;
-    if (typeof key === 'undefined' || typeof key === null || key.length === 0) {
-        // debug(req.headers);
+    if (typeof key === 'undefined' || typeof key === null || key.length === 0)
         return res.status(403).json({
             code: 'F009',
             type: "borrowContainerMessage",
             message: "Invalid Rent Request"
         });
-    }
-    if (!res._payload.orderTime) return res.status(403).json({
-        code: 'F006',
-        type: "borrowContainerMessage",
-        message: "Missing Order Time"
-    });
+    if (!res._payload.orderTime)
+        return res.status(403).json({
+            code: 'F006',
+            type: "borrowContainerMessage",
+            message: "Missing Order Time"
+        });
     redis.get('user_token:' + key, (err, userPhone) => {
         if (err) return next(err);
         if (!userPhone) return res.status(403).json({
@@ -244,31 +222,26 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
         }, (err, tradeSuccess, reply, tradeUser) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
-            if (tradeUser) {
-                let customer = tradeUser.newUser;
-                let sns_body = reply.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-                const sendNotificationToUser = ARN => {
-                    sns.sns_publish(ARN, '借用了容器！', sns_body, {
-                        action: "RELOAD_USAGE"
-                    }, (err, data, payload) => {
-                        if (err) debug(`[借出]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                    });
-                };
-                if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-                if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
-            }
             res.json(reply);
+            if (tradeUser) {
+                NotificationCenter.emit("container_rent", {
+                    customer: tradeUser.newUser
+                }, {
+                    containerList: reply.containerList
+                });
+            }
         });
     });
 });
 
 router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    if (!res._payload.orderTime) return res.status(403).json({
-        code: 'F006',
-        type: "returnContainerMessage",
-        message: "Missing Order Time"
-    });
+    if (!res._payload.orderTime)
+        return res.status(403).json({
+            code: 'F006',
+            type: "returnContainerMessage",
+            message: "Missing Order Time"
+        });
     var container = req.params.id;
     if (container === "list") container = req.body.containers;
     changeContainersState(container, dbStore, {
@@ -280,30 +253,25 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
     }, (err, tradeSuccess, reply, tradeUser) => {
         if (err) return next(err);
         if (!tradeSuccess) return res.status(403).json(reply);
-        if (tradeUser) {
-            let customer = tradeUser.oriUser;
-            let sns_body = reply.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、");
-            const sendNotificationToUser = ARN => {
-                sns.sns_publish(ARN, '歸還了容器！', sns_body, {
-                    action: "RELOAD_USAGE"
-                }, (err, data, payload) => {
-                    if (err) debug(`[歸還]通知推播失敗：[${customer.user.phone}] Err：${JSON.stringify(err)} Stack：${JSON.stringify(data)}`);
-                });
-            };
-            if (customer.pushNotificationArn["customer-ios"]) sendNotificationToUser(customer.pushNotificationArn["customer-ios"]);
-            if (customer.pushNotificationArn["customer-android"]) sendNotificationToUser(customer.pushNotificationArn["customer-android"]);
-        }
         res.json(reply);
+        if (tradeUser) {
+            NotificationCenter.emit("container_return", {
+                customer: tradeUser.oriUser
+            }, {
+                containerList: reply.containerList
+            });
+        }
     });
 });
 
 router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    if (!res._payload.orderTime) return res.status(403).json({
-        code: 'F006',
-        type: "readyToCleanMessage",
-        message: "Missing Order Time"
-    });
+    if (!res._payload.orderTime)
+        return res.status(403).json({
+            code: 'F006',
+            type: "readyToCleanMessage",
+            message: "Missing Order Time"
+        });
     var container = req.params.id;
     if (container === "list") container = req.body.containers;
     changeContainersState(container, dbAdmin, {
