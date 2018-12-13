@@ -135,10 +135,12 @@ module.exports = {
                 Promise
                     .all(funcList)
                     .then((dataList) => {
-                        Container.remove({
+                        Container.updateMany({
                             'checkedAt': {
                                 '$lt': checkpoint
                             }
+                        }, {
+                            'active': false
                         }, (err) => {
                             if (err) return debug(err);
                             cb();

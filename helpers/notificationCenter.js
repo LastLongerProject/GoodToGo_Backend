@@ -52,10 +52,10 @@ const notifications = {
                         action: "RELOAD_USAGE"
                     }
                 }, `[借出]通知推播失敗：[${users.customer.user.phone}]`);
-                pushBy.webhook("container_rent", users.customer);
             } catch (error) {
                 debug(error);
             }
+            pushBy.webhook("container_rent", users.customer);
         }
     },
     container_return: function (users, data) {
@@ -68,10 +68,10 @@ const notifications = {
                         action: "RELOAD_USAGE"
                     }
                 }, `[歸還]通知推播失敗：[${users.customer.user.phone}]`);
-                pushBy.webhook("container_return", users.customer);
             } catch (error) {
                 debug(error);
             }
+            pushBy.webhook("container_return", users.customer);
         }
     }
 };

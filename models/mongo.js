@@ -14,7 +14,7 @@ module.exports = function (done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug('mongoDB connect succeed');
-        // require('./tmp/removeOldLog.js')
+        // require('../tmp/modifyContainerSchema.js')
         Promise
             .all([
                 new Promise((resolve, reject) => {
@@ -31,6 +31,7 @@ module.exports = function (done) {
                 })
             ])
             .then(() => {
+                debug("Done App Initializing");
                 if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
                     scheduler();
                 } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
@@ -38,7 +39,6 @@ module.exports = function (done) {
                 } else {
                     debug("Deploy Server no scheduler");
                 }
-                debug("Done App Initializing");
                 done();
             })
             .catch(err => debugError(err));
