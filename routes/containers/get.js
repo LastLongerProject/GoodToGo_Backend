@@ -177,17 +177,18 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
 });
 
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+    var dbUser = req._user;
+    var dbKey = req._role;
     var typeDict = DataCacheFactory.get('containerType');
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbStore.role.typeCode === 'clerk')
+    if (dbKey.roleType === 'clerk')
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbUser.roles.clerk.storeID
             }, {
                 'tradeType.action': 'UndoReadyToClean'
             }],
@@ -232,10 +233,10 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
+                        phone: (dbKey.roleType === 'clerk') ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbStore.role.typeCode === 'clerk') ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === 'clerk') ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

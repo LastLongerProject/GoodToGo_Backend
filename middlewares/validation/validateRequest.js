@@ -125,10 +125,6 @@ module.exports = {
                                     if (reply !== 1) return next(reply);
                                     req._user = dbUser;
                                     req._key = dbKey;
-                                    req._user.role = dbUser.roles[dbKey.roleType || dbUser.role.typeCode];
-                                    req._user.role.typeCode = dbKey.roleType || dbUser.role.typeCode;
-                                    // console.log(req._user.role);
-                                    // console.log(req._thisUserRole);
                                     next();
                                 });
                             });

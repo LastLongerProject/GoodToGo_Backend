@@ -150,9 +150,9 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (req, r
 });
 
 router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+    var dbUser = req._user;
     var boxID = req.params.id;
-    var reqByAdmin = (req._user.role.typeCode === 'admin') ? true : false;
+    var reqByAdmin = req._key.roleType === 'admin';
     Box.findOne({
         'boxID': boxID
     }, function (err, aDelivery) {
@@ -163,13 +163,13 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (req,
                 type: "SignMessage",
                 message: "Can't Find The Box"
             });
-        if (!reqByAdmin && (aDelivery.storeID !== dbStore.role.storeID))
+        if (!reqByAdmin && (aDelivery.storeID !== dbUser.roles.clerk.storeID))
             return res.status(403).json({
                 code: 'F008',
                 type: "SignMessage",
                 message: "Box is not belong to user's store"
             });
-        changeContainersState(aDelivery.containerList, dbStore, {
+        changeContainersState(aDelivery.containerList, dbUser, {
             action: "Sign",
             newState: 1
         }, {

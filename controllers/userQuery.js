@@ -53,7 +53,6 @@ module.exports = {
                 return done(err);
             if (dbUser) {
                 if ((role.typeCode === 'clerk' || role.typeCode === 'admin') && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
-                    dbUser.role = role;
                     switch (role.typeCode) {
                         case "clerk":
                             dbUser.roles.typeList.push("clerk");
@@ -127,8 +126,6 @@ module.exports = {
                         newUser.active = req.body.active;
                         if (typeof roles !== 'undefined') { // v2 api
                             newUser.roles = roles;
-                            newUser.role = roles[roles.typeList[0]];
-                            newUser.role.typeCode = roles.typeList[0];
                         } else {
                             switch (role.typeCode) { // v1 api
                                 case "clerk":
@@ -147,7 +144,6 @@ module.exports = {
                                     break;
                             }
                             newUser.roles.typeList.push("customer");
-                            newUser.role = role;
                         }
                         newUser.save(function (err) {
                             if (err) return done(err);
@@ -429,9 +425,6 @@ module.exports = {
                         newUserKey.save(function (err) {
                             if (err) return done(err);
                             done(null, true, {
-                                headers: {
-                                    Authorization: tokenBuilder(returnKeys.serverSecretKey, newUserKey, newUser)
-                                },
                                 body: {
                                     type: 'signupMessage',
                                     message: 'Authentication succeeded',
@@ -479,9 +472,6 @@ module.exports = {
                 }, (err, keyPair) => {
                     if (err) return done(err);
                     done(null, true, {
-                        headers: {
-                            Authorization: tokenBuilder(returnKeys.serverSecretKey, keyPair, theBot)
-                        },
                         body: {
                             type: 'signupMessage',
                             message: 'Authentication succeeded',
@@ -507,7 +497,8 @@ function isStudentID(phone) {
     return reg.test(phone);
 }
 
-function getStoreName(storeDict, dbUser) {
+function getStoreName(dbUser) {
+    var storeDict = DataCacheFactory.get('store');
     if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
     var theStore = storeDict[dbUser.roles.clerk.storeID];
     if (theStore) return theStore.name;
@@ -515,52 +506,48 @@ function getStoreName(storeDict, dbUser) {
 }
 
 function tokenBuilder(serverSecretKey, userKey, dbUser) {
-    var stores = DataCacheFactory.get('store');
-    var storeName = getStoreName(stores, dbUser);
     var payload;
     if (Array.isArray(userKey)) {
-        var keyDict = {};
-        for (var i in userKey) {
-            keyDict[userKey[i].roleType] = userKey[i];
-        }
         payload = {
-            apiKey: keyDict[dbUser.role.typeCode].apiKey,
-            secretKey: keyDict[dbUser.role.typeCode].secretKey,
             roles: {
-                typeList: dbUser.roles.typeList,
-                customer: {
-                    apiKey: keyDict.customer.apiKey,
-                    secretKey: keyDict.customer.secretKey,
-                }
+                typeList: dbUser.roles.typeList
             }
         };
-        if (keyDict.clerk) {
-            payload.roles.clerk = {
-                storeID: dbUser.roles.clerk.storeID,
-                manager: dbUser.roles.clerk.manager,
-                apiKey: keyDict.clerk.apiKey,
-                secretKey: keyDict.clerk.secretKey,
-                storeName: storeName
-            };
-        }
-        if (keyDict.admin) {
-            payload.roles.admin = {
-                stationID: dbUser.roles.admin.stationID,
-                manager: dbUser.roles.admin.manager,
-                apiKey: keyDict.admin.apiKey,
-                secretKey: keyDict.admin.secretKey,
-            };
+        for (var aRole in userKey) {
+            payloadBuilder(payload, dbUser, userKey[aRole]);
         }
     } else {
         payload = {
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-            roles: dbUser.roles
+            roles: {
+                typeList: [userKey.roleType]
+            }
         };
-        if (payload.roles && payload.roles.clerk) {
-            payload.roles.clerk.storeName = storeName;
-        }
+        payloadBuilder(payload, dbUser, userKey);
     }
     var token = jwt.encode(payload, serverSecretKey);
     return token;
+}
+
+function payloadBuilder(payload, dbUser, userKey) {
+    if (userKey.roleType === "customer") {
+        payload.roles.customer = {
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+        };
+    } else if (userKey.roleType === "clerk") {
+        payload.roles.clerk = {
+            storeID: dbUser.roles.clerk.storeID,
+            manager: dbUser.roles.clerk.manager,
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+            storeName: getStoreName(dbUser)
+        };
+    } else if (userKey.roleType === "admin") {
+        payload.roles.admin = {
+            stationID: dbUser.roles.admin.stationID,
+            manager: dbUser.roles.admin.manager,
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+        };
+    }
 }

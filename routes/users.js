@@ -39,17 +39,18 @@ router.post('/signup', validateDefault, function (req, res, next) { // for CUSTO
 
 router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) { // for CLERK
     var dbUser = req._user;
-    if (dbUser.role.typeCode === "clerk") {
+    var dbKey = req._key;
+    if (dbKey.roleType === "clerk") {
         req.body.role = {
             typeCode: "clerk",
             manager: false,
-            storeID: dbUser.role.storeID
+            storeID: dbUser.roles.clerk.storeID
         };
-    } else if (dbUser.role.typeCode === "admin") {
+    } else if (dbKey.roleType === "admin") {
         req.body.role = {
             typeCode: "admin",
             manager: false,
-            stationID: dbUser.role.stationID
+            stationID: dbUser.roles.admin.stationID
         };
     }
     req.body.active = true;
@@ -68,7 +69,8 @@ router.post('/signup/clerk', regAsStoreManager, regAsAdminManager, validateReque
 router.post('/signup/root', regAsStore, regAsAdminManager, validateRequest, function (req, res, next) { // for ADMIN and CLERK
     req.body.active = true;
     var dbUser = req._user;
-    if (dbUser.role.typeCode === "clerk") {
+    var dbKey = req._key;
+    if (dbKey.roleType === "clerk") {
         req.body.role = {
             typeCode: "customer"
         };

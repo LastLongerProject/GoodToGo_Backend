@@ -143,17 +143,18 @@ router.get('/list.js', function (req, res, next) {
 
 router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
     const dbUser = req._user;
-    const TYPE_CODE = dbUser.role.typeCode;
+    const dbKey = req._key;
+    const TYPE_CODE = dbKey.roleType;
     let condition;
     switch (TYPE_CODE) {
         case 'admin':
             condition = {
-                'roles.admin.stationID': dbUser.role.stationID
+                'roles.admin.stationID': dbUser.roles.admin.stationID
             };
             break;
         case 'clerk':
             condition = {
-                'roles.clerk.storeID': dbUser.role.storeID
+                'roles.clerk.storeID': dbUser.roles.clerk.storeID
             };
             break;
         default:
@@ -195,9 +196,6 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, re
                     type: "layoffError",
                     message: "Don't lay off yourself"
                 });
-            clerk.role.storeID = undefined;
-            clerk.role.manager = undefined;
-            clerk.role.typeCode = 'customer';
             clerk.roles.clerk = null;
             clerk.roles.typeList.splice(clerk.roles.typeList.indexOf("clerk"), 1);
             clerk.save(function (err) {
@@ -242,10 +240,10 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpTypeCode;
     process.nextTick(function () {
         var containerQuery;
-        if (dbStore.role.storeID === 17) {
+        if (dbStore.roles.clerk.storeID === 17) {
             containerQuery = {
                 "$or": [{
-                        'storeID': dbStore.role.storeID,
+                        'storeID': dbStore.roles.clerk.storeID,
                         'active': true
                     },
                     {
@@ -257,7 +255,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
             };
         } else {
             containerQuery = {
-                'storeID': dbStore.role.storeID,
+                'storeID': dbStore.roles.clerk.storeID,
                 'active': true
             };
         }
@@ -285,9 +283,9 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 }
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
-                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.role.storeID)
+                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.roles.clerk.storeID)
                             resJson.todayData.rent++;
-                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.role.storeID)
+                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.roles.clerk.storeID)
                             resJson.todayData.return++;
                     }
                 }
@@ -301,7 +299,7 @@ router.get('/openingTime', regAsStore, validateRequest, function (req, res, next
     var dbStore = req._user;
     process.nextTick(function () {
         Store.findOne({
-            'id': dbStore.role.storeID,
+            'id': dbStore.roles.clerk.storeID,
             'active': true
         }, function (err, store) {
             if (err) return next(err);
@@ -318,7 +316,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
     var dbStore = req._user;
     process.nextTick(function () {
         Store.findOne({
-            'id': dbStore.role.storeID,
+            'id': dbStore.roles.clerk.storeID,
             'active': true
         }, function (err, store) {
             if (err) return next(err);
@@ -335,7 +333,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
 router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var id = req.params.id;
-    const thisRedisKey = redisKey(dbStore.role.storeID); // BOT??
+    const thisRedisKey = redisKey(dbStore.roles.clerk.storeID); // BOT??
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(id.toString() + '$', "i")
@@ -382,7 +380,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                 '$lt': dateCheckpoint(1)
             },
             'tradeType.action': "Rent",
-            'oriUser.storeID': dbStore.role.storeID
+            'oriUser.storeID': dbStore.roles.clerk.storeID
         }, function (err, rentedList) {
             if (err) return next(err);
             rentedList.sort(function (a, b) {
@@ -446,7 +444,7 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
             }
         }
         Store.findOne({
-            'id': dbStore.role.storeID
+            'id': dbStore.roles.clerk.storeID
         }, (err, aStore) => {
             if (err) return next(err);
             aStore.opening_hours = days;
@@ -474,7 +472,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         var containerDict = DataCacheFactory.get('container');
         var type = DataCacheFactory.get('containerType');
         Box.find({
-            'storeID': dbStore.role.storeID
+            'storeID': dbStore.roles.clerk.storeID
         }, {}, {
             "sort": {
                 "updatedAt": -1
@@ -518,7 +516,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
             }
             Trade.find({
                 'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.role.storeID,
+                'newUser.storeID': dbStore.roles.clerk.storeID,
                 'tradeTime': {
                     '$gte': dateCheckpoint(1 - historyDays)
                 }
@@ -584,7 +582,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
             .all([new Promise((resolve, reject) => {
                     Trade.find({
                         'tradeType.action': 'Rent',
-                        'oriUser.storeID': dbStore.role.storeID
+                        'oriUser.storeID': dbStore.roles.clerk.storeID
                     }, (err, tradeList) => {
                         if (err) return reject(err);
                         var dataList = {};
@@ -626,7 +624,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
                 '$lt': dateCheckpoint(1)
             },
             'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.role.storeID
+            'oriUser.storeID': dbStore.roles.clerk.storeID
         }, function (err, rentTrades) {
             if (err) return next(err);
             Trade.find({
@@ -635,7 +633,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
                     '$lt': dateCheckpoint(1)
                 },
                 'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.role.storeID
+                'newUser.storeID': dbStore.roles.clerk.storeID
             }, function (err, returnTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
@@ -667,23 +665,23 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
     var tradeQuery = {
         '$or': [{
                 'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.role.storeID
+                'newUser.storeID': dbStore.roles.clerk.storeID
             },
             {
                 'tradeType.action': 'Rent',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbStore.roles.clerk.storeID
             },
             {
                 'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.role.storeID
+                'newUser.storeID': dbStore.roles.clerk.storeID
             },
             {
                 'tradeType.action': 'Return',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbStore.roles.clerk.storeID
             },
             {
                 'tradeType.action': 'UndoReturn',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbStore.roles.clerk.storeID
             },
             {
                 'tradeType.action': 'ReadyToClean',
@@ -728,18 +726,18 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                 }
             } else if (aTrade.tradeType.action === "Return") {
                 returnTrades.push(aTrade);
-                if (aTrade.oriUser.storeID === dbStore.role.storeID && storeLostTradesDict[containerKey]) {
+                if (aTrade.oriUser.storeID === dbStore.roles.clerk.storeID && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
-                if (aTrade.newUser.storeID === dbStore.role.storeID) {
+                if (aTrade.newUser.storeID === dbStore.roles.clerk.storeID) {
                     storeLostTradesDict[containerKey] = aTrade;
                 }
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
                 }
             } else if (aTrade.tradeType.action === "ReadyToClean") {
-                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.role.storeID) {
+                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.roles.clerk.storeID) {
                     cleanReloadTrades.push(aTrade);
                     if (storeLostTradesDict[containerKey]) {
                         delete storeLostTradesDict[containerKey];
@@ -831,7 +829,7 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function (req, re
     var dbStore = req._user;
     let tradeQuery = {
         "tradeType.action": "Rent",
-        'oriUser.storeID': dbStore.role.storeID
+        'oriUser.storeID': dbStore.roles.clerk.storeID
     };
     if (req.query.days)
         Object.assign(tradeQuery, {
@@ -879,7 +877,7 @@ router.get('/performance', regAsStore, validateRequest, function (req, res, next
     let orderBy = req.query.by;
     Trade.find({
         'tradeType.action': 'Rent',
-        'oriUser.storeID': dbStore.role.storeID
+        'oriUser.storeID': dbStore.roles.clerk.storeID
     }, function (err, rentTrades) {
         if (err) return next(err);
         let clerkDict = {};
@@ -903,7 +901,7 @@ router.get('/performance', regAsStore, validateRequest, function (req, res, next
 
 router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    const thisRedisKey = redisKey(dbStore.role.storeID);
+    const thisRedisKey = redisKey(dbStore.roles.clerk.storeID);
     redis.exists(thisRedisKey, (err, keyIsExists) => {
         if (err) return next(err);
         if (keyIsExists) {
@@ -928,7 +926,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
         } else {
             Trade.find({
                 'tradeType.action': 'Rent',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbStore.roles.clerk.storeID
             }, function (err, rentTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined') {
