@@ -265,7 +265,20 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 'tradeTime': {
                     '$gte': dateCheckpoint(0),
                     '$lt': dateCheckpoint(1)
-                }
+                },
+                '$or': [{
+                        'tradeType.action': 'Rent',
+                        'oriUser.storeID': dbStore.roles.clerk.storeID
+                    },
+                    {
+                        'tradeType.action': 'Return',
+                        'newUser.storeID': dbStore.roles.clerk.storeID
+                    },
+                    {
+                        'tradeType.action': 'UndoReturn',
+                        'oriUser.storeID': dbStore.roles.clerk.storeID
+                    }
+                ]
             }, function (err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
@@ -281,11 +294,13 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                         }
                     }
                 }
+
+                cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
-                        if (trades[i].tradeType.action === 'Rent' && trades[i].oriUser.storeID === dbStore.roles.clerk.storeID)
+                        if (trades[i].tradeType.action === 'Rent')
                             resJson.todayData.rent++;
-                        else if (trades[i].tradeType.action === 'Return' && trades[i].newUser.storeID === dbStore.roles.clerk.storeID)
+                        else if (trades[i].tradeType.action === 'Return')
                             resJson.todayData.return++;
                     }
                 }

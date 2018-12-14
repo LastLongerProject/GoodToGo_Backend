@@ -178,7 +178,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
 
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var dbKey = req._role;
+    var dbKey = req._key;
     var typeDict = DataCacheFactory.get('containerType');
     var queryCond;
     var queryDays;
