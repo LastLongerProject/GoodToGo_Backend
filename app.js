@@ -10,10 +10,8 @@ const uuid = require('uuid/v4');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
-const debug = require('debug')('goodtogo_backend:app');
-debug.log = console.log.bind(console);
-const debugError = require('debug')('goodtogo_backend:appERR');
 
+const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
 const logModel = require('./models/DB/logDB');
 const socketCb = require('./controllers/socket');
@@ -76,7 +74,7 @@ app.use(function (req, res, next) {
 // error handler
 app.use(function (err, req, res, next) {
     if (!err.status) {
-        debugError(err);
+        debug.error(err);
         req._errorLevel = 3;
         res.status(500);
         res.json({
@@ -158,7 +156,7 @@ function cookieMid() {
 // GA
 function GAtrigger() {
     const gaErrHandler = err => {
-        if (err) debugError('Failed to trigger GA: ' + err);
+        if (err) debug.error('Failed to trigger GA: ' + err);
     };
     return function GAtrigger(req, res, next) {
         if (req._realIp) {
@@ -268,6 +266,6 @@ function onListening(server) {
         var bind = typeof addr === 'string' ?
             'pipe ' + addr :
             'port ' + addr.port;
-        debug('Listening on ' + bind);
+        debug.log('Listening on ' + bind);
     };
 }

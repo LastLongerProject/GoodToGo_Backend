@@ -1,4 +1,4 @@
-const debug = require("debug")("goodtogo_backend:notification_preprocessor");
+const debug = require("../debugger")("notification_preprocessor");
 
 const SnsEvent = require("./enums/snsEvents");
 
@@ -41,7 +41,7 @@ module.exports = {
                     };
             }
         } catch (error) {
-            debug(error);
+            debug.error(error);
             return null;
         }
     },

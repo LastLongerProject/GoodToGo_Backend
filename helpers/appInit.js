@@ -1,7 +1,4 @@
-const debug = require('debug')('goodtogo_backend:appInit');
-debug.log = console.log.bind(console);
-const debugError = require('debug')('goodtogo_backend:appINIT_ERR');
-
+const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const Store = require('../models/DB/storeDB');
 const PlaceID = require('../models/DB/placeIdDB');
@@ -15,22 +12,22 @@ module.exports = {
     store: function (cb) {
         storeListGenerator(err => {
             if (cb) return cb(err);
-            if (err) return debugError(err);
-            debug('storeList init');
+            if (err) return debug.error(err);
+            debug.log('storeList init');
         });
     },
     container: function (cb) {
         containerListGenerator(err => {
             if (cb) return cb(err);
-            if (err) return debugError(err);
-            debug('containerList init');
+            if (err) return debug.error(err);
+            debug.log('containerList init');
         });
     },
     refreshStore: function (cb) {
         sheet.getStore(data => {
             storeListGenerator(err => {
                 if (err) return cb(err);
-                debug('storeList refresh');
+                debug.log('storeList refresh');
                 cb();
             });
         });
@@ -39,7 +36,7 @@ module.exports = {
         sheet.getContainer(dbUser, () => {
             containerListGenerator(err => {
                 if (err) return cb(err);
-                debug('containerList refresh');
+                debug.log('containerList refresh');
                 cb();
             });
         });
@@ -52,7 +49,7 @@ module.exports = {
                         Store.findOne({
                             'id': aStoreID.slice(0, 2)
                         }, (err, aStore) => {
-                            if (err) return debugError(err);
+                            if (err) return debug.error(err);
                             if (!aStore) return resolve();
                             aStore.img_info.img_version++;
                             aStore.save((err) => {
@@ -70,12 +67,12 @@ module.exports = {
                     })
                     .catch((err) => {
                         if (err) {
-                            debugError(storeIdList);
+                            debug.error(storeIdList);
                             return cb(false, err);
                         }
                     });
             } else {
-                debugError(storeIdList);
+                debug.error(storeIdList);
                 cb(succeed, {
                     type: 'refreshStoreImg',
                     message: 'refresh fail',
@@ -98,7 +95,7 @@ module.exports = {
                         ContainerType.findOne({
                             'typeCode': aTypeCode
                         }, (err, aType) => {
-                            if (err) return debugError(err);
+                            if (err) return debug.error(err);
                             if (!aType) return resolve();
                             aType.version++;
                             aType.save((err) => {
@@ -116,12 +113,12 @@ module.exports = {
                     })
                     .catch((err) => {
                         if (err) {
-                            debugError(data);
+                            debug.error(data);
                             return cb(false, err);
                         }
                     });
             } else {
-                debugError(data);
+                debug.error(data);
                 cb(succeed, {
                     type: 'refreshContainerIcon',
                     message: 'refresh fail',

@@ -3,7 +3,7 @@ const readline = require('readline');
 const {
     google
 } = require('googleapis');
-var debug = require('debug')('goodtogo_backend:google_auth');
+const debug = require('../debugger')('google_auth');
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'];
@@ -16,7 +16,6 @@ const TOKEN_PATH = `${ROOT_DIR}/config/google_token.json`;
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
  * given callback function.
- * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
 function authorize(callback) {

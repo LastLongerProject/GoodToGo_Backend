@@ -1,15 +1,15 @@
-var request = require('request');
-var {
+const request = require('request');
+const {
     google
 } = require('googleapis');
-var sheets = google.sheets('v4');
-var debug = require('debug')('goodtogo_backend:google_sheet');
+const sheets = google.sheets('v4');
+const debug = require('../debugger')('google_sheet');
 
-var intReLength = require('@lastlongerproject/toolkit').intReLength;
-var PlaceID = require('../../models/DB/placeIdDB');
-var Store = require('../../models/DB/storeDB');
-var ContainerType = require('../../models/DB/containerTypeDB');
-var Container = require('../../models/DB/containerDB');
+const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const PlaceID = require('../../models/DB/placeIdDB');
+const Store = require('../../models/DB/storeDB');
+const ContainerType = require('../../models/DB/containerTypeDB');
+const Container = require('../../models/DB/containerDB');
 
 const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
@@ -17,8 +17,8 @@ const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
 
 const isNum = /^\d+$/;
-var defaultPeriods = [];
-for (var i = 0; i < 7; i++) {
+const defaultPeriods = [];
+for (let i = 0; i < 7; i++) {
     defaultPeriods.push({
         "close": {
             "day": i,
@@ -86,7 +86,7 @@ module.exports = {
                 ranges: ['container!A2:F', 'container_type!A2:C'],
             }, function (err, response) {
                 if (err) {
-                    debug('[Sheet API ERR (getContainer)] Error: ' + err);
+                    debug.error('[Sheet API ERR (getContainer)] Error: ' + err);
                     return;
                 }
                 var sheetContainerList = response.data.valueRanges[0].values;
@@ -142,12 +142,12 @@ module.exports = {
                         }, {
                             'active': false
                         }, (err) => {
-                            if (err) return debug(err);
+                            if (err) return debug.error(err);
                             cb();
                         });
                     })
                     .catch((err) => {
-                        if (err) return debug(err);
+                        if (err) return debug.error(err);
                     });
             });
         });
@@ -160,7 +160,7 @@ module.exports = {
                 range: 'active!A2:J',
             }, function (err, response) {
                 if (err) {
-                    debug('[Sheet API ERR (getStore)] Error: ' + err);
+                    debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                     return;
                 }
                 var rows = response.data.values;
@@ -194,7 +194,7 @@ module.exports = {
                     .all(PlaceIDFuncList)
                     .then((fulfillPlace) => {
                         Store.find({}, (err, oldList) => {
-                            if (err) return debug(err);
+                            if (err) return debug.error(err);
                             var placeApiFuncList = [];
                             for (var i = 0; i < fulfillPlace.length; i++) {
                                 if (!isNum.test(fulfillPlace[i].ID)) continue;
@@ -208,12 +208,12 @@ module.exports = {
                                             '&fields=formatted_address,opening_hours,geometry,types')
                                         .on('response', function (response) {
                                             if (response.statusCode !== 200) {
-                                                debug('[Place API ERR (1)] StatusCode : ' + response.statusCode);
+                                                debug.error('[Place API ERR (1)] StatusCode : ' + response.statusCode);
                                                 return reject(localCtr);
                                             }
                                         })
                                         .on('error', function (err) {
-                                            debug('[Place API ERR (2)] Message : ' + err);
+                                            debug.error('[Place API ERR (2)] Message : ' + err);
                                             return reject(localCtr);
                                         })
                                         .on('data', function (data) {
@@ -281,7 +281,7 @@ module.exports = {
                                                     resolve(res);
                                                 });
                                             } catch (error) {
-                                                debug(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
+                                                debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
                                                 reject(error);
                                             }
                                         });
@@ -293,12 +293,12 @@ module.exports = {
                                     return cb(data);
                                 })
                                 .catch((err) => {
-                                    if (err) return debug(err);
+                                    if (err) return debug.error(err);
                                 });
                         });
                     })
                     .catch((err) => {
-                        if (err) return debug(err);
+                        if (err) return debug.error(err);
                     });
             });
         });

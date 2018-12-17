@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const debugError = require('debug')('goodtogo_backend:managerERR');
-const debug = require('debug')('goodtogo_backend:manager');
+const debug = require('../helpers/debugger')('manager');
 const redis = require("../models/redis");
-debug.log = console.log.bind(console);
 
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
@@ -155,7 +153,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                             return true;
                         } catch (error) {
                             redis.del(CACHE.index);
-                            debugError(error);
+                            debug.error(error);
                             return false;
                         }
                     });
@@ -209,9 +207,9 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                             if (dataCached.usedTime.weight) toCache.usedTime.weight += dataCached.usedTime.weight;
                         }
                         redis.set(CACHE.index, JSON.stringify(toCache), (err, reply) => {
-                            if (err) return debugError(CACHE.index, err);
-                            if (reply != "OK") return debugError(CACHE.index, reply);
-                            debug("[" + CACHE.index + "] Cached!");
+                            if (err) return debug.error(CACHE.index, err);
+                            if (reply != "OK") return debug.error(CACHE.index, reply);
+                            debug.log("[" + CACHE.index + "] Cached!");
                         });
                     }
                 });
@@ -376,7 +374,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 for (var aCachedStoreIndex in activeStoreList) {
                     var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
                     if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
-                        debug("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
+                        debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
                         dataCached = {};
                         break;
                     }
@@ -481,9 +479,9 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                         activeStoreNameList
                     };
                     redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(CACHE.shop, err);
-                        if (reply != "OK") return debugError(CACHE.shop, reply);
-                        debug("[" + CACHE.shop + "] Cached!");
+                        if (err) return debug.error(CACHE.shop, err);
+                        if (reply != "OK") return debug.error(CACHE.shop, reply);
+                        debug.log("[" + CACHE.shop + "] Cached!");
                     });
                 }
             });
@@ -724,12 +722,12 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         history: result.history
                     };
                     redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(cacheKey, err);
-                        if (reply != "OK") return debugError(cacheKey, reply);
-                        debug("[" + cacheKey + "] Cached!");
+                        if (err) return debug.error(cacheKey, err);
+                        if (reply != "OK") return debug.error(cacheKey, reply);
+                        debug.log("[" + cacheKey + "] Cached!");
                         redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
-                            if (err) return debugError(err);
-                            if (reply !== 1) return debugError(reply);
+                            if (err) return debug.error(err);
+                            if (reply !== 1) return debug.error(reply);
                         });
                     });
                 }
@@ -860,9 +858,9 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                         totalUsageAmount: result.totalUsageAmount - recentTotalUsageAmount
                     };
                     redis.set(CACHE.user, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(CACHE.user, err);
-                        if (reply != "OK") return debugError(CACHE.user, reply);
-                        debug("[" + CACHE.user + "] Cached!");
+                        if (err) return debug.error(CACHE.user, err);
+                        if (reply != "OK") return debug.error(CACHE.user, reply);
+                        debug.log("[" + CACHE.user + "] Cached!");
                     });
                 }
             });
@@ -1138,7 +1136,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        debug("[Manage/shopSummary] Get DB Response!");
+        debug.log("[Manage/shopSummary] Get DB Response!");
         cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
         var lastUsed = {};
@@ -1188,7 +1186,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
         }
         lastUsed = null;
 
-        debug("[Manage/shopSummary] Finish Parse!");
+        debug.log("[Manage/shopSummary] Finish Parse!");
         // trade to rawdata
         let dataSets = [];
         let sheetNames = [];

@@ -2,8 +2,8 @@ const queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-const debug = require('debug')('goodtogo_backend:containerTrade');
 
+const debug = require('../helpers/debugger')('containerTrade');
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
@@ -197,7 +197,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {
-                                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
+                                    debug.error('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
                                         ' ID in uri : ' + aContainerId);
                                     return reject({
                                         code: 'F004',

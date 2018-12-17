@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('debug')('goodtogo_backend:users');
+const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
 
@@ -180,7 +180,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     if (deviceToken !== "HEYBITCH") {
         var dbUser = req._user;
         subscribeSNS(system, type, deviceToken, function (err, arn) {
-            if (err) return debug(err);
+            if (err) return debug.error(err);
             var newObject = {};
             if (dbUser.pushNotificationArn)
                 for (var key in dbUser.pushNotificationArn)
@@ -188,7 +188,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
             newObject[type + "-" + system] = arn;
             dbUser.pushNotificationArn = newObject;
             dbUser.save((err) => {
-                if (err) return debug(err);
+                if (err) return debug.error(err);
             });
         });
     }

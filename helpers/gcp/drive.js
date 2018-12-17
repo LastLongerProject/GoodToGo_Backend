@@ -4,9 +4,7 @@ const {
     google
 } = require('googleapis');
 const drive = google.drive('v3');
-const debug = require('debug')('goodtogo_backend:google_drive');
-debug.log = console.log.bind(console);
-const debugError = require('debug')('goodtogo_backend:google_drive_ERR');
+const debug = require('../debugger')('google_drive');
 
 const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
@@ -50,9 +48,9 @@ if (!fs.existsSync(GOOGLE_CONTENT_PATH)) {
     const tmpCb = function (initType) {
         return function tmpCb(success, data) {
             if (!success) {
-                debugError(`[${initType}] Initial Static File Not Success: `, data);
+                debug.error(`[${initType}] Initial Static File Not Success: `, data);
             } else {
-                debug(`[${initType}] Initial Static File Success!`);
+                debug.log(`[${initType}] Initial Static File Success!`);
             }
         };
     };
@@ -61,7 +59,7 @@ if (!fs.existsSync(GOOGLE_CONTENT_PATH)) {
 }
 
 function resFromGoogle(err, response, forceRenew, type, cb) {
-    if (err) return debugError('The API returned an error: ' + err);
+    if (err) return debug.error('The API returned an error: ' + err);
     var files = response.data.files;
     var fileIdList = files.map(aFile => aFile.id);
     fs.readFile(GOOGLE_CONTENT_PATH, (err, googleContent) => {
@@ -109,7 +107,7 @@ function resFromGoogle(err, response, forceRenew, type, cb) {
                 googleContent.file_watchList = newWatchList;
                 fs.writeFile(GOOGLE_CONTENT_PATH, JSON.stringify(googleContent), 'utf8', function (err) {
                     if (err) {
-                        debugError(err);
+                        debug.error(err);
                         return cb(false, err);
                     }
                     cb(true, modifiedFile);
@@ -139,7 +137,7 @@ function downloadFile(aFile, type, resolve, reject) {
                 res.data
                     .on('data', d => bufs.push(d))
                     .on('err', err => {
-                        debugError('Error during downloading file: ' + aFile.name + ' err: ' + err);
+                        debug.error('Error during downloading file: ' + aFile.name + ' err: ' + err);
                         resolve('error');
                         return;
                     })

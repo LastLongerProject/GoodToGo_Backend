@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('debug')('goodtogo_backend:containers');
+const debug = require('../../helpers/debugger')('containers');
 const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
@@ -99,7 +99,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                     User.find({
                         'roles.clerk.storeID': storeID
                     }, function (err, userList) {
-                        if (err) return debug(err);
+                        if (err) return debug.error(err);
                         userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
                             clerk: aClerk
                         }, {

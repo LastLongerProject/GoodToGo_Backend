@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jwt-simple');
-const debug = require('debug')('goodtogo_backend:containers_get');
+const debug = require('../../helpers/debugger')('containers_get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;

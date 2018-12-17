@@ -1,9 +1,6 @@
 const config = require('../config/config');
 
-const debug = require('debug')('goodtogo_backend:mongo');
-debug.log = console.log.bind(console);
-const debugError = require('debug')('goodtogo_backend:mongoERR');
-
+const debug = require('../helpers/debugger')('mongo');
 const appInit = require('../helpers/appInit');
 const scheduler = require('../helpers/scheduler');
 
@@ -13,7 +10,7 @@ mongoose.Promise = global.Promise;
 module.exports = function (done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
-        debug('mongoDB connect succeed');
+        debug.log('mongoDB connect succeed');
         // require('../tmp/modifyContainerSchema.js')
         Promise
             .all([
@@ -31,16 +28,16 @@ module.exports = function (done) {
                 })
             ])
             .then(() => {
-                debug("Done App Initializing");
+                debug.log("Done App Initializing");
                 if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
                     scheduler();
                 } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-                    debug("Local Testing no scheduler");
+                    debug.log("Local Testing no scheduler");
                 } else {
-                    debug("Deploy Server no scheduler");
+                    debug.log("Deploy Server no scheduler");
                 }
                 done();
             })
-            .catch(err => debugError(err));
+            .catch(err => debug.error(err));
     });
 };
