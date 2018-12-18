@@ -3,6 +3,9 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('manager');
 const redis = require("../models/redis");
 
+const SocketNamespace = require('../controllers/socket').namespace;
+const generateSocketToken = require('../controllers/socket').generateToken;
+
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 const refreshStore = require('../helpers/appInit').refreshStore;
@@ -36,6 +39,8 @@ const CACHE = {
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
 const baseUrl = require("../config/config").serverBaseUrl + "/manager";
+
+router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
 router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
     var result = {

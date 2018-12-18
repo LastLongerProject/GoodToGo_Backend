@@ -5,7 +5,6 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
-const User = require("../../models/DB/userDB");
 const Container = require('../../models/DB/containerDB');
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
@@ -14,6 +13,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
+const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
@@ -451,8 +451,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (r
     });
 });
 
-
-router.get('/challenge/token', regAsBot, regAsStore, regAsAdmin, validateRequest, generateSocketToken);
+router.get('/challenge/token', regAsBot, regAsStore, regAsAdmin, validateRequest, generateSocketToken(SocketNamespace.CHALLENGE));
 
 var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 router.get('/challenge/:action/:id', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {

@@ -11,23 +11,30 @@ const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
 
+const namespace = Object.freeze({
+    CHALLENGE: "/containers/challenge/socket",
+    SERVER_EVENT: "/serverEvent"
+});
+
 module.exports = {
-    generateToken: function (req, res, next) {
-        var dbUser = req._user;
-        var uri = "/containers/challenge/socket";
-        keys.serverSecretKey(function (err, serverSecretKey) {
-            if (err) return next(err);
-            var date = new Date();
-            var token = jwt.encode({
-                'iat': Date.now(),
-                'exp': date.setMinutes(date.getMinutes() + 5),
-                'user': dbUser.user.phone
-            }, serverSecretKey);
-            res.json({
-                uri: uri,
-                token: token
+    namespace,
+    generateToken: function (thisNamespace) {
+        return function (req, res, next) {
+            var dbUser = req._user;
+            keys.serverSecretKey(function (err, serverSecretKey) {
+                if (err) return next(err);
+                var date = new Date();
+                var token = jwt.encode({
+                    'iat': Date.now(),
+                    'exp': date.setMinutes(date.getMinutes() + 5),
+                    'user': dbUser.user.phone
+                }, serverSecretKey);
+                res.json({
+                    uri: thisNamespace,
+                    token: token
+                });
             });
-        });
+        };
     },
     auth: function (socket, next) {
         var handShakeData = socket.request;
@@ -75,7 +82,7 @@ module.exports = {
         });
 
     },
-    init: function (socket) {
+    challenge: function (socket) {
         socket.emitWithLog = addLog(socket);
         let next = nextInit(socket);
 
@@ -173,6 +180,9 @@ module.exports = {
                 });
             }
         });
+    },
+    serverEvent: function (socket) {
+
     }
 };
 

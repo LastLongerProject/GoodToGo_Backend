@@ -2,6 +2,7 @@ const debug = require("../debugger")("notification_preprocessor");
 
 const SnsEvent = require("./enums/sns/events");
 const WebhookEvent = require("./enums/webhook/events");
+const SocketEvent = require("./enums/socket/events");
 
 module.exports = {
     sns: function (event, user, data) {
@@ -58,6 +59,17 @@ module.exports = {
                 event,
                 para
             };
+        } catch (error) {
+            debug.error(error);
+            return null;
+        }
+    },
+    socket: function (event, data) {
+        try {
+            switch (event) {
+                case SocketEvent.GLOBAL_USAGE_UPDATE:
+                    return data.containerList.length;
+            }
         } catch (error) {
             debug.error(error);
             return null;

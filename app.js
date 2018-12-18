@@ -14,7 +14,8 @@ const ua = require('universal-analytics');
 const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
 const logModel = require('./models/DB/logDB');
-const socketCb = require('./controllers/socket');
+const DataCacheFactory = require('./models/dataCacheFactory');
+const mSocket = require('./controllers/socket');
 const logSystem = require('./middlewares/logSystem');
 const users = require('./routes/users');
 const stores = require('./routes/stores');
@@ -124,13 +125,14 @@ function startServer() {
     server.on('listening', onListening(server));
 
     io = io(server);
-    io.of('/containers/challenge/socket')
-        .use(socketCb.auth)
-        .on('connection', socketCb.init);
-    io.of('/containers/challenge/socket')
-        .use(socketCb.auth)
-        .on('connection', socketCb.init);
+    io.of(mSocket.namespace.CHALLENGE)
+        .use(mSocket.auth)
+        .on('connection', mSocket.challenge);
+    let SocketEmitter = io.of(mSocket.namespace.SERVER_EVENT)
+        .use(mSocket.auth)
+        .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
+    DataCacheFactory.set('SocketEmitter', SocketEmitter);
 }
 
 // cookie middleware (just for identify user)

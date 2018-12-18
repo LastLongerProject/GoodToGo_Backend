@@ -3,6 +3,7 @@ const request = require("axios");
 const debug = require("../debugger")("notification_sender");
 
 const SNS = require('../aws/SNS');
+const DataCacheFactory = require("../../models/dataCacheFactory");
 
 module.exports = {
     sns: function (formatted) {
@@ -33,6 +34,16 @@ module.exports = {
                         }
                         debug.error(`[Webhook] Config: ${error.config}`);
                     });
+            };
+        } else {
+            return function (url) {};
+        }
+    },
+    socket: function (formatted) {
+        const SocketEmitter = DataCacheFactory.get("SocketEmitter");
+        if (formatted && SocketEmitter) {
+            return function (event) {
+                SocketEmitter.emit(event, formatted);
             };
         } else {
             return function (url) {};

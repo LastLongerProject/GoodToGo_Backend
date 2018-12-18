@@ -29,6 +29,6 @@ module.exports = {
         });
     },
     socket: function (event, data) {
-
+        NotificationSender.socket(NotificationPreprocess.socket(event, data))(event);
     }
 };
