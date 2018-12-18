@@ -51,7 +51,7 @@ module.exports = {
                     thisErr = err;
                 }
                 if (!decoded || !decoded.user || !decoded.exp || !decoded.iat || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
-                    if (thisErr) debug.error(thisErr);
+                    if (thisErr) debug.log(thisErr);
                     if (!decoded) {
                         thisErr = "Can't Decode";
                     } else if (!decoded.user || !decoded.exp || !decoded.iat) {

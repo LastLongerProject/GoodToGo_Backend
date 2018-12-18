@@ -127,6 +127,9 @@ function startServer() {
     io.of('/containers/challenge/socket')
         .use(socketCb.auth)
         .on('connection', socketCb.init);
+    // io.of('/containers/challenge/socket')
+    //     .use(socketCb.auth)
+    //     .on('connection', socketCb.init);
     app.set('socket.io', io);
 }
 
