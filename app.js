@@ -127,9 +127,9 @@ function startServer() {
     io.of('/containers/challenge/socket')
         .use(socketCb.auth)
         .on('connection', socketCb.init);
-    // io.of('/containers/challenge/socket')
-    //     .use(socketCb.auth)
-    //     .on('connection', socketCb.init);
+    io.of('/containers/challenge/socket')
+        .use(socketCb.auth)
+        .on('connection', socketCb.init);
     app.set('socket.io', io);
 }
 
@@ -180,7 +180,7 @@ function resBodyParser(req, res, next) {
 
     res.write = function (chunk) {
         if (!Buffer.isBuffer(chunk))
-            chunk = new Buffer(chunk);
+            chunk = new Buffer.from(chunk);
         chunks.push(chunk);
 
         oldWrite.apply(res, arguments);
@@ -189,7 +189,7 @@ function resBodyParser(req, res, next) {
     res.end = function (chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
-                chunk = new Buffer(chunk);
+                chunk = new Buffer.from(chunk);
             chunks.push(chunk);
         }
 
