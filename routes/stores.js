@@ -345,13 +345,13 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
     });
 });
 
-router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req, res, next) {
+router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var id = req.params.id;
+    var phone = req.params.phone.replace(/tel:|-/g, "");
     const thisRedisKey = redisKey(dbStore.roles.clerk.storeID); // BOT??
     process.nextTick(function () {
         User.findOne({
-            'user.phone': new RegExp(id.toString() + '$', "i")
+            'user.phone': new RegExp(phone.toString() + '$', "i")
         }, function (err, user) {
             if (err)
                 return next(err);
@@ -359,8 +359,8 @@ router.get('/getUser/:id', regAsBot, regAsStore, validateRequest, function (req,
                 res.status(403).json({
                     code: 'E001',
                     type: "userSearchingError",
-                    message: "No User: [" + id + "] Found",
-                    data: id
+                    message: "No User: [" + phone + "] Found",
+                    data: phone
                 });
             } else {
                 var token = crypto.randomBytes(48).toString('hex').substr(0, 10);

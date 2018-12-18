@@ -18,7 +18,7 @@ module.exports = {
             typeCode: 'customer'
         };
         var roles = req.body.roles;
-        var phone = req.body.phone;
+        var phone = req.body.phone.replace(/tel:|-/g, "");
         var password = req.body.password;
         var code = req.body.verification_code;
         if (typeof phone === 'undefined' ||
@@ -296,7 +296,7 @@ module.exports = {
                 message: 'No User Found'
             });
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
-                if (typeof phone === 'string' && phone.length === 10) {
+                if (typeof phone === 'string' && isMobilePhone(phone)) {
                     var newCode = keys.getVerificationCode();
                     sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
