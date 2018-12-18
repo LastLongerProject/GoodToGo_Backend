@@ -23,23 +23,23 @@ module.exports = {
                     return {
                         content: {
                             title: "借用了容器！",
-                            body: data.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、"),
+                            body: data.join("、"),
                             options: {
                                 action: "RELOAD_USAGE"
                             }
                         },
-                        errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
+                        errMsgPrefix: `[借出]通知推播失敗：[${user}]`
                     };
                 case SnsEvent.CONTAINER_RETURN:
                     return {
                         content: {
                             title: "歸還了容器！",
-                            body: data.containerList.map(aContainerObj => `#${aContainerObj.id}`).join("、"),
+                            body: data.join("、"),
                             options: {
                                 action: "RELOAD_USAGE"
                             }
                         },
-                        errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
+                        errMsgPrefix: `[歸還]通知推播失敗：[${user}]`
                     };
             }
         } catch (error) {

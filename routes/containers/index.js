@@ -249,8 +249,6 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
         if (tradeDetail) {
             NotificationCenter.emit("container_return", {
                 customersDetailList: uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID)
-            }, {
-                containerList: reply.containerList
             });
         }
     });
