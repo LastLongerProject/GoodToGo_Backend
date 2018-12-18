@@ -1,3 +1,5 @@
+const request = require("axios");
+
 const debug = require("../debugger")("notification_sender");
 
 const SNS = require('../aws/SNS');
@@ -12,6 +14,28 @@ module.exports = {
             };
         } else {
             return function (arn) {};
+        }
+    },
+    webhook: function (formatted) {
+        if (formatted) {
+            return function (url) {
+                request
+                    .post(url, formatted)
+                    .catch(error => {
+                        if (error.response) {
+                            debug.error(`[Webhook|res] Data: ${error.response.data}`);
+                            debug.error(`[Webhook|res] Status: ${error.response.status}`);
+                            debug.error(`[Webhook|res] Headers: ${error.response.headers}`);
+                        } else if (error.request) {
+                            debug.error(`[Webhook|req] Req: ${error.request}`);
+                        } else {
+                            debug.error(`[Webhook|???] Msg: ${error.message}`);
+                        }
+                        debug.error(`[Webhook] Config: ${error.config}`);
+                    });
+            };
+        } else {
+            return function (url) {};
         }
     }
 };

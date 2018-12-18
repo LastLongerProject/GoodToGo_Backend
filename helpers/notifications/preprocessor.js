@@ -1,6 +1,7 @@
 const debug = require("../debugger")("notification_preprocessor");
 
-const SnsEvent = require("./enums/snsEvents");
+const SnsEvent = require("./enums/sns/events");
+const WebhookEvent = require("./enums/webhook/events");
 
 module.exports = {
     sns: function (event, user, data) {
@@ -45,7 +46,21 @@ module.exports = {
             return null;
         }
     },
-    webhook: function (params) {
-
+    webhook: function (event, data) {
+        let para;
+        try {
+            switch (event) {
+                case WebhookEvent.USER_USAGE_UPDATE:
+                    para = data._id;
+                    break;
+            }
+            return {
+                event,
+                para
+            };
+        } catch (error) {
+            debug.error(error);
+            return null;
+        }
     }
 };

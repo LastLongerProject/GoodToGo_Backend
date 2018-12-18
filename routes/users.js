@@ -15,6 +15,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
+const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 
 const redis = require("../models/redis");
 const User = require("../models/DB/userDB");
@@ -166,7 +167,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
             type: 'subscribeMessage',
             message: 'Content not Complete'
         });
-    } else if (!(type === "shop" || type === "customer") || !(system === "ios" || system === "android")) {
+    } else if (!(type === SnsAppType.SHOP || type === SnsAppType.CUSTOMER) || !(system === "ios" || system === "android")) {
         return res.status(401).json({
             code: 'D010',
             type: 'subscribeMessage',

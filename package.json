@@ -28,6 +28,7 @@
     "dependencies": {
         "@lastlongerproject/toolkit": "^1.0.2",
         "aws-sdk": "^2.296.0",
+        "axios": "^0.18.0",
         "bcrypt-nodejs": "0.0.3",
         "body-parser": "^1.18.3",
         "buffer-crc32": "^0.2.13",

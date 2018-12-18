@@ -95,18 +95,11 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (req, 
                 aBox.save(function (err) {
                     if (err) return next(err);
                     res.json(reply);
-                    /*
-                    User.find({
-                        'roles.clerk.storeID': storeID
-                    }, function (err, userList) {
-                        if (err) return debug.error(err);
-                        userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                            clerk: aClerk
-                        }, {
-                            boxID
-                        }));
-                    });
-                    */
+                    // NotificationCenter.emit("container_delivery", {
+                    //     storeID
+                    // }, {
+                    //     boxID
+                    // });
                 });
             });
         });

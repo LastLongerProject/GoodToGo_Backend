@@ -1,27 +1,35 @@
+const debug = require("../debugger")("notification_center");
+
 const NotificationEvent = require("./enums/events");
-const SnsEvent = require("./enums/snsEvents");
-const SnsAppType = require("./enums/snsAppType");
+const SnsEvent = require("./enums/sns/events");
+const SnsAppType = require("./enums/sns/appType");
+const WebhookEvent = require("./enums/webhook/events");
 
 const pushBy = require("./push");
 
 module.exports = {
-    emit: function (event, users, data) {
+    emit: function (event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-                if (users.clerk) {
-                    pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, users.clerk, data);
+                if (typeof target.storeID !== "undefined") {
+                    User.find({
+                        'roles.clerk.storeID': target.storeID
+                    }, (err, userList) => {
+                        if (err) return debug.error(err);
+                        userList.forEach(aClerk => pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data));
+                    });
                 }
                 break;
             case NotificationEvent.CONTAINER_RENT:
-                if (users.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, users.customer, data);
-                    pushBy.webhook("container_usage_update", users.customer);
+                if (target.customer) {
+                    pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target.customer, data);
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE, target.customer);
                 }
                 break;
             case NotificationEvent.CONTAINER_RETURN:
-                if (users.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, users.customer, data);
-                    pushBy.webhook("container_usage_update", users.customer);
+                if (target.customer) {
+                    pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data);
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE, target.customer);
                 }
                 break;
         }
