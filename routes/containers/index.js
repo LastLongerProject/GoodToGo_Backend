@@ -211,13 +211,13 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
         }, {
             rentToUser: userPhone,
             orderTime: res._payload.orderTime
-        }, (err, tradeSuccess, reply, tradeUser) => {
+        }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
             res.json(reply);
-            if (tradeUser) {
+            if (tradeDetail) {
                 NotificationCenter.emit("container_rent", {
-                    customer: tradeUser.newUser
+                    customer: tradeDetail[0].newUser
                 }, {
                     containerList: reply.containerList
                 });
@@ -242,13 +242,13 @@ router.post('/return/:id', regAsBot, regAsStore, regAsAdmin, validateRequest, fu
     }, {
         storeID: req.body.storeId,
         orderTime: res._payload.orderTime
-    }, (err, tradeSuccess, reply, tradeUser) => {
+    }, (err, tradeSuccess, reply, tradeDetail) => {
         if (err) return next(err);
         if (!tradeSuccess) return res.status(403).json(reply);
         res.json(reply);
-        if (tradeUser) {
+        if (tradeDetail) {
             NotificationCenter.emit("container_return", {
-                customer: tradeUser.oriUser
+                customersDetailList: uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID)
             }, {
                 containerList: reply.containerList
             });
@@ -538,3 +538,17 @@ router.post('/add/:id/:type', function (req, res, next) {
 });
 
 module.exports = router;
+
+function uniqArr(array, keyGenerator, dataExtractor) {
+    let seen = {};
+    array.forEach(ele => {
+        let thisKey = keyGenerator(ele);
+        let thisData = dataExtractor(ele);
+        if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
+        else seen[thisKey] = {
+            key: thisKey,
+            data: [thisData]
+        };
+    });
+    return Object.values(seen);
+}

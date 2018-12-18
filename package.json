@@ -26,7 +26,7 @@
     "author": "BenjaminChenTW",
     "license": "ISC",
     "dependencies": {
-        "@lastlongerproject/toolkit": "^1.0.2",
+        "@lastlongerproject/toolkit": "^1.0.4",
         "aws-sdk": "^2.296.0",
         "axios": "^0.18.0",
         "bcrypt-nodejs": "0.0.3",
