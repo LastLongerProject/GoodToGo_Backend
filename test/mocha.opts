@@ -1,0 +1,6 @@
+-t 50s
+--require chai
+--require should
+--reporter dot
+--ui bdd
+--recursive

@@ -67,14 +67,14 @@ app.use('/containers', containers);
 app.use('/images', images);
 
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
+app.use(function(req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
 
 // error handler
-app.use(function (err, req, res, next) {
+app.use(function(err, req, res, next) {
     if (!err.status) {
         debugError(err);
         req._errorLevel = 3;
@@ -177,7 +177,7 @@ function resBodyParser(req, res, next) {
 
     var chunks = [];
 
-    res.write = function (chunk) {
+    res.write = function(chunk) {
         if (!Buffer.isBuffer(chunk))
             chunk = new Buffer(chunk);
         chunks.push(chunk);
@@ -185,7 +185,7 @@ function resBodyParser(req, res, next) {
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function (chunk) {
+    res.end = function(chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer(chunk);
@@ -271,3 +271,5 @@ function onListening(server) {
         debug('Listening on ' + bind);
     };
 }
+
+module.exports = app;
