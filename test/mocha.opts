@@ -1,4 +1,4 @@
--t 50s
+-t 10s
 --require chai
 --require should
 --reporter dot

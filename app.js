@@ -110,7 +110,7 @@ function startServer() {
     /**
      * Get port from environment and store in Express.
      */
-    var port = normalizePort(process.env.PORT || '3000');
+    var port = normalizePort(process.env.PORT || '3030');
     app.set('port', port);
 
     /**
@@ -240,8 +240,8 @@ function onError() {
         }
 
         var bind = typeof port === 'string' ?
-            'Pipe ' + port :
-            'Port ' + port;
+            'Pipe ' + app.get('port') :
+            'Port ' + app.get('port');
 
         // handle specific listen errors with friendly messages
         switch (error.code) {
