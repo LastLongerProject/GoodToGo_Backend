@@ -27,9 +27,6 @@ const app = express();
 let io = require('socket.io');
 let esm;
 
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
-
 app.use(favicon(path.join(__dirname, 'public/favicon.ico')));
 app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
 app.use(logSystem(logModel));

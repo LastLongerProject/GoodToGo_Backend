@@ -226,8 +226,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (req
             }, function (err, tradeList) {
                 if (err) return next(err);
 
-                cleanUndoTrade('Return', tradeList);
                 tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
+                cleanUndoTrade('Return', tradeList);
 
                 var containerKey;
                 var tmpReturnedObject;
@@ -289,8 +289,8 @@ router.get('/data', validateRequest, function (req, res, next) {
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade('Return', tradeList);
         tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
+        cleanUndoTrade('Return', tradeList);
 
         var containerKey;
         var tmpReturnedObject;

@@ -104,7 +104,7 @@ module.exports = {
                             });
                         });
                     })))
-                    .then((returnData) => {
+                    .then(() => {
                         cb(succeed, {
                             type: 'refreshContainerIcon',
                             message: 'refresh succeed',

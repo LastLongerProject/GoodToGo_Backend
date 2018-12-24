@@ -439,12 +439,12 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
     });
 });
 
+const timeFormat = /^[0-1]{1}[0-9]{1}|[2]{1}[0-3]{1}:[0-9]{2}$/;
+const dayFormat = /^[0-6]{1}$/;
 router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var newData = req.body;
     var days = newData.opening_hours;
-    var timeFormat = /^[0-1]{1}[0-9]{1}|[2]{1}[0-3]{1}:[0-9]{2}$/;
-    var dayFormat = /^[0-6]{1}$/;
     if (Array.isArray(days)) {
         for (var i = 0; i < days.length; i++) {
             if (!(typeof days[i].close !== 'undefined' && typeof days[i].close.day !== 'undefined' && typeof days[i].close.time === 'string' &&
@@ -989,7 +989,6 @@ function parseHistory(data, dataType, type, callback) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
-        // if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100 || lastPhone !== thisPhone) {
         if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
             phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
             byOrderArr.push({
@@ -1009,7 +1008,6 @@ function parseHistory(data, dataType, type, callback) {
         containerAmount: tmpContainerList.length,
         containerList: tmpContainerList
     });
-    // console.log(byOrderArr)
     var byDateArr = [];
     var tmpOrderList = [];
     var tmpOrderAmount = 0;
@@ -1017,10 +1015,6 @@ function parseHistory(data, dataType, type, callback) {
     for (var i = 0; i < byOrderArr.length; i++) {
         aOrder = byOrderArr[i];
         nextOrder = byOrderArr[i + 1];
-        // console.log('i', i)
-        // console.log('date', fullDateString(dateCheckpoint(date)))
-        // console.log('this', aOrder)
-        // console.log('next', nextOrder)
         if (aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date)) {
             aOrder.time = timeFormatter(aOrder.time);
             tmpOrderList.push(aOrder);

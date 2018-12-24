@@ -119,7 +119,6 @@ module.exports = {
                             type: 'signupMessage',
                             message: "Verification Code isn't correct"
                         });
-                        if (err) return done(err);
                         var newUser = new User();
                         newUser.user.phone = phone;
                         newUser.user.password = newUser.generateHash(password);
