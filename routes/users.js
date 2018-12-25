@@ -27,16 +27,50 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 /**
+ * 
+ * @apiVersion 0.0.1 
+ */
+
+/**
  * @apiName SignUp
  * @apiGroup Users
+ * @apiPermission clerk
  *
- *
- * @api {post} /user/signup Request User information
- * @apiParam {String} phone number of the User.
- * @apiParam {String} password of the User.
- * @apiSuccess {String} phone number of the User.
- * @apiSuccess {String} password of the User.
+ * @api {post} /users/signup Sign up for new user (step 1)
+ * @apiUse DefaultSecurityMethod
+
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse SignupError
  */
+
+/**
+ * @apiName SignUp (add verification code)
+ * @apiGroup Users
+ * @apiPermission clerk
+ * 
+ * @api {post} /users/signup Sign up for new user (step 2)
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiParam {String} verification code from sms
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+
 router.post('/signup', validateDefault, function(req, res, next) {
     // for CUSTOMER
     req.body.active = true; // !!! Need to send by client when need purchasing !!!
@@ -52,6 +86,25 @@ router.post('/signup', validateDefault, function(req, res, next) {
         }
     });
 });
+
+/**
+ * @apiName SignUp-Clerk
+ * @apiGroup Users
+ * @apiPermission manager
+ *
+ * @api {post} /users/signup/clerk Sign up for new clerk
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
 
 router.post(
     '/signup/clerk',
@@ -89,6 +142,24 @@ router.post(
     }
 );
 
+/**
+ * @apiName SignUp-Root
+ * @apiGroup Users
+ * @apiPermission admin_clerk
+ *
+ * @api {post} /users/signup/root Sign up for customer from admin or clerk
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
 router.post(
     '/signup/root',
     regAsStore,
@@ -117,6 +188,37 @@ router.post(
     }
 );
 
+
+/**
+ * @apiName Login
+ * @apiGroup Users
+ *
+ * @api {post} /users/login User login
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Login Successfully (res.header.authorization)
+ *     { 
+ *          **Decoded JWT**
+ *          payload = {
+ *              "roles": {
+ *                  "typeList": [ //the list with ids that you can use
+ *                      "admin"
+ *                  ],
+ *              "admin": {
+ *                  "stationID": Number,
+ *                  "manager": Boolean,
+ *                  "apiKey": String,
+ *                  "secretKey": String
+ *              } // ids' info will store in its own object
+ *          } 
+ *      }
+ *     
+ * @apiUse LoginError
+ */
+
 router.post('/login', validateDefault, function(req, res, next) {
     userQuery.login(req, function(err, user, info) {
         if (err) {
@@ -130,6 +232,25 @@ router.post('/login', validateDefault, function(req, res, next) {
     });
 });
 
+/**
+ * @apiName ModifyPassword
+ * @apiGroup Users
+ * @apiPermission admin_clerk
+ *
+ * @api {post} /users/modifypassword Modify user's password
+ * @apiUse JWT
+ * 
+ * @apiParam {String} oripassword original password of the user.
+ * @apiParam {String} newpassword new password of the user.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'chanPassMessage',
+ *          message: 'Change succeeded' 
+ *     }
+ * @apiUse ChangePwdError
+ */
+
 router.post('/modifypassword', validateRequest, function(req, res, next) {
     userQuery.chanpass(req, function(err, user, info) {
         if (err) {
@@ -141,6 +262,43 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
         }
     });
 });
+
+/**
+ * @apiName Forgot Password
+ * @apiGroup Users
+ *
+ * @api {post} /users/forgotpassword Forgot password (step 1)
+ * @apiUse DefaultSecurityMethod
+
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'forgotPassMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse ForgetPwdError
+ */
+
+/**
+ * @apiName Forgot Password (add verification code)
+ * @apiGroup Users
+ * 
+ * @api {post} /users/forgotpassword Forgot password (step 2)
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} new_password new password of the User.
+ * @apiParam {String} verification code from sms
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'forgotPassMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse ForgetPwdError
+ */
 
 router.post('/forgotpassword', validateDefault, function(req, res, next) {
     userQuery.forgotpass(req, function(err, user, info) {
@@ -156,6 +314,22 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
     });
 });
 
+/**
+ * @apiName Logout
+ * @apiGroup Users
+ * 
+ * @api {post} /users/logout User logout
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'logoutMessage',
+ *          message: 'Logout succeeded' 
+ *     }
+ * @apiError {String} Others Remember ‘jti’ and contact me
+ */
+
 router.post('/logout', validateRequest, function(req, res, next) {
     userQuery.logout(req, function(err, user, info) {
         if (err) {
@@ -166,6 +340,28 @@ router.post('/logout', validateRequest, function(req, res, next) {
     });
 });
 
+/**
+ * @apiName AddBot
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ *
+ * @api {post} /users/addbot Add bot 
+ * @apiUse JWT
+ * 
+ * @apiParam {String} botName bot name.
+ * @apiParam {String} scopeID scope id.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded',
+ *          keys: {
+ *              apiKey: String,
+ *              secretKey: String
+ *          } 
+ *     }
+ * @apiUse AddbotError
+ */
 router.post('/addbot', regAsAdminManager, validateRequest, function(
     req,
     res,
@@ -180,6 +376,26 @@ router.post('/addbot', regAsAdminManager, validateRequest, function(
     });
 });
 
+/**
+ * @apiName CreateBotKey
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ *
+ * @api {post} /users/createBotKey Create new key pair for bot 
+ * @apiUse JWT
+ * 
+ * @apiParam {String} bot bot name.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded',
+ *          keys: {
+ *              apiKey: String,
+ *              secretKey: String
+ *          } 
+ *     }
+ */
 router.post('/createBotKey', regAsAdminManager, validateRequest, function(
     req,
     res,
@@ -194,6 +410,24 @@ router.post('/createBotKey', regAsAdminManager, validateRequest, function(
     });
 });
 
+/**
+ * @apiName Subscribe SNS service
+ * @apiGroup Users
+ *
+ * @api {post} /users/subscribeSNS Subscribe SNS service
+ * @apiUse JWT
+ * 
+ * @apiParam {String} deviceToken Token of the device.
+ * @apiParam {String} appType customer or shop.
+ * @apiParam {String} system The system what the user use (ios | android).
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     { 
+ *          type: 'subscribeMessage',
+ *          message: 'Subscribe succeeded',
+ *     }
+ * @apiUse SubscribeSNSError
+ */
 router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     var deviceToken = req.body.deviceToken
         .replace(/\s/g, '')
@@ -240,6 +474,32 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
         });
     }
 });
+
+/**
+ * @apiName DataByToken
+ * @apiGroup Users
+ * 
+ * @api {get} /users/data/:token Get user data by token
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        usingAmount : 0,
+ *	        data : [
+ *		    {
+ *			    container : String, // #001
+ *			    time : Date
+ *			    returned : Boolean
+ *			    type : String // 12oz 玻璃杯
+ *			    store : String // 正興咖啡館
+ *			    returnTime : Date // If returned == true
+ *		    }, ...
+ *	        ],
+ *	        globalAmount : Number
+ *      }
+ */
+
 router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
     req,
     res,
@@ -328,6 +588,31 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
         );
     });
 });
+
+/**
+ * @apiName Data
+ * @apiGroup Users
+ * 
+ * @api {get} /users/data Get user data
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        usingAmount : 0,
+ *	        data : [
+ *		    {
+ *			    container : String, // #001
+ *			    time : Date
+ *			    returned : Boolean
+ *			    type : String // 12oz 玻璃杯
+ *			    store : String // 正興咖啡館
+ *			    returnTime : Date // If returned == true
+ *		    }, ...
+ *	        ],
+ *	        globalAmount : Number
+ *      }
+ */
 
 router.get('/data', validateRequest, function(req, res, next) {
     var dbUser = req._user;
