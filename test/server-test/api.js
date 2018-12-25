@@ -140,13 +140,13 @@ describe('api', function() {
                         }
                         console.log(res.body)
 
-                        userDB.deleteOne({
-                                'user.phone': '0988888888',
-                            },
-                            (err, res) => {
-                                if (err) return done(err);
-                            }
-                        );
+                        // userDB.deleteOne({
+                        //         'user.phone': '0988888888',
+                        //     },
+                        //     (err, res) => {
+                        //         if (err) return done(err);
+                        //     }
+                        // );
                         done();
                     });
             });
@@ -361,7 +361,7 @@ describe('api', function() {
             });
         });
 
-        describe.only('POST /subscribeSNS', function() {
+        describe('POST /subscribeSNS', function() {
             it('status code should be 200', function(done) {
 
                 let payload = {
@@ -393,7 +393,7 @@ describe('api', function() {
             });
         });
 
-        describe.only('POST /logout', function() {
+        describe('POST /logout', function() {
             it('status code should be 200', function(done) {
                 let payload = {
                     jti: makeHexString(),
@@ -441,6 +441,7 @@ describe('api', function() {
                             console.log(res.body);
                             return done(err);
                         }
+                        console.log(res.body)
                         rent_apiKey = res.body.apiKey;
                         done();
                     });
@@ -468,6 +469,414 @@ describe('api', function() {
                         }
 
                         userapiKey = res.body.apiKey;
+                        done();
+                    });
+            });
+        });
+    });
+
+    describe('/stores', function() {
+        describe('GET /stores/list', function() {
+            it('should return 200', function(done) {
+                request(app)
+                    .get('/stores/list')
+                    .set('Content-Type', 'application/json')
+                    .set('reqID', makeHexString())
+                    .set('reqTime', Date.now())
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/dict', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/stores/dict')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/clerkList', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/stores/clerkList')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('POST /stores/layoff/:id', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .post('/stores/layoff/0988888888')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/status', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/status')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/openingTime', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/openingTime')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('POST /stores/unsetDefaultOpeningTime', function() {
+            it('status code should be 204', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .post('/stores/unsetDefaultOpeningTime')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(204)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/checkUnReturned', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/checkUnReturned')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('POST /stores/changeOpeningTime', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .post('/stores/changeOpeningTime')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .send({
+                        opening_hours: [{
+                            close: {
+                                time: "21:00",
+                                day: 1
+                            },
+                            open: {
+                                time: "09:00",
+                                day: 1
+                            }
+                        }]
+                    })
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/boxToSign', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/boxToSign')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/usedAmount', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/usedAmount')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/history', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/history')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/history/byContainerType', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/history/byContainerType')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/history/byCustomer', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/history/byCustomer')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /stores/performance', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/performance')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+                        done();
+                    });
+            });
+        });
+
+        describe.only('GET /stores/favorite', function() {
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                request(app)
+                    .get('/stores/favorite')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.clerk.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
                         done();
                     });
             });

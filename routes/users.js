@@ -26,10 +26,6 @@ const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
-/**
- * 
- * @apiVersion 0.0.1 
- */
 
 /**
  * @apiName SignUp
