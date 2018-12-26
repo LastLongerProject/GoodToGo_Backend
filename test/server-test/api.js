@@ -22,7 +22,7 @@ var roles = {
 };
 
 describe('api', function() {
-    this.slow(10000);
+    this.slow(5000);
     before(function(done) {
         setTimeout(done, 5000);
     });
@@ -857,7 +857,7 @@ describe('api', function() {
             });
         });
 
-        describe.only('GET /stores/favorite', function() {
+        describe('GET /stores/favorite', function() {
             it('status code should be 200', function(done) {
                 let payload = {
                     jti: makeHexString(),
@@ -877,6 +877,279 @@ describe('api', function() {
                             return done(err);
                         }
                         console.log(res.body);
+                        done();
+                    });
+            });
+        });
+    });
+
+    describe('/manage', function() {
+        describe('GET /manage/index', function() {
+            this.slow(20000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: makeHexString(),
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/index')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        res.body.summary && res.body.activityHistorySummary && res.body.shopRecentHistorySummary && res.body.shopHistorySummary
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/shop', function() {
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/shop')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        Array.isArray(res.body.list)
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/shopDetail', function() {
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/shopDetail?id=17')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        res.body.storeName && res.body.toUsedAmount && res.body.todayAmount && res.body.weekAmount &&
+                            res.body.weekAmountPercentage && res.body.totalAmount && res.body.joinedDate && res.body.contactNickname &&
+                            res.body.contactPhone && res.body.weekAverage && res.body.shopLostAmount && res.body.customerLostAmount &&
+                            Array.isArray(res.body.history) && Array.isArray(res.body.chartData)
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/user', function() {
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/user')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        res.body.totalUserAmount && res.body.totalUsageAmount && res.body.weeklyAverageUsage && res.body.totalLostAmount &&
+                            Array.isArray(res.body.list)
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/userDetail', function() {
+            this.slow(1000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/userDetail?id=1050047')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        res.body.userPhone && res.body.usingAmount && res.body.lostAmount && res.body.totalUsageAmount &&
+                            res.body.joinedDate && res.body.joinedMethod && res.body.recentAmount && res.body.recentAmountPercentage &&
+                            res.body.weekAverage && res.body.averageUsingDuration && res.body.amountOfBorrowingFromDiffPlace && Array.isArray(res.body.history)
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/container', function() {
+            this.slow(1000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/container')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        Array.isArray(res.body.list) && res.body.list[0].id && res.body.list[0].type && res.body.list[0].totalAmount && res.body.list[0].toUsedAmount &&
+                            res.body.list[0].usingAmount && res.body.list[0].returnedAmount && res.body.list[0].toCleanAmount && res.body.list[0].toDeliveryAmount &&
+                            res.body.list[0].toSignAmount && res.body.list[0].inStorageAmount && res.body.list[0].lostAmount
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/containerDetail', function() {
+            this.slow(1000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/containerDetail?id=3')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .expect(function(res) {
+                        res.body.containerID && res.body.containerType && res.body.reuseTime && res.body.status &&
+                            res.body.bindedUser && res.body.joinedDate && Array.isArray(res.body.history) &&
+                            res.body.history[0].tradeTime && res.body.history[0].action && res.body.history[0].newUser && res.body.history[0].oriUser &&
+                            res.body.history[0].comment
+                    })
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+
+                        done();
+                    });
+            });
+        });
+
+        describe('GET /manage/console', function() {
+            this.slow(1000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/console')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+
+                        done();
+                    });
+            });
+        });
+
+        describe.only('GET /manage/shopSummary', function() {
+            this.slow(1000);
+
+            it('status code should be 200', function(done) {
+                let payload = {
+                    jti: 'manager',
+                    iat: Date.now(),
+                    exp: Date.now() + 86400000 * 3,
+                };
+
+                let auth = jwt.encode(payload, roles.admin.secretKey);
+                request(app)
+                    .get('/manage/shopSummary')
+                    .set('Authorization', auth)
+                    .set('ApiKey', roles.admin.apiKey)
+                    .expect(200)
+                    .end(function(err, res) {
+                        if (err) {
+                            console.log(res.body);
+                            return done(err);
+                        }
+                        console.log(res.body);
+
                         done();
                     });
             });

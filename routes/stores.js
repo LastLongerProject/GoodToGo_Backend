@@ -1162,6 +1162,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
  * @apiGroup Stores
  *
  * @api {get} /stores/history/byCustomer Get history by customer
+ * @apiUse JWT
  * @apiPermission clerk
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -1224,6 +1225,7 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res
  * @apiGroup Stores
  *
  * @api {get} /stores/performance Get store performance
+ * @apiUse JWT
  * @apiPermission clerk
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -1265,6 +1267,7 @@ router.get('/performance', regAsStore, validateRequest, function(req, res, next)
  * @apiGroup Stores
  *
  * @api {get} /stores/favorite Get frequent guest list
+ * @apiUse JWT
  * @apiPermission clerk
  * 
  * @apiSuccessExample {json} Success-Response:
