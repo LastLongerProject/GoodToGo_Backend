@@ -46,6 +46,7 @@ const baseUrl = require("../config/config").serverBaseUrl + "/manager";
  *
  * @api {get} /manage/index Get manage index
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -390,6 +391,7 @@ router.get('/search', regAsAdminManager, validateRequest, function(req, res, nex
  *
  * @api {get} /manage/shop Get shop
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -560,6 +562,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
  *
  * @api {get} /manage/shopDetail?id={shopid} Get shop detail
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -850,6 +853,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
  *
  * @api {get} /manage/user Get user
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1010,6 +1014,7 @@ router.get('/user', regAsAdminManager, validateRequest, function(req, res, next)
  *
  * @api {get} /manage/userDetail?id={userid} Get user detail
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1150,6 +1155,7 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function(req, res,
  *
  * @api {get} /manage/container Get container
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1272,6 +1278,7 @@ const actionTxtDict = {
  *
  * @api {get} /manage/containerDetail?id={containerid} Get container detail
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1344,6 +1351,7 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function(req,
  *
  * @api {get} /manage/console Console
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1361,6 +1369,7 @@ router.get('/console', regAsAdminManager, validateRequest, function(req, res, ne
  * @api {get} /manage/shopSummary Put stores summary to google sheet
  * @apiPrivate
  * @apiPermission admin_manager
+ * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1510,7 +1519,6 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res
         }
         updateSummary(dataSets, sheetNames, (err) => {
             if (err) {
-                console.log(err)
                 return next(err);
             }
             res.status(200).end("Done");
@@ -1538,6 +1546,22 @@ function addContent(lastHistory, newHistory) {
         lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
 
+/**
+ * @apiName Manage refresh store
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/store Refresh store
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req, res, next) {
     refreshStore(function(err) {
         if (err) return next(err);
@@ -1547,6 +1571,22 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req,
     });
 });
 
+/**
+ * @apiName Manage refresh container
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/container Refresh container
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
 router.patch('/refresh/container', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function(err) {
@@ -1557,6 +1597,28 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function(
     });
 });
 
+/**
+ * @apiName Manage refresh specific store image
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/storeImg/:id Refresh specific store image
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshStoreImg',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '00000.jpg',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
 router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
     refreshStoreImg(forceRenew, function(succeed, resData) {
@@ -1564,6 +1626,28 @@ router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, functi
     });
 });
 
+/**
+ * @apiName Manage refresh specific container icon
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/containerIcon/:id Refresh specific container icon
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshContainerIcon',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '08@3x.png',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
 router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
     refreshContainerIcon(forceRenew, function(succeed, resData) {
