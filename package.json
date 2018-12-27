@@ -11,7 +11,7 @@
         "ngrok": "ngrok http -region ap 3030",
         "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:* && PORT=3030' NODE_ENV=\"testing\" nodemon app.js",
         "start": "nodemon app.js --ignore tmp/",
-        "unitTest": "mocha",
+        "unitTest": "mocha --grep api",
         "apidoc": "apidoc -i routes/ -o ./apidoc"
     },
     "nodemonConfig": {

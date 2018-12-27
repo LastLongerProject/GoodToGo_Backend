@@ -26,8 +26,8 @@ const DataCacheFactory = require("../models/dataCacheFactory");
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
-const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 15;
-const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 3;
+const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
+const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
 
 const CACHE = {
     index: "manage_cache:index",
@@ -1283,20 +1283,23 @@ const actionTxtDict = {
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            list:
+            containerID: '#3',
+            containerType: { 
+                txt: '12oz 玻璃杯', 
+                code: 0 
+            },
+            reuseTime: 1,
+            status: '庫存',
+            bindedUser: '09**-***-***',
+            joinedDate: Date,
+            history:
             [ 
                 { 
-                    id: Number,
-                    type: '12oz 玻璃杯',
-                    totalAmount: Number,
-                    toUsedAmount: Number,
-                    usingAmount: Number,
-                    returnedAmount: Number,
-                    toCleanAmount: Number,
-                    toDeliveryAmount: Number,
-                    toSignAmount: Number,
-                    inStorageAmount: Number,
-                    lostAmount: Number 
+                    tradeTime: Date,
+                    action: '回收',
+                    newUser: '09**-***-***',
+                    oriUser: '09**-***-***',
+                    comment: '' 
                 },
                 ...
             ]
@@ -1551,7 +1554,6 @@ function addContent(lastHistory, newHistory) {
  * @apiGroup Manage
  *
  * @api {patch} /manage/refresh/store Refresh store
- * @apiPrivate
  * @apiPermission admin_manager
  * @apiUse JWT
  * 
@@ -1576,7 +1578,6 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req,
  * @apiGroup Manage
  *
  * @api {patch} /manage/refresh/container Refresh container
- * @apiPrivate
  * @apiPermission admin_manager
  * @apiUse JWT
  * 
@@ -1602,7 +1603,6 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function(
  * @apiGroup Manage
  *
  * @api {patch} /manage/refresh/storeImg/:id Refresh specific store image
- * @apiPrivate
  * @apiPermission admin_manager
  * @apiUse JWT
  * 
@@ -1631,7 +1631,6 @@ router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, functi
  * @apiGroup Manage
  *
  * @api {patch} /manage/refresh/containerIcon/:id Refresh specific container icon
- * @apiPrivate
  * @apiPermission admin_manager
  * @apiUse JWT
  * 

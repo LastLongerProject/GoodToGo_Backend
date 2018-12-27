@@ -1,6 +1,6 @@
 -t 200s
 --require chai
 --require should
---reporter dot
+--reporter spec
 --ui bdd
 --recursive
