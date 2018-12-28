@@ -13,7 +13,7 @@ const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
 module.exports = {
-    signup: function (req, done) {
+    signup: function(req, done) {
         var role = req.body.role || {
             typeCode: 'customer'
         };
@@ -48,7 +48,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function (err, dbUser) {
+        }, function(err, dbUser) {
             if (err)
                 return done(err);
             if (dbUser) {
@@ -69,7 +69,7 @@ module.exports = {
                             };
                             break;
                     }
-                    dbUser.save(function (err) {
+                    dbUser.save(function(err) {
                         if (err) return done(err);
                         return done(null, dbUser, {
                             body: {
@@ -88,7 +88,7 @@ module.exports = {
             } else {
                 if (req._passCode !== true && typeof code === 'undefined') {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
                         if (err) return done(err);
                         redis.set('user_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -144,7 +144,7 @@ module.exports = {
                             }
                             newUser.roles.typeList.push("customer");
                         }
-                        newUser.save(function (err) {
+                        newUser.save(function(err) {
                             if (err) return done(err);
                             redis.del('user_verifying:' + phone, (err, delReply) => {
                                 if (err && req._passCode !== true) return done(err);
@@ -162,7 +162,7 @@ module.exports = {
             }
         });
     },
-    login: function (req, done) {
+    login: function(req, done) {
         var phone = req.body.phone;
         var password = req.body.password;
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -172,10 +172,10 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function () {
+        process.nextTick(function() {
             User.findOne({
                 'user.phone': phone
-            }, function (err, dbUser) {
+            }, function(err, dbUser) {
                 if (err)
                     return done(err);
                 if (!dbUser)
@@ -195,7 +195,7 @@ module.exports = {
                 for (var i = 0; i < typeList.length; i++) {
                     funcList.push(new Promise((resolve, reject) => {
                         var thisCtr = i;
-                        keys.keyPair(function (err, returnKeys) {
+                        keys.keyPair(function(err, returnKeys) {
                             if (err) return reject(err);
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
@@ -241,7 +241,7 @@ module.exports = {
             });
         });
     },
-    chanpass: function (req, done) {
+    chanpass: function(req, done) {
         var oriPassword = req.body.oriPassword;
         var newPassword = req.body.newPassword;
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
@@ -259,7 +259,7 @@ module.exports = {
                 message: 'Wrong password'
             });
         dbUser.user.password = dbUser.generateHash(newPassword);
-        dbUser.save(function (err) {
+        dbUser.save(function(err) {
             if (err) return done(err);
             UserKeys.deleteMany({
                 'phone': dbUser.user.phone
@@ -274,7 +274,7 @@ module.exports = {
             });
         });
     },
-    forgotpass: function (req, done) {
+    forgotpass: function(req, done) {
         var phone = req.body.phone;
         var code = req.body.verification_code;
         var newPassword = req.body.new_password;
@@ -287,7 +287,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function (err, dbUser) {
+        }, function(err, dbUser) {
             if (err) return done(err);
             if (!dbUser) return done(null, false, {
                 code: 'D013',
@@ -297,7 +297,7 @@ module.exports = {
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
                 if (typeof phone === 'string' && isMobilePhone(phone)) {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
                         if (err) return done(err);
                         redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -339,7 +339,7 @@ module.exports = {
                     }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        dbUser.save(function (err) {
+                        dbUser.save(function(err) {
                             if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
@@ -357,7 +357,7 @@ module.exports = {
             }
         });
     },
-    logout: function (req, done) {
+    logout: function(req, done) {
         var dbKey = req._key;
         var dbUser = req._user;
         UserKeys.deleteMany({
@@ -371,7 +371,7 @@ module.exports = {
             });
         });
     },
-    addBot: function (req, done) {
+    addBot: function(req, done) {
         if (typeof req.body.scopeID === "undefined" || typeof req.body.botName === "undefined") {
             return done(null, false, {
                 code: 'D001',
@@ -393,10 +393,10 @@ module.exports = {
         queue.push(doneQtask => {
             User.count({
                 'role.typeCode': "bot"
-            }, function (err, botAmount) {
+            }, function(err, botAmount) {
                 if (err) return done(err);
                 var botID = `bot${intReLength(botAmount + 1, 5)}`;
-                keys.apiKey(function (err, returnKeys) {
+                keys.apiKey(function(err, returnKeys) {
                     if (err) return done(err);
                     var newUser = new User({
                         user: {
@@ -419,9 +419,9 @@ module.exports = {
                         roleType: "bot",
                         user: newUser._id
                     });
-                    newUser.save(function (err) {
+                    newUser.save(function(err) {
                         if (err) return done(err);
-                        newUserKey.save(function (err) {
+                        newUserKey.save(function(err) {
                             if (err) return done(err);
                             done(null, true, {
                                 body: {
@@ -440,11 +440,11 @@ module.exports = {
             });
         });
     },
-    createBotKey: function (req, done) {
+    createBotKey: function(req, done) {
         User.findOne({
-            'user.phone': req.body.bot,
+            'user.name': req.body.bot,
             'role.typeCode': "bot"
-        }, function (err, theBot) {
+        }, function(err, theBot) {
             if (err) return done(err);
             if (!theBot)
                 return done(null, false, {
@@ -452,7 +452,7 @@ module.exports = {
                     type: 'botMessage',
                     message: 'No Bot Find'
                 });
-            keys.apiKey(function (err, returnKeys) {
+            keys.apiKey(function(err, returnKeys) {
                 if (err) return done(err);
                 UserKeys.findOneAndUpdate({
                     'phone': theBot.user.phone,

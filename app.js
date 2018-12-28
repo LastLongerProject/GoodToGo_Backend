@@ -63,14 +63,14 @@ app.use('/containers', containers);
 app.use('/images', images);
 
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
+app.use(function(req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
 
 // error handler
-app.use(function (err, req, res, next) {
+app.use(function(err, req, res, next) {
     if (!err.status) {
         debug.error(err);
         req._errorLevel = 3;
@@ -106,7 +106,7 @@ function startServer() {
     /**
      * Get port from environment and store in Express.
      */
-    var port = normalizePort(process.env.PORT || '3000');
+    var port = normalizePort(process.env.PORT || '3030');
     app.set('port', port);
 
     /**
@@ -177,7 +177,7 @@ function resBodyParser(req, res, next) {
 
     var chunks = [];
 
-    res.write = function (chunk) {
+    res.write = function(chunk) {
         if (!Buffer.isBuffer(chunk))
             chunk = new Buffer.from(chunk);
         chunks.push(chunk);
@@ -185,7 +185,7 @@ function resBodyParser(req, res, next) {
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function (chunk) {
+    res.end = function(chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer.from(chunk);
@@ -240,8 +240,8 @@ function onError() {
         }
 
         var bind = typeof port === 'string' ?
-            'Pipe ' + port :
-            'Port ' + port;
+            'Pipe ' + app.get('port') :
+            'Port ' + app.get('port');
 
         // handle specific listen errors with friendly messages
         switch (error.code) {
@@ -271,3 +271,5 @@ function onListening(server) {
         debug.log('Listening on ' + bind);
     };
 }
+
+module.exports = app;

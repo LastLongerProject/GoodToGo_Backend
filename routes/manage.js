@@ -42,6 +42,44 @@ const baseUrl = require("../config/config").serverBaseUrl + "/manager";
 
 router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
+
+/**
+ * @apiName Manage index
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/index Get manage index
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            summary: {
+                userAmount: Number,
+                storeAmount: Number,
+                activityAmount: Number 
+            },
+            activityHistorySummary: { 
+                usedAmount: Number,
+                lostAmount: Number,
+                totalDuration: Number
+            },
+            shopRecentHistorySummary: {
+                usedAmount: Number,
+                customerLostAmount: Number,
+                totalDuration: Number,
+                quantityOfBorrowingFromDiffPlace: Number
+            },
+            shopHistorySummary: {
+                usedAmount: Number,
+                shopLostAmount: Number,
+                customerLostAmount: Number,
+                totalDuration: Number,
+                quantityOfBorrowingFromDiffPlace: Number
+            }
+        }
+ * 
+ */
 router.get('/index', regAsAdminManager, validateRequest, function(req, res, next) {
     var result = {
         summary: {
@@ -99,7 +137,6 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                         return a.tradeTime - b.tradeTime;
                     });
                     cleanUndo(['Return', 'ReadyToClean'], tradeList);
-
                     var now = Date.now();
                     var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
                     var lastUsed = dataCached.lastUsed || {};
@@ -115,6 +152,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                     var success = tradeList.every(function(aTrade) {
                         try {
                             var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+
                             lastUsed[aTrade.container.id] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 action: aTrade.tradeType.action
@@ -146,6 +184,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                                         delete rentedContainer[containerKey];
                                     }
                                 }
+
                                 if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                                     result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                     if (recent) {
@@ -348,6 +387,31 @@ router.get('/search', regAsAdminManager, validateRequest, function(req, res, nex
         });
 });
 
+/**
+ * @apiName Manage shop
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shop Get shop
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            list:
+            [ 
+                { 
+                    id: Number, //storeID
+                    storeName: String,
+                    toUsedAmount: Number,
+                    todayAmount: Number,
+                    weekAmount: Number,
+                    weekAverage: Number },
+                ...
+                ]
+        }
+ * 
+ */
 router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next) {
     Store.find({
         active: true
@@ -494,6 +558,50 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
     });
 });
 
+/**
+ * @apiName Manage shop detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shopDetail?id={shopid} Get shop detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            storeName: String,
+            toUsedAmount: Number,
+            todayAmount: Number,
+            weekAmount: Number,
+            weekAmountPercentage: Float,
+            totalAmount: Number,
+            joinedDate: Date,
+            contactNickname: String,
+            contactPhone: '09XXXXXXXX',
+            weekAverage: Number,
+            shopLostAmount: Number,
+            customerLostAmount: Number,
+            history:
+            [ 
+                { 
+                    time: Date,
+                    action: '歸還',
+                    content: '野餐方碗 x 2',
+                    contentDetail: '野餐方碗\n#xx01、#xx02',
+                    owner: '好盒器基地',
+                    by: '09xx-***-xxx' 
+                },
+                    ...
+            ],
+            chartData:
+            [ 
+                [ '週', '數量' ],
+                [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],
+                ...
+            ]
+        }
+ * 
+ */
 router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
@@ -741,6 +849,35 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
     });
 });
 
+/**
+ * @apiName Manage user
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/user Get user
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            totalUserAmount: Number,
+            totalUsageAmount: Number,
+            weeklyAverageUsage: Number,
+            totalLostAmount: Number,
+            list:
+            [ 
+                { 
+                    id: String,
+                    phone: String,
+                    usingAmount: Number,
+                    lostAmount: Number,
+                    totalUsageAmount: Number 
+                },
+                ...
+            ]
+        }
+ * 
+ */
 router.get('/user', regAsAdminManager, validateRequest, function(req, res, next) {
     var result = {
         totalUserAmount: 0,
@@ -873,6 +1010,43 @@ router.get('/user', regAsAdminManager, validateRequest, function(req, res, next)
     });
 });
 
+/**
+ * @apiName Manage user detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/userDetail?id={userid} Get user detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            userPhone: String,
+            usingAmount: Number,
+            lostAmount: Number,
+            totalUsageAmount: Number,
+            joinedDate: Date,
+            joinedMethod: '店鋪 (方糖咖啡)',
+            recentAmount: Number,
+            recentAmountPercentage: Number,
+            weekAverage: Number,
+            averageUsingDuration: Number,
+            amountOfBorrowingFromDiffPlace: Number,
+            history:
+            [ 
+                { 
+                    containerType: String,
+                    containerID: String,
+                    rentTime: Date,
+                    rentPlace: String,
+                    returnTime: Date,
+                    returnPlace: String,
+                    usingDuration: Number 
+                },... 
+            ] 
+        }
+ * 
+ */
 router.get('/userDetail', regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
@@ -977,6 +1151,37 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function(req, res,
     });
 });
 
+/**
+ * @apiName Manage container
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/container Get container
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            list:
+            [ 
+                { 
+                    id: Number,
+                    type: '12oz 玻璃杯',
+                    totalAmount: Number,
+                    toUsedAmount: Number,
+                    usingAmount: Number,
+                    returnedAmount: Number,
+                    toCleanAmount: Number,
+                    toDeliveryAmount: Number,
+                    toSignAmount: Number,
+                    inStorageAmount: Number,
+                    lostAmount: Number 
+                },
+                ...
+            ]
+        }
+ * 
+ */
 router.get('/container', regAsAdminManager, validateRequest, function(req, res, next) {
     Container.find({
         'active': true
@@ -1068,6 +1273,41 @@ const actionTxtDict = {
     "Boxing": "裝箱",
     "Unboxing": "取消裝箱"
 };
+
+/**
+ * @apiName Manage container detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/containerDetail?id={containerid} Get container detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            containerID: '#3',
+            containerType: { 
+                txt: '12oz 玻璃杯', 
+                code: 0 
+            },
+            reuseTime: 1,
+            status: '庫存',
+            bindedUser: '09**-***-***',
+            joinedDate: Date,
+            history:
+            [ 
+                { 
+                    tradeTime: Date,
+                    action: '回收',
+                    newUser: '09**-***-***',
+                    oriUser: '09**-***-***',
+                    comment: '' 
+                },
+                ...
+            ]
+        }
+ * 
+ */
 router.get('/containerDetail', regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
@@ -1110,10 +1350,37 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function(req,
     });
 });
 
+/**
+ * @apiName Manage console
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/console Console
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {}
+ * 
+ */
 router.get('/console', regAsAdminManager, validateRequest, function(req, res, next) {
     res.json({});
 });
 
+/**
+ * @apiName Manage shop summary
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shopSummary Put stores summary to google sheet
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {}
+ * 
+ */
 router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res, next) {
     const storeDict = DataCacheFactory.get("store");
     let storesSummary = {};
@@ -1232,7 +1499,6 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res
                     }
                 }
             }
-
             // rawdata to gsheet
             let sheetName = `${theStoreSummary.ID}_${theStoreSummary.name}`;
             let range = `${sheetName}!A1:F`;
@@ -1258,7 +1524,9 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res
             });
         }
         updateSummary(dataSets, sheetNames, (err) => {
-            if (err) return next(err);
+            if (err) {
+                return next(err);
+            }
             res.status(200).end("Done");
         });
     });
@@ -1284,6 +1552,21 @@ function addContent(lastHistory, newHistory) {
         lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
 
+/**
+ * @apiName Manage refresh store
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/store Refresh store
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req, res, next) {
     refreshStore(function(err) {
         if (err) return next(err);
@@ -1293,6 +1576,21 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req,
     });
 });
 
+/**
+ * @apiName Manage refresh container
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/container Refresh container
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
 router.patch('/refresh/container', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function(err) {
@@ -1303,6 +1601,27 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function(
     });
 });
 
+/**
+ * @apiName Manage refresh specific store image
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/storeImg/:id Refresh specific store image
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshStoreImg',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '00000.jpg',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
 router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
     refreshStoreImg(forceRenew, function(succeed, resData) {
@@ -1310,6 +1629,27 @@ router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, functi
     });
 });
 
+/**
+ * @apiName Manage refresh specific container icon
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/containerIcon/:id Refresh specific container icon
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshContainerIcon',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '08@3x.png',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
 router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
     refreshContainerIcon(forceRenew, function(succeed, resData) {
