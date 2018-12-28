@@ -321,15 +321,21 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
-        { containers:
-            [ { typeCode: 0, name: '12oz 玻璃杯', IdList: [], amount: 0 },
+        { 
+            containers:
+            [ 
+                { typeCode: 0, name: '12oz 玻璃杯', IdList: [], amount: 0 },
                 ...    
             ],
             toReload:
-            [ { typeCode: 0, name: '12oz 玻璃杯', IdList: [Array], amount: 5 },
+            [ 
+                { typeCode: 0, name: '12oz 玻璃杯', IdList: [Array], amount: 5 },
                 ...
-             ],
-            todayData: { rent: 0, return: 0 } 
+            ],
+            todayData: { 
+                rent: 0, 
+                return: 0 
+            } 
         }
  * 
  */
@@ -418,7 +424,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                         }
                     }
                 }
-
                 cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
                     for (var i in trades) {
@@ -446,11 +451,14 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         HTTP/1.1 200 
         { 
             opening_hours:
-            [ { _id: '5c2111bd6de083345da5946e',
-                close: [Object],
-                open: [Object] },
-                ...
-             ],
+            [ 
+                { 
+                    _id: String,
+                    close: { day: Number, time: String },  //0 means Sunday
+                    open: { day: Number, time: String }
+                },
+                ...  // Missing day means day off
+            ],
             isSync: true 
         }
  * 
@@ -648,8 +656,10 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
                     time: String //ex. "09:00",
                     day: Number // 1
                 },
+                _id: String
+                },
                 ...
-            }]               
+            ]               
         }
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -715,13 +725,15 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(r
         { 
             toSign:
             [ 
-                { boxID: String,
-                boxTime: Date,
-                typeList: [Array],
-                containerList: [Object],
-                isDelivering: Boolean,
-                destinationStore: Number //storeID,
-                containerOverview: [Array] },
+                { 
+                    boxID: String,
+                    boxTime: Date,
+                    typeList: [Array],
+                    containerList: [Object],
+                    isDelivering: Boolean,
+                    destinationStore: Number //storeID,
+                    containerOverview: [Array] 
+                },
                 ...
             ]
         }
@@ -849,16 +861,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
             store:
             [ 
                 { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number },
-                { typeCode: Number, amount: Number } 
+                ...
             ],
             total: Number 
         }
@@ -1158,7 +1161,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
 }
 
 /**
- * @apiName Store history by customer
+ * @apiName Store history by customer //To do (oriUser.storeID)
  * @apiGroup Stores
  *
  * @api {get} /stores/history/byCustomer Get history by customer
@@ -1169,7 +1172,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
         HTTP/1.1 200 
         { 
             totalDistinctCustomer: Number, 
-            customerSummary: Array
+            customerSummary: Object
         }
  * 
  */
@@ -1221,7 +1224,7 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res
 });
 
 /**
- * @apiName Store performance
+ * @apiName Store performance // To do (oriUser storeID)
  * @apiGroup Stores
  *
  * @api {get} /stores/performance Get store performance
@@ -1238,6 +1241,8 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res
 router.get('/performance', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     let orderBy = req.query.by;
+    console.log(dbStore.roles.clerk.storeID)
+
     Trade.find({
         'tradeType.action': 'Rent',
         'oriUser.storeID': dbStore.roles.clerk.storeID

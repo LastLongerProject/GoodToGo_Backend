@@ -2,9 +2,7 @@ const request = require('supertest');
 const app = require('../../../app');
 const jwt = require('jwt-simple');
 const secret = require('../../../config/secret_key.json');
-const userDB = require('../../../models/DB/userDB');
-const redis = require('../../../models/redis');
-const Container = require('../../../models/DB/containerDB');
+
 const makeHexString = require('../tool.js').makeHexString;
 var typeList = [];
 var roles = {
@@ -279,8 +277,6 @@ describe('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -357,7 +353,7 @@ describe('api-manage', function() {
                 .expect(200)
                 .end(function(err, res) {
                     if (err) {
-                        console.log(res.body);
+                        console.log(err);
                         return done(err);
                     }
 

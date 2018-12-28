@@ -4,7 +4,6 @@ const jwt = require('jwt-simple');
 const secret = require('../../../config/secret_key.json');
 const userDB = require('../../../models/DB/userDB');
 const redis = require('../../../models/redis');
-const Container = require('../../../models/DB/containerDB');
 const makeHexString = require('../tool.js').makeHexString;
 
 var typeList = [];

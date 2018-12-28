@@ -2,10 +2,8 @@ const request = require('supertest');
 const app = require('../../../app');
 const jwt = require('jwt-simple');
 const secret = require('../../../config/secret_key.json');
-const userDB = require('../../../models/DB/userDB');
-const redis = require('../../../models/redis');
-const Container = require('../../../models/DB/containerDB');
 const makeHexString = require('../tool.js').makeHexString;
+const userDB = require('../../../models/DB/userDB');
 
 var typeList = [];
 var roles = {
@@ -23,8 +21,12 @@ var roles = {
     },
 };
 
-describe.only('api-stores', function() {
-    describe.only('POST /login', function() {
+describe('api-stores', function() {
+    before(function(done) {
+        setTimeout(done, 5000);
+    });
+
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -38,7 +40,8 @@ describe.only('api-stores', function() {
                 .expect(200)
                 .expect(function(res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
-                    if (!('customer' || 'admin' || 'clerk' in decode.roles)) throw new Error("Missing roles");
+                    if (!('customer' || 'admin' || 'clerk' in decode.roles))
+                        throw new Error('Missing roles');
                 })
                 .end(function(err, res) {
                     if (err) {
@@ -111,10 +114,14 @@ describe.only('api-stores', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(function(res) {
-                    if (!('clerkList' in res.body)) throw new Error('Missing clerk list');
-                    if (!('phone' in res.body.clerkList[0])) throw new Error('Missing phone in clerk list');
-                    if (!('name' in res.body.clerkList[0])) throw new Error('Missing name in clerk list');
-                    if (!('isManager' in res.body.clerkList[0])) throw new Error('Missing isManager in clerk list');
+                    if (!('clerkList' in res.body))
+                        throw new Error('Missing clerk list');
+                    if (!('phone' in res.body.clerkList[0]))
+                        throw new Error('Missing phone in clerk list');
+                    if (!('name' in res.body.clerkList[0]))
+                        throw new Error('Missing name in clerk list');
+                    if (!('isManager' in res.body.clerkList[0]))
+                        throw new Error('Missing isManager in clerk list');
                 })
                 .end(function(err, res) {
                     if (err) {
@@ -140,7 +147,7 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0999999999',
+                    phone: '0966666666',
                     password: '',
                 })
                 .expect(200)
@@ -164,7 +171,7 @@ describe.only('api-stores', function() {
 
             let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
-                .post('/stores/layoff/0999999999')
+                .post('/stores/layoff/0966666666')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
@@ -173,13 +180,19 @@ describe.only('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+                    userDB.deleteOne({
+                            'user.phone': '0966666666',
+                        },
+                        (err, res) => {
+                            if (err) return done(err);
+                        }
+                    );
                     done();
                 });
         });
     });
 
-    describe.only('GET /stores/status', function() {
+    describe('GET /stores/status', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -218,12 +231,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkOpeningTimeKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -248,7 +261,6 @@ describe.only('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -268,12 +280,14 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(function(res) {
+                    if (!('data' in res.body)) throw new Error('Missing data')
+                })
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -295,14 +309,14 @@ describe.only('api-stores', function() {
                 .send({
                     opening_hours: [{
                         close: {
-                            time: "21:00",
-                            day: 1
+                            time: '21:00',
+                            day: 1,
                         },
                         open: {
-                            time: "09:00",
-                            day: 1
-                        }
-                    }]
+                            time: '09:00',
+                            day: 1,
+                        },
+                    }, ],
                 })
                 .expect(200)
                 .end(function(err, res) {
@@ -310,7 +324,6 @@ describe.only('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -330,12 +343,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkBoxToSignKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -355,12 +368,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkUsedAmountKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -380,12 +393,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkGetHistoryKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -405,12 +418,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkGetHistoryByContainerKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -430,18 +443,22 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(function(res) {
+                    if (!('totalDistinctCustomer' in res.body)) throw new Error('Missing totalDistinctCustomer');
+                    if (!('customerSummary' in res.body)) throw new Error('Missing customerSummary');
+                })
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+
                     done();
                 });
         });
     });
 
-    describe('GET /stores/performance', function() {
+    describe('GET /stores/performance?date', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -460,7 +477,6 @@ describe.only('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -480,12 +496,12 @@ describe.only('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
+                .expect(checkFavoriteKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -494,18 +510,28 @@ describe.only('api-stores', function() {
 
 function checkStoreListKeys(res) {
     if (!('title' in res.body)) throw new Error('Missing title');
-    if (!('contract_code_explanation' in res.body)) throw new Error('Missing contract_code_explanation');
+    if (!('contract_code_explanation' in res.body))
+        throw new Error('Missing contract_code_explanation');
     if (!('globalAmount' in res.body)) throw new Error('Missing globalAmount');
     if (!('shop_data' in res.body)) throw new Error('Missing shop_data');
-    if (!('id' in res.body.shop_data[0])) throw new Error('Missing id in shop_data');
-    if (!('name' in res.body.shop_data[0])) throw new Error('Missing id name shop_data');
-    if (!('img_info' in res.body.shop_data[0])) throw new Error('Missing img_info in shop_data');
-    if (!('opening_hours' in res.body.shop_data[0])) throw new Error('Missing opening_hours in shop_data');
-    if (!('contract' in res.body.shop_data[0])) throw new Error('Missing contract in shop_data');
-    if (!('location' in res.body.shop_data[0])) throw new Error('Missing location in shop_data');
-    if (!('address' in res.body.shop_data[0])) throw new Error('Missing address in shop_data');
-    if (!('type' in res.body.shop_data[0])) throw new Error('Missing type in shop_data');
-    if (!('testing' in res.body.shop_data[0])) throw new Error('Missing testing in shop_data');
+    if (!('id' in res.body.shop_data[0]))
+        throw new Error('Missing id in shop_data');
+    if (!('name' in res.body.shop_data[0]))
+        throw new Error('Missing id name shop_data');
+    if (!('img_info' in res.body.shop_data[0]))
+        throw new Error('Missing img_info in shop_data');
+    if (!('opening_hours' in res.body.shop_data[0]))
+        throw new Error('Missing opening_hours in shop_data');
+    if (!('contract' in res.body.shop_data[0]))
+        throw new Error('Missing contract in shop_data');
+    if (!('location' in res.body.shop_data[0]))
+        throw new Error('Missing location in shop_data');
+    if (!('address' in res.body.shop_data[0]))
+        throw new Error('Missing address in shop_data');
+    if (!('type' in res.body.shop_data[0]))
+        throw new Error('Missing type in shop_data');
+    if (!('testing' in res.body.shop_data[0]))
+        throw new Error('Missing testing in shop_data');
 }
 
 function checkStoreStatusKeys(res) {
@@ -513,14 +539,106 @@ function checkStoreStatusKeys(res) {
     if (!('toReload' in res.body)) throw new Error('Missing toReload');
     if (!('todayData' in res.body)) throw new Error('Missing todayData');
 
-    if (!('typeCode' in res.body.containers[0])) throw new Error('Missing typeCode in containers');
-    if (!('name' in res.body.containers[0])) throw new Error('Missing name in containers');
-    if (!('IdList' in res.body.containers[0])) throw new Error('Missing IdList in containers');
-    if (!('amount' in res.body.containers[0])) throw new Error('Missing amount in containers');
-    if (!('typeCode' in res.body.toReload[0])) throw new Error('Missing typeCode in containers');
-    if (!('name' in res.body.toReload[0])) throw new Error('Missing name in toReload');
-    if (!('IdList' in res.body.toReload[0])) throw new Error('Missing IdList in toReload');
-    if (!('amount' in res.body.toReload[0])) throw new Error('Missing amount in toReload');
-    if (!('rent' in res.body.todayData)) throw new Error('Missing rent in todayData');
-    if (!('amount' in res.body.todayData)) throw new Error('Missing amount in todayData');
+    if (!('typeCode' in res.body.containers[0]))
+        throw new Error('Missing typeCode in containers');
+    if (!('name' in res.body.containers[0]))
+        throw new Error('Missing name in containers');
+    if (!('IdList' in res.body.containers[0]))
+        throw new Error('Missing IdList in containers');
+    if (!('amount' in res.body.containers[0]))
+        throw new Error('Missing amount in containers');
+    if (!('typeCode' in res.body.toReload[0]))
+        throw new Error('Missing typeCode in containers');
+    if (!('name' in res.body.toReload[0]))
+        throw new Error('Missing name in toReload');
+    if (!('IdList' in res.body.toReload[0]))
+        throw new Error('Missing IdList in toReload');
+    if (!('amount' in res.body.toReload[0]))
+        throw new Error('Missing amount in toReload');
+    if (!('rent' in res.body.todayData))
+        throw new Error('Missing rent in todayData');
+    if (!('return' in res.body.todayData))
+        throw new Error('Missing return in todayData');
+}
+
+function checkOpeningTimeKeys(res) {
+    if (!('opening_hours' in res.body))
+        throw new Error('Missing opening_hours');
+    if (!('isSync' in res.body)) throw new Error('Missing isSync');
+
+    if (!('close' in res.body.opening_hours[0]))
+        throw new Error('Missing close in opening_hours');
+    if (!('open' in res.body.opening_hours[0]))
+        throw new Error('Missing open in opening_hours');
+    if (!('_id' in res.body.opening_hours[0]))
+        throw new Error('Missing _id in opening_hours');
+    if (!('day' in res.body.opening_hours[0].close))
+        throw new Error('Missing day in close');
+    if (!('time' in res.body.opening_hours[0].close))
+        throw new Error('Missing time in close');
+    if (!('day' in res.body.opening_hours[0].open))
+        throw new Error('Missing day in open');
+    if (!('time' in res.body.opening_hours[0].open))
+        throw new Error('Missing time in open');
+}
+
+function checkBoxToSignKeys(res) {
+    if (!('toSign' in res.body))
+        throw new Error('Missing toSign');
+    if (!('boxID' in res.body.toSign[0]))
+        throw new Error('Missing boxID in toSign');
+    if (!('boxTime' in res.body.toSign[0]))
+        throw new Error('Missing boxTime in toSign');
+    if (!('typeList' in res.body.toSign[0]))
+        throw new Error('Missing typeList in toSign');
+    if (!('containerList' in res.body.toSign[0]))
+        throw new Error('Missing containerList in toSign');
+    if (!('isDelivering' in res.body.toSign[0]))
+        throw new Error('Missing isDelivering in toSign');
+    if (!('destinationStore' in res.body.toSign[0]))
+        throw new Error('Missing destinationStore in toSign');
+    if (!('containerOverview' in res.body.toSign[0]))
+        throw new Error('Missing containerOverview in toSign');
+}
+
+function checkUsedAmountKeys(res) {
+    if (!('store' in res.body))
+        throw new Error('Missing store');
+    if (!('total' in res.body))
+        throw new Error('Missing total');
+    if (!('typeCode' in res.body.store[0]))
+        throw new Error('Missing typeCode in store');
+    if (!('amount' in res.body.store[0]))
+        throw new Error('Missing amount in store');
+}
+
+function checkGetHistoryKeys(res) {
+    if (!('rentHistory' in res.body))
+        throw new Error('Missing rentHistory');
+    if (!('returnHistory' in res.body))
+        throw new Error('Missing returnHistory');
+    if (!('amount' in res.body.rentHistory))
+        throw new Error('Missing amount in rentHistory');
+    if (!('dataList' in res.body.rentHistory))
+        throw new Error('Missing dataList in rentHistory');
+    if (!('amount' in res.body.returnHistory))
+        throw new Error('Missing amount in returnHistory');
+    if (!('dataList' in res.body.returnHistory))
+        throw new Error('Missing dataList in returnHistory');
+}
+
+function checkGetHistoryByContainerKeys(res) {
+    if (!('personalLostHistory' in res.body)) throw new Error('Missing personalLostHistory');
+    if (!('storeLostHistory' in res.body)) throw new Error('Missing storeLostHistory');
+    if (!('cleanReloadHistory' in res.body)) throw new Error('Missing cleanReloadHistory');
+    if (!('usedHistory' in res.body)) throw new Error('Missing usedHistory');
+    if (!('rentHistory' in res.body)) throw new Error('Missing rentHistory');
+    if (!('returnHistory' in res.body)) throw new Error('Missing returnHistory');
+}
+
+function checkFavoriteKeys(res) {
+    if (!('userList' in res.body)) throw new Error('Missing userList');
+
+    if (!('phone' in res.body.userList[0])) throw new Error('Missing phone');
+    if (!('times' in res.body.userList[0])) throw new Error('Missing times');
 }

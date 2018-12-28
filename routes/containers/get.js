@@ -103,8 +103,7 @@ router.get('/list', validateDefault, function(req, res, next) {
                     boxID: String //102457,
                     boxTime: Date // '2018-10-26T09:13:40.267Z',
                     phone: {
-                        "box": String,
-                        "delivery": String
+                        "box": String
                     },
                     typeList: [
                         "12oz 玻璃杯"
@@ -218,9 +217,8 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) 
                         },...
                     ],
                     "destinationStore": Number // store ID 
-                        },
-                    ...
-                }
+                },
+                ...
             ]
         }
  *
