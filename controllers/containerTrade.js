@@ -136,7 +136,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                     });
                 Container.findOne({
                     'ID': aContainerId
-                }, function (err, theContainer) {
+                }, function(err, theContainer) {
                     if (err)
                         return reject(err);
                     if (!theContainer)
@@ -158,12 +158,14 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
+
+
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
-                            ID: aContainerId,
-                            txt: "Already Return"
-                        });
-                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                        ID: aContainerId,
+                        txt: "Already Return"
+                    });
+                    validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -180,7 +182,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
-                                }, function (err, aBox) {
+                                }, function(err, aBox) {
                                     if (err) return reject(err);
                                     if (!aBox) return resolveWithErr(errorMsg);
                                     errorList.push(aBox.boxID);
@@ -193,7 +195,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         } else {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
-                            }, function (err, oriUser) {
+                            }, function(err, oriUser) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {

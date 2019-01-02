@@ -18,7 +18,7 @@
 /**
  * @apiDefine SignError
  * @apiError {String} F007 status : 403, type : SignMessage, msg : Can't Find The Box
- * @apiError {String} F007 status : 403, type : SignMessage, msg : Box is not belong to user's store
+ * @apiError {String} F008 status : 403, type : SignMessage, msg : Box is not belong to user's store
  */
 
 /**

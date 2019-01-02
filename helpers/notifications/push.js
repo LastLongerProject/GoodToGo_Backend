@@ -8,7 +8,7 @@ const debug = require("../debugger")("notification_push");
 const config = require("../../config/config");
 
 module.exports = {
-    sns: function (event, appType, user, data) {
+    sns: function(event, appType, user, data) {
         let sender = NotificationSender.sns(NotificationPreprocess.sns(event, user, data));
         for (let key in user.pushNotificationArn) {
             if (key.indexOf(appType) !== -1) {
@@ -16,7 +16,8 @@ module.exports = {
             }
         }
     },
-    webhook: function (event, data) {
+    webhook: function(event, data) {
+        console.log('data: ' + data)
         fs.readFile(`${config.rootDir}/config/webhook_submission.json`, (err, webhookSubmission) => {
             if (err) return debug.error(err);
             let sender = NotificationSender.webhook(NotificationPreprocess.webhook(event, data));
@@ -28,7 +29,7 @@ module.exports = {
             });
         });
     },
-    socket: function (event, data) {
+    socket: function(event, data) {
         NotificationSender.socket(NotificationPreprocess.socket(event, data))(event);
     }
 };
