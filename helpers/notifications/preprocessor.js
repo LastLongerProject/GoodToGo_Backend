@@ -5,7 +5,7 @@ const WebhookEvent = require("./enums/webhook/events");
 const SocketEvent = require("./enums/socket/events");
 
 module.exports = {
-    sns: function (event, user, data) {
+    sns: function(event, user, data) {
         try {
             switch (event) {
                 case SnsEvent.CONTAINER_DELIVERY:
@@ -47,12 +47,15 @@ module.exports = {
             return null;
         }
     },
-    webhook: function (event, data) {
+    webhook: function(event, data) {
         let para;
         try {
             switch (event) {
-                case WebhookEvent.USER_USAGE_UPDATE:
-                    para = data._id;
+                case WebhookEvent.USER_USAGE_UPDATE_RENT:
+                    para = data.user.phone;
+                    break;
+                case WebhookEvent.USER_USAGE_UPDATE_RETURN:
+                    para = data;
                     break;
             }
             return {
@@ -64,7 +67,7 @@ module.exports = {
             return null;
         }
     },
-    socket: function (event, data) {
+    socket: function(event, data) {
         try {
             switch (event) {
                 case SocketEvent.GLOBAL_USAGE_UPDATE:

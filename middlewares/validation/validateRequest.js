@@ -35,17 +35,17 @@ function addRoleToCheck(req, theRole, shouldBeManager, cb) {
 }
 
 module.exports = {
-    JWT: function (req, res, next) {
+    JWT: function(req, res, next) {
         var jwtToken = req.headers['authorization'];
         var key = req.headers['apikey'];
 
         if (jwtToken && key) {
-            process.nextTick(function () {
+            process.nextTick(function() {
                 UserKeys.findOneAndUpdate({
                     'apiKey': key
                 }, {
                     'updatedAt': Date.now()
-                }, function (err, dbKey) {
+                }, function(err, dbKey) {
                     if (err)
                         return next(err);
                     if (!dbKey)
@@ -54,7 +54,7 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has logout'
                         });
-                    User.findById(dbKey.user, function (err, dbUser) {
+                    User.findById(dbKey.user, function(err, dbUser) {
                         if (err)
                             return next(err);
                         if (!dbUser)

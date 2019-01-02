@@ -19,7 +19,6 @@ module.exports = {
     },
     webhook: function(formatted) {
         if (formatted) {
-            console.log('formatted: ' + formatted);
             return function(url) {
                 request
                     .post(url, formatted)

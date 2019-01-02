@@ -17,15 +17,15 @@ module.exports = {
         }
     },
     webhook: function(event, data) {
-        console.log('data: ' + data)
         fs.readFile(`${config.rootDir}/config/webhook_submission.json`, (err, webhookSubmission) => {
             if (err) return debug.error(err);
             let sender = NotificationSender.webhook(NotificationPreprocess.webhook(event, data));
             webhookSubmission = JSON.parse(webhookSubmission);
             webhookSubmission.client.forEach(aClient => {
-                if (!((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||
-                        (Array.isArray(aClient.event_listened) && aClient.event_listened.indexOf(event) !== -1)))
+                if ((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||
+                    (Array.isArray(aClient.event_listened) && aClient.event_listened.indexOf(event) !== -1)) {
                     sender(aClient.url);
+                }
             });
         });
     },

@@ -28,7 +28,7 @@ describe('api-users', function() {
     before(function(done) {
         setTimeout(done, 5000);
     });
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -266,7 +266,7 @@ describe('api-users', function() {
             });
         });
     });
-    describe('POST /addbot and /createBotKey', function() {
+    describe.only('POST /addbot and /createBotKey', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -281,7 +281,7 @@ describe('api-users', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
                     botName: 'test_bot',
-                    scopeID: 10,
+                    scopeID: 999,
                 })
                 .expect(200)
                 .expect(function(res) {
@@ -294,6 +294,7 @@ describe('api-users', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });

@@ -21,7 +21,7 @@ var roles = {
     },
 };
 
-describe.only('api-cycle', function() {
+describe('api-cycle', function() {
     before(function(done) {
         setTimeout(done, 5000);
     });
@@ -83,42 +83,6 @@ describe.only('api-cycle', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
-                    done();
-                });
-        });
-    });
-
-    describe('POST /containers/box', function() {
-        this.slow(1000);
-
-        it('status code should be 200', function(done) {
-            let payload = {
-                jti: 'manager',
-                iat: Date.now(),
-                exp: Date.now() + 86400000 * 3,
-            };
-
-            let auth = jwt.encode(payload, roles.admin.secretKey);
-
-            request(app)
-                .post('/containers/box')
-                .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
-                .send({
-                    phone: "0900000000",
-                    containerList: [99999],
-                    boxId: 99999
-                })
-                .expect(200)
-                .end(function(err, res) {
-                    if (err) {
-                        console.log(res.body);
-                        return done(err);
-                    }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -141,13 +105,12 @@ describe.only('api-cycle', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
+                .expect(checkCycleKey)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -170,13 +133,12 @@ describe.only('api-cycle', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
+                .expect(checkCycleKey)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -230,13 +192,12 @@ describe.only('api-cycle', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .set('userapikey', rent_apiKey)
                 .expect(200)
+                .expect(checkCycleKey)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -261,13 +222,12 @@ describe.only('api-cycle', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .set('userapikey', rent_apiKey)
                 .expect(200)
+                .expect(checkCycleKey)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
@@ -292,15 +252,22 @@ describe.only('api-cycle', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .set('userapikey', rent_apiKey)
                 .expect(200)
+                .expect(checkCycleKey)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
     });
 });
+
+function checkCycleKey(res) {
+    if (!('oriUser' in res.body)) throw new Error('Missing oriUser');
+    if (!('containerList' in res.body)) throw new Error('Missing containerList');
+    if (!('id' in res.body.containerList[0])) throw new Error('Missing id in containerList');
+    if (!('typeCode' in res.body.containerList[0])) throw new Error('Missing id in typeCode');
+    if (!('typeName' in res.body.containerList[0])) throw new Error('Missing id in typeName');
+}

@@ -9,7 +9,7 @@ const SocketEvent = require("./enums/socket/events");
 const pushBy = require("./push");
 
 module.exports = {
-    emit: function (event, target, data) {
+    emit: function(event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
                 if (typeof target.storeID !== "undefined") {
@@ -24,16 +24,18 @@ module.exports = {
             case NotificationEvent.CONTAINER_RENT:
                 if (target.customer) {
                     pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target.customer, data);
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE, target.customer);
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target.customer);
                 }
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data);
                 break;
             case NotificationEvent.CONTAINER_RETURN:
                 if (target.customersDetailList) {
+
                     for (let aDetailKey in target.customersDetailList) {
                         let aCustomerDetail = target.customersDetailList[aDetailKey];
+
                         pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, aCustomerDetail.key, aCustomerDetail.data);
-                        pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE, aCustomerDetail.key);
+                        pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, aCustomerDetail.key);
                     }
                 }
                 break;

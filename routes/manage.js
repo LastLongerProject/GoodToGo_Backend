@@ -8,6 +8,7 @@ const generateSocketToken = require('../controllers/socket').generateToken;
 
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const refreshStore = require('../helpers/appInit').refreshStore;
 const refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
 const refreshContainer = require('../helpers/appInit').refreshContainer;
@@ -1047,7 +1048,7 @@ router.get('/user', regAsAdminManager, validateRequest, function(req, res, next)
         }
  * 
  */
-router.get('/userDetail', regAsAdminManager, validateRequest, function(req, res, next) {
+router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
     var containerDict = DataCacheFactory.get('containerWithDeactive');
