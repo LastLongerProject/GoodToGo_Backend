@@ -140,6 +140,54 @@ router.post(
 );
 
 /**
+ * @apiName SignUp-Manager
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ *
+ * @api {post} /users/signup/storeManager Sign up for new store manager
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiParam {String} storeID store of the store manager
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+
+router.post(
+    '/signup/storeManager',
+    regAsAdminManager,
+    validateRequest,
+    function(req, res, next) {
+        // for CLERK
+        var dbUser = req._user;
+        var dbKey = req._key;
+        req.body.role = {
+            typeCode: 'clerk',
+            manager: true,
+            storeID: req.body.storeID
+        };
+
+        req.body.active = true;
+        req._passCode = true;
+        userQuery.signup(req, function(err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else {
+                res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
  * @apiName SignUp-Root
  * @apiGroup Users
  * @apiPermission admin_clerk

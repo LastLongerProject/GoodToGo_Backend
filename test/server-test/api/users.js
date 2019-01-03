@@ -147,6 +147,35 @@ describe('api-users', function() {
         });
     });
 
+    describe.skip('POST /signup/storeManager', function() {
+        it('status code should be 200', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .post('/users/signup/storeManager')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .send({
+                    phone: '0933320268',
+                    password: '',
+                    storeID: 30
+                })
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    done();
+                });
+        });
+    });
+
     describe('POST /signup/root', function() {
         it('status code should be 200', function(done) {
             let payload = {

@@ -23,7 +23,7 @@ var roles = {
 
 describe('api-cycle', function() {
     before(function(done) {
-        setTimeout(done, 10000);
+        setTimeout(done, 11000);
     });
     describe('POST /login', function() {
         it('respond in json with roles', function(done) {
