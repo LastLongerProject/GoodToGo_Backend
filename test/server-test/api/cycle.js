@@ -21,7 +21,7 @@ var roles = {
     },
 };
 
-describe('api-cycle', function() {
+describe.only('api-cycle', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });

@@ -1072,6 +1072,7 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
             amountOfBorrowingFromDiffPlace: 0,
             history: []
         };
+
         var tradeQuery = {
             '$or': [{
                     'tradeType.action': 'Rent',
