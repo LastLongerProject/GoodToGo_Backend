@@ -23,7 +23,7 @@ var roles = {
 
 describe('api-cycle', function() {
     before(function(done) {
-        setTimeout(done, 5000);
+        setTimeout(done, 10000);
     });
     describe('POST /login', function() {
         it('respond in json with roles', function(done) {
@@ -154,7 +154,7 @@ describe('api-cycle', function() {
 
             let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
-                .get('/stores/getUser/0900000000')
+                .get('/stores/getUser/0905519292')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)

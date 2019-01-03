@@ -26,9 +26,9 @@ describe('api-users', function() {
     this.slow(1000);
 
     before(function(done) {
-        setTimeout(done, 5000);
+        setTimeout(done, 10000);
     });
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -259,6 +259,7 @@ describe('api-users', function() {
                             console.log(res.body);
                             return done(err);
                         }
+                        console.log(res.body)
 
                         userapiKey = res.body.apiKey;
                         done();

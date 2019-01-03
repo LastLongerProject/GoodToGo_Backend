@@ -1059,6 +1059,7 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
         if (err || !theUser) return next(err);
         var result = {
             userPhone: phoneEncoder(theUser.user.phone, true),
+            userLineToken: theUser.user.lineId,
             usingAmount: 0,
             lostAmount: 0,
             totalUsageAmount: 0,
