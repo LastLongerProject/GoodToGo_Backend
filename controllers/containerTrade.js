@@ -152,7 +152,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
+                    const oriState = theContainer.statusCode;
                     if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
                         return reject({
                             code: 'F010',
