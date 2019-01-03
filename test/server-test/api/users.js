@@ -266,7 +266,7 @@ describe('api-users', function() {
             });
         });
     });
-    describe.only('POST /addbot and /createBotKey', function() {
+    describe('POST /addbot and /createBotKey', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
