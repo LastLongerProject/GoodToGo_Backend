@@ -23,10 +23,10 @@ var roles = {
 describe('api-manage', function() {
 
     before(function(done) {
-        setTimeout(done, 5000);
+        setTimeout(done, 10000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -173,7 +173,7 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/userDetail?id=1050047', function() {
+    describe.only('GET /manage/userDetail?id=0905519292', function() {
         this.slow(1000);
 
         it('status code should be 200 and with correct keys', function(done) {
@@ -185,7 +185,7 @@ describe('api-manage', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .get('/manage/userDetail?id=1050047')
+                .get('/manage/userDetail?id=0905519292')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
@@ -195,7 +195,7 @@ describe('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-
+                    console.log(res.body);
                     done();
                 });
         });
@@ -469,6 +469,7 @@ function checkUserDetailKeys(res) {
     if (!('recentAmountPercentage' in res.body)) throw new Error("Missing recentAmountPercentage");
     if (!('weekAverage' in res.body)) throw new Error("Missing weekAverage");
     if (!('averageUsingDuration' in res.body)) throw new Error("Missing averageUsingDuration");
+    if (!('contribution' in res.body)) throw new Error("Missing contribution");
     if (!('amountOfBorrowingFromDiffPlace' in res.body)) throw new Error("Missing amountOfBorrowingFromDiffPlace");
     if (!('history' in res.body)) throw new Error("Missing history");
     if (!('containerType' in res.body.history[0])) throw new Error("Missing containerType in history");
@@ -478,6 +479,7 @@ function checkUserDetailKeys(res) {
     if (!('returnTime' in res.body.history[0])) throw new Error("Missing returnTime in history");
     if (!('returnPlace' in res.body.history[0])) throw new Error("Missing returnPlace in history");
     if (!('usingDuration' in res.body.history[0])) throw new Error("Missing usingDuration in history");
+
 }
 
 function checkContainerKeys(res) {

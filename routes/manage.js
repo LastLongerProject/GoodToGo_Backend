@@ -1063,6 +1063,11 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
             usingAmount: 0,
             lostAmount: 0,
             totalUsageAmount: 0,
+            contribution: {
+                tree: 0.0,
+                water: 0.0,
+                co2: 0.0
+            },
             joinedDate: theUser.registerTime,
             joinedMethod: "店鋪 (方糖咖啡)", // 待更新
             recentAmount: 0,
@@ -1126,6 +1131,10 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
                     delete tradeDict[containerKey];
                 }
             });
+
+            result.contribution.tree = result.totalUsageAmount * 0.0004;
+            result.contribution.water = result.totalUsageAmount * 0.9;
+            result.contribution.co2 = result.totalUsageAmount * 0.1;
 
             var notReturnedList = Object.values(tradeDict).sort((a, b) => b.rentTime - a.rentTime);
             notReturnedList.forEach((aNotReturnedTrade) => {
