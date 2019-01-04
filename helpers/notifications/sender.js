@@ -27,13 +27,13 @@ module.exports = {
                         if (error.response) {
                             debug.error(`[Webhook|res] Data: ${error.response.data}`);
                             debug.error(`[Webhook|res] Status: ${error.response.status}`);
-                            debug.error(`[Webhook|res] Headers: ${error.response.headers}`);
+                            debug.error(`[Webhook|res] Headers: ${JSON.stringify(error.response.headers)}`);
                         } else if (error.request) {
                             debug.error(`[Webhook|req] Req: ${error.request}`);
                         } else {
                             debug.error(`[Webhook|???] Msg: ${error.message}`);
                         }
-                        debug.error(`[Webhook] Config: ${error.config}`);
+                        debug.error(`[Webhook] Config: ${JSON.stringify(error.config)}`);
                     });
             };
         } else {
