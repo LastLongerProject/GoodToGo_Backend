@@ -22,7 +22,6 @@ module.exports = {
             return function(url) {
                 request
                     .post(url, formatted)
-                    .then(res => console.log(res))
                     .catch(error => {
                         if (error.response) {
                             debug.error(`[Webhook|res] Data: ${error.response.data}`);
