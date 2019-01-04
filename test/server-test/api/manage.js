@@ -23,7 +23,7 @@ var roles = {
 describe('api-manage', function() {
 
     before(function(done) {
-        setTimeout(done, 10000);
+        setTimeout(done, 13000);
     });
 
     describe.only('POST /login', function() {
@@ -173,7 +173,7 @@ describe('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/userDetail?id=0905519292', function() {
+    describe.only('GET /manage/userDetail?id=0900000000', function() {
         this.slow(1000);
 
         it('status code should be 200 and with correct keys', function(done) {
@@ -185,7 +185,7 @@ describe('api-manage', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .get('/manage/userDetail?id=0905519292')
+                .get('/manage/userDetail?id=0900000000')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
