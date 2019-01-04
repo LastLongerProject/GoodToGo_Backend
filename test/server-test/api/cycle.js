@@ -21,7 +21,7 @@ var roles = {
     },
 };
 
-describe.only('api-cycle', function() {
+describe('api-cycle', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
@@ -154,7 +154,7 @@ describe.only('api-cycle', function() {
 
             let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
-                .get('/stores/getUser/0905519292')
+                .get('/stores/getUser/0900000000')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)

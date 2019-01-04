@@ -23,7 +23,7 @@ module.exports = {
                     return {
                         content: {
                             title: "借用了容器！",
-                            body: data.join("、"),
+                            body: Array.isArray(data) ? data.join("、") : data,
                             options: {
                                 action: "RELOAD_USAGE"
                             }
@@ -34,7 +34,7 @@ module.exports = {
                     return {
                         content: {
                             title: "歸還了容器！",
-                            body: data.join("、"),
+                            body: Array.isArray(data) ? data.join("、") : data,
                             options: {
                                 action: "RELOAD_USAGE"
                             }
