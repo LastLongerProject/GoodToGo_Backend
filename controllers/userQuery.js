@@ -58,7 +58,7 @@ module.exports = {
                             dbUser.roles.typeList.push("clerk");
                             dbUser.roles.clerk = {
                                 storeID: role.storeID,
-                                manager: role.manager
+                                manager: role.manager,
                             };
                             break;
                         case "admin":
@@ -131,7 +131,7 @@ module.exports = {
                                     newUser.roles.typeList.push("clerk");
                                     newUser.roles.clerk = {
                                         storeID: role.storeID,
-                                        manager: role.manager || false
+                                        manager: role.manager || false,
                                     };
                                     break;
                                 case "admin":
@@ -539,7 +539,7 @@ function payloadBuilder(payload, dbUser, userKey) {
             manager: dbUser.roles.clerk.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
-            storeName: getStoreName(dbUser)
+            storeName: getStoreName(dbUser),
         };
     } else if (userKey.roleType === "admin") {
         payload.roles.admin = {

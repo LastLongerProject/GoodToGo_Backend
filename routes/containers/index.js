@@ -35,7 +35,7 @@ const status = [
     'rented',
     'returned',
     'notClean',
-    'boxed',
+    'boxed'
 ];
 
 router.use('/get', require('./get'));
@@ -83,29 +83,27 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(
 ) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    process.nextTick(() => {
-        Box.findOne({
-                boxID: boxID,
-            },
-            function(err, aBox) {
-                if (err) return next(err);
-                if (!aBox)
-                    return res.status(403).json({
-                        code: 'F007',
-                        type: 'stockBoxMessage',
-                        message: "Can't Find The Box",
-                    });
-                aBox.stocking = true;
-                aBox.save(function(err) {
-                    if (err) return next(err);
-                    return res.json({
-                        type: 'stockBoxMessage',
-                        message: 'StockBox Succeed',
-                    });
+    Box.findOne({
+            boxID: boxID,
+        },
+        function(err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F007',
+                    type: 'stockBoxMessage',
+                    message: "Can't Find The Box",
                 });
-            }
-        );
-    });
+            aBox.stocking = true;
+            aBox.save(function(err) {
+                if (err) return next(err);
+                return res.json({
+                    type: 'stockBoxMessage',
+                    message: 'StockBox Succeed'
+                });
+            });
+        }
+    );
 });
 
 /**
@@ -229,13 +227,13 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
                 return res.status(403).json({
                     code: 'F007',
                     type: 'DeliveryMessage',
-                    message: "Box Isn't Delivering",
+                    message: "Box Isn't Delivering"
                 });
             changeContainersState(
                 aBox.containerList,
                 dbAdmin, {
                     action: 'CancelDelivery',
-                    newState: 5,
+                    newState: 5
                 }, {
                     bypassStateValidation: true,
                 },
@@ -290,22 +288,22 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
                 return res.status(403).json({
                     code: 'F007',
                     type: 'SignMessage',
-                    message: "Can't Find The Box",
+                    message: "Can't Find The Box"
                 });
             if (!reqByAdmin && aDelivery.storeID !== dbUser.roles.clerk.storeID)
                 return res.status(403).json({
                     code: 'F008',
                     type: 'SignMessage',
-                    message: "Box is not belong to user's store",
+                    message: "Box is not belong to user's store"
                 });
             changeContainersState(
                 aDelivery.containerList,
                 dbUser, {
                     action: 'Sign',
-                    newState: 1,
+                    newState: 1
                 }, {
                     boxID,
-                    storeID: reqByAdmin ? aDelivery.storeID : undefined,
+                    storeID: reqByAdmin ? aDelivery.storeID : undefined
                 },
                 (err, tradeSuccess, reply) => {
                     if (err) return next(err);
@@ -362,13 +360,13 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
         return res.status(403).json({
             code: 'F009',
             type: 'borrowContainerMessage',
-            message: 'Invalid Rent Request',
+            message: 'Invalid Rent Request'
         });
     if (!res._payload.orderTime)
         return res.status(403).json({
             code: 'F006',
             type: 'borrowContainerMessage',
-            message: 'Missing Order Time',
+            message: 'Missing Order Time'
         });
     redis.get('user_token:' + key, (err, userPhone) => {
         if (err) return next(err);
@@ -376,7 +374,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
             return res.status(403).json({
                 code: 'F013',
                 type: 'borrowContainerMessage',
-                message: 'Rent Request Expired',
+                message: 'Rent Request Expired'
             });
         var container = req.params.id;
         if (container === "list") container = req.body.containers;
@@ -442,7 +440,7 @@ router.post(
             return res.status(403).json({
                 code: 'F006',
                 type: 'returnContainerMessage',
-                message: 'Missing Order Time',
+                message: 'Missing Order Time'
             });
         var container = req.params.id;
         if (container === 'list') container = req.body.containers;
@@ -450,7 +448,7 @@ router.post(
             container,
             dbStore, {
                 action: 'Return',
-                newState: 3,
+                newState: 3
             }, {
                 storeID: req.body.storeId,
                 orderTime: res._payload.orderTime,
@@ -506,7 +504,7 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(
         return res.status(403).json({
             code: 'F006',
             type: 'readyToCleanMessage',
-            message: 'Missing Order Time',
+            message: 'Missing Order Time'
         });
     var container = req.params.id;
     if (container === 'list') container = req.body.containers;
@@ -514,7 +512,7 @@ router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(
         container,
         dbAdmin, {
             action: 'ReadyToClean',
-            newState: 4,
+            newState: 4
         }, {
             orderTime: res._payload.orderTime,
         },
@@ -559,7 +557,7 @@ router.post(
             return res.status(403).json({
                 code: 'F011',
                 type: 'BoxingMessage',
-                message: 'Boxing req body invalid',
+                message: 'Boxing req body invalid'
             });
         var task = function(done) {
             Box.findOne({
@@ -571,13 +569,13 @@ router.post(
                         return res.status(403).json({
                             code: 'F012',
                             type: 'BoxingMessage',
-                            message: 'Box is already exist',
+                            message: 'Box is already exist'
                         });
                     changeContainersState(
                         containerList,
                         dbAdmin, {
                             action: 'Boxing',
-                            newState: 5,
+                            newState: 5
                         }, {
                             boxID,
                         },
@@ -683,13 +681,13 @@ router.post(
                     return res.status(403).json({
                         code: 'F007',
                         type: 'UnboxingMessage',
-                        message: "Can't Find The Box",
+                        message: "Can't Find The Box"
                     });
                 changeContainersState(
                     aBox.containerList,
                     dbAdmin, {
                         action: 'Unboxing',
-                        newState: 4,
+                        newState: 4
                     }, {
                         bypassStateValidation: true,
                     },
@@ -697,7 +695,7 @@ router.post(
                         if (err) return next(err);
                         if (!tradeSuccess) return res.status(403).json(reply);
                         Box.remove({
-                                boxID: boxID,
+                                boxID: boxID
                             },
                             function(err) {
                                 if (err) return next(err);
@@ -753,7 +751,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
             function(err, theTrade) {
                 if (err) return next(err);
                 Container.findOne({
-                        ID: containerID,
+                        ID: containerID
                     },
                     function(err, theContainer) {
                         if (err) return next(err);
@@ -762,13 +760,13 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
                                 code: 'F002',
                                 type: 'UndoMessage',
                                 message: 'No container found',
-                                data: containerID,
+                                data: containerID
                             });
                         if (theContainer.statusCode !== actionCanUndo[action])
                             return res.status(403).json({
                                 code: 'F00?',
                                 type: 'UndoMessage',
-                                message: 'Container is not in that state',
+                                message: 'Container is not in that state'
                             });
                         theContainer.conbineTo = theTrade.oriUser.phone;
                         theContainer.statusCode = theTrade.tradeType.oriState;
@@ -782,7 +780,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
                         newTrade.tradeType = {
                             action: 'Undo' + action,
                             oriState: theTrade.tradeType.newState,
-                            newState: theTrade.tradeType.oriState,
+                            newState: theTrade.tradeType.oriState
                         };
                         var tmpTradeUser = theTrade.newUser;
                         newTrade.newUser = theTrade.oriUser;
@@ -792,7 +790,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
                         newTrade.container = {
                             id: containerID,
                             typeCode: theContainer.typeCode,
-                            cycleCtr: theContainer.cycleCtr,
+                            cycleCtr: theContainer.cycleCtr
                         };
                         newTrade.save(err => {
                             if (err) return next(err);
@@ -800,7 +798,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
                                 if (err) return next(err);
                                 res.json({
                                     type: 'UndoMessage',
-                                    message: 'Undo ' + action + ' Succeeded',
+                                    message: 'Undo ' + action + ' Succeeded'
                                 });
                             });
                         });
@@ -863,7 +861,7 @@ var actionTodo = [
     'Return',
     'ReadyToClean',
     'Boxing',
-    'dirtyReturn',
+    'dirtyReturn'
 ];
 router.get(
     '/challenge/:action/:id',
@@ -879,7 +877,7 @@ router.get(
         if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
             return res.json({
                 type: 'ChallengeMessage',
-                message: 'Can be ' + action,
+                message: 'Can be ' + action
             });
         process.nextTick(() => {
             Container.findOne({
@@ -892,7 +890,7 @@ router.get(
                             code: 'F002',
                             type: 'ChallengeMessage',
                             message: 'No container found',
-                            data: containerID,
+                            data: containerID
                         });
                     validateStateChanging(
                         false,
@@ -912,8 +910,8 @@ router.get(
                                     errorDict: [{
                                         containerID: containerID,
                                         originalState: theContainer.statusCode,
-                                        newState: newState,
-                                    }, ],
+                                        newState: newState
+                                    }, ]
                                 });
                             } else {
                                 return res.json({
@@ -957,7 +955,7 @@ router.post('/add/:id/:type', function(req, res, next) {
                 if (container) {
                     return res.status(403).json({
                         type: 'addContainerMessage',
-                        message: 'That ID is already exist.',
+                        message: 'That ID is already exist.'
                     });
                 } else {
                     var newContainer = new Container();
@@ -970,7 +968,7 @@ router.post('/add/:id/:type', function(req, res, next) {
                         if (err) return next(err);
                         res.status(200).json({
                             type: 'addContainerMessage',
-                            message: 'Add succeeded',
+                            message: 'Add succeeded'
                         });
                     });
                 }

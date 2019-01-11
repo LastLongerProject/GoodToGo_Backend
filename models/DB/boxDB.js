@@ -2,18 +2,26 @@ var mongoose = require('mongoose');
 
 // define the schema for our user model
 var userSchema = mongoose.Schema({
-    boxID: Number,
+    listID: String,
+    boxID: String,
     boxName: String,
-    boxContent: [{
+    boxOrderContent: [{
+        containerType: Number,
+        amount: Number
+    }],
+    boxDeliverContent: [{
         containerType: Number,
         amount: Number
     }],
     dueDate: Date,
-    storeID: Number,
+    destinationStoreID: Number,
+    action: [{
+        phone: String,
+        boxStatus: String,
+        timestamps: Date
+    }],
     user: {
-        order: String,
-        box: String,
-        delivery: String
+        box: String
     },
     containerList: Array,
     delivering: {
@@ -24,7 +32,7 @@ var userSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-    status: Number,
+    status: String,
     error: {
         type: Boolean,
         Default: false
@@ -36,7 +44,7 @@ var userSchema = mongoose.Schema({
 });
 
 userSchema.index({
-    "storeID": 1
+    "DestinationStoreID": 1
 });
 userSchema.index({
     "boxID": 1

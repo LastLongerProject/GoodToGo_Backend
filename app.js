@@ -21,6 +21,7 @@ const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
+const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
 const app = express();
@@ -61,6 +62,7 @@ app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
 app.use('/images', images);
+app.use('/deliveryList', deliveryList);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -68,7 +70,6 @@ app.use(function(req, res, next) {
     err.status = 404;
     next(err);
 });
-
 // error handler
 app.use(function(err, req, res, next) {
     if (!err.status) {

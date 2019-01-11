@@ -121,9 +121,12 @@ router.get('/list', validateDefault, function(req, res, next) {
                         location: storeList[i].location,
                         address: storeList[i].address,
                         type: storeList[i].type,
+                        category: storeList[i].category,
                         testing: (storeList[i].project === '正興杯杯') ? false : true
                     });
+                    console.log(tmpArr);
                 }
+
                 jsonData.shop_data = tmpArr;
                 res.json(jsonData);
             });

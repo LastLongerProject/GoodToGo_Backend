@@ -32,12 +32,12 @@ for (let i = 0; i < 7; i++) {
 }
 
 module.exports = {
-    updateSummary: function (dataSets, sheetNames, cb) {
+    updateSummary: function(dataSets, sheetNames, cb) {
         googleAuth(auth => {
             sheets.spreadsheets.get({
                 auth,
                 spreadsheetId: configs.summary_sheet_ID
-            }, function (err, spreadsheetsDetail) {
+            }, function(err, spreadsheetsDetail) {
                 if (err) return cb(err);
                 let existsSheets = spreadsheetsDetail.data.sheets.map(aSheet => aSheet.properties.title);
                 let sheetsToUpdate = sheetNames.filter(aSheetNames => existsSheets.indexOf(aSheetNames) === -1);
@@ -78,13 +78,13 @@ module.exports = {
             });
         });
     },
-    getContainer: function (dbAdmin, cb) {
+    getContainer: function(dbAdmin, cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.batchGet({
                 auth: auth,
                 spreadsheetId: configs.container_sheet_ID,
                 ranges: ['container!A2:F', 'container_type!A2:C'],
-            }, function (err, response) {
+            }, function(err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getContainer)] Error: ' + err);
                     return;
@@ -152,13 +152,13 @@ module.exports = {
             });
         });
     },
-    getStore: function (cb) {
+    getStore: function(cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
                 range: 'active!A2:J',
-            }, function (err, response) {
+            }, function(err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                     return;
@@ -180,7 +180,8 @@ module.exports = {
                             },
                             'type': row[6],
                             'project': row[8],
-                            'active': row[9] === 'TRUE'
+                            'active': row[9] === 'TRUE',
+                            'category': row[10]
                         }, {
                             upsert: true,
                             new: true
@@ -206,20 +207,20 @@ module.exports = {
                                         .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
                                             '&language=zh-TW&region=tw&key=' + placeApiKey +
                                             '&fields=formatted_address,opening_hours,geometry,types')
-                                        .on('response', function (response) {
+                                        .on('response', function(response) {
                                             if (response.statusCode !== 200) {
                                                 debug.error('[Place API ERR (1)] StatusCode : ' + response.statusCode);
                                                 return reject(localCtr);
                                             }
                                         })
-                                        .on('error', function (err) {
+                                        .on('error', function(err) {
                                             debug.error('[Place API ERR (2)] Message : ' + err);
                                             return reject(localCtr);
                                         })
-                                        .on('data', function (data) {
+                                        .on('data', function(data) {
                                             dataArray.push(data);
                                         })
-                                        .on('end', function () {
+                                        .on('end', function() {
                                             var dataBuffer = Buffer.concat(dataArray);
                                             var dataObject = JSON.parse(dataBuffer.toString());
                                             try {
@@ -266,6 +267,7 @@ module.exports = {
                                                     'opening_hours': opening_hours,
                                                     'location': dataObject.result.geometry.location,
                                                     'active': aPlace.active,
+                                                    'category': aPlace.category,
                                                     '$setOnInsert': {
                                                         'img_info': {
                                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),

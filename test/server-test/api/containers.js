@@ -23,7 +23,7 @@ var roles = {
 
 describe('api-containers', function() {
     before(function(done) {
-        setTimeout(done, 5000);
+        setTimeout(done, 13000);
     });
 
     describe('POST /login', function() {
@@ -273,46 +273,46 @@ describe('api-containers', function() {
 });
 
 function checkToDeliveryKeys(res) {
-    if (!res.body.toDelivery) throw new Error('Missging toDelivery');
-    if (!res.body.toDelivery[0].boxID) throw new Error('Missging boxID in toDelivery');
-    if (!res.body.toDelivery[0].boxTime) throw new Error('Missging boxTime in toDelivery');
-    if (!res.body.toDelivery[0].phone) throw new Error('Missging phone in toDelivery');
-    if (!res.body.toDelivery[0].typeList) throw new Error('Missging typeList in toDelivery');
-    if (!res.body.toDelivery[0].containerList) throw new Error('Missging containerList in toDelivery');
-    if (!('stocking' in res.body.toDelivery[0])) throw new Error('Missging stocking in toDelivery');
-    if (!('isDelivering' in res.body.toDelivery[0])) throw new Error('Missging isDelivering in toDelivery');
-    if (!('containerOverview' in res.body.toDelivery[0])) throw new Error('Missging containerOverview in toDelivery');
-    if (!('box' in res.body.toDelivery[0].phone)) throw new Error('Missging box in phone');
-    if (!('containerType' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missging containerType in containerOverview');
-    if (!('amount' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missging amount in containerOverview');
+    if (!res.body.toDelivery) throw new Error('Missing toDelivery');
+    if (!res.body.toDelivery[0].boxID) throw new Error('Missing boxID in toDelivery');
+    if (!res.body.toDelivery[0].boxTime) throw new Error('Missing boxTime in toDelivery');
+    if (!res.body.toDelivery[0].phone) throw new Error('Missing phone in toDelivery');
+    if (!res.body.toDelivery[0].typeList) throw new Error('Missing typeList in toDelivery');
+    if (!res.body.toDelivery[0].containerList) throw new Error('Missing containerList in toDelivery');
+    if (!('stocking' in res.body.toDelivery[0])) throw new Error('Missing stocking in toDelivery');
+    if (!('isDelivering' in res.body.toDelivery[0])) throw new Error('Missing isDelivering in toDelivery');
+    if (!('containerOverview' in res.body.toDelivery[0])) throw new Error('Missing containerOverview in toDelivery');
+    if (!('box' in res.body.toDelivery[0].phone[0])) throw new Error('Missing box in phone');
+    if (!('containerType' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing containerType in containerOverview');
+    if (!('amount' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing amount in containerOverview');
 }
 
 function checkDeliveryHistoryKeys(res) {
-    if (!res.body.pastDelivery) throw new Error('Missging pastDelivery');
-    if (!res.body.pastDelivery[0].boxID) throw new Error('Missging boxID in pastDelivery');
-    if (!res.body.pastDelivery[0].boxTime) throw new Error('Missging boxTime in pastDelivery');
-    if (!res.body.pastDelivery[0].phone) throw new Error('Missging phone in pastDelivery');
-    if (!res.body.pastDelivery[0].typeList) throw new Error('Missging typeList in pastDelivery');
-    if (!res.body.pastDelivery[0].containerList) throw new Error('Missging containerList in pastDelivery');
-    if (!res.body.pastDelivery[0].containerOverview) throw new Error('Missging containerOverview in pastDelivery');
-    if (!('destinationStore' in res.body.pastDelivery[0])) throw new Error('Missging destinationStore in pastDelivery');
+    if (!res.body.pastDelivery) throw new Error('Missing pastDelivery');
+    if (!res.body.pastDelivery[0].boxID) throw new Error('Missing boxID in pastDelivery');
+    if (!res.body.pastDelivery[0].boxTime) throw new Error('Missing boxTime in pastDelivery');
+    if (!res.body.pastDelivery[0].phone) throw new Error('Missing phone in pastDelivery');
+    if (!res.body.pastDelivery[0].typeList) throw new Error('Missing typeList in pastDelivery');
+    if (!res.body.pastDelivery[0].containerList) throw new Error('Missing containerList in pastDelivery');
+    if (!res.body.pastDelivery[0].containerOverview) throw new Error('Missing containerOverview in pastDelivery');
+    if (!('destinationStore' in res.body.pastDelivery[0])) throw new Error('Missing destinationStore in pastDelivery');
 
-    if (!('delivery' in res.body.pastDelivery[0].phone)) throw new Error('Missging delivery in phone');
-    if (!('containerType' in res.body.pastDelivery[0].containerOverview[0])) throw new Error('Missging containerType in containerOverview');
-    if (!('amount' in res.body.pastDelivery[0].containerOverview[0])) throw new Error('Missging amount in containerOverview');
+    if (!('delivery' in res.body.pastDelivery[0].phone)) throw new Error('Missing delivery in phone');
+    if (!('containerType' in res.body.pastDelivery[0].containerOverview[0])) throw new Error('Missing containerType in containerOverview');
+    if (!('amount' in res.body.pastDelivery[0].containerOverview[0])) throw new Error('Missing amount in containerOverview');
 }
 
 function checkReloadHistoryKeys(res) {
-    if (!res.body.reloadHistory) throw new Error('Missging reloadHistory');
-    if (!res.body.reloadHistory[0].from) throw new Error('Missging from in reloadHistory');
-    if (!res.body.reloadHistory[0].boxTime) throw new Error('Missging boxTime in reloadHistory');
-    if (!res.body.reloadHistory[0].phone) throw new Error('Missging phone in reloadHistory');
-    if (!res.body.reloadHistory[0].typeList) throw new Error('Missging typeList in reloadHistory');
-    if (!res.body.reloadHistory[0].containerList) throw new Error('Missging containerList in reloadHistory');
-    if (!res.body.reloadHistory[0].containerOverview) throw new Error('Missging containerOverview in reloadHistory');
-    if (!('cleanReload' in res.body.reloadHistory[0])) throw new Error('Missging cleanReload in reloadHistory');
+    if (!res.body.reloadHistory) throw new Error('Missing reloadHistory');
+    if (!res.body.reloadHistory[0].from) throw new Error('Missing from in reloadHistory');
+    if (!res.body.reloadHistory[0].boxTime) throw new Error('Missing boxTime in reloadHistory');
+    if (!res.body.reloadHistory[0].phone) throw new Error('Missing phone in reloadHistory');
+    if (!res.body.reloadHistory[0].typeList) throw new Error('Missing typeList in reloadHistory');
+    if (!res.body.reloadHistory[0].containerList) throw new Error('Missing containerList in reloadHistory');
+    if (!res.body.reloadHistory[0].containerOverview) throw new Error('Missing containerOverview in reloadHistory');
+    if (!('cleanReload' in res.body.reloadHistory[0])) throw new Error('Missing cleanReload in reloadHistory');
 
-    if (!('reload' in res.body.reloadHistory[0].phone)) throw new Error('Missging reload in phone');
-    if (!('containerType' in res.body.reloadHistory[0].containerOverview[0])) throw new Error('Missging containerType in containerOverview');
-    if (!('amount' in res.body.reloadHistory[0].containerOverview[0])) throw new Error('Missging amount in containerOverview');
+    if (!('reload' in res.body.reloadHistory[0].phone)) throw new Error('Missing reload in phone');
+    if (!('containerType' in res.body.reloadHistory[0].containerOverview[0])) throw new Error('Missing containerType in containerOverview');
+    if (!('amount' in res.body.reloadHistory[0].containerOverview[0])) throw new Error('Missing amount in containerOverview');
 }

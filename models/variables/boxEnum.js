@@ -1,7 +1,10 @@
 module.exports = {
     BoxStatus: Object.freeze({
-        Ordering: 1,
-        Stocking: 2,
-        Delivering: 3
+        Created: "Created",
+        Boxing: "Boxing",
+        Delivering: "Delivering",
+        Signed: "Signed",
+        Stocked: "Stocked",
+        Archived: "Archived"
     })
 };

@@ -94,6 +94,7 @@ router.post('/signup', validateDefault, function(req, res, next) {
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
+ * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -116,7 +117,7 @@ router.post(
             req.body.role = {
                 typeCode: 'clerk',
                 manager: false,
-                storeID: dbUser.roles.clerk.storeID,
+                storeID: dbUser.roles.clerk.storeID
             };
         } else if (dbKey.roleType === 'admin') {
             req.body.role = {
@@ -149,7 +150,8 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} storeID store of the store manager
+ * @apiParam {String} storeID store of the store manager.
+ * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -172,7 +174,6 @@ router.post(
             manager: true,
             storeID: req.body.storeID
         };
-
         req.body.active = true;
         req._passCode = true;
         userQuery.signup(req, function(err, user, info) {

@@ -36,7 +36,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0911789727',
+                    phone: '0955555555',
                     password: '',
                 })
                 .expect(200)
@@ -53,6 +53,7 @@ describe('api-users', function() {
                     typeList = decode.roles.typeList;
                     delete decode.roles.typeList;
                     roles = decode.roles;
+
                     done();
                 });
         });
@@ -161,9 +162,10 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0933320268',
+                    phone: '0955555555',
                     password: '',
-                    storeID: 30
+                    storeID: 9999,
+                    isCampaign: true
                 })
                 .expect(200)
                 .end(function(err, res) {
