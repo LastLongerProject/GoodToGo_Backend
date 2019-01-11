@@ -3,7 +3,7 @@ var mongoose = require('mongoose');
 // define the schema for our user model
 var userSchema = mongoose.Schema({
     listID: String,
-    boxID: String,
+    boxID: mongoose.Schema.Types.Mixed,
     boxName: String,
     boxOrderContent: [{
         containerType: Number,
