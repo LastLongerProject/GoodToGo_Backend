@@ -130,7 +130,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
 ) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
-    var storeID = parseInt(req.params.store);
+    var storeID = req.params.store;
     process.nextTick(() => {
         Box.findOne({
                 boxID: boxID,
