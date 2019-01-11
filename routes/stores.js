@@ -61,6 +61,7 @@ const redisKey = storeID => `store_favorite:${storeID}`;
                 location: [Object],
                 address: '台南市中西區國華街三段43號',
                 type: [Array],
+                category: Number, // (0, 1, 9) = ("店舖", "活動", "庫存")
                 testing: false
             },
             ...
