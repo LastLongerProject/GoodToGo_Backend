@@ -167,7 +167,7 @@ module.exports = {
                 var PlaceIDFuncList = [];
                 for (var i = 0; i < rows.length; i++) {
                     var row = rows[i];
-                    console.log(row[10]);
+                    console.log(row);
                     if (row[1] == "" || row[2] == "") break;
                     PlaceIDFuncList.push(new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({

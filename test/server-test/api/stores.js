@@ -64,7 +64,7 @@ describe('api-stores', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .expect(200)
-                // .expect(checkStoreListKeys)
+                .expect(checkStoreListKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);
