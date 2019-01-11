@@ -208,7 +208,7 @@ router.post(
                                             phone: phone,
                                             boxStatus: BoxStatus.Boxing,
                                             timestamps: Date.now(),
-                                        },
+                                        }
                                     },
                                     status: BoxStatus.Boxing,
                                 }, {
