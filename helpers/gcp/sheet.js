@@ -157,7 +157,7 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
-                range: 'active!A2:J',
+                range: 'active!A2:K',
             }, function(err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getStore)] Error: ' + err);
@@ -167,7 +167,6 @@ module.exports = {
                 var PlaceIDFuncList = [];
                 for (var i = 0; i < rows.length; i++) {
                     var row = rows[i];
-                    console.log(row);
                     if (row[1] == "" || row[2] == "") break;
                     PlaceIDFuncList.push(new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({
