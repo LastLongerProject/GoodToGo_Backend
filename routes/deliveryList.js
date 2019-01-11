@@ -258,7 +258,7 @@ router.post(
         HTTP/1.1 200 
         {
             type: "StockMessage",
-            message: "Stock Succeed"
+            message: "Stock successfully"
         }
  * @apiUse CreateError
  * @apiUse ChangeStateError
@@ -284,11 +284,11 @@ router.post(
                 },
                 function(err, aBox) {
                     if (err) return next(err);
-                    if (!aBox)
+                    if (aBox)
                         return res.status(403).json({
                             code: 'F012',
                             type: 'BoxingMessage',
-                            message: 'Box is not exist',
+                            message: 'Box is already exist',
                         });
 
                     changeContainersState(
@@ -306,18 +306,10 @@ router.post(
                             if (!tradeSuccess) return res.status(403).json(reply);
                             Promise.all(req._boxArray.map(box => box.save()))
                                 .then(success => {
-                                    let list = new DeliveryList({
-                                        listID: req._listID,
-                                        boxList: req._boxIDs,
-                                        destinationStoreID,
-                                        creator: creator,
-                                    });
-                                    list.save().then(result => {
-                                        return res.status(200).json({
-                                            type: 'CreateMessage',
-                                            message: 'Create delivery list successfully',
-                                            boxIDs: req._boxIDs,
-                                        });
+                                    return res.status(200).json({
+                                        type: 'StockMessage',
+                                        message: 'Stock successfully',
+                                        boxIDs: req._boxIDs,
                                     });
                                 })
                                 .catch(err => {

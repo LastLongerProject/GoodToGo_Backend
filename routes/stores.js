@@ -135,6 +135,112 @@ router.get('/list', validateDefault, function(req, res, next) {
 });
 
 /**
+ * @apiName Store list
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/list/:id Get store specific store info
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+       HTTP/1.1 200 
+       {
+            title: 'Store info',
+            contract_code_explanation: {
+            '0': 'Only borrowable and returnable',
+            '1': 'Only returnable',
+            '2': 'Borrowable and returnable'
+            },
+            globalAmount: 0,
+            shop_data: {
+                id: 0,
+                name: '正興咖啡館',
+                img_info: [Object],
+                opening_hours: [Array],
+                contract: [Object],
+                location: [Object],
+                address: '台南市中西區國華街三段43號',
+                type: [Array],
+                category: Number, // (0, 1, 9) = ("店舖", "活動", "庫存")
+                testing: false
+            }
+        }
+ * 
+ */
+
+router.get('/list/:id', validateDefault, function(req, res, next) {
+    let storeId = req.params.id;
+    var jsonData = {
+        title: "Store info",
+        contract_code_explanation: {
+            0: "Only borrowable and returnable",
+            1: "Only returnable",
+            2: "Borrowable and returnable"
+        }
+    };
+    var tmpArr = [];
+    process.nextTick(function() {
+        Store.find({
+            "project": {
+                "$ne": "測試用"
+            },
+            "id": storeId
+        }, {}, {
+            sort: {
+                id: 1
+            }
+        }, function(err, store) {
+            if (err) return next(err);
+            if (!store) {
+                return res.status(403).json({
+                    code: "E004",
+                    type: "StoresMessage",
+                    message: "No store found, please check id"
+                });
+            }
+            jsonData.globalAmount = 0;
+            keys.serverSecretKey((err, key) => {
+                if (err) return next(err);
+                var date = new Date();
+                var payload = {
+                    'iat': Date.now(),
+                    'exp': date.setMinutes(date.getMinutes() + 5)
+                };
+                var token = jwt.encode(payload, key);
+                res.set('etag', wetag(store));
+                var tmpOpening = [];
+                console.log(store[0].id)
+                store[0].img_info.img_src = `${baseUrl}/images/store/${store[0].id}/${token}`;
+                for (var i = 0; i < store[0].opening_hours.length; i++)
+                    tmpOpening.push({
+                        close: store[0].opening_hours[i].close,
+                        open: store[0].opening_hours[i].open
+                    });
+                tmpOpening.sort((a, b) => {
+                    return a.close.day - b.close.day;
+                });
+                tmpArr.push({
+                    id: store[0].id,
+                    name: store[0].name,
+                    img_info: store[0].img_info,
+                    opening_hours: tmpOpening,
+                    contract: store[0].contract,
+                    location: store[0].location,
+                    address: store[0].address,
+                    type: store[0].type,
+                    category: store[0].category,
+                    testing: (store[0].project === '正興杯杯') ? false : true
+                });
+
+
+                jsonData.shop_data = tmpArr;
+                res.json(jsonData);
+            });
+        });
+    });
+});
+
+
+/**
  * @apiName Store dict
  * @apiGroup Stores
  *

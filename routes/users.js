@@ -198,6 +198,7 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
+ * @apiParam {String} [active] Add the param if the category of the store is 1, and set the value to false 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -213,12 +214,12 @@ router.post(
     validateRequest,
     function(req, res, next) {
         // for ADMIN and CLERK
-        req.body.active = true;
+        req.body.active = req.body.active ? req.body.active : true;
         var dbUser = req._user;
         var dbKey = req._key;
         if (dbKey.roleType === 'clerk') {
             req.body.role = {
-                typeCode: 'customer',
+                typeCode: 'customer'
             };
         }
         req._passCode = true;

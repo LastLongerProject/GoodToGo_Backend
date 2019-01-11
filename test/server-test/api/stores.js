@@ -26,7 +26,7 @@ describe('api-stores', function() {
         setTimeout(done, 11000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -56,10 +56,29 @@ describe('api-stores', function() {
                 });
         });
     });
-    describe.only('GET /stores/list', function() {
+    describe('GET /stores/list', function() {
         it('should return 200', function(done) {
             request(app)
                 .get('/stores/list')
+                .set('Content-Type', 'application/json')
+                .set('reqID', makeHexString())
+                .set('reqTime', Date.now())
+                .expect(200)
+                .expect(checkStoreListKeys)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    done();
+                });
+        });
+    });
+
+    describe('GET /stores/list/12', function() {
+        it('should return 200', function(done) {
+            request(app)
+                .get('/stores/list/12')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())

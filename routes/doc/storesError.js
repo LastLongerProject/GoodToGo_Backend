@@ -8,3 +8,8 @@
  * @apiDefine ChangeOpeningTimeError
  * @apiError {String} E003 status : 403, type : changeOpeningTimeError, msg : Data format invalid
  */
+
+/**
+ * @apiDefine GetStoreInfoError
+ * @apiError {String} E004 status : 403, type : GetStoreInfoError, msg : No store id found, please check it
+ */

@@ -14,16 +14,18 @@ function validateCreateApiContent(req, res, next) {
         fullDateString(date).replace(/\//g, '') +
         '' +
         timeFormatter(date).replace(/\:/g, '');
+    let index = 0;
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
     } else if (req.body.phone === undefined)
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
+        index++;
         let pass = validateBoxListContent(element, BoxContentType.order, [
             'boxName',
             'boxOrderContent',
-            'dueDate',
+            'dueDate'
         ]);
 
         if (!pass.bool) {
@@ -65,36 +67,37 @@ function validateStockApiContent(req, res, next) {
         fullDateString(date).replace(/\//g, '') +
         '' +
         timeFormatter(date).replace(/\:/g, '');
+    let index = 0;
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
     } else if (req.body.phone === undefined)
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
+        index++;
         let pass = validateBoxListContent(element, BoxContentType.deliver, [
             'boxName',
             'boxDeliverContent',
-            'containerList',
+            'containerList'
         ]);
 
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
             let boxID = listID + '_' + String(index);
-            let date = new Date();
-            date.addDays(99999);
+
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
                 boxOrderContent: element.boxDeliverContent,
                 boxDeliverContent: element.boxDeliverContent,
-                dueDate: date,
+                dueDate: Date.now(),
                 destinationStoreID: 99999,
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
                     timestamps: Date.now(),
-                }, ],
+                }],
                 user: {
                     box: req.body.phone,
                 },
@@ -104,7 +107,6 @@ function validateStockApiContent(req, res, next) {
             boxIDs.push(boxID);
         }
     }
-    req._listID = listID;
     req._boxArray = boxArray;
     req._boxIDs = boxIDs;
     next();
