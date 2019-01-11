@@ -285,11 +285,7 @@ router.post(
                 function(err, aBox) {
                     if (err) return next(err);
                     if (aBox)
-                        return res.status(403).json({
-                            code: 'F012',
-                            type: 'BoxingMessage',
-                            message: 'Box is already exist',
-                        });
+                        return res.status(403).json(ErrorResponse.F012);
 
                     changeContainersState(
                         containerList,

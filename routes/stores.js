@@ -208,7 +208,6 @@ router.get('/list/:id', validateDefault, function(req, res, next) {
                 var token = jwt.encode(payload, key);
                 res.set('etag', wetag(store));
                 var tmpOpening = [];
-                console.log(store[0].id)
                 store[0].img_info.img_src = `${baseUrl}/images/store/${store[0].id}/${token}`;
                 for (var i = 0; i < store[0].opening_hours.length; i++)
                     tmpOpening.push({
@@ -1350,7 +1349,6 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res
 router.get('/performance', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     let orderBy = req.query.by;
-    console.log(dbStore.roles.clerk.storeID)
 
     Trade.find({
         'tradeType.action': 'Rent',

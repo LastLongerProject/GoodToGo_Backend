@@ -26,7 +26,7 @@ describe('api-containers', function() {
         setTimeout(done, 13000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -190,7 +190,7 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/get/toDelivery', function() {
+    describe.only('GET /containers/get/toDelivery', function() {
         this.slow(1000);
 
         it('status code should be 200', function(done) {
@@ -282,7 +282,7 @@ function checkToDeliveryKeys(res) {
     if (!('stocking' in res.body.toDelivery[0])) throw new Error('Missing stocking in toDelivery');
     if (!('isDelivering' in res.body.toDelivery[0])) throw new Error('Missing isDelivering in toDelivery');
     if (!('containerOverview' in res.body.toDelivery[0])) throw new Error('Missing containerOverview in toDelivery');
-    if (!('box' in res.body.toDelivery[0].phone[0])) throw new Error('Missing box in phone');
+    if (!('box' in res.body.toDelivery[0].phone)) throw new Error('Missing box in phone');
     if (!('containerType' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing containerType in containerOverview');
     if (!('amount' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing amount in containerOverview');
 }

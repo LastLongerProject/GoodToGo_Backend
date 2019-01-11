@@ -1,4 +1,9 @@
 let ErrorResponse = Object.freeze({
+    F012: {
+        code: 'F012',
+        type: 'BoxingMessage',
+        message: 'Box is already exist',
+    },
     H001_1: {
         code: 'H001_1',
         type: "CreateMessage",
