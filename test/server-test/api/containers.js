@@ -286,6 +286,7 @@ function checkToDeliveryKeys(res) {
     if (!('box' in res.body.toDelivery[0].phone)) throw new Error('Missing box in phone');
     if (!('containerType' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing containerType in containerOverview');
     if (!('amount' in res.body.toDelivery[0].containerOverview[0])) throw new Error('Missing amount in containerOverview');
+    console.log(typeof res.body.toDelivery[0].boxID)
 }
 
 function checkDeliveryHistoryKeys(res) {
