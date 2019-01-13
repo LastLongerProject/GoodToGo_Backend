@@ -44,21 +44,13 @@ describe.only('other - trans data format in db', function() {
                         return done(err);
                     }
                     
-                    Trade.find({ 'container.box': '"11104"' }).exec()
-                    .then(list => {
-                        let arr = [];
-                        console.log(list);
-                        for (let element of list) {
-                            console.log(element.container.box)
+                    Trade.find().forEach(element => {
+                        console.log(element);
+                        if (typeof element.container.box === String) {
                             element.container.box = parseInt(element.container.box);
-                            arr.push(element.save());
+                            console.log(typeof element.container.box);
+                            Trade.save(element);
                         }
-                        Promise.all(arr).then(res => {
-                            console.log(res);
-                            done();
-                        })
-                    }).catch(err => {
-                        return done(err);
                     });
                 });
         
