@@ -26,7 +26,7 @@ describe('api-containers', function() {
         setTimeout(done, 13000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -190,7 +190,7 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/get/toDelivery', function() {
+    describe.only('GET /containers/get/toDelivery', function() {
         this.slow(1000);
 
         it('status code should be 200', function(done) {
@@ -212,6 +212,7 @@ describe('api-containers', function() {
                         console.log(res.body.toDelivery[0]);
                         return done(err);
                     }
+                    console.log(res.body)
                     done();
                 });
         });

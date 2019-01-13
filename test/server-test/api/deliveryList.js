@@ -57,7 +57,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /create/:destinationStoreId', function() {
+    describe('POST /create/:storeID', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
