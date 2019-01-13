@@ -81,13 +81,13 @@ const changeContainersState = require('../controllers/containerTrade');
  * @apiUse CreateError
  */
 router.post(
-    '/create/:destinationStoreID',
+    '/create/:storeID',
     regAsAdmin,
     validateRequest,
     validateCreateApiContent,
     function(req, res, next) {
         let creator = req.body.phone;
-        let destinationStoreID = parseInt(req.params.destinationStoreID);
+        let storeID = parseInt(req.params.storeID);
 
         DeliveryList.find({
                 listID: req._listID,
@@ -107,7 +107,7 @@ router.post(
                 let list = new DeliveryList({
                     listID: req._listID,
                     boxList: req._boxIDs,
-                    destinationStoreID,
+                    storeID,
                     creator: creator,
                 });
                 list.save().then(result => {

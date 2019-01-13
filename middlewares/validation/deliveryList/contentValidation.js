@@ -37,7 +37,7 @@ function validateCreateApiContent(req, res, next) {
                 boxName: element.boxName,
                 boxOrderContent: element.boxOrderContent,
                 dueDate: element.dueDate,
-                destinationStoreID: parseInt(req.params.destinationStoreID),
+                storeID: parseInt(req.params.storeID),
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Created,
@@ -92,7 +92,7 @@ function validateStockApiContent(req, res, next) {
                 boxOrderContent: element.boxDeliverContent,
                 boxDeliverContent: element.boxDeliverContent,
                 dueDate: Date.now(),
-                destinationStoreID: 99999,
+                storeID: 99999,
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,

@@ -14,7 +14,7 @@ var userSchema = mongoose.Schema({
         amount: Number
     }],
     dueDate: Date,
-    destinationStoreID: Number,
+    storeID:Number,
     action: [{
         phone: String,
         boxStatus: String,
@@ -44,7 +44,7 @@ var userSchema = mongoose.Schema({
 });
 
 userSchema.index({
-    "DestinationStoreID": 1
+    "storeID": 1
 });
 userSchema.index({
     "boxID": 1

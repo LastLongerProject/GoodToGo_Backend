@@ -29,7 +29,7 @@ let changeStateProcess = function(oldState, newState, box, phone) {
     if (stateChanging === validChange[0]) {
         box.update({
             status: BoxStatus.Stocked,
-            destinationStoreID: 99999,
+            storeID: 99999,
         }, function(err, result) {
             if (err) return Promise.resolve({
                 status: ProgramStatus.Error,
@@ -81,7 +81,7 @@ let changeStateProcess = function(oldState, newState, box, phone) {
     } else if (stateChanging === validChange[3]) {
         box.update({
             status: BoxStatus.Stocked,
-            destinationStoreID: 99999,
+            storeID: 99999,
             dueDate: Date.now(),
             $pull: {
                 action: {

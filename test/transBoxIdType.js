@@ -23,7 +23,7 @@ var roles = {
     },
 };
 
-describe.only('other - trans data format in db', function() {
+describe('other - trans data format in db', function() {
     before(function(done) {
         setTimeout(done, 5000);
     });
