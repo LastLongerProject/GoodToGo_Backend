@@ -134,10 +134,31 @@ function validateBoxingApiContent(req, res, next) {
     next();
 }
 
+function validateChangeStateApiContent(req, res, next) {
+    let boxList = req.body.boxList;
+    if (boxList === undefined || !Array.isArray(boxList))
+        return res.status(403).json(ErrorResponse.H001_1);
+    else if (req.body.phone === undefined)
+        return res.status(403).json(ErrorResponse.H001_2);
+    for (let element of boxList) {
+        let pass = validateBoxListContent(element, BoxContentType.deliver, [
+            'oldState',
+            'newState',
+        ]);
+
+        if (!pass.bool) {
+            return res.status(403).json(ErrorResponse[pass.code]);
+        }
+    }
+
+    next();
+}
+
 module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
     validateStockApiContent,
+    validateChangeStateApiContent
 };
 
 let BoxContentType = Object.freeze({

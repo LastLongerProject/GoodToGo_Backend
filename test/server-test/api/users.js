@@ -28,7 +28,7 @@ describe('api-users', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -36,7 +36,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0955555555',
+                    phone: '0905519292',
                     password: '',
                 })
                 .expect(200)
@@ -148,7 +148,7 @@ describe('api-users', function() {
         });
     });
 
-    describe.skip('POST /signup/storeManager', function() {
+    describe.only('POST /signup/storeManager', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -162,9 +162,9 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0955555555',
+                    phone: '062216138',
                     password: '',
-                    storeID: 9999,
+                    storeID: 0,
                     isCampaign: true
                 })
                 .expect(200)

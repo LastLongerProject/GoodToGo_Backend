@@ -35,6 +35,9 @@ const validateBoxingApiContent = require('../middlewares/validation/deliveryList
     .validateBoxingApiContent;
 const validateStockApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateStockApiContent;
+const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateChangeStateApiContent;
+const changeStateProcess = require('../controllers/boxTrade.js');
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -332,15 +335,8 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  boxId: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
- *                  containerList: Array,
- *                  comment: String
+ *                  oldState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
+ *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
  *              },...
  *          ]
  *      }
@@ -354,20 +350,18 @@ router.post(
  * @apiUse ChangeStateError
  */
 router.post(
-    '/changeStatus/:action/:id',
+    '/changeState',
     regAsAdmin,
     validateRequest,
-    validateBoxingApiContent,
-    function(req, res, next) {
+    validateChangeStateApiContent,
+    async function(req, res, next) {
         let dbAdmin = req._user;
+        let phone = req.body.phone;
         var boxID = req.params.id;
-        var action = parseInt(req.params.action);
 
         for (let element of boxList) {
-            let boxID = element.boxId;
-            const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
-            const comment = element.comment;
+            const oldState = element.oldState;
+            const newState = element.newState;
 
             Box.findOne({
                     boxID: boxID,
@@ -380,45 +374,8 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
+                    let result = changeStateProcess(oldState, newState, aBox, phone);
 
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            aBox.update({
-                                    boxDeliverContent: boxDeliverContent,
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        },
-                                    },
-                                }, {
-                                    upsert: true,
-                                },
-                                function(err, result) {
-                                    if (err) return res.status(500).json(ErrorResponse.H006);
-
-                                    return res.status(200).json({
-                                        type: 'BoxingMessage',
-                                        message: 'Boxing Succeeded',
-                                    });
-                                }
-                            );
-                        }
-                    );
                 }
             );
         }

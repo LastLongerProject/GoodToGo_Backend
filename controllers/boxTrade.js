@@ -20,14 +20,14 @@ let checkStateChanging = function(stateChanging) {
     }
 }
 
-let changeStateProcess = function(oldState, newState, box, phone) {
+let changeStateProcess = function(oldState, newState, box, phone, cb) {
     let stateChanging = [oldState, newState];
     if (!checkStateChanging(stateChanging)) return Promise.resolve({
         status: ProgramStatus.Error,
         message: "invalid box state changing"
     });
     if (stateChanging === validChange[0]) {
-        box.update({
+        return box.update({
             status: BoxStatus.Stocked,
             storeID: 99999,
         }, function(err, result) {
@@ -41,7 +41,7 @@ let changeStateProcess = function(oldState, newState, box, phone) {
             });
         });
     } else if (stateChanging === validChange[1]) {
-        box.update({
+        return box.update({
             status: BoxStatus.Delivering,
             $push: {
                 action: {
@@ -61,7 +61,7 @@ let changeStateProcess = function(oldState, newState, box, phone) {
             });
         });
     } else if (stateChanging === validChange[2]) {
-        box.update({
+        return box.update({
             status: BoxStatus.Boxing,
             $pull: {
                 action: {
@@ -79,7 +79,7 @@ let changeStateProcess = function(oldState, newState, box, phone) {
             });
         });
     } else if (stateChanging === validChange[3]) {
-        box.update({
+        return box.update({
             status: BoxStatus.Stocked,
             storeID: 99999,
             dueDate: Date.now(),
@@ -94,11 +94,35 @@ let changeStateProcess = function(oldState, newState, box, phone) {
         }, function(err, result) {
             if (err) return Promise.resolve({
                 status: ProgramStatus.Error,
-                message: "Box update failed in changing state from Delivering to Boxing"
+                message: "Box update failed in changing state from Signed to Stocked"
             });
             return Promise.resolve({
                 status: ProgramStatus.Success,
-                message: "Successfully change state from Delivering to Boxing"
+                message: "Successfully change state from Signed to Stocked"
+            });
+        });
+    } else if (stateChanging === validChange[4]) {
+        return box.update({
+            status: BoxStatus.Boxing
+        }, function(err, result) {
+            if (err) return Promise.resolve({
+                status: ProgramStatus.Error,
+                message: "Box update failed in changing state from Stocked to Boxing"
+            });
+            return Promise.resolve({
+                status: ProgramStatus.Success,
+                message: "Successfully change state from Stocked to Boxing"
+            });
+        });
+    } else if (stateChanging === validChange[5]) {
+        return box.deleteOne(function(err, result) {
+            if (err) return Promise.resolve({
+                status: ProgramStatus.Error,
+                message: "Box delete failed in changing state from Signed to Archived"
+            });
+            return Promise.resolve({
+                status: ProgramStatus.Success,
+                message: "Successfully change state from Signed to Archived"
             });
         });
     }
