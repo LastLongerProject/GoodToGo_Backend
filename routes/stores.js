@@ -448,7 +448,8 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
             todayData: { 
                 rent: 0, 
                 return: 0 
-            } 
+            },
+            lostList: [// container ID] 
         }
  * 
  */
