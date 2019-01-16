@@ -35,6 +35,11 @@ const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
 
+const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
+const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
+const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
+const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
+
 /**
  * @apiName Store list
  * @apiGroup Stores
@@ -451,6 +456,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
+    let lastUsed = [];
     var type = Object.values(DataCacheFactory.get('containerType'));
     var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
@@ -473,7 +479,8 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         todayData: {
             rent: 0,
             return: 0
-        }
+        },
+        lostList: []
     };
     var tmpTypeCode;
     process.nextTick(function() {
@@ -498,7 +505,23 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
             };
         }
         Container.find(containerQuery, function(err, containers) {
-            if (err) return next(err);
+            for (let container of containers) {
+                if (container.ID === 4) {
+                    console.log(container)
+                }
+                lastUsed[container.ID] = {
+                    time: container.lastUsedAt.valueOf(),
+                    status: container.statusCode
+                };
+            }
+            let now = new Date();
+            for (let containerID in lastUsed) {
+                var timeToNow = now - lastUsed[containerID].time;
+                if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                    resJson.lostList.push(containerID);
+                }
+            }
+
             Trade.find({
                 'tradeTime': {
                     '$gte': dateCheckpoint(0),
@@ -532,8 +555,10 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                         }
                     }
                 }
+
                 cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
+
                     for (var i in trades) {
                         if (trades[i].tradeType.action === 'Rent')
                             resJson.todayData.rent++;

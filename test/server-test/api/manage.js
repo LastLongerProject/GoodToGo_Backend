@@ -141,8 +141,6 @@ describe('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });

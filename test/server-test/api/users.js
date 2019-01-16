@@ -28,7 +28,7 @@ describe('api-users', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -148,7 +148,7 @@ describe('api-users', function() {
         });
     });
 
-    describe.only('POST /signup/storeManager', function() {
+    describe('POST /signup/storeManager', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
