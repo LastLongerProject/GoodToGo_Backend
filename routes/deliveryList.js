@@ -37,7 +37,7 @@ const validateStockApiContent = require('../middlewares/validation/deliveryList/
     .validateStockApiContent;
 const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateChangeStateApiContent;
-const changeStateProcess = require('../controllers/boxTrade.js');
+const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -50,6 +50,7 @@ const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
 const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
 
 const changeContainersState = require('../controllers/containerTrade');
+const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
 
 /**
  * @apiName DeliveryList create delivery list
@@ -66,7 +67,7 @@ const changeContainersState = require('../controllers/containerTrade');
  *                  boxName: String,
  *                  boxOrderContent: [
  *                      {
- *                          containerType: String,
+ *                          containerType: Number,
  *                          amount: Number
  *                      },...
  *                  ]
@@ -327,7 +328,7 @@ router.post(
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /box Boxing
+ * @api {post} /box change state
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -335,6 +336,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
+ *                  id: String
  *                  oldState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
  *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
  *              },...
@@ -357,16 +359,15 @@ router.post(
     async function(req, res, next) {
         let dbAdmin = req._user;
         let phone = req.body.phone;
-        var boxID = req.params.id;
-
+        let boxList = req.body.boxList;
         for (let element of boxList) {
             const oldState = element.oldState;
             const newState = element.newState;
-
+            var boxID = element.id;
             Box.findOne({
                     boxID: boxID,
                 },
-                function(err, aBox) {
+                async function(err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -374,7 +375,15 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
-                    let result = changeStateProcess(oldState, newState, aBox, phone);
+                    try {
+                        let result = await changeStateProcess(oldState, newState, aBox, phone);
+                        console.log(result)
+                        if (result.status === ProgramStatus.Success) {
+
+                        }
+                    } catch (err) {
+                        next(err);
+                    }
 
                 }
             );
@@ -383,3 +392,47 @@ router.post(
 );
 
 module.exports = router;
+
+function containerStateFactory(oldState, newState, aBox, dbAdmin) {
+    if (oldState === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'Delivery',
+                newState: 0,
+            }, {
+                boxID,
+                storeID,
+            },
+            (err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                aBox.delivering = true;
+                aBox.stocking = false;
+                aBox.storeID = storeID;
+                aBox.user.delivery = dbAdmin.user.phone;
+                aBox.save(function(err) {
+                    if (err) return next(err);
+                    res.json(reply);
+                });
+            }
+        );
+    }
+
+    if (oldState === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
+
+    }
+
+    if (oldState === BoxStatus.Signed && newState === BoxStatus.Stocked) {
+
+    }
+
+    if (oldState === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+
+    }
+
+    if (oldState === BoxStatus.Signed && newState === BoxStatus.Archived) {
+
+    }
+
+}

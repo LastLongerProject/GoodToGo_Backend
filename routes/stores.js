@@ -507,9 +507,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         }
         Container.find(containerQuery, function(err, containers) {
             for (let container of containers) {
-                if (container.ID === 4) {
-                    console.log(container)
-                }
                 lastUsed[container.ID] = {
                     time: container.lastUsedAt.valueOf(),
                     status: container.statusCode
@@ -519,7 +516,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
             for (let containerID in lastUsed) {
                 var timeToNow = now - lastUsed[containerID].time;
                 if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                    resJson.lostList.push(containerID);
+                    resJson.lostList.push(parseInt(containerID));
                 }
             }
 

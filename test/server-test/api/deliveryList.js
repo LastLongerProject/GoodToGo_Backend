@@ -69,36 +69,19 @@ describe('api-deliveryList', function() {
             let auth = jwt.encode(payload, roles.admin.secretKey);
 
             request(app)
-                .post('/deliveryList/create/17')
+                .post('/deliveryList/create/12')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                            boxName: "test",
-                            boxOrderContent: [{
-                                containerType: 0,
-                                amount: 4
-                            }],
-                            dueDate: Date.now()
-                        },
-                        {
-                            boxName: "test",
-                            boxOrderContent: [{
-                                containerType: 0,
-                                amount: 4
-                            }],
-                            dueDate: Date.now()
-                        },
-                        {
-                            boxName: "test",
-                            boxOrderContent: [{
-                                containerType: 0,
-                                amount: 4
-                            }],
-                            dueDate: Date.now()
-                        }
-                    ]
+                        boxName: "test",
+                        boxOrderContent: [{
+                            containerType: 0,
+                            amount: 4
+                        }],
+                        dueDate: Date.now()
+                    }]
                 })
                 .expect(200)
                 .expect(function(res) {
@@ -182,6 +165,39 @@ describe('api-deliveryList', function() {
                             amount: 1
                         }],
                         containerList: ["99999"]
+                    }]
+                })
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+
+                    done();
+                });
+        });
+    });
+
+    describe('POST /changeState', function() {
+        it('status code should be 200 and with correct keys', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .post('/deliveryList/changeState')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .send({
+                    phone: "0900000000",
+                    boxList: [{
+                        id: 2019011702041,
+                        oldState: "Signed",
+                        newState: "Archived"
                     }]
                 })
                 .expect(200)

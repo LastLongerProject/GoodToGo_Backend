@@ -21,7 +21,7 @@ var roles = {
     },
 };
 
-describe.only('api-stores', function() {
+describe('api-stores', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
@@ -231,6 +231,7 @@ describe.only('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body.lostList)
                     done();
                 });
         });
