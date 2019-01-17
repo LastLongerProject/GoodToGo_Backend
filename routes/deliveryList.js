@@ -35,6 +35,9 @@ const validateBoxingApiContent = require('../middlewares/validation/deliveryList
     .validateBoxingApiContent;
 const validateStockApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateStockApiContent;
+const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateChangeStateApiContent;
+const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -47,6 +50,7 @@ const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
 const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
 
 const changeContainersState = require('../controllers/containerTrade');
+const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
 
 /**
  * @apiName DeliveryList create delivery list
@@ -63,7 +67,7 @@ const changeContainersState = require('../controllers/containerTrade');
  *                  boxName: String,
  *                  boxOrderContent: [
  *                      {
- *                          containerType: String,
+ *                          containerType: Number,
  *                          amount: Number
  *                      },...
  *                  ]
@@ -324,7 +328,7 @@ router.post(
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /box Boxing
+ * @api {post} /box change state
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -332,15 +336,9 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  boxId: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
- *                  containerList: Array,
- *                  comment: String
+ *                  id: String
+ *                  oldState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
+ *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
  *              },...
  *          ]
  *      }
@@ -354,25 +352,22 @@ router.post(
  * @apiUse ChangeStateError
  */
 router.post(
-    '/changeStatus/:action/:id',
+    '/changeState',
     regAsAdmin,
     validateRequest,
-    validateBoxingApiContent,
-    function(req, res, next) {
+    validateChangeStateApiContent,
+    async function(req, res, next) {
         let dbAdmin = req._user;
-        var boxID = req.params.id;
-        var action = parseInt(req.params.action);
-
+        let phone = req.body.phone;
+        let boxList = req.body.boxList;
         for (let element of boxList) {
-            let boxID = element.boxId;
-            const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
-            const comment = element.comment;
-
+            const oldState = element.oldState;
+            const newState = element.newState;
+            var boxID = element.id;
             Box.findOne({
                     boxID: boxID,
                 },
-                function(err, aBox) {
+                async function(err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -380,45 +375,16 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
+                    try {
+                        let result = await changeStateProcess(oldState, newState, aBox, phone);
+                        console.log(result)
+                        if (result.status === ProgramStatus.Success) {
 
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            aBox.update({
-                                    boxDeliverContent: boxDeliverContent,
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        },
-                                    },
-                                }, {
-                                    upsert: true,
-                                },
-                                function(err, result) {
-                                    if (err) return res.status(500).json(ErrorResponse.H006);
-
-                                    return res.status(200).json({
-                                        type: 'BoxingMessage',
-                                        message: 'Boxing Succeeded',
-                                    });
-                                }
-                            );
                         }
-                    );
+                    } catch (err) {
+                        next(err);
+                    }
+
                 }
             );
         }
@@ -426,3 +392,47 @@ router.post(
 );
 
 module.exports = router;
+
+function containerStateFactory(oldState, newState, aBox, dbAdmin) {
+    if (oldState === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'Delivery',
+                newState: 0,
+            }, {
+                boxID,
+                storeID,
+            },
+            (err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                aBox.delivering = true;
+                aBox.stocking = false;
+                aBox.storeID = storeID;
+                aBox.user.delivery = dbAdmin.user.phone;
+                aBox.save(function(err) {
+                    if (err) return next(err);
+                    res.json(reply);
+                });
+            }
+        );
+    }
+
+    if (oldState === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
+
+    }
+
+    if (oldState === BoxStatus.Signed && newState === BoxStatus.Stocked) {
+
+    }
+
+    if (oldState === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+
+    }
+
+    if (oldState === BoxStatus.Signed && newState === BoxStatus.Archived) {
+
+    }
+
+}

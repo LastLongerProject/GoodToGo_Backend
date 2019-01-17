@@ -31,7 +31,7 @@ function validateCreateApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-            let boxID = listID + '_' + String(index);
+            let boxID = parseInt(listID + String(index));
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
@@ -84,7 +84,7 @@ function validateStockApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-            let boxID = listID + '_' + String(index);
+            let boxID = parseInt(listID + String(index));
 
             let box = new Box({
                 boxID: boxID,
@@ -134,57 +134,83 @@ function validateBoxingApiContent(req, res, next) {
     next();
 }
 
+function validateChangeStateApiContent(req, res, next) {
+    let boxList = req.body.boxList;
+    if (boxList === undefined || !Array.isArray(boxList))
+        return res.status(403).json(ErrorResponse.H001_1);
+    else if (req.body.phone === undefined)
+        return res.status(403).json(ErrorResponse.H001_2);
+    for (let element of boxList) {
+        let pass = validateBoxListContent(element, BoxContentType.changeState, [
+            "id",
+            'oldState',
+            'newState',
+        ]);
+
+        if (!pass.bool) {
+            return res.status(403).json(ErrorResponse[pass.code]);
+        }
+    }
+
+    next();
+}
+
 module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
     validateStockApiContent,
+    validateChangeStateApiContent
 };
 
 let BoxContentType = Object.freeze({
     order: 'boxOrderContent',
     deliver: 'boxDeliverContent',
+    changeState: 'change state'
 });
 
 function validateBoxListContent(element, boxContentType, contents) {
     for (let index in contents) {
         if (!(contents[index] in element)) {
-            console.log(contents[index]);
             return {
                 bool: false,
                 code: 'H002',
             };
         }
     }
-
-    if (!Array.isArray(element[boxContentType])) {
-        return {
-            bool: false,
-            code: 'H003',
-        };
-    } else if (element[boxContentType].length !== 0) {
-        let boxContent = element[boxContentType];
-        for (let element of boxContent) {
-            if (!('containerType' in element) || !('amount' in element)) {
-                return {
-                    bool: false,
-                    code: 'H005_1',
-                };
-            } else if (
-                typeof element.containerType !== 'number' ||
-                typeof element.amount !== 'number'
-            ) {
-                return {
-                    bool: false,
-                    code: 'H005_2',
-                };
+    if (boxContentType === BoxContentType.order || boxContentType === BoxContentType.deliver) {
+        if (!Array.isArray(element[boxContentType])) {
+            return {
+                bool: false,
+                code: 'H003',
+            };
+        } else if (element[boxContentType].length !== 0) {
+            let boxContent = element[boxContentType];
+            for (let element of boxContent) {
+                if (!('containerType' in element) || !('amount' in element)) {
+                    return {
+                        bool: false,
+                        code: 'H005_1',
+                    };
+                } else if (
+                    typeof element.containerType !== 'number' ||
+                    typeof element.amount !== 'number'
+                ) {
+                    return {
+                        bool: false,
+                        code: 'H005_2',
+                    };
+                }
             }
+            return {
+                bool: true,
+            };
+        } else {
+            return {
+                bool: true,
+            };
         }
-        return {
-            bool: true,
-        };
-    } else {
-        return {
-            bool: true,
-        };
     }
+    return {
+        bool: true,
+    };
 }

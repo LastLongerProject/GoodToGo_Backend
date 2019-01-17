@@ -26,7 +26,7 @@ describe('api-stores', function() {
         setTimeout(done, 11000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -211,7 +211,7 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/status', function() {
+    describe.only('GET /stores/status', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -231,8 +231,7 @@ describe('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
+                    console.log(res.body.lostList)
                     done();
                 });
         });
@@ -561,6 +560,7 @@ function checkStoreStatusKeys(res) {
     if (!('containers' in res.body)) throw new Error('Missing containers');
     if (!('toReload' in res.body)) throw new Error('Missing toReload');
     if (!('todayData' in res.body)) throw new Error('Missing todayData');
+    if (!('lostList' in res.body)) throw new Error('Missing lostList');
 
     if (!('typeCode' in res.body.containers[0]))
         throw new Error('Missing typeCode in containers');
