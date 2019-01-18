@@ -230,7 +230,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 } else if (action === 'Delivery') {
                                     storeID_newUser = storeID;
                                     theContainer.cycleCtr++;
-                                } else if (action === 'CancelDelivery') {
+                                } else if (action === 'CancelDelivery' || action === 'UnSign') {
                                     theContainer.cycleCtr--;
                                 }
 

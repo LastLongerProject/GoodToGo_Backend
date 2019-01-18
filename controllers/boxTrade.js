@@ -2,7 +2,7 @@ let BoxStatus = require('../models/variables/boxEnum').BoxStatus;
 let ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
 let ErrorResponse = require('../models/variables/error.js').ErrorResponse;
 
-let validChange = [
+const validChange = [
     [BoxStatus.Boxing, BoxStatus.Stocked],
     [BoxStatus.Boxing, BoxStatus.Delivering],
     [BoxStatus.Delivering, BoxStatus.Boxing],
@@ -22,14 +22,16 @@ let checkStateChanging = function(stateChanging) {
     return false;
 }
 
-let changeStateProcess = async function(oldState, newState, box, phone) {
-    let stateChanging = [oldState, newState];
+let changeStateProcess = async function(element, box, phone) {
+    const newState = element.newState;
+    let stateChanging = [box.status, newState];
     let result = checkStateChanging(stateChanging);
-    if (!result || box.status !== result[0]) return Promise.resolve({
+    if (!result) return Promise.resolve({
         status: ProgramStatus.Error,
         message: "invalid box state changing"
     });
-    else if (result === validChange[0]) {
+
+    if (result === validChange[0]) {
         let res = await box.update({
             status: BoxStatus.Stocked,
             storeID: 99999,
@@ -105,7 +107,6 @@ let changeStateProcess = async function(oldState, newState, box, phone) {
                 }
             }
         }).exec();
-        console.log(res)
         if (res) {
             return Promise.resolve({
                 status: ProgramStatus.Success,
@@ -120,7 +121,8 @@ let changeStateProcess = async function(oldState, newState, box, phone) {
 
     } else if (result === validChange[4]) {
         let res = await box.update({
-            status: BoxStatus.Boxing
+            status: BoxStatus.Boxing,
+            storeID: element.destinationStoreId
         }).exec();
 
         if (res) {
@@ -136,8 +138,7 @@ let changeStateProcess = async function(oldState, newState, box, phone) {
         });
 
     } else if (result === validChange[5]) {
-        let res = await box.remove().exec();
-        console.log(res)
+        let res = await box.remove();
         if (res) {
             return Promise.resolve({
                 status: ProgramStatus.Success,

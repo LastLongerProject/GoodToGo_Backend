@@ -1,5 +1,5 @@
 const timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
-const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
+const fullDateStringWithoutYear = require('@lastlongerproject/toolkit').fullDateStringWithoutYear;
 const Box = require('../../../models/DB/boxDB');
 const BoxStatus = require('../../../models/variables/boxEnum.js').BoxStatus;
 const ErrorResponse = require('../../../models/variables/error.js')
@@ -11,7 +11,7 @@ function validateCreateApiContent(req, res, next) {
     let boxList = req.body.boxList;
     let date = new Date();
     let listID =
-        fullDateString(date).replace(/\//g, '') +
+        fullDateStringWithoutYear(date).replace(/\//g, '') +
         '' +
         timeFormatter(date).replace(/\:/g, '');
     let index = 0;
@@ -138,13 +138,33 @@ function validateChangeStateApiContent(req, res, next) {
     let boxList = req.body.boxList;
     if (boxList === undefined || !Array.isArray(boxList))
         return res.status(403).json(ErrorResponse.H001_1);
-    else if (req.body.phone === undefined)
+    if (req.body.phone === undefined)
         return res.status(403).json(ErrorResponse.H001_2);
+
     for (let element of boxList) {
         let pass = validateBoxListContent(element, BoxContentType.changeState, [
             "id",
-            'oldState',
             'newState',
+        ]);
+
+        if (!pass.bool) {
+            return res.status(403).json(ErrorResponse[pass.code]);
+        }
+    }
+
+    next();
+}
+
+function validateSignApiContent(req, res, next) {
+    let boxList = req.body.boxList;
+    if (boxList === undefined || !Array.isArray(boxList))
+        return res.status(403).json(ErrorResponse.H001_1);
+    if (req.body.phone === undefined)
+        return res.status(403).json(ErrorResponse.H001_2);
+
+    for (let element of boxList) {
+        let pass = validateBoxListContent(element, BoxContentType.changeState, [
+            "id"
         ]);
 
         if (!pass.bool) {
@@ -159,7 +179,8 @@ module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
     validateStockApiContent,
-    validateChangeStateApiContent
+    validateChangeStateApiContent,
+    validateSignApiContent
 };
 
 let BoxContentType = Object.freeze({

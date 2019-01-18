@@ -37,6 +37,8 @@ const validateStockApiContent = require('../middlewares/validation/deliveryList/
     .validateStockApiContent;
 const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateChangeStateApiContent;
+const validateSignApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateSignApiContent;
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 
 const Box = require('../models/DB/boxDB');
@@ -217,16 +219,15 @@ router.post(
                                     status: BoxStatus.Boxing,
                                 }, {
                                     upsert: true,
-                                },
-                                function(err, result) {
-                                    if (err) return res.status(500).json(ErrorResponse.H006);
-
+                                }).exec()
+                                .then(result => {
                                     return res.status(200).json({
                                         type: 'BoxingMessage',
                                         message: 'Boxing Succeeded',
                                     });
-                                }
-                            );
+                                }).catch(err => {
+                                    return res.status(500).json(ErrorResponse.H006);
+                                });
                         }
                     );
                 }
@@ -325,28 +326,35 @@ router.post(
 );
 
 /**
- * @apiName DeliveryList boxing
+ * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
  * @api {post} /box change state
  * @apiPermission admin
  * @apiUse JWT
+ * @apiDescription
+ *      available state changing list:
+ *      Boxing -> Stocked
+ *      Boxing -> BoxStatus
+ *      Delivering -> Boxing
+ *      Signed -> Stocked
+ *      Stocked -> Boxing
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
  *          boxList: [
  *              {
  *                  id: String
- *                  oldState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
- *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
+ *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
+ *                  [destinationStoreId]: String // only need when update Stocked to Boxing 
  *              },...
  *          ]
  *      }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            type: "BoxMessage",
-            message: "Box Succeed"
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
         }
  * @apiUse CreateError
  * @apiUse ChangeStateError
@@ -360,10 +368,88 @@ router.post(
         let dbAdmin = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
+
         for (let element of boxList) {
-            const oldState = element.oldState;
             const newState = element.newState;
             var boxID = element.id;
+
+            Box.findOne({
+                    boxID: boxID,
+                },
+                async function(err, aBox) {
+                    if (err) return next(err);
+                    if (!aBox)
+                        return res.status(403).json({
+                            code: 'F012',
+                            type: 'BoxingMessage',
+                            message: 'Box is not exist',
+                        });
+                    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
+                        return res.status(403).json(ErrorResponse.H005_3);
+                    }
+                    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+                        return res.status(403).json(ErrorResponse.H005_3);
+                    }
+                    try {
+                        let result = await changeStateProcess(element, aBox, phone);
+                        if (result.status === ProgramStatus.Success) {
+                            let reply = await containerStateFactory(newState, aBox, dbAdmin);
+                            return res.status(200).json(reply);
+                        } else {
+                            ErrorResponse.H007.message = result.message;
+                            return res.status(403).json(ErrorResponse.H007);
+                        }
+                    } catch (err) {
+                        debug.error(err);
+                        next(err);
+                    }
+
+                }
+            );
+        }
+    }
+);
+
+/**
+ * @apiName DeliveryList sign
+ * @apiGroup DeliveryList
+ *
+ * @api {post} /box sign
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiParamExample {json} Request-Example:
+ *      {
+ *          phone: String,
+ *          boxList: [
+ *              {
+ *                  id: String
+ *              },...
+ *          ]
+ *      }
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "SignMessage",
+            message: "Sign successfully"
+        }
+ * @apiUse CreateError
+ * @apiUse ChangeStateError
+ */
+router.post(
+    '/sign',
+    regAsStore,
+    regAsAdmin,
+    validateRequest,
+    validateSignApiContent,
+    async function(req, res, next) {
+        let dbUser = req._user;
+        let phone = req.body.phone;
+        let boxList = req.body.boxList;
+        var reqByAdmin = req._key.roleType === 'admin';
+
+        for (let element of boxList) {
+            var boxID = element.id;
+            element.newState = BoxStatus.Signed;
             Box.findOne({
                     boxID: boxID,
                 },
@@ -376,15 +462,35 @@ router.post(
                             message: 'Box is not exist',
                         });
                     try {
-                        let result = await changeStateProcess(oldState, newState, aBox, phone);
-                        console.log(result)
+                        let result = await changeStateProcess(element, aBox, phone);
                         if (result.status === ProgramStatus.Success) {
-
+                            changeContainersState(
+                                aBox.containerList,
+                                dbUser, {
+                                    action: 'Sign',
+                                    newState: 1
+                                }, {
+                                    boxID,
+                                    storeID: reqByAdmin ? aBox.storeID : undefined
+                                },
+                                (err, tradeSuccess, reply) => {
+                                    if (err) return next(err);
+                                    if (!tradeSuccess) return res.status(500).json(reply);
+                                    return res.status(200).json({
+                                        type: "SignMessage",
+                                        message: "Sign successfully"
+                                    });
+                                }
+                            );
+                        } else {
+                            ErrorResponse.H007.message = result.message;
+                            return res.status(403).json(ErrorResponse.H007);
                         }
+
                     } catch (err) {
+                        debug.error(err);
                         next(err);
                     }
-
                 }
             );
         }
@@ -393,8 +499,10 @@ router.post(
 
 module.exports = router;
 
-function containerStateFactory(oldState, newState, aBox, dbAdmin) {
-    if (oldState === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
+async function containerStateFactory(newState, aBox, dbAdmin) {
+    let boxID = aBox.boxID;
+    let storeID = aBox.storeID;
+    if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
@@ -404,35 +512,93 @@ function containerStateFactory(oldState, newState, aBox, dbAdmin) {
                 boxID,
                 storeID,
             },
-            (err, tradeSuccess, reply) => {
+            async(err, tradeSuccess, reply) => {
                 if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
+                if (!tradeSuccess) return Promise.resolve(reply);
                 aBox.delivering = true;
                 aBox.stocking = false;
-                aBox.storeID = storeID;
                 aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function(err) {
-                    if (err) return next(err);
-                    res.json(reply);
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
                 });
             }
         );
     }
 
-    if (oldState === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
-
+    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'CancelDelivery',
+                newState: 5
+            }, {
+                bypassStateValidation: true,
+            },
+            async(err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return Promise.resolve(reply);
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
+            }
+        );
     }
 
-    if (oldState === BoxStatus.Signed && newState === BoxStatus.Stocked) {
-
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Stocked) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'UnSign',
+                newState: 5
+            }, {
+                bypassStateValidation: true,
+            },
+            async(err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return Promise.resolve(reply);
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                aBox.stocking = true;
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
+            }
+        );
     }
 
-    if (oldState === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
-
+    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
     }
 
-    if (oldState === BoxStatus.Signed && newState === BoxStatus.Archived) {
-
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
     }
 
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
+
+    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
 }

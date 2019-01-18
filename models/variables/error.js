@@ -2,7 +2,7 @@ let ErrorResponse = Object.freeze({
     F012: {
         code: 'F012',
         type: 'BoxingMessage',
-        message: 'Box is already exist',
+        message: 'Box is already exist'
     },
     H001_1: {
         code: 'H001_1',
@@ -44,10 +44,25 @@ let ErrorResponse = Object.freeze({
         type: "CreateMessage",
         message: "Data format invalid (ContainerType and amount and should be Number)"
     },
+    H005_3: {
+        code: 'H005_3',
+        type: "CreateMessage",
+        message: "Data format invalid (Update Stocked to Boxing need provide destinationStoreId)"
+    },
     H006: {
         code: "H006",
         type: "CreateMessage",
         message: "Database save error(Please check key type is correct)"
+    },
+    H007: {
+        code: "H007",
+        type: "ChangeStateMessage",
+        message: ""
+    },
+    H008: {
+        code: "H008",
+        type: "ChangeStateMessage",
+        message: "Please use 'sign' api to sign the box"
     }
 });
 

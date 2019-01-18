@@ -24,10 +24,10 @@ var roles = {
 describe('api-deliveryList', function() {
 
     before(function(done) {
-        setTimeout(done, 5000);
+        setTimeout(done, 10000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -122,7 +122,7 @@ describe('api-deliveryList', function() {
                                     containerType: 0,
                                     amount: 1
                                 }],
-                                containerList: ["99999"],
+                                containerList: [99999],
                                 comment: "test"
                             }]
                         })
@@ -195,9 +195,39 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 2019011702041,
-                        oldState: "Signed",
-                        newState: "Archived"
+                        id: 11800231,
+                        newState: "Delivering"
+                    }]
+                })
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+
+                    done();
+                });
+        });
+    });
+
+    describe.only('POST /sign', function() {
+        it('status code should be 200 and with correct keys', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .post('/deliveryList/sign')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .send({
+                    phone: "0900000000",
+                    boxList: [{
+                        id: 11800231
                     }]
                 })
                 .expect(200)

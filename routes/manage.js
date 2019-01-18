@@ -1279,6 +1279,7 @@ const actionTxtDict = {
     "Delivery": "配送",
     "CancelDelivery": "取消配送",
     "Sign": "簽收",
+    "UnSign": "取消簽收",
     "Rent": "借出",
     "Return": "歸還",
     "UndoReturn": "取消歸還",

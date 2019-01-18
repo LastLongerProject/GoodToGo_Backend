@@ -26,7 +26,7 @@ describe('api-stores', function() {
         setTimeout(done, 11000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -211,7 +211,7 @@ describe('api-stores', function() {
         });
     });
 
-    describe.only('GET /stores/status', function() {
+    describe('GET /stores/status', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -231,7 +231,6 @@ describe('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body.lostList)
                     done();
                 });
         });
@@ -419,6 +418,8 @@ describe('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
+
                     done();
                 });
         });

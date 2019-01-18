@@ -14,7 +14,7 @@ var userSchema = mongoose.Schema({
         amount: Number
     }],
     dueDate: Date,
-    storeID:Number,
+    storeID: Number,
     action: [{
         phone: String,
         boxStatus: String,
@@ -23,7 +23,7 @@ var userSchema = mongoose.Schema({
     user: {
         box: String
     },
-    containerList: Array,
+    containerList: [Number],
     delivering: {
         type: Boolean,
         default: false

@@ -728,7 +728,7 @@ router.post(
  */
 var actionCanUndo = {
     Return: 3,
-    ReadyToClean: 4,
+    ReadyToClean: 4
 };
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
     req,
