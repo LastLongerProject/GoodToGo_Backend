@@ -175,12 +175,61 @@ function validateSignApiContent(req, res, next) {
     next();
 }
 
+function validateModifyApiContent(req, res, next) {
+    let body = req.body;
+    let modifiable = ["boxName", "storeID", "dueDate", "boxOrderContent", "boxDeliverContent", "containerList", "comment"];
+    for (let key of Object.keys(body)) {
+        if (modifiable.indexOf(key) === -1) return res.status(403).json(ErrorResponse.H009);
+        if ((key === 'boxName' && typeof body['boxName'] !== 'string') ||
+            (key === 'storeID' && typeof body['storeID'] !== 'number') ||
+            (key === 'dueDate' && typeof body['dueDate'] !== 'string') ||
+            (key === 'boxOrderContent' && !Array.isArray(body['boxOrderContent'])) ||
+            (key === 'boxDeliverContent' && !Array.isArray(body['boxDeliverContent'])) ||
+            (key === 'containerList' && !Array.isArray(body['containerList'])) ||
+            (key === 'comment' && typeof body['comment'] !== 'string')
+        ) {
+            return res.status(403).json(ErrorResponse.H005_4);
+        }
+        if (key === 'boxOrderContent') {
+            for (let content of body['boxOrderContent']) {
+                if (!('amount' in content) || typeof content['amount'] !== 'number') {
+                    ErrorResponse.H010.message = "missing amount or its type is not Number";
+                    return res.status(403).json(ErrorResponse.H010);
+                } else if (!('containerType' in content) || typeof content['containerType'] !== 'number') {
+                    ErrorResponse.H010.message = "missing containerType or its type is not Number";
+                    return res.status(403).json(ErrorResponse.H010);
+                }
+            }
+        }
+        if (key === 'boxDeliverContent') {
+            for (let content of body['boxDeliverContent']) {
+                if (!('amount' in content) || typeof content['amount'] !== 'number') {
+                    ErrorResponse.H010.message = "missing amount or its type is not Number";
+                    return res.status(403).json(ErrorResponse.H010);
+                } else if (!('containerType' in content) || typeof content['containerType'] !== 'number') {
+                    ErrorResponse.H010.message = "missing containerType or its type is not Number";
+                    return res.status(403).json(ErrorResponse.H010);
+                }
+            }
+        }
+        if (key === 'containerList') {
+            for (let content of body['boxDeliverContent']) {
+                if (typeof content !== 'number') {
+                    ErrorResponse.H010.message = "container id type should be number";
+                    return res.status(403).json(ErrorResponse.H010);
+                }
+            }
+        }
+        next();
+    }
+}
 module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
     validateStockApiContent,
     validateChangeStateApiContent,
-    validateSignApiContent
+    validateSignApiContent,
+    validateModifyApiContent
 };
 
 let BoxContentType = Object.freeze({

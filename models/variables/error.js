@@ -49,6 +49,11 @@ let ErrorResponse = Object.freeze({
         type: "CreateMessage",
         message: "Data format invalid (Update Stocked to Boxing need provide destinationStoreId)"
     },
+    H005_4: {
+        code: 'H005_4',
+        type: "ModifyMessage",
+        message: "Data format invalid (Please see the data type in apidoc)"
+    },
     H006: {
         code: "H006",
         type: "CreateMessage",
@@ -63,6 +68,16 @@ let ErrorResponse = Object.freeze({
         code: "H008",
         type: "ChangeStateMessage",
         message: "Please use 'sign' api to sign the box"
+    },
+    H009: {
+        code: "H009",
+        type: "ModifyMessage",
+        message: "Modify key is invalid, only 'storeID', 'dueDate', 'boxOrderContent', 'boxDeliverContent', 'containerList', 'comment', 'boxName' can be modified"
+    },
+    H010: {
+        code: "H010",
+        type: "ModifyMessage",
+        message: ""
     }
 });
 

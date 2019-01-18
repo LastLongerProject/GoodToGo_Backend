@@ -39,6 +39,7 @@ const validateChangeStateApiContent = require('../middlewares/validation/deliver
     .validateChangeStateApiContent;
 const validateSignApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateSignApiContent;
+const validateModifyApiContent = require('../middlewares/validation/deliveryList/contentValidation.js').validateModifyApiContent;
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').changeStateProcess;
 const Box = require('../models/DB/boxDB');
@@ -329,16 +330,16 @@ router.post(
  * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
- * @api {post} /box change state
+ * @api {post} /box Change state
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription
- *      available state changing list: \n
- *      Boxing -> Stocked \n
- *      Boxing -> BoxStatus \n
- *      Delivering -> Boxing \n
- *      Signed -> Stocked \n
- *      Stocked -> Boxing \n
+ *      available state changing list: 
+ *      Boxing -> Stocked 
+ *      , Boxing -> BoxStatus 
+ *      , Delivering -> Boxing 
+ *      , Signed -> Stocked 
+ *      , Stocked -> Boxing 
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
@@ -414,7 +415,7 @@ router.post(
  * @apiName DeliveryList sign
  * @apiGroup DeliveryList
  *
- * @api {post} /box sign
+ * @api {post} /box Sign
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -573,5 +574,43 @@ router.get(
         });
     }
 );
+
+/**
+ * @apiName DeliveryList modify box info
+ * @apiGroup DeliveryList
+ *
+ * @api {post} /modifyBoxInfo/:boxID Modify box info
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription 
+ * Can modify "storeID: Number", "dueDate: Date", "boxOrderContent: [{containerType, amount},...]", "boxDeliverContent: [{containerType, amount},...]", 
+ * "containerList: Array<Number>", "comment: String", "boxName: String" 
+ * @apiParamExample {json} Request-Example:
+ *      {
+ *          <the key wanna modify> : <new value>,
+ *      }
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ModifyMessage",
+            message: "Modifyign successfully"
+        }
+ * @apiUse ModifyError
+ */
+router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function(req, res, next) {
+    let boxID = req.params.boxID;
+    Box.findOne({
+        boxID
+    }, async(err, box) => {
+        console.log(box);
+        try {
+            let result = await box.update(req.body).exec();
+            console.log(result);
+        } catch (err) {
+            console.log(err);
+            next(err);
+        }
+    });
+});
 
 module.exports = router;

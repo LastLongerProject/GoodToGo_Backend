@@ -243,7 +243,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe.only('GET /box/list', function() {
+    describe('GET /box/list', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -256,6 +256,34 @@ describe('api-deliveryList', function() {
                 .get('/deliveryList/box/list')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
+                .expect(200)
+                .expect(checkBoxListKeys)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    done();
+                });
+        });
+    });
+
+    describe.only('PATCH /modifyBoxInfo', function() {
+        it('status code should be 200 and with correct keys', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .patch('/deliveryList/modifyBoxInfo/11800231')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .send({
+                    containerList: [8888]
+                })
                 .expect(200)
                 .expect(checkBoxListKeys)
                 .end(function(err, res) {
