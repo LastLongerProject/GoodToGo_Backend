@@ -40,7 +40,7 @@ const validateChangeStateApiContent = require('../middlewares/validation/deliver
 const validateSignApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateSignApiContent;
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
-
+const containerStateFactory = require('../controllers/boxTrade.js').changeStateProcess;
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -333,12 +333,12 @@ router.post(
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription
- *      available state changing list:
- *      Boxing -> Stocked
- *      Boxing -> BoxStatus
- *      Delivering -> Boxing
- *      Signed -> Stocked
- *      Stocked -> Boxing
+ *      available state changing list: \n
+ *      Boxing -> Stocked \n
+ *      Boxing -> BoxStatus \n
+ *      Delivering -> Boxing \n
+ *      Signed -> Stocked \n
+ *      Stocked -> Boxing \n
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
@@ -497,108 +497,81 @@ router.post(
     }
 );
 
+/**
+ * @apiName DeliveryList Get list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /box/list Box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription If see "before upgrade" as the value of key, means that the box is in old version.
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "{storeID}": {
+                ID: Number //boxID,
+                name: String,
+                dueDate: Date,
+                status: String,
+                action: [
+                    {
+                        phone: String,
+                        boxStatus: String,
+                        timestamps: Date
+                    },...
+                ],
+                deliverContent: [
+                    {
+                        amount: Number,
+                        containerType: Number
+                    },...
+                ],
+                orderContent: [
+                    {
+                        amount: Number,
+                        containerType: Number
+                    },...
+                ],
+                containerList: Array //boxID,
+                comment: String // If comment === "" means no error
+            },...
+        }
+ */
+router.get(
+    '/box/list',
+    regAsAdmin,
+    validateRequest,
+    async function(req, res, next) {
+        let dbUser = req._user;
+        let result = {};
+        let storeList = DataCacheFactory.get('store');
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            if (Object.keys(storeList)[i] !== "null") {
+                result[Object.keys(storeList)[i]] = [];
+            }
+        }
+        Box.find({}, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!box.storeID) continue;
+                result[box.storeID].push({
+                    ID: box.boxID,
+                    name: box.boxName || "before upgrade",
+                    dueDate: box.dueDate || "before upgrade",
+                    status: box.status || "before upgrade",
+                    action: box.action || "before upgrade",
+                    deliverContent: box.boxDeliverContent || "before upgrade",
+                    orderContent: box.orderContent || "before upgrade",
+                    containerList: box.containerList,
+                    comment: box.comment || ""
+                });
+            }
+            for (let key in result) {
+                if (!result[key].length) delete result[key];
+            }
+            return res.status(200).json(result);
+        });
+    }
+);
+
 module.exports = router;
-
-async function containerStateFactory(newState, aBox, dbAdmin) {
-    let boxID = aBox.boxID;
-    let storeID = aBox.storeID;
-    if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: 'Delivery',
-                newState: 0,
-            }, {
-                boxID,
-                storeID,
-            },
-            async(err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
-                aBox.delivering = true;
-                aBox.stocking = false;
-                aBox.user.delivery = dbAdmin.user.phone;
-                let result = await aBox.save();
-                if (result) return Promise.resolve({
-                    type: "ChangeStateMessage",
-                    message: "Change state successfully"
-                });
-            }
-        );
-    }
-
-    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: 'CancelDelivery',
-                newState: 5
-            }, {
-                bypassStateValidation: true,
-            },
-            async(err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
-                aBox.delivering = false;
-                aBox.user.delivery = undefined;
-                let result = await aBox.save();
-                if (result) return Promise.resolve({
-                    type: "ChangeStateMessage",
-                    message: "Change state successfully"
-                });
-            }
-        );
-    }
-
-    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Stocked) {
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: 'UnSign',
-                newState: 5
-            }, {
-                bypassStateValidation: true,
-            },
-            async(err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
-                aBox.delivering = false;
-                aBox.user.delivery = undefined;
-                aBox.stocking = true;
-                let result = await aBox.save();
-                if (result) return Promise.resolve({
-                    type: "ChangeStateMessage",
-                    message: "Change state successfully"
-                });
-            }
-        );
-    }
-
-    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
-        return Promise.resolve({
-            type: "ChangeStateMessage",
-            message: "Change state successfully"
-        });
-    }
-
-    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
-        return Promise.resolve({
-            type: "ChangeStateMessage",
-            message: "Change state successfully"
-        });
-    }
-
-    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
-        return Promise.resolve({
-            type: "ChangeStateMessage",
-            message: "Change state successfully"
-        });
-    }
-
-    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
-        return Promise.resolve({
-            type: "ChangeStateMessage",
-            message: "Change state successfully"
-        });
-    }
-}

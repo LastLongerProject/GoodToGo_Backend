@@ -196,7 +196,8 @@ describe('api-deliveryList', function() {
                     phone: "0900000000",
                     boxList: [{
                         id: 11800231,
-                        newState: "Delivering"
+                        newState: "Delivering",
+                        destinationStoreId: 17
                     }]
                 })
                 .expect(200)
@@ -211,7 +212,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe.only('POST /sign', function() {
+    describe('POST /sign', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -241,4 +242,44 @@ describe('api-deliveryList', function() {
                 });
         });
     });
+
+    describe.only('GET /box/list', function() {
+        it('status code should be 200 and with correct keys', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .get('/deliveryList/box/list')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .expect(200)
+                .expect(checkBoxListKeys)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    done();
+                });
+        });
+    });
 });
+
+function checkBoxListKeys(res) {
+    let list = res.body;
+    for (let key in list) {
+        if (!('ID' in list[key][0])) return new Error('Missing ID');
+        if (!('name' in list[key][0])) return new Error('Missing name');
+        if (!('dueDate' in list[key][0])) return new Error('Missing dueDate');
+        if (!('status' in list[key][0])) return new Error('Missing status');
+        if (!('action' in list[key][0])) return new Error('Missing action');
+        if (!('deliverContent' in list[key][0])) return new Error('Missing deliverContent');
+        if (!('orderContent' in list[key][0])) return new Error('Missing orderContent');
+        if (!('containerList' in list[key][0])) return new Error('Missing containerList');
+        if (!('comment' in list[key][0])) return new Error('Missing comment');
+    }
+}

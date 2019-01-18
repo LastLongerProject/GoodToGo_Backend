@@ -1,6 +1,7 @@
 let BoxStatus = require('../models/variables/boxEnum').BoxStatus;
 let ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
 let ErrorResponse = require('../models/variables/error.js').ErrorResponse;
+const changeContainersState = require('./containerTrade');
 
 const validChange = [
     [BoxStatus.Boxing, BoxStatus.Stocked],
@@ -173,7 +174,112 @@ let changeStateProcess = async function(element, box, phone) {
     }
 }
 
+async function containerStateFactory(newState, aBox, dbAdmin) {
+    let boxID = aBox.boxID;
+    let storeID = aBox.storeID;
+    if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'Delivery',
+                newState: 0,
+            }, {
+                boxID,
+                storeID,
+            },
+            async(err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return Promise.resolve(reply);
+                aBox.delivering = true;
+                aBox.stocking = false;
+                aBox.user.delivery = dbAdmin.user.phone;
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
+            }
+        );
+    }
+
+    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'CancelDelivery',
+                newState: 5
+            }, {
+                bypassStateValidation: true,
+            },
+            async(err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return Promise.resolve(reply);
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
+            }
+        );
+    }
+
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Stocked) {
+        changeContainersState(
+            aBox.containerList,
+            dbAdmin, {
+                action: 'UnSign',
+                newState: 5
+            }, {
+                bypassStateValidation: true,
+            },
+            async(err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return Promise.resolve(reply);
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                aBox.stocking = true;
+                let result = await aBox.save();
+                if (result) return Promise.resolve({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
+            }
+        );
+    }
+
+    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
+
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
+
+    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
+
+    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+        return Promise.resolve({
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
+        });
+    }
+}
+
 module.exports = {
     checkStateChanging,
-    changeStateProcess
+    changeStateProcess,
+    containerStateFactory
 };
