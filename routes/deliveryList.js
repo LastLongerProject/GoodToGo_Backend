@@ -583,10 +583,23 @@ router.get(
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription 
- * Can modify "storeID: Number", "dueDate: Date", "boxOrderContent: [{containerType, amount},...]", "boxDeliverContent: [{containerType, amount},...]", 
- * "containerList: Array<Number>", "comment: String", "boxName: String" 
+ * **Can modify** 
  * 
- * "boxDeliveryContent" and "containerList" should always pass at the same time
+ * 1. "storeID: Number"
+ * 
+ * 2. "dueDate: Date"
+ * 
+ * 3. "boxOrderContent: [{containerType, amount},...]"
+ * 
+ * 4. "boxDeliverContent: [{containerType, amount},...]"
+ * 
+ * 5. "containerList: Array<Number>"
+ * 
+ * 6. "comment: String"
+ * 
+ * 7. "boxName: String" 
+ * 
+ * **"boxDeliveryContent" and "containerList" should always pass at the same time**
  * @apiParamExample {json} Request-Example:
  *      {
  *          <the key wanna modify> : <new value>,
