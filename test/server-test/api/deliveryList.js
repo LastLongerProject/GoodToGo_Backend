@@ -21,7 +21,7 @@ var roles = {
     },
 };
 
-describe('api-deliveryList', function() {
+describe.only('api-deliveryList', function() {
 
     before(function(done) {
         setTimeout(done, 10000);
@@ -179,7 +179,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /changeState', function() {
+    describe.only('POST /changeState', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -196,8 +196,7 @@ describe('api-deliveryList', function() {
                     phone: "0900000000",
                     boxList: [{
                         id: 11800231,
-                        newState: "Delivering",
-                        destinationStoreId: 17
+                        newState: "Delivering"
                     }]
                 })
                 .expect(200)
@@ -206,7 +205,7 @@ describe('api-deliveryList', function() {
                         console.log(res.body);
                         return done(err);
                     }
-
+                    console.log(res.body);
                     done();
                 });
         });
@@ -268,7 +267,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe.only('PATCH /modifyBoxInfo', function() {
+    describe('PATCH /modifyBoxInfo', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -282,10 +281,20 @@ describe('api-deliveryList', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    containerList: [8888]
+                    boxName: 'test',
+                    storeID: 17,
+                    boxDeliverContent: [{
+                            containerType: 0,
+                            amount: 1
+                        },
+                        {
+                            containerType: 9,
+                            amount: 1
+                        }
+                    ],
+                    containerList: [99999, 7424]
                 })
                 .expect(200)
-                .expect(checkBoxListKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);

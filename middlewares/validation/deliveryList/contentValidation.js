@@ -4,6 +4,7 @@ const Box = require('../../../models/DB/boxDB');
 const BoxStatus = require('../../../models/variables/boxEnum.js').BoxStatus;
 const ErrorResponse = require('../../../models/variables/error.js')
     .ErrorResponse;
+const DataCacheFactory = require("../../../models/dataCacheFactory");
 
 function validateCreateApiContent(req, res, next) {
     let boxArray = [];
@@ -201,27 +202,59 @@ function validateModifyApiContent(req, res, next) {
                 }
             }
         }
-        if (key === 'boxDeliverContent') {
-            for (let content of body['boxDeliverContent']) {
-                if (!('amount' in content) || typeof content['amount'] !== 'number') {
-                    ErrorResponse.H010.message = "missing amount or its type is not Number";
-                    return res.status(403).json(ErrorResponse.H010);
-                } else if (!('containerType' in content) || typeof content['containerType'] !== 'number') {
-                    ErrorResponse.H010.message = "missing containerType or its type is not Number";
-                    return res.status(403).json(ErrorResponse.H010);
+        if (key === 'boxDeliverContent' || key === 'containerList') {
+            if (!body['containerList'] || !body['boxDeliverContent']) return res.status(403).json(ErrorResponse.H012);
+
+            if (key === "containerList") {
+                let containerType = DataCacheFactory.get('containerType');
+                let containerList = DataCacheFactory.get('containerWithDeactive');
+                let containerCodeAndName = {};
+                for (let key of Object.keys(containerType)) {
+                    containerCodeAndName[containerType[key].name] = key;
+                }
+
+                for (let container of body['containerList']) {
+                    if (typeof container !== 'number') {
+                        ErrorResponse.H010.message = "container id type should be number";
+                        return res.status(403).json(ErrorResponse.H010);
+                    }
+                }
+
+                let deliverContent = {};
+                for (let content of body['boxDeliverContent']) {
+                    if (!('amount' in content) || typeof content['amount'] !== 'number') {
+                        ErrorResponse.H010.message = "missing amount or its type is not Number";
+                        return res.status(403).json(ErrorResponse.H010);
+                    } else if (!('containerType' in content) || typeof content['containerType'] !== 'number') {
+                        ErrorResponse.H010.message = "missing containerType or its type is not Number";
+                        return res.status(403).json(ErrorResponse.H010);
+                    }
+                    deliverContent[content['containerType']] = content['amount'];
+                }
+
+                let deliverContentInContainerList = {};
+                for (let container of body['containerList']) {
+                    let name = containerList[String(container)];
+                    let key = containerCodeAndName[name];
+                    if (!deliverContentInContainerList[key]) deliverContentInContainerList[key] = 0;
+                    deliverContentInContainerList[key]++;
+                }
+
+                for (let key of Object.keys(deliverContentInContainerList)) {
+                    if (deliverContent[key] !== deliverContentInContainerList[key]) {
+                        return res.status(403).json(ErrorResponse.H012);
+                    }
+                }
+
+                for (let key of Object.keys(deliverContent)) {
+                    if (deliverContent[key] !== deliverContentInContainerList[key]) {
+                        return res.status(403).json(ErrorResponse.H012);
+                    }
                 }
             }
         }
-        if (key === 'containerList') {
-            for (let content of body['boxDeliverContent']) {
-                if (typeof content !== 'number') {
-                    ErrorResponse.H010.message = "container id type should be number";
-                    return res.status(403).json(ErrorResponse.H010);
-                }
-            }
-        }
-        next();
     }
+    next();
 }
 module.exports = {
     validateCreateApiContent,

@@ -41,7 +41,7 @@ const validateSignApiContent = require('../middlewares/validation/deliveryList/c
     .validateSignApiContent;
 const validateModifyApiContent = require('../middlewares/validation/deliveryList/contentValidation.js').validateModifyApiContent;
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
-const containerStateFactory = require('../controllers/boxTrade.js').changeStateProcess;
+const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -365,7 +365,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateChangeStateApiContent,
-    async function(req, res, next) {
+    function(req, res, next) {
         let dbAdmin = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
@@ -383,7 +383,7 @@ router.post(
                         return res.status(403).json({
                             code: 'F012',
                             type: 'BoxingMessage',
-                            message: 'Box is not exist',
+                            message: 'Box is not exist'
                         });
                     if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
                         return res.status(403).json(ErrorResponse.H005_3);
@@ -394,8 +394,7 @@ router.post(
                     try {
                         let result = await changeStateProcess(element, aBox, phone);
                         if (result.status === ProgramStatus.Success) {
-                            let reply = await containerStateFactory(newState, aBox, dbAdmin);
-                            return res.status(200).json(reply);
+                            return containerStateFactory(newState, aBox, dbAdmin, res, next);
                         } else {
                             ErrorResponse.H007.message = result.message;
                             return res.status(403).json(ErrorResponse.H007);
@@ -585,6 +584,8 @@ router.get(
  * @apiDescription 
  * Can modify "storeID: Number", "dueDate: Date", "boxOrderContent: [{containerType, amount},...]", "boxDeliverContent: [{containerType, amount},...]", 
  * "containerList: Array<Number>", "comment: String", "boxName: String" 
+ * 
+ * "boxDeliveryContent" and "containerList" should always pass at the same time
  * @apiParamExample {json} Request-Example:
  *      {
  *          <the key wanna modify> : <new value>,
@@ -593,22 +594,57 @@ router.get(
         HTTP/1.1 200 
         {
             type: "ModifyMessage",
-            message: "Modifyign successfully"
+            message: "Modify successfully"
         }
  * @apiUse ModifyError
  */
 router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function(req, res, next) {
     let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+    let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
     Box.findOne({
         boxID
     }, async(err, box) => {
-        console.log(box);
         try {
-            let result = await box.update(req.body).exec();
-            console.log(result);
+            if (containerList) {
+                changeContainersState(
+                    box.containerList,
+                    dbAdmin, {
+                        action: 'Unboxing',
+                        newState: 4
+                    }, {
+                        bypassStateValidation: true,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) return next(err);
+                        if (!tradeSuccess) return res.status(403).json(reply);
+                        changeContainersState(
+                            containerList,
+                            dbAdmin, {
+                                action: 'Boxing',
+                                newState: 5
+                            }, {
+                                boxID,
+                            },
+                            async(err, tradeSuccess, reply) => {
+                                if (err) return next(err);
+                                if (!tradeSuccess) return res.status(403).json(reply);
+                                let result = await box.update(req.body).exec();
+                                if (result.ok === 1) {
+                                    return res.status(200).json({
+                                        type: "ModifyMessage",
+                                        message: "Modify successfully"
+                                    });
+                                }
+                                return res.status(500).json(ErrorResponse.H011);
+                            }
+                        );
+                    }
+                );
+            }
         } catch (err) {
-            console.log(err);
-            next(err);
+            debug.error(err);
+            return next(err);
         }
     });
 });

@@ -78,6 +78,16 @@ let ErrorResponse = Object.freeze({
         code: "H010",
         type: "ModifyMessage",
         message: ""
+    },
+    H011: {
+        code: "H011",
+        type: "ModifyMessage",
+        message: "Box update failed, plz contact developer"
+    },
+    H012: {
+        code: "H011",
+        type: "ModifyMessage",
+        message: "ContainerList and boxDeliverContent need to be modified at the same time, and should correspond to each other"
     }
 });
 

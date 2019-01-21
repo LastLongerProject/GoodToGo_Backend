@@ -781,7 +781,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
                         timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         result.shopLostAmount++;
-                        console.log(containerID)
 
                     } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                         result.customerLostAmount++;

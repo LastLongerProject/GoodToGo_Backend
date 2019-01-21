@@ -60,6 +60,7 @@ let changeStateProcess = async function(element, box, phone) {
                 }
             }
         }).exec();
+
         if (res) {
             return Promise.resolve({
                 status: ProgramStatus.Success,
@@ -70,7 +71,6 @@ let changeStateProcess = async function(element, box, phone) {
             status: ProgramStatus.Error,
             message: "Box update failed in changing state from Boxing to Delivering"
         });
-
     } else if (result === validChange[2]) {
         let res = await box.update({
             status: BoxStatus.Boxing,
@@ -174,7 +174,7 @@ let changeStateProcess = async function(element, box, phone) {
     }
 }
 
-async function containerStateFactory(newState, aBox, dbAdmin) {
+let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
     let boxID = aBox.boxID;
     let storeID = aBox.storeID;
     if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
@@ -189,12 +189,12 @@ async function containerStateFactory(newState, aBox, dbAdmin) {
             },
             async(err, tradeSuccess, reply) => {
                 if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
+                if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = true;
                 aBox.stocking = false;
                 aBox.user.delivery = dbAdmin.user.phone;
                 let result = await aBox.save();
-                if (result) return Promise.resolve({
+                if (result) return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -213,11 +213,11 @@ async function containerStateFactory(newState, aBox, dbAdmin) {
             },
             async(err, tradeSuccess, reply) => {
                 if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
+                if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
                 let result = await aBox.save();
-                if (result) return Promise.resolve({
+                if (result) return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -236,12 +236,12 @@ async function containerStateFactory(newState, aBox, dbAdmin) {
             },
             async(err, tradeSuccess, reply) => {
                 if (err) return next(err);
-                if (!tradeSuccess) return Promise.resolve(reply);
+                if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
                 aBox.stocking = true;
                 let result = await aBox.save();
-                if (result) return Promise.resolve({
+                if (result) return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -250,21 +250,21 @@ async function containerStateFactory(newState, aBox, dbAdmin) {
     }
 
     if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
-        return Promise.resolve({
+        return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
         });
     }
 
     if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
-        return Promise.resolve({
+        return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
         });
     }
 
     if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
-        return Promise.resolve({
+        return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
         });

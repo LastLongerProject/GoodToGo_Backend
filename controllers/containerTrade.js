@@ -16,7 +16,7 @@ const Box = require('../models/DB/boxDB');
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
-function changeContainersState(containers, reqUser, stateChanging, options, done) {
+async function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
         containers = [containers];
     if (containers.length < 1)
@@ -71,15 +71,15 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         aDataSaver.saver(resolve, reject);
                     })))
                     .then(containerList => {
-                        return done(null, true, {
+                        return Promise.resolve(done(null, true, {
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
                             containerList
-                        }, tradeDetail);
+                        }, tradeDetail));
                     }).catch(done);
             } else {
-                return done(null, false, {
+                return Promise.resolve(done(null, false, {
                     code: 'F001',
                     type: messageType,
                     message: "State Changing Invalid",
@@ -87,7 +87,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                     listExplanation: ["containerID", "originalState", "newState", "boxID"],
                     errorList: errorListArr,
                     errorDict: errorDictArr
-                });
+                }));
             }
         })
         .catch(err => {
@@ -95,7 +95,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 Object.assign(err, {
                     type: messageType
                 });
-                return done(null, false, err);
+                done(null, false, err);
             } else {
                 done(err);
             }
