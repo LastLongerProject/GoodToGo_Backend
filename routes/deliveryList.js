@@ -200,6 +200,7 @@ router.post(
                             newState: 5,
                         }, {
                             boxID,
+                            storeID: aBox.storeID
                         },
                         (err, tradeSuccess, reply) => {
                             if (err) {
@@ -389,7 +390,7 @@ router.post(
                         return res.status(403).json(ErrorResponse.H005_3);
                     }
                     if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
-                        return res.status(403).json(ErrorResponse.H005_3);
+                        return res.status(403).json(ErrorResponse.H008);
                     }
                     try {
                         let result = await changeStateProcess(element, aBox, phone);
@@ -429,8 +430,8 @@ router.post(
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            type: "SignMessage",
-            message: "Sign successfully"
+            type: "ChangeStateMessage",
+            message: "Change State successfully"
         }
  * @apiUse CreateError
  * @apiUse ChangeStateError

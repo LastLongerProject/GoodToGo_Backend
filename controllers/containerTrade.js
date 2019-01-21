@@ -16,7 +16,7 @@ const Box = require('../models/DB/boxDB');
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 
-async function changeContainersState(containers, reqUser, stateChanging, options, done) {
+function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
         containers = [containers];
     if (containers.length < 1)
@@ -71,15 +71,15 @@ async function changeContainersState(containers, reqUser, stateChanging, options
                         aDataSaver.saver(resolve, reject);
                     })))
                     .then(containerList => {
-                        return Promise.resolve(done(null, true, {
+                        return done(null, true, {
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
                             containerList
-                        }, tradeDetail));
+                        }, tradeDetail);
                     }).catch(done);
             } else {
-                return Promise.resolve(done(null, false, {
+                return done(null, false, {
                     code: 'F001',
                     type: messageType,
                     message: "State Changing Invalid",
@@ -87,7 +87,7 @@ async function changeContainersState(containers, reqUser, stateChanging, options
                     listExplanation: ["containerID", "originalState", "newState", "boxID"],
                     errorList: errorListArr,
                     errorDict: errorDictArr
-                }));
+                });
             }
         })
         .catch(err => {
@@ -232,8 +232,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     theContainer.cycleCtr++;
                                 } else if (action === 'CancelDelivery' || action === 'UnSign') {
                                     theContainer.cycleCtr--;
+                                } else if (action === 'Boxing') {
+                                    theContainer.boxID = boxID;
                                 }
-
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();

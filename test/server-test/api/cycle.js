@@ -21,11 +21,11 @@ var roles = {
     },
 };
 
-describe('api-cycle', function() {
+describe.only('api-cycle', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -144,7 +144,7 @@ describe('api-cycle', function() {
         });
     });
     let rent_apiKey = "";
-    describe('Get /stores/getUser/:id', function() {
+    describe.only('Get /stores/getUser/:id', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -154,7 +154,7 @@ describe('api-cycle', function() {
 
             let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
-                .get('/stores/getUser/0900000000')
+                .get('/stores/getUser/0905519292')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
@@ -173,7 +173,7 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/rent/:id', function() {
+    describe.only('POST /containers/rent/:id', function() {
         this.slow(1000);
 
         it('status code should be 200', function(done) {
@@ -198,6 +198,7 @@ describe('api-cycle', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });

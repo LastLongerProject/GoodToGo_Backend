@@ -13,7 +13,6 @@
 
 /**
  * @apiDefine ChangeStateError
- * @apiError {String} H005_3 status : 403, type : CreateMessage, msg : "Data format invalid (Update Stocked to Boxing need provide destinationStoreId)"
  * @apiError {String} H007 status : 403, type : ChangeStateMessage, msg : "Box update failed in changing state from {oldState} to {newState}"
  * @apiError {String} H008 status : 403, type : ChangeStateMessage, msg : "Please use 'sign' api to sign the box"
  */

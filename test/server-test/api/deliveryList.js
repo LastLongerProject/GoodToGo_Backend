@@ -21,13 +21,13 @@ var roles = {
     },
 };
 
-describe.only('api-deliveryList', function() {
+describe('api-deliveryList', function() {
 
     before(function(done) {
         setTimeout(done, 10000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -69,7 +69,7 @@ describe.only('api-deliveryList', function() {
             let auth = jwt.encode(payload, roles.admin.secretKey);
 
             request(app)
-                .post('/deliveryList/create/12')
+                .post('/deliveryList/create/17')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
@@ -122,7 +122,7 @@ describe.only('api-deliveryList', function() {
                                     containerType: 0,
                                     amount: 1
                                 }],
-                                containerList: [99999],
+                                containerList: [99999, 7424],
                                 comment: "test"
                             }]
                         })
@@ -179,7 +179,7 @@ describe.only('api-deliveryList', function() {
         });
     });
 
-    describe.only('POST /changeState', function() {
+    describe('POST /changeState', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -195,7 +195,7 @@ describe.only('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 11800231,
+                        id: 12202181,
                         newState: "Delivering"
                     }]
                 })
@@ -227,7 +227,7 @@ describe.only('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 11800231
+                        id: 12202181
                     }]
                 })
                 .expect(200)
