@@ -704,7 +704,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
             if (typeof containers !== 'undefined') {
                 for (var i in containers) {
                     tmpTypeCode = containers[i].typeCode;
-                    if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
                     if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
                         result.toUsedAmount++;
                     }
