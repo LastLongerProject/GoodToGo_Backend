@@ -450,7 +450,6 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                 for (var i in containers) {
                     if (containers[i].storeID || containers[i].storeID === 0) {
                         tmpTypeCode = containers[i].typeCode;
-                        // if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
                         if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
                             if (storeIdDict[String(containers[i].storeID)]) {
                                 storeIdDict[String(containers[i].storeID)]['toUsedAmount']++;
@@ -466,7 +465,6 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                     var timeToNow = now - lastUsed[storeID][containerID].time;
                     if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         if (storeIdDict[String(containers[i].storeID)]) {
-                            if (containers[i].storeID === 0) console.log("hi")
                             storeIdDict[String(storeID)]['toUsedAmount']--;
                         }
                     }
