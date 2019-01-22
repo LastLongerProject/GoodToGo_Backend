@@ -497,6 +497,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                 var todayCheckpoint = dateCheckpoint(0);
                 for (var usedContainerKey in usedContainer) {
                     var usedContainerRecord = usedContainer[usedContainerKey];
+
                     if (storeIdDict.hasOwnProperty(usedContainerRecord.storeID)) {
                         if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
                             weeklyAmountByStore[usedContainerRecord.storeID] = {};
@@ -533,6 +534,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                     var weights = arrOfWeeklyUsageOfThisStore.length;
                     var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                     storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
+                    if (aStoreID === '18') console.log(Math.round(weeklySum / weights));
                 }
 
                 res.json({
@@ -676,6 +678,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     }
                 }
             }
+            result.toUsedAmount -= result.shopLostAmount;
         });
         var tradeQuery = {
             '$or': [{
@@ -713,7 +716,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                 tradeQuery.tradeTime = {
                     '$gte': new Date(dataCached.timestamp)
                 };
-
             Trade.find(tradeQuery, {}, {
                 sort: {
                     tradeTime: 1
@@ -832,7 +834,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     }
                 }
 
-
                 result.totalAmount = Object.keys(usedContainer).length;
                 if (result.totalAmount !== 0) {
                     var weeklyAmount = {};
@@ -859,14 +860,14 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     }
 
                     result.weekAmount = weeklyAmount[weekCheckpoint];
-                    delete weeklyAmount[weekCheckpoint];
                     var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
                     var weights = arrOfWeeklyUsageOfThisStore.length;
                     var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
+                    delete weeklyAmount[weekCheckpoint];
                     result.weekAverage = Math.round(weeklySum / weights);
                     result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
-
                     result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
+                    console.log(weights)
                 }
 
                 res.json(result);

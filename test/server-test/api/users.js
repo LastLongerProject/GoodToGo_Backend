@@ -148,7 +148,7 @@ describe('api-users', function() {
         });
     });
 
-    describe('POST /signup/storeManager', function() {
+    describe.skip('POST /signup/storeManager', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -162,10 +162,9 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '062216138',
+                    phone: '0953807637',
                     password: '',
-                    storeID: 0,
-                    isCampaign: true
+                    storeID: 0
                 })
                 .expect(200)
                 .end(function(err, res) {
