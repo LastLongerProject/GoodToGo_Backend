@@ -436,6 +436,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                 '$in': ['Sign', 'Rent', 'ReadyToClean', 'UndoReadyToClean']
             }
         };
+
         Container.find({}, function(err, containers) {
             for (let container of containers) {
                 if (container.storeID || container.storeID === 0) {
@@ -459,12 +460,12 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                 }
             }
 
-            let now = new Date();
+            let now = Date.now();
             for (let storeID in lastUsed) {
                 for (let containerID in lastUsed[storeID]) {
                     var timeToNow = now - lastUsed[storeID][containerID].time;
                     if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                        if (storeIdDict[String(containers[i].storeID)]) {
+                        if (storeIdDict[String(storeID)]) {
                             storeIdDict[String(storeID)]['toUsedAmount']--;
                         }
                     }
@@ -710,218 +711,218 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                 }
             }
             result.toUsedAmount -= result.shopLostAmount;
-        });
-        var tradeQuery = {
-            '$or': [{
-                    'tradeType.action': 'Sign',
-                    'newUser.storeID': STORE_ID
-                },
-                {
-                    'tradeType.action': 'Rent',
-                    'oriUser.storeID': STORE_ID
-                },
-                {
-                    'tradeType.action': 'Return',
-                    'newUser.storeID': STORE_ID
-                },
-                {
-                    'tradeType.action': 'UndoReturn',
-                    'oriUser.storeID': STORE_ID
-                },
-                {
-                    'tradeType.action': 'ReadyToClean',
-                },
-                {
-                    'tradeType.action': 'UndoReadyToClean'
-                }
-            ]
-        };
+            var tradeQuery = {
+                '$or': [{
+                        'tradeType.action': 'Sign',
+                        'newUser.storeID': STORE_ID
+                    },
+                    {
+                        'tradeType.action': 'Rent',
+                        'oriUser.storeID': STORE_ID
+                    },
+                    {
+                        'tradeType.action': 'Return',
+                        'newUser.storeID': STORE_ID
+                    },
+                    {
+                        'tradeType.action': 'UndoReturn',
+                        'oriUser.storeID': STORE_ID
+                    },
+                    {
+                        'tradeType.action': 'ReadyToClean',
+                    },
+                    {
+                        'tradeType.action': 'UndoReadyToClean'
+                    }
+                ]
+            };
 
-        var cacheKey = CACHE.shopDetail + ":" + STORE_ID.toString();
-        redis.get(cacheKey, (err, reply) => {
-            if (err) return next(err);
-            var dataCached = {};
-            if (reply !== null) dataCached = JSON.parse(reply);
-
-            if (dataCached.timestamp)
-                tradeQuery.tradeTime = {
-                    '$gte': new Date(dataCached.timestamp)
-                };
-            Trade.find(tradeQuery, {}, {
-                sort: {
-                    tradeTime: 1
-                }
-            }, function(err, tradeList) {
+            var cacheKey = CACHE.shopDetail + ":" + STORE_ID.toString();
+            redis.get(cacheKey, (err, reply) => {
                 if (err) return next(err);
+                var dataCached = {};
+                if (reply !== null) dataCached = JSON.parse(reply);
 
-                cleanUndo(['Return', 'ReadyToClean'], tradeList);
-
-                var lastUsed = dataCached.lastUsed || {};
-                var usedContainer = dataCached.usedContainer || {};
-                var unusedContainer = dataCached.unusedContainer || {};
-                result.history = dataCached.history || [];
-
-                tradeList.forEach(function(aTrade) {
-                    var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    lastUsed[aTrade.container.id] = {
-                        time: aTrade.tradeTime.valueOf(),
-                        action: aTrade.tradeType.action
+                if (dataCached.timestamp)
+                    tradeQuery.tradeTime = {
+                        '$gte': new Date(dataCached.timestamp)
                     };
-                    if (aTrade.tradeType.action === "Sign") {
-                        unusedContainer[containerKey] = {
+                Trade.find(tradeQuery, {}, {
+                    sort: {
+                        tradeTime: 1
+                    }
+                }, function(err, tradeList) {
+                    if (err) return next(err);
+
+                    cleanUndo(['Return', 'ReadyToClean'], tradeList);
+
+                    var lastUsed = dataCached.lastUsed || {};
+                    var usedContainer = dataCached.usedContainer || {};
+                    var unusedContainer = dataCached.unusedContainer || {};
+                    result.history = dataCached.history || [];
+
+                    tradeList.forEach(function(aTrade) {
+                        var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                        lastUsed[aTrade.container.id] = {
                             time: aTrade.tradeTime.valueOf(),
-                            storeID: aTrade.newUser.storeID
+                            action: aTrade.tradeType.action
                         };
-                    } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
-                        if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
-                            usedContainer[containerKey] = {
+                        if (aTrade.tradeType.action === "Sign") {
+                            unusedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
-                                storeID: unusedContainer[containerKey].storeID
+                                storeID: aTrade.newUser.storeID
                             };
+                        } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
+                            if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                                usedContainer[containerKey] = {
+                                    time: aTrade.tradeTime.valueOf(),
+                                    storeID: unusedContainer[containerKey].storeID
+                                };
+                            }
+                            delete unusedContainer[containerKey];
                         }
-                        delete unusedContainer[containerKey];
-                    }
-                    if (aTrade.tradeType.action === "Sign") {
-                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && BOXID.test(result.history[0].action) &&
-                            result.history[0].action.match(BOXID)[1] == aTrade.container.box) {
-                            addContent(result.history[0], aTrade);
-                        } else {
-                            result.history.unshift({
-                                time: aTrade.tradeTime,
-                                action: "簽收 [BOX #" + aTrade.container.box + "]",
-                                content: {
-                                    [aTrade.container.typeCode]: 1
-                                },
-                                contentDetail: {
-                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
-                                },
-                                owner: theStore.name,
-                                by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
-                            });
+                        if (aTrade.tradeType.action === "Sign") {
+                            if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && BOXID.test(result.history[0].action) &&
+                                result.history[0].action.match(BOXID)[1] == aTrade.container.box) {
+                                addContent(result.history[0], aTrade);
+                            } else {
+                                result.history.unshift({
+                                    time: aTrade.tradeTime,
+                                    action: "簽收 [BOX #" + aTrade.container.box + "]",
+                                    content: {
+                                        [aTrade.container.typeCode]: 1
+                                    },
+                                    contentDetail: {
+                                        [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                    },
+                                    owner: theStore.name,
+                                    by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
+                                });
+                            }
+                        } else if (aTrade.tradeType.action === "Rent") {
+                            if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "借出") {
+                                addContent(result.history[0], aTrade);
+                            } else {
+                                result.history.unshift({
+                                    time: aTrade.tradeTime,
+                                    action: "借出",
+                                    content: {
+                                        [aTrade.container.typeCode]: 1
+                                    },
+                                    contentDetail: {
+                                        [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                    },
+                                    owner: phoneEncoder(aTrade.newUser.phone),
+                                    by: aTrade.oriUser.name || phoneEncoder(aTrade.oriUser.phone)
+                                });
+                            }
+                        } else if (aTrade.tradeType.action === "Return") {
+                            if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "歸還") {
+                                addContent(result.history[0], aTrade);
+                            } else {
+                                result.history.unshift({
+                                    time: aTrade.tradeTime,
+                                    action: "歸還",
+                                    content: {
+                                        [aTrade.container.typeCode]: 1
+                                    },
+                                    contentDetail: {
+                                        [aTrade.container.typeCode]: ["#" + aTrade.container.id]
+                                    },
+                                    owner: theStore.name,
+                                    by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
+                                });
+                            }
                         }
-                    } else if (aTrade.tradeType.action === "Rent") {
-                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "借出") {
-                            addContent(result.history[0], aTrade);
-                        } else {
-                            result.history.unshift({
-                                time: aTrade.tradeTime,
-                                action: "借出",
-                                content: {
-                                    [aTrade.container.typeCode]: 1
-                                },
-                                contentDetail: {
-                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
-                                },
-                                owner: phoneEncoder(aTrade.newUser.phone),
-                                by: aTrade.oriUser.name || phoneEncoder(aTrade.oriUser.phone)
-                            });
-                        }
-                    } else if (aTrade.tradeType.action === "Return") {
-                        if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "歸還") {
-                            addContent(result.history[0], aTrade);
-                        } else {
-                            result.history.unshift({
-                                time: aTrade.tradeTime,
-                                action: "歸還",
-                                content: {
-                                    [aTrade.container.typeCode]: 1
-                                },
-                                contentDetail: {
-                                    [aTrade.container.typeCode]: ["#" + aTrade.container.id]
-                                },
-                                owner: theStore.name,
-                                by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
-                            });
-                        }
-                    }
-                });
+                    });
 
-                var containerType = DataCacheFactory.get('containerType');
-                for (var index in result.history) {
-                    var theHistory = result.history[index];
-                    if (typeof theHistory.content === "object") {
-                        var contentTxt = "";
-                        for (var aContent in theHistory.content) {
-                            if (contentTxt !== "") contentTxt += "、";
-                            contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
+                    var containerType = DataCacheFactory.get('containerType');
+                    for (var index in result.history) {
+                        var theHistory = result.history[index];
+                        if (typeof theHistory.content === "object") {
+                            var contentTxt = "";
+                            for (var aContent in theHistory.content) {
+                                if (contentTxt !== "") contentTxt += "、";
+                                contentTxt += `${containerType[aContent].name} x ${theHistory.content[aContent]}`;
+                            }
+                            theHistory.content = contentTxt;
                         }
-                        theHistory.content = contentTxt;
-                    }
-                    if (typeof theHistory.contentDetail === "object") {
-                        var contentDetailTxt = "";
-                        for (var aContentDetail in theHistory.contentDetail) {
-                            if (contentDetailTxt !== "") contentDetailTxt += "\n\n";
-                            contentDetailTxt += `${containerType[aContentDetail].name}\n${theHistory.contentDetail[aContentDetail].join("、")}`;
+                        if (typeof theHistory.contentDetail === "object") {
+                            var contentDetailTxt = "";
+                            for (var aContentDetail in theHistory.contentDetail) {
+                                if (contentDetailTxt !== "") contentDetailTxt += "\n\n";
+                                contentDetailTxt += `${containerType[aContentDetail].name}\n${theHistory.contentDetail[aContentDetail].join("、")}`;
+                            }
+                            theHistory.contentDetail = contentDetailTxt;
                         }
-                        theHistory.contentDetail = contentDetailTxt;
                     }
-                }
 
-                var now = Date.now();
-                for (var containerID in lastUsed) {
-                    var timeToNow = now - lastUsed[containerID].time;
-                    if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
-                        result.customerLostAmount++;
+                    var now = Date.now();
+                    for (var containerID in lastUsed) {
+                        var timeToNow = now - lastUsed[containerID].time;
+                        if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                            result.customerLostAmount++;
+                        }
                     }
-                }
 
-                result.totalAmount = Object.keys(usedContainer).length;
-                if (result.totalAmount !== 0) {
-                    var weeklyAmount = {};
-                    var weekCheckpoint = getWeekCheckpoint(new Date(Object.entries(usedContainer)[0][1].time));
-                    var todayCheckpoint = dateCheckpoint(0);
-                    weeklyAmount[weekCheckpoint] = 0;
-                    for (var usedContainerKey in usedContainer) {
-                        var usedContainerRecord = usedContainer[usedContainerKey];
-                        while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                    result.totalAmount = Object.keys(usedContainer).length;
+                    if (result.totalAmount !== 0) {
+                        var weeklyAmount = {};
+                        var weekCheckpoint = getWeekCheckpoint(new Date(Object.entries(usedContainer)[0][1].time));
+                        var todayCheckpoint = dateCheckpoint(0);
+                        weeklyAmount[weekCheckpoint] = 0;
+                        for (var usedContainerKey in usedContainer) {
+                            var usedContainerRecord = usedContainer[usedContainerKey];
+                            while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                                weeklyAmount[weekCheckpoint] = 0;
+                            }
+                            if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
+                                weeklyAmount[weekCheckpoint]++;
+                            }
+                            if (usedContainerRecord.time - todayCheckpoint > 0) {
+                                result.todayAmount++;
+                            }
+                        }
+
+                        while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
                             weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
                             weeklyAmount[weekCheckpoint] = 0;
                         }
-                        if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
-                            weeklyAmount[weekCheckpoint]++;
-                        }
-                        if (usedContainerRecord.time - todayCheckpoint > 0) {
-                            result.todayAmount++;
-                        }
+
+                        result.weekAmount = weeklyAmount[weekCheckpoint];
+                        var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
+                        var weights = arrOfWeeklyUsageOfThisStore.length;
+                        var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
+                        delete weeklyAmount[weekCheckpoint];
+                        result.weekAverage = Math.round(weeklySum / weights);
+                        result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
+                        result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
                     }
 
-                    while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                        weeklyAmount[weekCheckpoint] = 0;
-                    }
+                    res.json(result);
 
-                    result.weekAmount = weeklyAmount[weekCheckpoint];
-                    var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
-                    var weights = arrOfWeeklyUsageOfThisStore.length;
-                    var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
-                    delete weeklyAmount[weekCheckpoint];
-                    result.weekAverage = Math.round(weeklySum / weights);
-                    result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
-                    result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
-                }
-
-                res.json(result);
-
-                if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                    var timestamp = tradeList.length > 0 ? tradeList[tradeList.length - 1].tradeTime.valueOf() : (dataCached.timestamp || Date.now());
-                    var toCache = {
-                        timestamp,
-                        cachedAt: Date.now(),
-                        lastUsed,
-                        usedContainer,
-                        unusedContainer,
-                        history: result.history
-                    };
-                    redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debug.error(cacheKey, err);
-                        if (reply != "OK") return debug.error(cacheKey, reply);
-                        debug.log("[" + cacheKey + "] Cached!");
-                        redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
-                            if (err) return debug.error(err);
-                            if (reply !== 1) return debug.error(reply);
+                    if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
+                        var timestamp = tradeList.length > 0 ? tradeList[tradeList.length - 1].tradeTime.valueOf() : (dataCached.timestamp || Date.now());
+                        var toCache = {
+                            timestamp,
+                            cachedAt: Date.now(),
+                            lastUsed,
+                            usedContainer,
+                            unusedContainer,
+                            history: result.history
+                        };
+                        redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
+                            if (err) return debug.error(cacheKey, err);
+                            if (reply != "OK") return debug.error(cacheKey, reply);
+                            debug.log("[" + cacheKey + "] Cached!");
+                            redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
+                                if (err) return debug.error(err);
+                                if (reply !== 1) return debug.error(reply);
+                            });
                         });
-                    });
-                }
+                    }
+                });
             });
         });
     });
