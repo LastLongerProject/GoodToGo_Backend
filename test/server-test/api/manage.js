@@ -115,12 +115,13 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });
     });
 
-    describe.only('GET /manage/shopDetail', function() {
+    describe('GET /manage/shopDetail', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {

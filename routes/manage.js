@@ -420,6 +420,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
     }, function(err, activeStoreList) {
         if (err) return next(err);
         var storeIdDict = {};
+        var lastUsed = {};
         activeStoreList.forEach(function(aStoreData) {
             storeIdDict[aStoreData.id] = {
                 id: aStoreData.id,
@@ -435,127 +436,162 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                 '$in': ['Sign', 'Rent', 'ReadyToClean', 'UndoReadyToClean']
             }
         };
-
-        redis.get(CACHE.shop, (err, reply) => {
-            if (err) return next(err);
-            var dataCached = {};
-            if (reply !== null) dataCached = JSON.parse(reply);
-
-            if (dataCached.activeStoreNameList) {
-                for (var aCachedStoreIndex in activeStoreList) {
-                    var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
-                    if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
-                        debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
-                        dataCached = {};
-                        break;
+        Container.find({}, function(err, containers) {
+            for (let container of containers) {
+                if (container.storeID || container.storeID === 0) {
+                    if (!lastUsed[container.storeID]) lastUsed[container.storeID] = {};
+                    if (!lastUsed[container.storeID][container.ID]) lastUsed[container.storeID][container.ID] = {
+                        time: container.lastUsedAt.valueOf(),
+                        status: container.statusCode
+                    };
+                }
+            }
+            if (typeof containers !== 'undefined') {
+                for (var i in containers) {
+                    if (containers[i].storeID || containers[i].storeID === 0) {
+                        tmpTypeCode = containers[i].typeCode;
+                        // if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
+                        if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
+                            if (storeIdDict[String(containers[i].storeID)]) {
+                                storeIdDict[String(containers[i].storeID)]['toUsedAmount']++;
+                            }
+                        }
                     }
                 }
             }
-            if (dataCached.timestamp)
-                tradeQuery.tradeTime = {
-                    '$gte': new Date(dataCached.timestamp)
-                };
 
-            Trade.find(tradeQuery, {}, {
-                sort: {
-                    tradeTime: 1
+            let now = new Date();
+            for (let storeID in lastUsed) {
+                for (let containerID in lastUsed[storeID]) {
+                    var timeToNow = now - lastUsed[storeID][containerID].time;
+                    if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                        if (storeIdDict[String(containers[i].storeID)]) {
+                            if (containers[i].storeID === 0) console.log("hi")
+                            storeIdDict[String(storeID)]['toUsedAmount']--;
+                        }
+                    }
                 }
-            }, function(err, tradeList) {
+            }
+
+            redis.get(CACHE.shop, (err, reply) => {
                 if (err) return next(err);
+                var dataCached = {};
+                if (reply !== null) dataCached = JSON.parse(reply);
 
-                cleanUndo('ReadyToClean', tradeList);
-
-                var usedContainer = dataCached.usedContainer || {};
-                var unusedContainer = dataCached.unusedContainer || {};
-                tradeList.forEach(function(aTrade) {
-                    var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
-                        unusedContainer[containerKey] = {
-                            time: aTrade.tradeTime.valueOf(),
-                            storeID: aTrade.newUser.storeID
-                        };
-                    } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && unusedContainer[containerKey]) {
-                        if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
-                            usedContainer[containerKey] = {
-                                time: aTrade.tradeTime.valueOf(),
-                                storeID: unusedContainer[containerKey].storeID
-                            };
+                if (dataCached.activeStoreNameList) {
+                    for (var aCachedStoreIndex in activeStoreList) {
+                        var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
+                        if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
+                            debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
+                            dataCached = {};
+                            break;
                         }
-                        delete unusedContainer[containerKey];
-                    }
-                });
-
-                for (let unusedContainerRecord in unusedContainer) {
-                    if (storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID))
-                        storeIdDict[unusedContainer[unusedContainerRecord].storeID].toUsedAmount++;
-                    else
-                        delete unusedContainer[unusedContainerRecord];
-                }
-
-                var weeklyAmountByStore = {};
-                var weekCheckpoint = getWeekCheckpoint(new Date(Object.entries(usedContainer)[0][1].time));
-                var todayCheckpoint = dateCheckpoint(0);
-                for (var usedContainerKey in usedContainer) {
-                    var usedContainerRecord = usedContainer[usedContainerKey];
-
-                    if (storeIdDict.hasOwnProperty(usedContainerRecord.storeID)) {
-                        if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
-                            weeklyAmountByStore[usedContainerRecord.storeID] = {};
-                            weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
-                        }
-                        while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                            weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                            for (var aStore in weeklyAmountByStore) {
-                                weeklyAmountByStore[aStore][weekCheckpoint] = 0;
-                            }
-                        }
-                        if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
-                            weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint]++;
-                        }
-                        if (usedContainerRecord.time - todayCheckpoint < MILLISECONDS_OF_A_DAY && usedContainerRecord.time - todayCheckpoint > 0) {
-                            storeIdDict[usedContainerRecord.storeID].todayAmount++;
-                        }
-                    } else {
-                        delete usedContainer[usedContainerKey];
                     }
                 }
-
-                var now = Date.now();
-                while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
-                    weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
-                    for (var aStore in weeklyAmountByStore) {
-                        weeklyAmountByStore[aStore][weekCheckpoint] = 0;
-                    }
-                }
-
-                for (var aStoreID in weeklyAmountByStore) {
-                    storeIdDict[aStoreID].weekAmount = weeklyAmountByStore[aStoreID][weekCheckpoint];
-                    var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmountByStore[aStoreID]);
-                    var weights = arrOfWeeklyUsageOfThisStore.length;
-                    var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
-                    storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
-                }
-
-                res.json({
-                    list: Object.values(storeIdDict)
-                });
-
-                if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                    activeStoreNameList = activeStoreList.map(ele => ele.name);
-                    var timestamp = now - MILLISECONDS_OF_A_WEEK;
-                    var toCache = {
-                        timestamp,
-                        cachedAt: Date.now(),
-                        usedContainer,
-                        unusedContainer,
-                        activeStoreNameList
+                if (dataCached.timestamp)
+                    tradeQuery.tradeTime = {
+                        '$gte': new Date(dataCached.timestamp)
                     };
-                    redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debug.error(CACHE.shop, err);
-                        if (reply != "OK") return debug.error(CACHE.shop, reply);
-                        debug.log("[" + CACHE.shop + "] Cached!");
+
+                Trade.find(tradeQuery, {}, {
+                    sort: {
+                        tradeTime: 1
+                    }
+                }, function(err, tradeList) {
+                    if (err) return next(err);
+
+                    cleanUndo('ReadyToClean', tradeList);
+
+                    var usedContainer = dataCached.usedContainer || {};
+                    var unusedContainer = dataCached.unusedContainer || {};
+                    tradeList.forEach(function(aTrade) {
+                        var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                        if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
+                            unusedContainer[containerKey] = {
+                                time: aTrade.tradeTime.valueOf(),
+                                storeID: aTrade.newUser.storeID
+                            };
+                        } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && unusedContainer[containerKey]) {
+                            if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                                usedContainer[containerKey] = {
+                                    time: aTrade.tradeTime.valueOf(),
+                                    storeID: unusedContainer[containerKey].storeID
+                                };
+                            }
+                            delete unusedContainer[containerKey];
+                        }
                     });
-                }
+
+                    for (let unusedContainerRecord in unusedContainer) {
+                        if (storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID)) {} else
+                            delete unusedContainer[unusedContainerRecord];
+                    }
+
+                    var weeklyAmountByStore = {};
+                    var weekCheckpoint = getWeekCheckpoint(new Date(Object.entries(usedContainer)[0][1].time));
+                    var todayCheckpoint = dateCheckpoint(0);
+                    for (var usedContainerKey in usedContainer) {
+                        var usedContainerRecord = usedContainer[usedContainerKey];
+
+                        if (storeIdDict.hasOwnProperty(usedContainerRecord.storeID)) {
+                            if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
+                                weeklyAmountByStore[usedContainerRecord.storeID] = {};
+                                weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint] = 0;
+                            }
+                            while (usedContainerRecord.time - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                                weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                                for (var aStore in weeklyAmountByStore) {
+                                    weeklyAmountByStore[aStore][weekCheckpoint] = 0;
+                                }
+                            }
+                            if (usedContainerRecord.time - weekCheckpoint < MILLISECONDS_OF_A_WEEK) {
+                                weeklyAmountByStore[usedContainerRecord.storeID][weekCheckpoint]++;
+                            }
+                            if (usedContainerRecord.time - todayCheckpoint < MILLISECONDS_OF_A_DAY && usedContainerRecord.time - todayCheckpoint > 0) {
+                                storeIdDict[usedContainerRecord.storeID].todayAmount++;
+                            }
+                        } else {
+                            delete usedContainer[usedContainerKey];
+                        }
+                    }
+
+                    var now = Date.now();
+                    while (now - weekCheckpoint >= MILLISECONDS_OF_A_WEEK) {
+                        weekCheckpoint.setDate(weekCheckpoint.getDate() + 7);
+                        for (var aStore in weeklyAmountByStore) {
+                            weeklyAmountByStore[aStore][weekCheckpoint] = 0;
+                        }
+                    }
+
+                    for (var aStoreID in weeklyAmountByStore) {
+                        storeIdDict[aStoreID].weekAmount = weeklyAmountByStore[aStoreID][weekCheckpoint];
+                        var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmountByStore[aStoreID]);
+                        var weights = arrOfWeeklyUsageOfThisStore.length;
+                        var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
+                        storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
+                    }
+
+                    res.json({
+                        list: Object.values(storeIdDict)
+                    });
+
+                    if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
+                        activeStoreNameList = activeStoreList.map(ele => ele.name);
+                        var timestamp = now - MILLISECONDS_OF_A_WEEK;
+                        var toCache = {
+                            timestamp,
+                            cachedAt: Date.now(),
+                            usedContainer,
+                            unusedContainer,
+                            activeStoreNameList
+                        };
+                        redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
+                            if (err) return debug.error(CACHE.shop, err);
+                            if (reply != "OK") return debug.error(CACHE.shop, reply);
+                            debug.log("[" + CACHE.shop + "] Cached!");
+                        });
+                    }
+                });
             });
         });
     });
@@ -633,8 +669,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
 
         var containerQuery;
         var lastUsed = {};
-        var usedContainer = {};
-        var unusedContainer = {};
         if (STORE_ID === 17) {
             containerQuery = {
                 "$or": [{
