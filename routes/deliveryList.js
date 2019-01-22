@@ -1,34 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
-const crypto = require('crypto');
 const debug = require('../helpers/debugger')('deliveryList');
-const redis = require('../models/redis');
 const DataCacheFactory = require('../models/dataCacheFactory');
-
-const keys = require('../config/keys');
-const baseUrl = require('../config/config.js').serverBaseUrl;
-const wetag = require('@lastlongerproject/toolkit').wetag;
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
-const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
-const getDateCheckpoint = require('@lastlongerproject/toolkit')
-    .getDateCheckpoint;
-
-const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const regAsStore = require('../middlewares/validation/validateRequest')
     .regAsStore;
 const regAsAdmin = require('../middlewares/validation/validateRequest')
     .regAsAdmin;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
 const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateCreateApiContent;
 const validateBoxingApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
@@ -43,11 +22,6 @@ const validateModifyApiContent = require('../middlewares/validation/deliveryList
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
-const User = require('../models/DB/userDB');
-const Store = require('../models/DB/storeDB');
-const Trade = require('../models/DB/tradeDB');
-const Place = require('../models/DB/placeIdDB');
-const Container = require('../models/DB/containerDB');
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
 const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
@@ -163,7 +137,6 @@ router.post(
             message: "Box Succeed"
         }
  * @apiUse CreateError
- * @apiUse ChangeStateError
  */
 router.post(
     ['/cleanStation/box', '/box'],
@@ -265,10 +238,10 @@ router.post(
         HTTP/1.1 200 
         {
             type: "StockMessage",
-            message: "Stock successfully"
+            message: "Stock successfully",
+            boxIDs: Array
         }
  * @apiUse CreateError
- * @apiUse ChangeStateError
  */
 router.post(
     '/stock',
@@ -278,21 +251,17 @@ router.post(
     function(req, res, next) {
         let dbAdmin = req._user;
         let boxList = req.body.boxList;
-        let phone = req.body.phone;
 
         for (let element of boxList) {
             let boxID = element.boxId;
             const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
-            const comment = element.comment;
 
             Box.findOne({
                     boxID: boxID,
                 },
                 function(err, aBox) {
                     if (err) return next(err);
-                    if (aBox)
-                        return res.status(403).json(ErrorResponse.F012);
+                    if (aBox) return res.status(403).json(ErrorResponse.F012);
 
                     changeContainersState(
                         containerList,
@@ -312,7 +281,7 @@ router.post(
                                     return res.status(200).json({
                                         type: 'StockMessage',
                                         message: 'Stock successfully',
-                                        boxIDs: req._boxIDs,
+                                        boxIDs: req._boxIDs
                                     });
                                 })
                                 .catch(err => {

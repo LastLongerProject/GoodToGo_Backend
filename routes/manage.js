@@ -30,6 +30,7 @@ const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
+const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 const CACHE = {
     index: "manage_cache:index",
@@ -628,6 +629,54 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                 ["週", "數量"]
             ]
         };
+
+        var containerQuery;
+        var lastUsed = {};
+        var usedContainer = {};
+        var unusedContainer = {};
+        if (STORE_ID === 17) {
+            containerQuery = {
+                "$or": [{
+                        'storeID': STORE_ID,
+                        'active': true
+                    },
+                    {
+                        "ID": {
+                            "$in": DEMO_CONTAINER_ID_LIST
+                        }
+                    }
+                ]
+            };
+        } else {
+            containerQuery = {
+                'storeID': STORE_ID,
+                'active': true
+            };
+        }
+        Container.find(containerQuery, function(err, containers) {
+            for (let container of containers) {
+                lastUsed[container.ID] = {
+                    time: container.lastUsedAt.valueOf(),
+                    status: container.statusCode
+                };
+            }
+            let now = new Date();
+            for (let containerID in lastUsed) {
+                var timeToNow = now - lastUsed[containerID].time;
+                if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                    result.shopLostAmount++;
+                }
+            }
+            if (typeof containers !== 'undefined') {
+                for (var i in containers) {
+                    tmpTypeCode = containers[i].typeCode;
+                    if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
+                    if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
+                        result.toUsedAmount++;
+                    }
+                }
+            }
+        });
         var tradeQuery = {
             '$or': [{
                     'tradeType.action': 'Sign',
@@ -778,16 +827,12 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                 var now = Date.now();
                 for (var containerID in lastUsed) {
                     var timeToNow = now - lastUsed[containerID].time;
-                    if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
-                        timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                        result.shopLostAmount++;
-
-                    } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                    if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                         result.customerLostAmount++;
                     }
                 }
 
-                result.toUsedAmount = Object.keys(unusedContainer).length;
+
                 result.totalAmount = Object.keys(usedContainer).length;
                 if (result.totalAmount !== 0) {
                     var weeklyAmount = {};

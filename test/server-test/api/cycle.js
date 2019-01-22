@@ -21,11 +21,11 @@ var roles = {
     },
 };
 
-describe.only('api-cycle', function() {
+describe('api-cycle', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -144,7 +144,7 @@ describe.only('api-cycle', function() {
         });
     });
     let rent_apiKey = "";
-    describe.only('Get /stores/getUser/:id', function() {
+    describe('Get /stores/getUser/:id', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -173,7 +173,7 @@ describe.only('api-cycle', function() {
         });
     });
 
-    describe.only('POST /containers/rent/:id', function() {
+    describe('POST /containers/rent/:id', function() {
         this.slow(1000);
 
         it('status code should be 200', function(done) {

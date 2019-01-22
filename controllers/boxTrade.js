@@ -1,6 +1,5 @@
 let BoxStatus = require('../models/variables/boxEnum').BoxStatus;
 let ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
-let ErrorResponse = require('../models/variables/error.js').ErrorResponse;
 const changeContainersState = require('./containerTrade');
 
 const validChange = [

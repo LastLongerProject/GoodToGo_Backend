@@ -553,7 +553,6 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                         }
                     }
                 }
-
                 cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
 
