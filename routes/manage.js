@@ -572,9 +572,10 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                     for (var aStoreID in weeklyAmountByStore) {
                         storeIdDict[aStoreID].weekAmount = weeklyAmountByStore[aStoreID][weekCheckpoint];
                         var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmountByStore[aStoreID]);
-                        var weights = arrOfWeeklyUsageOfThisStore.length - 1;
+                        var weights = arrOfWeeklyUsageOfThisStore.length;
                         var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                         storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
+                        if (aStoreID === '12') console.log(storeIdDict[aStoreID].weekAverage)
                     }
 
                     res.json({
@@ -901,13 +902,14 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                         }
 
                         result.weekAmount = weeklyAmount[weekCheckpoint];
+                        // delete weeklyAmount[weekCheckpoint];
                         var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmount);
                         var weights = arrOfWeeklyUsageOfThisStore.length;
                         var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
-                        delete weeklyAmount[weekCheckpoint];
                         result.weekAverage = Math.round(weeklySum / weights);
                         result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
                         result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
+                        console.log(result.weekAverage)
                     }
 
                     res.json(result);

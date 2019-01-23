@@ -116,7 +116,7 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+                    // console.log(res.body);
                     done();
                 });
         });
@@ -133,7 +133,7 @@ describe.only('api-manage', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .get('/manage/shopDetail?id=30')
+                .get('/manage/shopDetail?id=12')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
@@ -143,7 +143,7 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+                    // console.log(res.body);
 
                     done();
                 });
