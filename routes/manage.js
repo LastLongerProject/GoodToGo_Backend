@@ -574,7 +574,6 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                         var weights = arrOfWeeklyUsageOfThisStore.length;
                         var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                         storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
-                        if (aStoreID === '12') console.log(storeIdDict[aStoreID].weekAverage)
                     }
 
                     res.json({
@@ -755,7 +754,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
 
                 if (dataCached.timestamp)
                     tradeQuery.tradeTime = {
-                        '$gte': new Date(dataCached.timestamp)
+                        '$gt': new Date(dataCached.timestamp)
                     };
                 Trade.find(tradeQuery, {}, {
                     sort: {
@@ -770,7 +769,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     var usedContainer = dataCached.usedContainer || {};
                     var unusedContainer = dataCached.unusedContainer || {};
                     result.history = dataCached.history || [];
-
                     tradeList.forEach(function(aTrade) {
                         var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                         lastUsed[aTrade.container.id] = {
@@ -908,7 +906,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                         result.weekAverage = Math.round(weeklySum / weights);
                         result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
                         result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
-                        console.log(result.weekAverage)
                     }
 
                     res.json(result);

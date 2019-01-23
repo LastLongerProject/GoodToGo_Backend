@@ -57,7 +57,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/index', function() {
+    describe('GET /manage/index', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -123,7 +123,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe('GET /manage/shopDetail', function() {
+    describe.only('GET /manage/shopDetail', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -144,7 +144,7 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    // console.log(res.body);
+                    console.log(res.body);
 
                     done();
                 });
