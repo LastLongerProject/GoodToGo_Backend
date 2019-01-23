@@ -572,7 +572,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                     for (var aStoreID in weeklyAmountByStore) {
                         storeIdDict[aStoreID].weekAmount = weeklyAmountByStore[aStoreID][weekCheckpoint];
                         var arrOfWeeklyUsageOfThisStore = Object.values(weeklyAmountByStore[aStoreID]);
-                        var weights = arrOfWeeklyUsageOfThisStore.length;
+                        var weights = arrOfWeeklyUsageOfThisStore.length - 1;
                         var weeklySum = arrOfWeeklyUsageOfThisStore.reduce((a, b) => (a + b), 0);
                         storeIdDict[aStoreID].weekAverage = Math.round(weeklySum / weights);
                     }
