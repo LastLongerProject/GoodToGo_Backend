@@ -437,17 +437,22 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
             }
         };
 
-        Container.find({}, function(err, containers) {
-            for (let container of containers) {
-                if (container.storeID || container.storeID === 0) {
-                    if (!lastUsed[container.storeID]) lastUsed[container.storeID] = {};
-                    if (!lastUsed[container.storeID][container.ID]) lastUsed[container.storeID][container.ID] = {
-                        time: container.lastUsedAt.valueOf(),
-                        status: container.statusCode
-                    };
-                }
-            }
+        Container.find({
+            'active': true
+        }, function(err, containers) {
+            let index = 0;
             if (typeof containers !== 'undefined') {
+                for (let container of containers) {
+                    if (container.storeID || container.storeID === 0) {
+                        if (container.storeID === 17) index++;
+                        if (!lastUsed[container.storeID]) lastUsed[container.storeID] = {};
+                        if (!lastUsed[container.storeID][container.ID]) lastUsed[container.storeID][container.ID] = {
+                            time: container.lastUsedAt.valueOf(),
+                            status: container.statusCode
+                        };
+                    }
+                }
+
                 for (var i in containers) {
                     if (containers[i].storeID || containers[i].storeID === 0) {
                         tmpTypeCode = containers[i].typeCode;
@@ -458,19 +463,21 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
                         }
                     }
                 }
-            }
 
-            let now = Date.now();
-            for (let storeID in lastUsed) {
-                for (let containerID in lastUsed[storeID]) {
-                    var timeToNow = now - lastUsed[storeID][containerID].time;
-                    if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                        if (storeIdDict[String(storeID)]) {
-                            storeIdDict[String(storeID)]['toUsedAmount']--;
+                let now = Date.now();
+                for (let storeID in lastUsed) {
+                    for (let containerID in lastUsed[storeID]) {
+                        var timeToNow = now - lastUsed[storeID][containerID].time;
+                        if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                            if (storeIdDict[String(storeID)]) {
+                                storeIdDict[String(storeID)]['toUsedAmount']--;
+                            }
                         }
                     }
                 }
             }
+
+
 
             redis.get(CACHE.shop, (err, reply) => {
                 if (err) return next(err);
@@ -688,11 +695,14 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
             };
         }
         Container.find(containerQuery, function(err, containers) {
+            let index = 0;
             for (let container of containers) {
                 lastUsed[container.ID] = {
                     time: container.lastUsedAt.valueOf(),
                     status: container.statusCode
                 };
+                if (container.storeID === 17)
+                    index++;
             }
             let now = new Date();
             for (let containerID in lastUsed) {
@@ -701,6 +711,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res,
                     result.shopLostAmount++;
                 }
             }
+
             if (typeof containers !== 'undefined') {
                 for (var i in containers) {
                     tmpTypeCode = containers[i].typeCode;
