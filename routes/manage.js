@@ -155,8 +155,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                     var success = tradeList.every(function(aTrade) {
                         try {
                             var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                            // if (aTrade.container.id === 528)
-                            //     console.log(containerKey + " " + aTrade.tradeType.action)
+
                             lastUsed[aTrade.container.id] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 action: aTrade.tradeType.action
@@ -166,7 +165,6 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: aTrade.newUser.storeID
                                 };
-                                // console.log(aTrade.container.id)
                             } else if (aTrade.tradeType.action === "Rent") {
                                 rentedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf()
@@ -205,7 +203,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                             return false;
                         }
                     });
-
+                    console.log(success);
                     if (!success) return res.redirect(301, baseUrl + "/index");
 
                     for (var containerID in lastUsed) {

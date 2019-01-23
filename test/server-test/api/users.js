@@ -36,7 +36,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0911789727',
+                    phone: '0905519292',
                     password: '',
                 })
                 .expect(200)
