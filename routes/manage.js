@@ -203,7 +203,6 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                             return false;
                         }
                     });
-                    console.log(success);
                     if (!success) return res.redirect(301, baseUrl + "/index");
 
                     for (var containerID in lastUsed) {
