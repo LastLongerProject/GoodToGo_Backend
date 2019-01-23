@@ -36,7 +36,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0911789727',
                     password: '',
                 })
                 .expect(200)
@@ -67,7 +67,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0988888888',
+                    phone: '0905519292',
                     password: '',
                 })
                 .expect(205)
@@ -148,7 +148,7 @@ describe('api-users', function() {
         });
     });
 
-    describe.skip('POST /signup/storeManager', function() {
+    describe('POST /signup/storeManager', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -162,9 +162,9 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0953807637',
+                    phone: '0966666666',
                     password: '',
-                    storeID: 0
+                    storeID: 17
                 })
                 .expect(200)
                 .end(function(err, res) {

@@ -139,6 +139,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                         return a.tradeTime - b.tradeTime;
                     });
                     cleanUndo(['Return', 'ReadyToClean'], tradeList);
+
                     var now = Date.now();
                     var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
                     var lastUsed = dataCached.lastUsed || {};
@@ -154,7 +155,8 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                     var success = tradeList.every(function(aTrade) {
                         try {
                             var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-
+                            // if (aTrade.container.id === 528)
+                            //     console.log(containerKey + " " + aTrade.tradeType.action)
                             lastUsed[aTrade.container.id] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 action: aTrade.tradeType.action
@@ -164,6 +166,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: aTrade.newUser.storeID
                                 };
+                                // console.log(aTrade.container.id)
                             } else if (aTrade.tradeType.action === "Rent") {
                                 rentedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf()
@@ -186,8 +189,7 @@ router.get('/index', regAsAdminManager, validateRequest, function(req, res, next
                                         delete rentedContainer[containerKey];
                                     }
                                 }
-
-                                if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
+                                if (signedContainer[containerKey] && (aTrade.newUser.storeID !== signedContainer[containerKey].storeID)) {
                                     result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                     if (recent) {
                                         result.shopRecentHistorySummary.quantityOfBorrowingFromDiffPlace++;

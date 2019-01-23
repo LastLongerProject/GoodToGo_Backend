@@ -30,10 +30,8 @@ module.exports = {
                 break;
             case NotificationEvent.CONTAINER_RETURN:
                 if (target.customersDetailList) {
-
                     for (let aDetailKey in target.customersDetailList) {
                         let aCustomerDetail = target.customersDetailList[aDetailKey];
-
                         pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, aCustomerDetail.key, aCustomerDetail.data);
                         pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, aCustomerDetail.key);
                     }

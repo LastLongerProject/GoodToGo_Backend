@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../../../app');
 const jwt = require('jwt-simple');
 const secret = require('../../../config/secret_key.json');
+const Trade = require('../../../models/DB/tradeDB');
 
 const makeHexString = require('../tool.js').makeHexString;
 var typeList = [];
@@ -56,7 +57,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe('GET /manage/index', function() {
+    describe.only('GET /manage/index', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -88,7 +89,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/shop', function() {
+    describe('GET /manage/shop', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -122,7 +123,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/shopDetail', function() {
+    describe('GET /manage/shopDetail', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
