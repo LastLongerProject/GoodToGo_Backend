@@ -331,6 +331,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
  * @apiUse JWT_orderTime
  * 
  * @apiHeader {String} userapikey User api key
+ * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -429,6 +430,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
  * @apiPermission admin
  * 
  * @apiUse JWT_orderTime
+ * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
