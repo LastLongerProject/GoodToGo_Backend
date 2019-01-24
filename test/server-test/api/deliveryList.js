@@ -27,7 +27,7 @@ describe('api-deliveryList', function() {
         setTimeout(done, 10000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -268,7 +268,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe.only('PATCH /modifyBoxInfo', function() {
+    describe('PATCH /modifyBoxInfo', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
