@@ -459,7 +459,9 @@ router.post(
                 res.json(reply);
                 if (tradeDetail) {
                     NotificationCenter.emit("container_return", {
-                        customersDetailList: uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID)
+                        customer: tradeDetail[0].oriUser
+                    }, {
+                        containerList: reply.containerList
                     });
                 }
             }
