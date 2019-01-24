@@ -20,6 +20,7 @@ module.exports = {
                         errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
                     };
                 case SnsEvent.CONTAINER_RENT:
+                    console.log("in sns rent: " + Array.isArray(data) ? data.join("、") : data)
                     return {
                         content: {
                             title: "借用了容器！",
@@ -31,6 +32,8 @@ module.exports = {
                         errMsgPrefix: `[借出]通知推播失敗：[${user}]`
                     };
                 case SnsEvent.CONTAINER_RETURN:
+                    console.log("in sns return: " + Array.isArray(data) ? data.join("、") : data)
+
                     return {
                         content: {
                             title: "歸還了容器！",

@@ -388,6 +388,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
             if (tradeDetail) {
+                console.log("in rent: " + reply.containerList)
                 NotificationCenter.emit("container_rent", {
                     customer: tradeDetail[0].newUser
                 }, {
@@ -478,6 +479,7 @@ router.post(
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
                 if (tradeDetail) {
+                    console.log("in return: " + uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID))
                     NotificationCenter.emit("container_return", {
                         customersDetailList: uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID)
                     });
