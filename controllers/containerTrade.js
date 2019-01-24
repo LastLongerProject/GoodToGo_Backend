@@ -95,7 +95,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 Object.assign(err, {
                     type: messageType
                 });
-                return done(null, false, err);
+                done(null, false, err);
             } else {
                 done(err);
             }
@@ -232,8 +232,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     theContainer.cycleCtr++;
                                 } else if (action === 'CancelDelivery' || action === 'UnSign') {
                                     theContainer.cycleCtr--;
+                                } else if (action === 'Boxing') {
+                                    theContainer.boxID = boxID;
                                 }
-
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();

@@ -67,7 +67,7 @@ describe('api-users', function() {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0988888888',
+                    phone: '0905519292',
                     password: '',
                 })
                 .expect(205)
@@ -162,10 +162,9 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '062216138',
+                    phone: '0966666666',
                     password: '',
-                    storeID: 0,
-                    isCampaign: true
+                    storeID: 17
                 })
                 .expect(200)
                 .end(function(err, res) {

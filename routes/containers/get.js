@@ -161,19 +161,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) 
                     isDelivering: boxList[i].delivering,
                     destinationStore: boxList[i].storeID
                 });
-                if (thisBox === 11800231) console.log({
-                    boxID: thisBox,
-                    boxTime: boxList[i].updatedAt,
-                    phone: boxList[i].user,
-                    typeList: thisBoxTypeList,
-                    containerList: thisBoxContainerList,
-                    stocking: boxList[i].stocking,
-                    isDelivering: boxList[i].delivering,
-                    destinationStore: boxList[i].storeID
-                })
             }
-
-            console.log(boxArr[0])
 
             for (var i = 0; i < boxArr.length; i++) {
                 boxArr[i].containerOverview = [];

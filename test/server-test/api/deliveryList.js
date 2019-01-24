@@ -69,7 +69,7 @@ describe('api-deliveryList', function() {
             let auth = jwt.encode(payload, roles.admin.secretKey);
 
             request(app)
-                .post('/deliveryList/create/12')
+                .post('/deliveryList/create/17')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
@@ -122,7 +122,7 @@ describe('api-deliveryList', function() {
                                     containerType: 0,
                                     amount: 1
                                 }],
-                                containerList: [99999],
+                                containerList: [99999, 7424],
                                 comment: "test"
                             }]
                         })
@@ -195,9 +195,8 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 11800231,
-                        newState: "Delivering",
-                        destinationStoreId: 17
+                        id: 12202181,
+                        newState: "Delivering"
                     }]
                 })
                 .expect(200)
@@ -206,7 +205,7 @@ describe('api-deliveryList', function() {
                         console.log(res.body);
                         return done(err);
                     }
-
+                    console.log(res.body);
                     done();
                 });
         });
@@ -228,7 +227,7 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 11800231
+                        id: 12202181
                     }]
                 })
                 .expect(200)
@@ -282,10 +281,20 @@ describe('api-deliveryList', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    containerList: [8888]
+                    boxName: 'test',
+                    storeID: 17,
+                    boxDeliverContent: [{
+                            containerType: 0,
+                            amount: 1
+                        },
+                        {
+                            containerType: 9,
+                            amount: 1
+                        }
+                    ],
+                    containerList: [99999, 7424]
                 })
                 .expect(200)
-                .expect(checkBoxListKeys)
                 .end(function(err, res) {
                     if (err) {
                         console.log(res.body);

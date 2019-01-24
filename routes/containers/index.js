@@ -331,6 +331,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
  * @apiUse JWT_orderTime
  * 
  * @apiHeader {String} userapikey User api key
+ * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -387,7 +388,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
-            res.json(reply);
             if (tradeDetail) {
                 NotificationCenter.emit("container_rent", {
                     customer: tradeDetail[0].newUser
@@ -395,6 +395,27 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
                     containerList: reply.containerList
                 });
             }
+            Container.find({
+                ID: parseInt(container)
+            }).exec().then(container => {
+                if (!container) return res.status(403).json({
+                    code: 'Fxxx',
+                    type: 'borrowContainerMessage',
+                    message: 'can not find container id'
+                });
+                let boxID = container[0].boxID;
+                Box.deleteOne({
+                    boxID
+                }).exec().then(result => {
+                    return res.json(reply);
+                }).catch(err => {
+                    debug.error(err);
+                    return next(err);
+                });
+            }).catch(err => {
+                debug.error(err);
+                return next(err);
+            });
         });
     });
 });
@@ -409,6 +430,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
  * @apiPermission admin
  * 
  * @apiUse JWT_orderTime
+ * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -459,7 +481,9 @@ router.post(
                 res.json(reply);
                 if (tradeDetail) {
                     NotificationCenter.emit("container_return", {
-                        customersDetailList: uniqArr(tradeDetail, aTradeDetail => aTradeDetail.oriUser.user.phone, aTradeDetail => aTradeDetail.containerID)
+                        customer: tradeDetail[0].oriUser
+                    }, {
+                        containerList: reply.containerList
                     });
                 }
             }

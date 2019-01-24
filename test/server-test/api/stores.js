@@ -231,6 +231,9 @@ describe('api-stores', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body.containers[0].IdList)
+                    console.log(res.body.containers[1].IdList)
+
                     done();
                 });
         });
