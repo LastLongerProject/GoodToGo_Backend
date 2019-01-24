@@ -29,12 +29,9 @@ module.exports = {
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data);
                 break;
             case NotificationEvent.CONTAINER_RETURN:
-                if (target.customersDetailList) {
-                    for (let aDetailKey in target.customersDetailList) {
-                        let aCustomerDetail = target.customersDetailList[aDetailKey];
-                        pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, aCustomerDetail.key, aCustomerDetail.data);
-                        pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, aCustomerDetail.key);
-                    }
+                if (target.customer) {
+                    pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data);
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
                 }
                 break;
         }
