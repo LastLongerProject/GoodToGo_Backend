@@ -33,7 +33,7 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  * @apiName DeliveryList create delivery list
  * @apiGroup DeliveryList
  *
- * @api {post} /create/:destiantionStoreId Create delivery list
+ * @api {post} /deliveryList/create/:destiantionStoreId Create delivery list
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -110,7 +110,7 @@ router.post(
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /box Boxing
+ * @api {post} /deliveryList/box Boxing
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -215,7 +215,7 @@ router.post(
  * @apiName DeliveryList stock
  * @apiGroup DeliveryList
  *
- * @api {post} /box Create stock box
+ * @api {post} /deliveryList/stock Create stock box
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -300,7 +300,7 @@ router.post(
  * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
- * @api {post} /box Change state
+ * @api {post} /deliveryList/changeState Change state
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription
@@ -384,7 +384,7 @@ router.post(
  * @apiName DeliveryList sign
  * @apiGroup DeliveryList
  *
- * @api {post} /box Sign
+ * @api {post} /deliveryList/sign Sign
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -471,7 +471,7 @@ router.post(
  * @apiName DeliveryList Get list
  * @apiGroup DeliveryList
  *
- * @api {get} /box/list Box list
+ * @api {get} /deliveryList/box/list Box list
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription If see "before upgrade" as the value of key, means that the box is in old version.
@@ -548,7 +548,7 @@ router.get(
  * @apiName DeliveryList modify box info
  * @apiGroup DeliveryList
  *
- * @api {post} /modifyBoxInfo/:boxID Modify box info
+ * @api {post} /deliveryList/modifyBoxInfo/:boxID Modify box info
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription 
