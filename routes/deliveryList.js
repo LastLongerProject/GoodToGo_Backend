@@ -44,7 +44,7 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  *                  boxName: String,
  *                  boxOrderContent: [
  *                      {
- *                          containerType: Number,
+ *                          containerType: String,
  *                          amount: Number
  *                      },...
  *                  ]
@@ -66,7 +66,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateCreateApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
 
@@ -119,12 +119,6 @@ router.post(
  *          boxList: [
  *              {
  *                  boxId: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
  *                  containerList: Array,
  *                  comment: String
  *              },...
@@ -143,7 +137,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateBoxingApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let boxList = req.body.boxList;
         let phone = req.body.phone;
@@ -151,13 +145,12 @@ router.post(
         for (let element of boxList) {
             let boxID = element.boxId;
             const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
             const comment = element.comment;
 
             Box.findOne({
                     boxID: boxID,
                 },
-                function(err, aBox) {
+                function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -181,7 +174,6 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                    boxDeliverContent: boxDeliverContent,
                                     containerList: containerList,
                                     comment: comment,
                                     $push: {
@@ -224,12 +216,6 @@ router.post(
  *          boxList: [
  *              {
  *                  boxName: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
  *                  containerList: Array,
  *              },...
  *          ]
@@ -248,7 +234,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateStockApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let boxList = req.body.boxList;
 
@@ -259,7 +245,7 @@ router.post(
             Box.findOne({
                     boxID: boxID,
                 },
-                function(err, aBox) {
+                function (err, aBox) {
                     if (err) return next(err);
                     if (aBox) return res.status(403).json(ErrorResponse.F012);
 
@@ -335,7 +321,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateChangeStateApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
@@ -347,7 +333,7 @@ router.post(
             Box.findOne({
                     boxID: boxID,
                 },
-                async function(err, aBox) {
+                async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -411,7 +397,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateSignApiContent,
-    async function(req, res, next) {
+    async function (req, res, next) {
         let dbUser = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
@@ -423,7 +409,7 @@ router.post(
             Box.findOne({
                     boxID: boxID,
                 },
-                async function(err, aBox) {
+                async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -477,68 +463,77 @@ router.post(
  * @apiDescription If see "before upgrade" as the value of key, means that the box is in old version.
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
-        {
-            "{storeID}": {
-                ID: Number //boxID,
-                name: String,
-                dueDate: Date,
-                status: String,
-                action: [
-                    {
-                        phone: String,
-                        boxStatus: String,
-                        timestamps: Date
-                    },...
-                ],
-                deliverContent: [
-                    {
-                        amount: Number,
-                        containerType: Number
-                    },...
-                ],
-                orderContent: [
-                    {
-                        amount: Number,
-                        containerType: Number
-                    },...
-                ],
-                containerList: Array //boxID,
-                comment: String // If comment === "" means no error
+        [   
+            {
+                storeID: String
+                boxObj: [{
+                    ID: Number //boxID,
+                    name: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
             },...
-        }
+        ]
  */
 router.get(
     '/box/list',
     regAsAdmin,
     validateRequest,
-    async function(req, res, next) {
-        let dbUser = req._user;
-        let result = {};
+    async function (req, res, next) {
+        let result = [];
         let storeList = DataCacheFactory.get('store');
         for (let i = 0; i < Object.keys(storeList).length; i++) {
-            if (Object.keys(storeList)[i] !== "null") {
-                result[Object.keys(storeList)[i]] = [];
-            }
+            result.push({
+                storeID: Object.keys(storeList)[i],
+                boxObj: []
+            });
         }
         Box.find({}, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
                 if (!box.storeID) continue;
-                result[box.storeID].push({
-                    ID: box.boxID,
-                    name: box.boxName || "before upgrade",
-                    dueDate: box.dueDate || "before upgrade",
-                    status: box.status || "before upgrade",
-                    action: box.action || "before upgrade",
-                    deliverContent: box.boxDeliverContent || "before upgrade",
-                    orderContent: box.orderContent || "before upgrade",
-                    containerList: box.containerList,
-                    comment: box.comment || ""
+                
+                result.forEach(obj => {
+                    if (obj.storeID === String(box.storeID)) {
+                        obj.boxObj.push({
+                            ID: box.boxID,
+                            name: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
                 });
             }
-            for (let key in result) {
-                if (!result[key].length) delete result[key];
-            }
+            result = result.filter(obj => {
+                return obj.boxObj.length > 0; 
+            });
             return res.status(200).json(result);
         });
     }
@@ -581,13 +576,13 @@ router.get(
         }
  * @apiUse ModifyError
  */
-router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function(req, res, next) {
+router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
     Box.findOne({
         boxID
-    }, async(err, box) => {
+    }, async (err, box) => {
         try {
             if (containerList) {
                 changeContainersState(
@@ -609,7 +604,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             }, {
                                 boxID,
                             },
-                            async(err, tradeSuccess, reply) => {
+                            async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
                                 let result = await box.update(req.body).exec();
@@ -633,3 +628,26 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 });
 
 module.exports = router;
+
+function transContainerType(typeCode) {
+    let storeList = DataCacheFactory.get('store');
+    return storeList[String(typeCode)].name;
+}
+
+function getDeliverContent(containerList) {
+    let container = DataCacheFactory.get('container');
+    let deliverContent = {};
+    containerList.forEach(element => {
+        if (!deliverContent[container[element]]) deliverContent[container[element]] = {
+            amount: 0
+        };
+        deliverContent[container[element]]['amount']++;
+    });
+
+    return Object.keys(deliverContent).map(containerType => {
+        return {
+            containerType,
+            amount: deliverContent[containerType]['amount']
+        }
+    });
+}

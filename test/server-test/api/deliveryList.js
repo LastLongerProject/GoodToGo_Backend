@@ -21,13 +21,13 @@ var roles = {
     },
 };
 
-describe('api-deliveryList', function() {
+describe.only('api-deliveryList', function() {
 
     before(function(done) {
         setTimeout(done, 10000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -77,7 +77,7 @@ describe('api-deliveryList', function() {
                     boxList: [{
                         boxName: "test",
                         boxOrderContent: [{
-                            containerType: 0,
+                            containerType: "12oz 玻璃杯",
                             amount: 4
                         }],
                         dueDate: Date.now()
@@ -118,11 +118,7 @@ describe('api-deliveryList', function() {
                             phone: "0900000000",
                             boxList: [{
                                 boxId: box.boxID,
-                                boxDeliverContent: [{
-                                    containerType: 0,
-                                    amount: 1
-                                }],
-                                containerList: [99999, 7424],
+                                containerList: [99999],
                                 comment: "test"
                             }]
                         })
@@ -160,10 +156,6 @@ describe('api-deliveryList', function() {
                     phone: "0900000000",
                     boxList: [{
                         boxName: 'test',
-                        boxDeliverContent: [{
-                            containerType: 0,
-                            amount: 1
-                        }],
                         containerList: ["99999"]
                     }]
                 })
@@ -195,7 +187,7 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 12202181,
+                        id: 12817151,
                         newState: "Delivering"
                     }]
                 })
@@ -205,7 +197,6 @@ describe('api-deliveryList', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -242,7 +233,7 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('GET /box/list', function() {
+    describe.only('GET /box/list', function() {
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -262,6 +253,7 @@ describe('api-deliveryList', function() {
                         console.log(res.body);
                         return done(err);
                     }
+
                     done();
                 });
         });
@@ -309,14 +301,7 @@ describe('api-deliveryList', function() {
 function checkBoxListKeys(res) {
     let list = res.body;
     for (let key in list) {
-        if (!('ID' in list[key][0])) return new Error('Missing ID');
-        if (!('name' in list[key][0])) return new Error('Missing name');
-        if (!('dueDate' in list[key][0])) return new Error('Missing dueDate');
-        if (!('status' in list[key][0])) return new Error('Missing status');
-        if (!('action' in list[key][0])) return new Error('Missing action');
-        if (!('deliverContent' in list[key][0])) return new Error('Missing deliverContent');
-        if (!('orderContent' in list[key][0])) return new Error('Missing orderContent');
-        if (!('containerList' in list[key][0])) return new Error('Missing containerList');
-        if (!('comment' in list[key][0])) return new Error('Missing comment');
+        if (!('storeID' in list[key])) return new Error('Missing storeID');
+        if (!('boxObj' in list[key])) return new Error('Missing boxObj');
     }
 }

@@ -127,7 +127,7 @@ module.exports = {
             }
         });
     }
-};
+}
 
 function storeListGenerator(cb) {
     PlaceID.find({}, {}, {

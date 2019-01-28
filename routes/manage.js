@@ -439,11 +439,10 @@ router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next)
         Container.find({
             'active': true
         }, function(err, containers) {
-            let index = 0;
+            console.log(containers.length)
             if (typeof containers !== 'undefined') {
                 for (let container of containers) {
                     if (container.storeID || container.storeID === 0) {
-                        if (container.storeID === 17) index++;
                         if (!lastUsed[container.storeID]) lastUsed[container.storeID] = {};
                         if (!lastUsed[container.storeID][container.ID]) lastUsed[container.storeID][container.ID] = {
                             time: container.lastUsedAt.valueOf(),
@@ -1496,6 +1495,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res
         });
         storesTmpData[aStoreKey] = [];
     }
+    
     Trade.find({
         'tradeType.action': {
             '$in': ['Sign', 'Rent', 'Return', 'UndoReturn', 'ReadyToClean', 'UndoReadyToClean']
@@ -1556,7 +1556,6 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res
             }
         }
         lastUsed = null;
-
         debug.log("[Manage/shopSummary] Finish Parse!");
         // trade to rawdata
         let dataSets = [];
