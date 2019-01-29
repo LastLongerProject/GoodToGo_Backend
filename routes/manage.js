@@ -449,33 +449,20 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                         };
                     }
                 }
-
+                let now = Date.now();
                 for (var i in containers) {
                     if (containers[i].storeID || containers[i].storeID === 0) {
+                        var timeToNow = now - lastUsed[containers[i].storeID][containers[i].ID].time;
                         tmpTypeCode = containers[i].typeCode;
-                        if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
+                        if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) && timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                             if (storeIdDict[String(containers[i].storeID)]) {
                                 storeIdDict[String(containers[i].storeID)]['toUsedAmount']++;
                             }
                         }
                     }
                 }
-                let now = Date.now();
-                let index = 0;
-                for (let storeID in lastUsed) {
-                    for (let containerID in lastUsed[storeID]) {
-                        var timeToNow = now - lastUsed[storeID][containerID].time;
-                        if ((lastUsed[storeID][containerID].status === 1 || lastUsed[storeID][containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                            if (storeIdDict[String(storeID)]) {
-                                storeIdDict[String(storeID)]['toUsedAmount']--;
-                                if (String(storeID) === '17') index++;
-                            }
-                        }
-                    }
-                }
+                console.log(storeIdDict['3']['toUsedAmount'])
             }
-
-
 
             redis.get(CACHE.shop, (err, reply) => {
                 if (err) return next(err);
@@ -700,7 +687,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     status: container.statusCode
                 };
             }
-            let now = new Date();
+            let now = Date.now();
             for (let containerID in lastUsed) {
                 var timeToNow = now - lastUsed[containerID].time;
                 if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
@@ -710,13 +697,14 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
 
             if (typeof containers !== 'undefined') {
                 for (var i in containers) {
+                    var timeToNow = now - lastUsed[containers[i].ID].time;
                     tmpTypeCode = containers[i].typeCode;
-                    if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
+                    if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) &&　timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         result.toUsedAmount++;
                     }
                 }
             }
-            result.toUsedAmount -= result.shopLostAmount;
+            console.log(result.toUsedAmount);
             var tradeQuery = {
                 '$or': [{
                         'tradeType.action': 'Sign',
