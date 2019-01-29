@@ -2056,7 +2056,7 @@
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n    \"{storeID}\": {\n        ID: Number //boxID,\n        name: String,\n        dueDate: Date,\n        status: String,\n        action: [\n            {\n                phone: String,\n                boxStatus: String,\n                timestamps: Date\n            },...\n        ],\n        deliverContent: [\n            {\n                amount: Number,\n                containerType: Number\n            },...\n        ],\n        orderContent: [\n            {\n                amount: Number,\n                containerType: Number\n            },...\n        ],\n        containerList: Array //boxID,\n        comment: String // If comment === \"\" means no error\n    },...\n}",
+          "content": "HTTP/1.1 200 \n[   \n    {\n        storeID: String\n        boxObj: [{\n            ID: Number //boxID,\n            name: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...\n]",
           "type": "json"
         }
       ]
@@ -2164,7 +2164,7 @@
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxId: String,\n            boxDeliverContent: [\n                {\n                    containerType: String,\n                    amount: Number\n                },...\n            ],\n            containerList: Array,\n            comment: String\n        },...\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxId: String,\n            containerList: Array,\n            comment: String\n        },...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -2525,7 +2525,7 @@
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            boxOrderContent: [\n                {\n                    containerType: Number,\n                    amount: Number\n                },...\n            ]\n            dueDate: Date\n        }\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            boxOrderContent: [\n                {\n                    containerType: String,\n                    amount: Number\n                },...\n            ]\n            dueDate: Date\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -3010,7 +3010,7 @@
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            boxDeliverContent: [\n                {\n                    containerType: String,\n                    amount: Number\n                },...\n            ],\n            containerList: Array,\n        },...\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            containerList: Array,\n        },...\n    ]\n}",
           "type": "json"
         }
       ]

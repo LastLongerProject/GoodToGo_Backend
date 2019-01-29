@@ -461,7 +461,6 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                         }
                     }
                 }
-                console.log(storeIdDict['3']['toUsedAmount'])
             }
 
             redis.get(CACHE.shop, (err, reply) => {
@@ -704,7 +703,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     }
                 }
             }
-            console.log(result.toUsedAmount);
             var tradeQuery = {
                 '$or': [{
                         'tradeType.action': 'Sign',
