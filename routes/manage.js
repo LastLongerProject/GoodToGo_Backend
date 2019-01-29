@@ -12,6 +12,7 @@ const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const refreshStore = require('../helpers/appInit').refreshStore;
 const refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
 const refreshContainer = require('../helpers/appInit').refreshContainer;
+const refreshActivity = require('../helpers/appInit').refreshActivity;
 const refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
 const cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
@@ -1684,6 +1685,31 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
 });
 
 /**
+ * @apiName Manage refresh activity
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/activity Refresh container
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
+router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
+    var dbAdmin = req._user;
+    refreshActivity(dbAdmin, function (err) {
+        if (err) return next(err);
+        res.json({
+            "success": true
+        });
+    });
+});
+
+/**
  * @apiName Manage refresh specific store image
  * @apiGroup Manage
  *
@@ -1738,5 +1764,6 @@ router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, f
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
+
 
 module.exports = router;

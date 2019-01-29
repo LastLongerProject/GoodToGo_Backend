@@ -8,6 +8,7 @@ const debug = require('../debugger')('google_sheet');
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const PlaceID = require('../../models/DB/placeIdDB');
 const Store = require('../../models/DB/storeDB');
+const Activity = require('../../models/DB/activityDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
 const Container = require('../../models/DB/containerDB');
 
@@ -157,7 +158,7 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
-                range: 'active!A2:K',
+                range: 'active!A2:L',
             }, function(err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getStore)] Error: ' + err);
@@ -181,7 +182,8 @@ module.exports = {
                             'type': row[6],
                             'project': row[8],
                             'active': row[9] === 'TRUE',
-                            'category': row[10]
+                            'category': row[10],
+                            'activity': row[11]
                         }, {
                             upsert: true,
                             new: true
@@ -268,6 +270,7 @@ module.exports = {
                                                     'location': dataObject.result.geometry.location,
                                                     'active': aPlace.active,
                                                     'category': aPlace.category,
+                                                    'activity': aPlace.activity,
                                                     '$setOnInsert': {
                                                         'img_info': {
                                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
@@ -297,6 +300,59 @@ module.exports = {
                                 .catch((err) => {
                                     if (err) return debug.error(err);
                                 });
+                        });
+                    })
+                    .catch((err) => {
+                        if (err) return debug.error(err);
+                    });
+            });
+        });
+    },
+    getActivity: function(dbAdmin, cb) {
+        googleAuth(function getSheet(auth) {
+            sheets.spreadsheets.values.get({
+                auth: auth,
+                spreadsheetId: configs.activity_sheet_ID,
+                range: 'active!A2:C',
+            }, function(err, response) {
+                if (err) {
+                    debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
+                    return;
+                }
+                var rows = response.data.values;
+                var funcList = [];
+                var checkpoint = Date.now();
+                for (var i = 0; i < rows.length; i++) {
+                    var row = rows[i];
+                    if (row[1] === "" || row[2] === "" || row[3 === ""]) break;
+                    funcList.push(new Promise((resolve, reject) => {
+                        Activity.findOneAndUpdate({
+                            'ID': row[0]
+                        }, {
+                            'name': row[1],
+                            'startAt': row[2],
+                            'endAt': row[2]
+                        }, {
+                            upsert: true,
+                            new: true
+                        }, (err, afterUpdate) => {
+                            if (err) return reject(err);
+                            resolve(afterUpdate);
+                        });
+                    }));
+                }
+                Promise
+                    .all(funcList)
+                    .then((dataList) => {
+                        Activity.updateMany({
+                            'checkedAt': {
+                                '$lt': checkpoint
+                            }
+                        }, {
+                            'active': false
+                        }, (err) => {
+                            if (err) return debug.error(err);
+                            cb();
                         });
                     })
                     .catch((err) => {

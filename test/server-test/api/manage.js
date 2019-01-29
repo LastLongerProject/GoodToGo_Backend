@@ -89,7 +89,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/shop', function() {
+    describe('GET /manage/shop', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -123,7 +123,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('GET /manage/shopDetail', function() {
+    describe('GET /manage/shopDetail', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -352,6 +352,33 @@ describe.only('api-manage', function() {
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/container')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(err);
+                        return done(err);
+                    }
+
+                    done();
+                });
+        });
+    });
+
+    describe.only('PATCH /manage/refresh/activity', function() {
+        this.slow(1000);
+
+        it('status code should be 200', function(done) {
+            let payload = {
+                jti: 'manager',
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .patch('/manage/refresh/activity')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
