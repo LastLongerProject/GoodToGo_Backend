@@ -460,13 +460,12 @@ router.post(
  * @api {get} /deliveryList/box/list Box list
  * @apiPermission admin
  * @apiUse JWT
- * @apiDescription If see "before upgrade" as the value of key, means that the box is in old version.
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         [   
             {
-                storeID: String
-                boxObj: [{
+                storeID: Number
+                boxObjs: [{
                     ID: Number //boxID,
                     name: String,
                     dueDate: Date,
@@ -505,8 +504,8 @@ router.get(
         let storeList = DataCacheFactory.get('store');
         for (let i = 0; i < Object.keys(storeList).length; i++) {
             result.push({
-                storeID: Object.keys(storeList)[i],
-                boxObj: []
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
             });
         }
         Box.find({}, (err, boxes) => {
@@ -515,8 +514,8 @@ router.get(
                 if (!box.storeID) continue;
                 
                 result.forEach(obj => {
-                    if (obj.storeID === String(box.storeID)) {
-                        obj.boxObj.push({
+                    if (obj.storeID === box.storeID) {
+                        obj.boxObjs.push({
                             ID: box.boxID,
                             name: box.boxName || "",
                             dueDate: box.dueDate || "",
@@ -532,7 +531,93 @@ router.get(
                 });
             }
             result = result.filter(obj => {
-                return obj.boxObj.length > 0; 
+                return obj.boxObjs.length > 0; 
+            });
+            return res.status(200).json(result);
+        });
+    }
+);
+
+/**
+ * @apiName DeliveryList Get specific status list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list/:status Specific status box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    name: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+router.get(
+    '/box/list/:status',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get('store');
+        let boxStatus = req.params.status;
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({ 'status': boxStatus }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!box.storeID) continue;
+                
+                result.forEach(obj => {
+                    if (obj.storeID === box.storeID) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            name: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
+                });
+            }
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0; 
             });
             return res.status(200).json(result);
         });

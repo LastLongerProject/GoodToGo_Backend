@@ -21,13 +21,13 @@ var roles = {
     },
 };
 
-describe.only('api-manage', function() {
+describe('api-manage', function() {
 
     before(function(done) {
         setTimeout(done, 8000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -366,7 +366,7 @@ describe.only('api-manage', function() {
         });
     });
 
-    describe.only('PATCH /manage/refresh/activity', function() {
+    describe('PATCH /manage/refresh/activity', function() {
         this.slow(1000);
 
         it('status code should be 200', function(done) {

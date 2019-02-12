@@ -11,11 +11,12 @@ const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const UserId = require('../routes/enum/userEnum').userId;
 
 module.exports = {
     signup: function(req, done) {
         var role = req.body.role || {
-            typeCode: 'customer'
+            typeCode: UserId.customer
         };
         var roles = req.body.roles;
         var phone = req.body.phone.replace(/tel:|-/g, "");
@@ -23,7 +24,7 @@ module.exports = {
         var code = req.body.verification_code;
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
-                !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
+                !(typeof req._user !== 'undefined' && role.typeCode === UserId.clerk))) {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
@@ -37,9 +38,9 @@ module.exports = {
             });
         } else if (
             typeof roles === 'undefined' &&
-            ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            ((role.typeCode === UserId.clerk && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === UserId.admin && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === UserId.customer && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -52,17 +53,17 @@ module.exports = {
             if (err)
                 return done(err);
             if (dbUser) {
-                if ((role.typeCode === 'clerk' || role.typeCode === 'admin') && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                if ((role.typeCode === UserId.clerk || role.typeCode === UserId.admin) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
-                        case "clerk":
-                            dbUser.roles.typeList.push("clerk");
+                        case UserId.clerk:
+                            dbUser.roles.typeList.push(UserId.clerk);
                             dbUser.roles.clerk = {
                                 storeID: role.storeID,
                                 manager: role.manager,
                             };
                             break;
-                        case "admin":
-                            dbUser.roles.typeList.push("admin");
+                        case UserId.admin:
+                            dbUser.roles.typeList.push(UserId.admin);
                             dbUser.roles.admin = {
                                 stationID: role.stationID,
                                 manager: role.manager
@@ -127,22 +128,22 @@ module.exports = {
                             newUser.roles = roles;
                         } else {
                             switch (role.typeCode) { // v1 api
-                                case "clerk":
-                                    newUser.roles.typeList.push("clerk");
+                                case UserId.clerk:
+                                    newUser.roles.typeList.push(UserId.clerk);
                                     newUser.roles.clerk = {
                                         storeID: role.storeID,
                                         manager: role.manager || false,
                                     };
                                     break;
-                                case "admin":
-                                    newUser.roles.typeList.push("admin");
+                                case UserId.admin:
+                                    newUser.roles.typeList.push(UserId.admin);
                                     newUser.roles.admin = {
                                         stationID: role.stationID,
                                         manager: role.manager || false
                                     };
                                     break;
                             }
-                            newUser.roles.typeList.push("customer");
+                            newUser.roles.typeList.push(UserId.customer);
                         }
                         newUser.save(function(err) {
                             if (err) return done(err);
@@ -392,7 +393,7 @@ module.exports = {
         var botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': "bot"
+                'role.typeCode': UserId.bot
             }, function(err, botAmount) {
                 if (err) return done(err);
                 var botID = `bot${intReLength(botAmount + 1, 5)}`;
@@ -405,7 +406,7 @@ module.exports = {
                         },
                         role: role,
                         roles: {
-                            typeList: ["bot"],
+                            typeList: [UserId.bot],
                             bot: role
                         },
                         active: true
@@ -416,7 +417,7 @@ module.exports = {
                         secretKey: returnKeys.secretKey,
                         clientId: req.signedCookies.uid,
                         userAgent: req.headers['user-agent'],
-                        roleType: "bot",
+                        roleType: UserId.bot,
                         user: newUser._id
                     });
                     newUser.save(function(err) {
@@ -443,7 +444,7 @@ module.exports = {
     createBotKey: function(req, done) {
         User.findOne({
             'user.name': req.body.bot,
-            'role.typeCode': "bot"
+            'role.typeCode': UserId.bot
         }, function(err, theBot) {
             if (err) return done(err);
             if (!theBot)
@@ -456,7 +457,7 @@ module.exports = {
                 if (err) return done(err);
                 UserKeys.findOneAndUpdate({
                     'phone': theBot.user.phone,
-                    'roleType': "bot",
+                    'roleType': UserId.bot,
                     'user': theBot._id
                 }, {
                     'secretKey': returnKeys.secretKey,
@@ -528,12 +529,12 @@ function tokenBuilder(serverSecretKey, userKey, dbUser) {
 }
 
 function payloadBuilder(payload, dbUser, userKey) {
-    if (userKey.roleType === "customer") {
+    if (userKey.roleType === UserId.customer) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (userKey.roleType === "clerk") {
+    } else if (userKey.roleType === UserId.clerk) {
         payload.roles.clerk = {
             storeID: dbUser.roles.clerk.storeID,
             manager: dbUser.roles.clerk.manager,
@@ -541,7 +542,7 @@ function payloadBuilder(payload, dbUser, userKey) {
             secretKey: userKey.secretKey,
             storeName: getStoreName(dbUser),
         };
-    } else if (userKey.roleType === "admin") {
+    } else if (userKey.roleType === UserId.admin) {
         payload.roles.admin = {
             stationID: dbUser.roles.admin.stationID,
             manager: dbUser.roles.admin.manager,

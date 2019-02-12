@@ -26,7 +26,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
-
+const UserId = require('./enum/userEnum.js').userId;
 
 /**
  * @apiName SignUp
@@ -113,15 +113,15 @@ router.post(
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (dbKey.roleType === UserId.clerk) {
             req.body.role = {
-                typeCode: 'clerk',
+                typeCode: UserId.clerk,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === 'admin') {
+        } else if (dbKey.roleType === UserId.admin) {
             req.body.role = {
-                typeCode: 'admin',
+                typeCode: UserId.admin,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
@@ -170,7 +170,7 @@ router.post(
         var dbUser = req._user;
         var dbKey = req._key;
         req.body.role = {
-            typeCode: 'clerk',
+            typeCode: UserId.clerk,
             manager: true,
             storeID: req.body.storeID
         };
@@ -215,11 +215,10 @@ router.post(
     function(req, res, next) {
         // for ADMIN and CLERK
         req.body.active = req.body.active ? req.body.active : true;
-        var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (dbKey.roleType === UserId.clerk) {
             req.body.role = {
-                typeCode: 'customer'
+                typeCode: UserId.customer
             };
         }
         req._passCode = true;

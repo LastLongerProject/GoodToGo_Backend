@@ -24,6 +24,9 @@ const manage = require('./routes/manage');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
+const graphqlHttp = require('express-graphql');
+const { schema, rootValue } = require('./GraphQL/graphQLSchema.js');
+
 const app = express();
 let io = require('socket.io');
 let esm;
@@ -58,6 +61,13 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
+
+app.use('/graphql', graphqlHttp({
+    schema,
+    rootValue,
+    graphiql: process.env.NODE_ENV !== 'production'? true : false
+}));
+
 app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);

@@ -12,7 +12,7 @@ var userSchema = mongoose.Schema({
 });
 
 userSchema.index({
-    "startAt": 1
+    "startAt": -1
 });
 
 // create the model for users and expose it to our app

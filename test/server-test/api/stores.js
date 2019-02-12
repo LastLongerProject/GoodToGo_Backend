@@ -532,6 +532,25 @@ describe('api-stores', function() {
                 });
         });
     });
+
+    describe('GET /stores/activity/0', function() {
+        it('status code should be 200', function(done) {
+            request(app)
+                .get('/stores/activity/0')
+                .set('Content-Type', 'application/json')
+                .set('reqID', makeHexString())
+                .set('reqTime', Date.now())
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
+                    done();
+                });
+        });
+    });
 });
 
 function checkStoreListKeys(res) {

@@ -2,6 +2,7 @@ const jwt = require('jwt-simple');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB'); // load up the user model
 const UserKeys = require('../../models/DB/userKeysDB');
+const UserId = require('../../routes/enum/userEnum.js').userId;
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -140,9 +141,9 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: (req, res, next) => addRoleToCheck(req, "clerk", true, next),
-    regAsStore: (req, res, next) => addRoleToCheck(req, "clerk", false, next),
-    regAsAdminManager: (req, res, next) => addRoleToCheck(req, "admin", true, next),
-    regAsAdmin: (req, res, next) => addRoleToCheck(req, "admin", false, next),
-    regAsBot: (req, res, next) => addRoleToCheck(req, "bot", false, next)
+    regAsStoreManager: (req, res, next) => addRoleToCheck(req, UserId.clerk, true, next),
+    regAsStore: (req, res, next) => addRoleToCheck(req, UserId.clerk, false, next),
+    regAsAdminManager: (req, res, next) => addRoleToCheck(req, UserId.admin, true, next),
+    regAsAdmin: (req, res, next) => addRoleToCheck(req, UserId.admin, false, next),
+    regAsBot: (req, res, next) => addRoleToCheck(req, UserId.bot, false, next)
 };

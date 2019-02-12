@@ -2051,12 +2051,119 @@
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
-    "description": "<p>If see &quot;before upgrade&quot; as the value of key, means that the box is in old version.</p>",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n[   \n    {\n        storeID: String\n        boxObj: [{\n            ID: Number //boxID,\n            name: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...\n]",
+          "content": "HTTP/1.1 200 \n[   \n    {\n        storeID: Number\n        boxObjs: [{\n            ID: Number //boxID,\n            name: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...\n]",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/deliveryList.js",
+    "groupTitle": "DeliveryList",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "DeliveryList_Get_specific_status_list",
+    "group": "DeliveryList",
+    "type": "get",
+    "url": "/deliveryList/box/list/:status",
+    "title": "Specific status box list",
+    "permission": [
+      {
+        "name": "admin",
+        "title": "Admin access rights needed.",
+        "description": "<p>Please use admin identity to request this uri.</p>"
+      }
+    ],
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n[   \n    {\n        storeID: Number\n        boxObjs: [{\n            ID: Number //boxID,\n            name: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...\n]",
           "type": "json"
         }
       ]
