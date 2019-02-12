@@ -246,7 +246,7 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
             startAt: '2018-03-02T16:00:00.000Z',
             endAt: '2018-03-02T16:00:00.000Z' 
         }
- * 
+ * @apiUse GetActivityError
  */
 router.get('/activity/:activityID', validateDefault, function (req, res, next) {
     const ID = String(req.params.activityID);
@@ -263,6 +263,7 @@ router.get('/activity/:activityID', validateDefault, function (req, res, next) {
                     endAt: activity.endAt
                 });
             return res.status(404).json({
+                code: "E005",
                 type: "ActivityMessage",
                 message: "activity not found, plz check id"
             });
@@ -323,7 +324,8 @@ router.get('/activityList', validateDefault, function (req, res, next) {
 /**
  * @apiName Store activities list of specific store
  * @apiGroup Stores
- *
+ * @apiDescription
+ * still need to test
  * @api {get} /stores/activityList/:storeID Get activities list of specific store
  * @apiUse DefaultSecurityMethod
  * 

@@ -4913,6 +4913,7 @@ define({ "api": [
   {
     "name": "Store_activities_list_of_specific_store",
     "group": "Stores",
+    "description": "<p>still need to test</p>",
     "type": "get",
     "url": "/stores/activityList/:storeID",
     "title": "Get activities list of specific store",
@@ -6583,6 +6584,13 @@ define({ "api": [
             "optional": false,
             "field": "A002",
             "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "E005",
+            "description": "<p>status : 404 type: GetActivityError, msg: activity not found, plz check id</p>"
           }
         ]
       }
