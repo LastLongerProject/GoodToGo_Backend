@@ -109,6 +109,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
+    const activity = options.activity || "沒活動"; // Deliver Sign Rent Return NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -261,7 +262,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         typeCode: theContainer.typeCode,
                                         cycleCtr: theContainer.cycleCtr,
                                         box: boxID
-                                    }
+                                    },
+                                    activity
                                 });
 
                                 containerStateCache[aContainerId] = newState;

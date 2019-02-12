@@ -29,6 +29,10 @@ var userSchema = mongoose.Schema({
     logTime: {
         type: Date,
         default: Date.now
+    },
+    activity: {
+        type: String,
+        default: "沒活動"
     }
 });
 

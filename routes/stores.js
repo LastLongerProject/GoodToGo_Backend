@@ -231,6 +231,23 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
     });
 });
 
+/**
+ * @apiName Store specific activity
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/activity/:activityID Get specific activity
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            ID: '0',
+            name: '沒活動',
+            startAt: '2018-03-02T16:00:00.000Z',
+            endAt: '2018-03-02T16:00:00.000Z' 
+        }
+ * 
+ */
 router.get('/activity/:activityID', validateDefault, function (req, res, next) {
     const ID = String(req.params.activityID);
     Activity
@@ -253,6 +270,79 @@ router.get('/activity/:activityID', validateDefault, function (req, res, next) {
         .catch(err => {
             debug.error(err);
             return next(err);
+        });
+});
+
+/**
+ * @apiName Store activities list
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/activityList Get activities list
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+       HTTP/1.1 200 
+       {
+            [
+                { 
+                    ID: '0',
+                    name: '沒活動',
+                    startAt: '2018-03-02T16:00:00.000Z',
+                    endAt: '2018-03-02T16:00:00.000Z' 
+                },... 
+            ]
+        }
+ * 
+ */
+router.get('/activityList', validateDefault, function (req, res, next) {
+    Activity
+        .find({})
+        .exec()
+        .then(activities => {
+            if (activities) {
+                let result = [];
+                for (let {ID: id, name: name, startAt: start, endAt: end} of activities) {
+                    result.push({
+                        ID: id,
+                        name,
+                        startAt: start,
+                        endAt: end
+                    });
+                }
+                return res.status(200).json(result);
+            }
+                
+            return res.status(200).json({});
+        })
+        .catch(err => {
+            debug.error(err);
+            return next(err);
+        });
+});
+
+/**
+ * @apiName Store activities list of specific store
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/activityList/:storeID Get activities list of specific store
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+       HTTP/1.1 200 
+       {
+            ["沒活動",...]
+        }
+ * 
+ */
+router.get('/activityList/:storeID', validateDefault, function (req, res, next) {
+    let storeID = req.params.storeID;
+    Store
+        .findOne( {'id': storeID} )
+        .exec()
+        .then(activities => res.status(200).json(activities))
+        .catch(err => {
+            debug.error(err);
+            next(err);
         });
 });
 

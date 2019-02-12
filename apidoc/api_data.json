@@ -10,6 +10,19 @@
         "name": "clerk_manager"
       }
     ],
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": true,
+            "field": "activity",
+            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
+          }
+        ]
+      }
+    },
     "success": {
       "examples": [
         {
@@ -689,6 +702,19 @@
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": true,
+            "field": "activity",
+            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
+          }
+        ]
+      }
+    },
     "success": {
       "examples": [
         {
@@ -1637,6 +1663,13 @@
         "Parameter": [
           {
             "group": "Parameter",
+            "type": "String",
+            "optional": true,
+            "field": "activity",
+            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
+          },
+          {
+            "group": "Parameter",
             "type": "Boolean",
             "optional": true,
             "field": "isOffLine",
@@ -1794,6 +1827,13 @@
             "optional": true,
             "field": "isOffLine",
             "description": "<p>only pass when is off line, and give it true</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": true,
+            "field": "activity",
+            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
           }
         ]
       }
@@ -4812,6 +4852,124 @@
     }
   },
   {
+    "name": "Store_activities_list",
+    "group": "Stores",
+    "type": "get",
+    "url": "/stores/activityList",
+    "title": "Get activities list",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     [\n         { \n             ID: '0',\n             name: '沒活動',\n             startAt: '2018-03-02T16:00:00.000Z',\n             endAt: '2018-03-02T16:00:00.000Z' \n         },... \n     ]\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/stores.js",
+    "groupTitle": "Stores",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Store_activities_list_of_specific_store",
+    "group": "Stores",
+    "type": "get",
+    "url": "/stores/activityList/:storeID",
+    "title": "Get activities list of specific store",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     [\"沒活動\",...]\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/stores.js",
+    "groupTitle": "Stores",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "Store_box_to_sign",
     "group": "Stores",
     "type": "get",
@@ -6366,6 +6524,65 @@
             "optional": false,
             "field": "B008",
             "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Store_specific_activity",
+    "group": "Stores",
+    "type": "get",
+    "url": "/stores/activity/:activityID",
+    "title": "Get specific activity",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{ \n    ID: '0',\n    name: '沒活動',\n    startAt: '2018-03-02T16:00:00.000Z',\n    endAt: '2018-03-02T16:00:00.000Z' \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/stores.js",
+    "groupTitle": "Stores",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
           }
         ]
       }

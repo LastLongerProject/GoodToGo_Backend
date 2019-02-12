@@ -26,7 +26,7 @@ describe('api-stores', function() {
         setTimeout(done, 11000);
     });
 
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -533,10 +533,29 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/activity/0', function() {
+    describe.only('GET /stores/activity/0', function() {
         it('status code should be 200', function(done) {
             request(app)
                 .get('/stores/activity/0')
+                .set('Content-Type', 'application/json')
+                .set('reqID', makeHexString())
+                .set('reqTime', Date.now())
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
+                    done();
+                });
+        });
+    });
+
+    describe('GET /stores/activityList', function() {
+        it('status code should be 200', function(done) {
+            request(app)
+                .get('/stores/activityList')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
