@@ -28,7 +28,7 @@ describe('api-users', function() {
     before(function(done) {
         setTimeout(done, 11000);
     });
-    describe('POST /login', function() {
+    describe.only('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -148,7 +148,7 @@ describe('api-users', function() {
         });
     });
 
-    describe('POST /signup/storeManager', function() {
+    describe.only('POST /signup/storeManager', function() {
         it('status code should be 200', function(done) {
             let payload = {
                 jti: makeHexString(),
@@ -162,9 +162,9 @@ describe('api-users', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0921222938',
+                    phone: '0981863876',
                     password: '',
-                    storeID: 2
+                    storeID: 18
                 })
                 .expect(200)
                 .end(function(err, res) {
@@ -208,6 +208,35 @@ describe('api-users', function() {
                             if (err) return done(err);
                         }
                     );
+                    done();
+                });
+        });
+    });
+
+    describe('POST /signup/activity', function() {
+        it('status code should be 200', function(done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .post('/users/signup/activity')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .send({
+                    phone: '0999999999',
+                    password: '',
+                })
+                .expect(200)
+                .end(function(err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
                     done();
                 });
         });

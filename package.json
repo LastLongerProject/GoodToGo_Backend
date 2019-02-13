@@ -12,6 +12,7 @@
         "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:* && PORT=3030' NODE_ENV=\"testing\" nodemon --trace-warnings app.js",
         "start": "nodemon app.js --ignore tmp/",
         "unitTest": "mocha --grep api",
+        "migrate": "mocha --grep migrate",
         "apidoc": "apidoc -i routes/ -o ./apidoc"
     },
     "nodemonConfig": {

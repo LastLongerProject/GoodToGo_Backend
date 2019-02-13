@@ -33,6 +33,10 @@ var userSchema = mongoose.Schema({
     activity: {
         type: String,
         default: "沒活動"
+    },
+    exception: {
+        type: Boolean,
+        default: false
     }
 });
 

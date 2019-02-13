@@ -198,7 +198,6 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} [active] Add the param if the category of the store is 1, and set the value to false 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -214,7 +213,7 @@ router.post(
     validateRequest,
     function(req, res, next) {
         // for ADMIN and CLERK
-        req.body.active = req.body.active ? req.body.active : true;
+        req.body.active = true;
         var dbKey = req._key;
         if (dbKey.roleType === UserId.clerk) {
             req.body.role = {
@@ -222,6 +221,52 @@ router.post(
             };
         }
         req._passCode = true;
+        userQuery.signup(req, function(err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else {
+                res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-Activity
+ * @apiGroup Users
+ * @apiPermission admin_clerk
+ *
+ * @api {post} /users/signup/activity Sign up for customer from activity
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+router.post(
+    '/signup/activity',
+    regAsStore,
+    regAsAdminManager,
+    validateRequest,
+    function(req, res, next) {
+        // for ADMIN and CLERK
+        req.body.active = true;
+        var dbKey = req._key;
+        if (dbKey.roleType === UserId.clerk) {
+            req.body.role = {
+                typeCode: UserId.customer
+            };
+        }
+        req._passCode = true;
+        req._activity = true;
         userQuery.signup(req, function(err, user, info) {
             if (err) {
                 return next(err);

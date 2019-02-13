@@ -12,6 +12,7 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
+const Exception = require('../models/DB/exceptionDB.js');
 
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
@@ -154,19 +155,16 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
-                        return reject({
-                            code: 'F010',
-                            message: "Container not belone to user's store"
-                        });
-
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                         ID: aContainerId,
                         txt: "Already Return"
                     });
+
                     validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
+                        let exceptionLabel = false;
+
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -178,7 +176,32 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorList,
                                 errorDict
                             };
-                            if (oriState === 0 || oriState === 1) {
+
+                            if (newState === 2 || newState === 3) {
+                                let exception = new Exception({
+                                    containerID: theContainer.ID,
+                                    storeID: theContainer.storeID,
+                                    operator: (action === 'Rent') ? rentToUser : theContainer.conbineTo,
+                                    oriState,
+                                    newState,
+                                    description: errorMsg
+                                });
+                                exceptionLabel = true;
+
+                                exception
+                                    .save({
+                                        containerID: theContainer.ID,
+                                        storeID: theContainer.storeID,
+                                        operator: (action === 'Rent') ? rentToUser : theContainer.conbineTo,
+                                        oriState,
+                                        newState,
+                                        description: errorMsg
+                                    })
+                                    .catch(err => {
+                                        debug.error(err);
+                                        return reject(err);
+                                    });
+                            } else if (oriState === 0 || oriState === 1) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
@@ -193,7 +216,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             } else {
                                 return resolveWithErr(errorMsg);
                             }
-                        } else {
+                        } 
+
+                        if(succeed || (newState === 2 || newState === 3)) {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
                             }, function(err, oriUser) {
@@ -263,7 +288,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         cycleCtr: theContainer.cycleCtr,
                                         box: boxID
                                     },
-                                    activity
+                                    activity,
+                                    exception: exceptionLabel
                                 });
 
                                 containerStateCache[aContainerId] = newState;

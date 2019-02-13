@@ -113,8 +113,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(
  * @apiPermission admin
  * @apiUse JWT
  * 
- * @apiParam {String} [activity] if activity is "no activity", would not give this param in body.
- * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -132,7 +130,6 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
     var dbAdmin = req._user;
     var boxID = req.params.id;
     var storeID = req.params.store;
-    let activity = req.body.activity || "沒活動";
     process.nextTick(() => {
         Box.findOne({
                 boxID: boxID,
@@ -159,7 +156,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
                     }, {
                         boxID,
                         storeID,
-                        activity
+                        activity: "沒活動"
                     },
                     (err, tradeSuccess, reply) => {
                         if (err) return next(err);
@@ -264,7 +261,6 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
  * @apiPermission clerk_manager
  * @apiUse JWT
  * 
- * @apiParam {String} [activity] if activity is "no activity", would not give this param in body.
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -283,7 +279,6 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
     var dbUser = req._user;
     var reqByAdmin = req._key.roleType === 'admin';
     var boxID = req.params.id;
-    let activity = req.body.activity || "沒活動";
 
     Box.findOne({
             boxID: boxID,
@@ -338,8 +333,6 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
  * @apiUse JWT_orderTime
  * 
  * @apiHeader {String} userapikey User api key
- * @apiParam {String} [activity] if activity is "no activity", would not give this param in body.
- * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -365,7 +358,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
 ) {
     var dbStore = req._user;
     var key = req.headers.userapikey;
-    let activity = req.body.activity || "沒活動";
     if (typeof key === 'undefined' || typeof key === null || key.length === 0)
         return res.status(403).json({
             code: 'F009',
@@ -394,7 +386,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
         }, {
             rentToUser: userPhone,
             orderTime: res._payload.orderTime,
-            activity
+            activity: "沒活動"
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
@@ -440,8 +432,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function(
  * @apiPermission admin
  * 
  * @apiUse JWT_orderTime
- * @apiParam {Boolean} [isOffLine] only pass when is off line, and give it true
- * @apiParam {String} [activity] if activity is "no activity", would not give this param in body.
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -475,7 +465,6 @@ router.post(
                 message: 'Missing Order Time'
             });
         var container = req.params.id;
-        let activity = req.body.activity || "沒活動";;
         if (container === 'list') container = req.body.containers;
         changeContainersState(
             container,
@@ -485,7 +474,7 @@ router.post(
             }, {
                 storeID: req.body.storeId,
                 orderTime: res._payload.orderTime,
-                activity
+                activity: "沒活動"
             },
             (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);

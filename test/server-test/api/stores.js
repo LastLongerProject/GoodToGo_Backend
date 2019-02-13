@@ -26,7 +26,7 @@ describe('api-stores', function() {
         setTimeout(done, 11000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('respond in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -533,7 +533,7 @@ describe('api-stores', function() {
         });
     });
 
-    describe.only('GET /stores/activity/0', function() {
+    describe('GET /stores/activity/0', function() {
         it('status code should be 200', function(done) {
             request(app)
                 .get('/stores/activity/0')

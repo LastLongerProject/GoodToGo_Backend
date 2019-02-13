@@ -9,6 +9,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
+const ActivityUser = require('../models/DB/activityUserDB.js');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const UserId = require('../routes/enum/userEnum').userId;
@@ -22,6 +23,7 @@ module.exports = {
         var phone = req.body.phone.replace(/tel:|-/g, "");
         var password = req.body.password;
         var code = req.body.verification_code;
+
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
                 !(typeof req._user !== 'undefined' && role.typeCode === UserId.clerk))) {
@@ -120,7 +122,11 @@ module.exports = {
                             type: 'signupMessage',
                             message: "Verification Code isn't correct"
                         });
-                        var newUser = new User();
+
+                        var newUser;
+                        if (req._activity) newUser = new ActivityUser();
+                        else newUser = new User();
+
                         newUser.user.phone = phone;
                         newUser.user.password = newUser.generateHash(password);
                         newUser.active = req.body.active;
