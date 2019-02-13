@@ -97,6 +97,7 @@ module.exports = {
                 });
             }
             var containerID = data.containerID;
+            let requestID = data.requestID;
             var action = data.action;
             debug.log("[" + socket._user + "] ON \"challenge\": " + containerID + ", " + action);
             if (typeof containerID !== 'number' || typeof action !== "string") {
@@ -142,6 +143,7 @@ module.exports = {
                     validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
                         return socket.emitWithLog('reply', {
                             id: containerID,
+                            requestID: requestID,
                             succeed: succeed,
                             message: "Can" + (succeed ? "" : " NOT") + " be " + action,
                             originalState: theContainer.statusCode,
