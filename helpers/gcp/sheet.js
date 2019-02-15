@@ -287,7 +287,10 @@ module.exports = {
                                                     if (aPlace.activity) {
                                                         Promise.all(aPlace.activity.map(activity => User
                                                             .updateMany({
-                                                                'roles.clerk.storeID': aPlace.ID
+                                                                'roles.clerk.storeID': aPlace.ID,
+                                                                'roles.typeList': {
+                                                                    $nin: [`clerk_${activity}`]
+                                                                }
                                                             },{
                                                                 $push: {
                                                                     'roles.typeList': `clerk_${activity}`
