@@ -15,7 +15,6 @@ module.exports = {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
                 if (typeof target.clerk.roles.clerk.storeID !== "undefined") {
-                    console.log(target.clerk.roles.clerk.storeID)
                     pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
                 }
                 break;
