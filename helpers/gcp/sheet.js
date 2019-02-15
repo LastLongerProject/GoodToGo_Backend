@@ -9,6 +9,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const PlaceID = require('../../models/DB/placeIdDB');
 const Store = require('../../models/DB/storeDB');
 const Activity = require('../../models/DB/activityDB');
+const User = require('../../models/DB/userDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
 const Container = require('../../models/DB/containerDB');
 
@@ -283,7 +284,27 @@ module.exports = {
                                                     new: true
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
-                                                    resolve(res);
+                                                    
+                                                    aPlace.activity.forEach(activity => {
+                                                        User
+                                                            .updateMany({
+                                                                'roles.clerk.storeID': aPlace.ID
+                                                            },{
+                                                                $push: {
+                                                                    'roles.typeList': `clerk_${activity}`
+                                                                }
+                                                            },{
+                                                                upsert: true,
+                                                                new: true,
+                                                                setDefaultsOnInsert: true
+                                                            })
+                                                            .exec()
+                                                            .then(_ => resolve(res))
+                                                            .catch(err => {
+                                                                debug.error(err);
+                                                                reject(err);
+                                                            });
+                                                    });   
                                                 });
                                             } catch (error) {
                                                 debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
