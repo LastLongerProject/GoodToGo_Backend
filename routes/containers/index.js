@@ -150,7 +150,6 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                         type: 'DeliveryMessage',
                         message: 'Box Already Delivering',
                     });
-                let x = 0;
                 changeContainersState(
                     aBox.containerList,
                     dbAdmin, {
@@ -171,8 +170,6 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             if (err) return next(err);
                             res.json(reply);
                             //test
-                            x++;
-                            console.log(x);
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {

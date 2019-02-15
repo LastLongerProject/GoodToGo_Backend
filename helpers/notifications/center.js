@@ -15,6 +15,7 @@ module.exports = {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
                 if (typeof target.clerk.roles.clerk.storeID !== "undefined") {
+                    console.log(target.clerk.roles.clerk.storeID)
                     User.find({
                         'roles.clerk.storeID': Number(target.clerk.roles.clerk.storeID)
                     }, (err, userList) => {
