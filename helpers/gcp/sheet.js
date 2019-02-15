@@ -284,9 +284,8 @@ module.exports = {
                                                     new: true
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
-                                                    
+                                                    console.log(res)
                                                     if (aPlace.activity) {
-                                                        console.log(aPlace.activity)
                                                         aPlace.activity.forEach(activity => {
                                                             User
                                                                 .updateMany({
