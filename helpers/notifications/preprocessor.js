@@ -16,8 +16,7 @@ module.exports = {
                 case SnsEvent.CONTAINER_DELIVERY:
                     return {
                         content: {
-                            title: "新容器送到囉！",
-                            body: `點我簽收 #${data.boxID}`,
+                            "content-available" : 1,
                             options: {
                                 action: "BOX_DELIVERY"
                             }
@@ -69,7 +68,6 @@ module.exports = {
                         },
                         errMsgPrefix: `[歸還]通知推播失敗：[${user}]`
                     };
-
             }
         } catch (error) {
             debug.error(error);
@@ -108,3 +106,4 @@ module.exports = {
         }
     }
 };
+

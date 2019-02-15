@@ -1,22 +1,28 @@
-const request = require('supertest');
-const app = require('../../../app');
 const Trade = require('../../../models/DB/tradeDB');
+const config = require('../../../config/config.js');
+
+const mongoose = require('mongoose');
 
 describe('migration', function() {
     before(function(done) {
-        setTimeout(done, 8000);
+        mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
+            if (err) {
+                console.log(err);
+                return done();
+            }
+            console.log('mongoDB connect succeed');
+            return done();
+        });
     });
 
     describe('migrate-trade', function() {
         it('should succeed', function(done) {
-            request(app)
-            .send('')
-            .end(function(err, res) {
-                if (err) {
-                    console.log(res.body);
-                    return done(err);
-                }
-                Trade.update().exec().then(_ => done()).catch(err => console.log(err));
+            Trade.updateMany({}, {$set: {'exception': false}}).exec().then(_ =>{
+                console.log(_);
+                done();
+            }).catch(err => {
+                console.log(err);
+                done();
             });
         });
     });

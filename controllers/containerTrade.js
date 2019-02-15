@@ -161,10 +161,14 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         ID: aContainerId,
                         txt: "Already Return"
                     });
-
                     validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
                         let exceptionLabel = false;
+                        const condition = {
+                            rentOrReturnBeforeSign: oriState === 2 || 3 && newState === 1,
+                            rentOrReturn: newState === 2 || newState === 3,
 
+                        }
+                        
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -177,7 +181,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorDict
                             };
 
-                            if (newState === 2 || newState === 3) {
+                            if (rentOrReturn) {
+                                // not to reject rent or return action in any situation
+
                                 let exception = new Exception({
                                     containerID: theContainer.ID,
                                     storeID: theContainer.storeID,
@@ -189,18 +195,28 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 exceptionLabel = true;
 
                                 exception
-                                    .save({
-                                        containerID: theContainer.ID,
-                                        storeID: theContainer.storeID,
-                                        operator: (action === 'Rent') ? rentToUser : theContainer.conbineTo,
-                                        oriState,
-                                        newState,
-                                        description: errorMsg
-                                    })
+                                    .save()
                                     .catch(err => {
                                         debug.error(err);
                                         return reject(err);
                                     });
+                            } 
+                            // need to validate
+                            else if (condition.rentOrReturnBeforeSign) {
+                                Box.findOne({
+                                    'containerList': {
+                                        '$all': [aContainerId]
+                                    }
+                                }, function(err, aBox) {
+                                    if (err) return reject(err);
+                                    if (!aBox) return resolveWithErr(errorMsg);
+                                    return resolve({
+                                        ID: aContainerId,
+                                        oriUser: "",
+                                        dataSaver: (doneSave, getErr) => {},
+                                        tradeDetail: null
+                                    });
+                                });
                             } else if (oriState === 0 || oriState === 1) {
                                 Box.findOne({
                                     'containerList': {
