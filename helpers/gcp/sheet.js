@@ -284,32 +284,27 @@ module.exports = {
                                                     new: true
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
-                                                    console.log(res)
                                                     if (aPlace.activity) {
-                                                        aPlace.activity.forEach(activity => {
-                                                            User
-                                                                .updateMany({
-                                                                    'roles.clerk.storeID': aPlace.ID
-                                                                },{
-                                                                    $push: {
-                                                                        'roles.typeList': `clerk_${activity}`
-                                                                    }
-                                                                },{
-                                                                    upsert: true,
-                                                                    new: true,
-                                                                    setDefaultsOnInsert: true
-                                                                })
-                                                                .exec()
-                                                                .then(_ => {
-                                                                    console.log(_);
-                                                                    return resolve(res);
-                                                                })
-                                                                .catch(err => {
-                                                                    debug.error(err);
-                                                                    return reject(err);
-                                                                });
+                                                        Promise.all(aPlace.activity.map(activity => User
+                                                            .updateMany({
+                                                                'roles.clerk.storeID': aPlace.ID
+                                                            },{
+                                                                $push: {
+                                                                    'roles.typeList': `clerk_${activity}`
+                                                                }
+                                                            },{
+                                                                upsert: true,
+                                                                new: true,
+                                                                setDefaultsOnInsert: true
+                                                            })
+                                                            .exec()
+                                                        )).then(_ => resolve(_))
+                                                        .catch(err => {
+                                                            debug.error(err);
+                                                            reject(err);
                                                         });
-                                                    }   
+                                                    }
+                                                    resolve(res);   
                                                 });
                                             } catch (error) {
                                                 debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
