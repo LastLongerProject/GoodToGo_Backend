@@ -12,11 +12,9 @@ module.exports = {
     emit: function(event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-            console.log(event + "\n" + target + "\n" + data);
-
                 if (typeof target.storeID !== "undefined") {
                     User.find({
-                        'roles.clerk.storeID': target.storeID
+                        'roles.clerk.storeID': Number(target.storeID)
                     }, (err, userList) => {
                         if (err) return debug.error(err);
                         userList.forEach(aClerk => pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data));
