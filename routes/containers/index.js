@@ -5,7 +5,7 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
-const User = require('../../models/DB/userDB');
+const User = require('../../models/DB/userDB.js');
 
 const Container = require('../../models/DB/containerDB');
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
@@ -171,10 +171,10 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             res.json(reply);
                             //test
                             User.find({
-                                'roles.clerk.storeID': storeID
+                                'roles.clerk.storeID': 17
                             }, function (err, userList) {
                                 if (err) return debug(err);
-                                console.log(storeID + " " + userList)
+                                console.log(userList)
                                 userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
                                     clerk: aClerk
                                 }, {
