@@ -5,6 +5,7 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
+const User = require('../../models/DB/userDB');
 
 const Container = require('../../models/DB/containerDB');
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
