@@ -20,7 +20,7 @@ module.exports = {
                     }, (err, userList) => {
                         if (err) return debug.error(err);
                         userList.forEach(aClerk => {
-                            console.log(aClerk.user.phone)
+                            // console.log(aClerk.user.phone)
                             pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data);
                         }) 
                     });
