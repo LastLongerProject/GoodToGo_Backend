@@ -171,7 +171,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             res.json(reply);
                             //test
                             User.find({
-                                'roles.clerk.storeID': 17
+                                'roles.clerk.storeID': storeID
                             }, function (err, userList) {
                                 if (err) return debug(err);
                                 console.log(userList)
