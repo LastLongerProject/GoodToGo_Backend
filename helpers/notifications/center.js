@@ -12,15 +12,17 @@ module.exports = {
     emit: function(event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-            console.log(target.clerk.roles)
+            console.log(target.clerk.roles.clerk.storeID)
 
-                if (typeof target.storeID !== "undefined") {
+                if (typeof target.clerk.roles.clerk.storeID !== "undefined") {
                     User.find({
-                        'roles.clerk.storeID': Number(target.roles.clerk.storeID)
+                        'roles.clerk.storeID': Number(target.clerk.roles.clerk.storeID)
                     }, (err, userList) => {
                         if (err) return debug.error(err);
-                        console.log(userList)
-                        userList.forEach(aClerk => pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data));
+                        userList.forEach(aClerk => {
+                            console.log(aClerk)
+                            pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data);
+                        }) 
                     });
                 }
                 break;
