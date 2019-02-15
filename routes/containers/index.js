@@ -168,18 +168,16 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
                         aBox.save(function(err) {
                             if (err) return next(err);
                             res.json(reply);
-                            /*
-                                  User.find({
-                                      'roles.clerk.storeID': storeID
-                                  }, function (err, userList) {
-                                      if (err) return debug(err);
-                                      userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                          clerk: aClerk
-                                      }, {
-                                          boxID
-                                      }));
-                                  });
-                                  */
+                            User.find({
+                                'roles.clerk.storeID': Number(storeID)
+                            }, function (err, userList) {
+                                if (err) return debug(err);
+                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
+                                    clerk: aClerk
+                                }, {
+                                    boxID
+                                }));
+                            });
                         });
                     }
                 );

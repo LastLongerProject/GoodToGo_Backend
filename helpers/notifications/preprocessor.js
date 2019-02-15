@@ -16,13 +16,14 @@ module.exports = {
                 case SnsEvent.CONTAINER_DELIVERY:
                     return {
                         content: {
-                            "content-available" : 1,
+                            title: "新容器送到囉！",
+                            body: `點我簽收 #${data.boxID}`,
                             options: {
                                 action: "BOX_DELIVERY"
                             }
                         },
                         errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
-                    };
+                    }
                 case SnsEvent.CONTAINER_RENT:
                     containers = {};
                     amount = 0;
