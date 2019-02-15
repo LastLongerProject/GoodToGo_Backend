@@ -286,6 +286,7 @@ module.exports = {
                                                     if (err) return reject(err);
                                                     
                                                     if (aPlace.activity) {
+                                                        console.log(aPlace.activity)
                                                         aPlace.activity.forEach(activity => {
                                                             User
                                                                 .updateMany({
@@ -300,10 +301,13 @@ module.exports = {
                                                                     setDefaultsOnInsert: true
                                                                 })
                                                                 .exec()
-                                                                .then(_ => resolve(res))
+                                                                .then(_ => {
+                                                                    console.log(_);
+                                                                    return resolve(res);
+                                                                })
                                                                 .catch(err => {
                                                                     debug.error(err);
-                                                                    reject(err);
+                                                                    return reject(err);
                                                                 });
                                                         });
                                                     }   
