@@ -13,6 +13,7 @@ module.exports = {
         try {
             switch (event) {
                 case SnsEvent.CONTAINER_DELIVERY:
+                    console.log(event + "\n" + user + "\n" + data);
                     return {
                         content: {
                             title: "新容器送到囉！",
