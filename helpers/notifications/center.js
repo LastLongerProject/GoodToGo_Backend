@@ -16,15 +16,7 @@ module.exports = {
             case NotificationEvent.CONTAINER_DELIVERY:
                 if (typeof target.clerk.roles.clerk.storeID !== "undefined") {
                     console.log(target.clerk.roles.clerk.storeID)
-                    User.find({
-                        'roles.clerk.storeID': Number(target.clerk.roles.clerk.storeID)
-                    }, (err, userList) => {
-                        if (err) return debug.error(err);
-                        userList.forEach(aClerk => {
-                            // console.log(aClerk.user.phone)
-                            pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data);
-                        }) 
-                    });
+                    pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
                 }
                 break;
             case NotificationEvent.CONTAINER_RENT:
