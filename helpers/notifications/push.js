@@ -10,10 +10,9 @@ const config = require("../../config/config");
 module.exports = {
     sns: function(event, appType, user, data) {
         let sender = NotificationSender.sns(NotificationPreprocess.sns(event, user, data));
-        console.log(user.user.phone);
         for (let key in user.pushNotificationArn) {
             if (key.indexOf(appType) !== -1) {
-                // sender(user.pushNotificationArn[key]);
+                sender(user.pushNotificationArn[key]);
             }
         }
     },
