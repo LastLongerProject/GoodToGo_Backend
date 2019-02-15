@@ -13,10 +13,12 @@ module.exports = {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
                 if (typeof target.storeID !== "undefined") {
+                    console.log(target.storeID)
                     User.find({
                         'roles.clerk.storeID': Number(target.storeID)
                     }, (err, userList) => {
                         if (err) return debug.error(err);
+                        console.log(userList)
                         userList.forEach(aClerk => pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, aClerk, data));
                     });
                 }
