@@ -13,7 +13,7 @@ module.exports = {
         console.log(user.user.phone);
         for (let key in user.pushNotificationArn) {
             if (key.indexOf(appType) !== -1) {
-                sender(user.pushNotificationArn[key]);
+                // sender(user.pushNotificationArn[key]);
             }
         }
     },
