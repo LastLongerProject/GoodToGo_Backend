@@ -12,7 +12,7 @@ module.exports = {
     emit: function(event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-            console.log(target.roles)
+            console.log(target[0].roles)
 
                 if (typeof target.storeID !== "undefined") {
                     User.find({
