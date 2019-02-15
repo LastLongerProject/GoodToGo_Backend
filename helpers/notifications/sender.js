@@ -11,6 +11,7 @@ module.exports = {
             return function(arn) {
                 SNS.sns_publish(arn, formatted.content.title, formatted.content.body, formatted.content.options, (err, stack) => {
                     if (err) debug.error(`${formatted.errMsgPrefix} Err：${JSON.stringify(err)} Stack：${JSON.stringify(stack)}`);
+                    console.log("finish")
                 });
             };
         } else {
