@@ -174,6 +174,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                                 'roles.clerk.storeID': storeID
                             }, function (err, userList) {
                                 if (err) return debug(err);
+                                console.log("hi")
                                 userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
                                     clerk: aClerk
                                 }, {
