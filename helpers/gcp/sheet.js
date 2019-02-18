@@ -6,10 +6,13 @@ const sheets = google.sheets('v4');
 const debug = require('../debugger')('google_sheet');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+
 const PlaceID = require('../../models/DB/placeIdDB');
 const Store = require('../../models/DB/storeDB');
 const Activity = require('../../models/DB/activityDB');
 const User = require('../../models/DB/userDB');
+const UserKeys = require('../../models/DB/userKeysDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
 const Container = require('../../models/DB/containerDB');
 
@@ -34,12 +37,12 @@ for (let i = 0; i < 7; i++) {
 }
 
 module.exports = {
-    updateSummary: function(dataSets, sheetNames, cb) {
+    updateSummary: function (dataSets, sheetNames, cb) {
         googleAuth(auth => {
             sheets.spreadsheets.get({
                 auth,
                 spreadsheetId: configs.summary_sheet_ID
-            }, function(err, spreadsheetsDetail) {
+            }, function (err, spreadsheetsDetail) {
                 if (err) return cb(err);
                 let existsSheets = spreadsheetsDetail.data.sheets.map(aSheet => aSheet.properties.title);
                 let sheetsToUpdate = sheetNames.filter(aSheetNames => existsSheets.indexOf(aSheetNames) === -1);
@@ -80,13 +83,13 @@ module.exports = {
             });
         });
     },
-    getContainer: function(dbAdmin, cb) {
+    getContainer: function (dbAdmin, cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.batchGet({
                 auth: auth,
                 spreadsheetId: configs.container_sheet_ID,
                 ranges: ['container!A2:F', 'container_type!A2:C'],
-            }, function(err, response) {
+            }, function (err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getContainer)] Error: ' + err);
                     return;
@@ -154,13 +157,13 @@ module.exports = {
             });
         });
     },
-    getStore: function(cb) {
+    getStore: function (cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
                 range: 'active!A2:L',
-            }, function(err, response) {
+            }, function (err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                     return;
@@ -210,20 +213,20 @@ module.exports = {
                                         .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
                                             '&language=zh-TW&region=tw&key=' + placeApiKey +
                                             '&fields=formatted_address,opening_hours,geometry,types')
-                                        .on('response', function(response) {
+                                        .on('response', function (response) {
                                             if (response.statusCode !== 200) {
                                                 debug.error('[Place API ERR (1)] StatusCode : ' + response.statusCode);
                                                 return reject(localCtr);
                                             }
                                         })
-                                        .on('error', function(err) {
+                                        .on('error', function (err) {
                                             debug.error('[Place API ERR (2)] Message : ' + err);
                                             return reject(localCtr);
                                         })
-                                        .on('data', function(data) {
+                                        .on('data', function (data) {
                                             dataArray.push(data);
                                         })
-                                        .on('end', function() {
+                                        .on('end', function () {
                                             var dataBuffer = Buffer.concat(dataArray);
                                             var dataObject = JSON.parse(dataBuffer.toString());
                                             try {
@@ -286,28 +289,28 @@ module.exports = {
                                                     if (err) return reject(err);
                                                     if (aPlace.activity) {
                                                         Promise.all(aPlace.activity.map(activity => User
-                                                            .updateMany({
-                                                                'roles.clerk.storeID': aPlace.ID,
-                                                                'roles.typeList': {
-                                                                    $nin: [`clerk_${activity}`]
-                                                                }
-                                                            },{
-                                                                $push: {
-                                                                    'roles.typeList': `clerk_${activity}`
-                                                                }
-                                                            },{
-                                                                upsert: true,
-                                                                new: true,
-                                                                setDefaultsOnInsert: true
-                                                            })
-                                                            .exec()
-                                                        )).then(_ => resolve(_))
-                                                        .catch(err => {
-                                                            debug.error(err);
-                                                            reject(err);
-                                                        });
+                                                                .updateMany({
+                                                                    'roles.clerk.storeID': aPlace.ID,
+                                                                    'roles.typeList': {
+                                                                        $nin: [`clerk_${activity}`]
+                                                                    }
+                                                                }, {
+                                                                    $push: {
+                                                                        'roles.typeList': `clerk_${activity}`
+                                                                    }
+                                                                }, {
+                                                                    upsert: true,
+                                                                    new: true,
+                                                                    setDefaultsOnInsert: true
+                                                                })
+                                                                .exec()
+                                                            )).then(_ => resolve(_))
+                                                            .catch(err => {
+                                                                debug.error(err);
+                                                                reject(err);
+                                                            });
                                                     }
-                                                    resolve(res);   
+                                                    resolve(res);
                                                 });
                                             } catch (error) {
                                                 debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
@@ -332,13 +335,13 @@ module.exports = {
             });
         });
     },
-    getActivity: function(cb) {
+    getActivity: function (cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.activity_sheet_ID,
-                range: 'active!A2:C',
-            }, function(err, response) {
+                range: 'active!A2:D',
+            }, function (err, response) {
                 if (err) {
                     debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
                     return;
@@ -347,15 +350,15 @@ module.exports = {
                 var funcList = [];
                 var checkpoint = Date.now();
                 for (var i = 0; i < rows.length; i++) {
+                    if (rows[1] === "" || rows[2] === "" || rows[3 === ""]) break;
                     var row = rows[i];
-                    if (row[1] === "" || row[2] === "" || row[3 === ""]) break;
                     funcList.push(new Promise((resolve, reject) => {
                         Activity.findOneAndUpdate({
                             'ID': row[0]
                         }, {
                             'name': row[1],
                             'startAt': row[2],
-                            'endAt': row[2]
+                            'endAt': row[3]
                         }, {
                             upsert: true,
                             new: true
@@ -364,10 +367,11 @@ module.exports = {
                             resolve(afterUpdate);
                         });
                     }));
+
                 }
                 Promise
                     .all(funcList)
-                    .then((dataList) => {
+                    .then((activityList) => {
                         Activity.updateMany({
                             'checkedAt': {
                                 '$lt': checkpoint
@@ -376,9 +380,19 @@ module.exports = {
                             'active': false
                         }, (err) => {
                             if (err) return debug.error(err);
-                            console.log(dataList);
-                            // User.find({'roles.typeList': `clerk_${}`})
-                            cb();
+
+                            activityList = activityList.filter(activity => {
+                                return dateCheckpoint(0) > activity.endAt;
+                            });
+
+                            let deleteExpiredActivityIdAll = Promise.all(activityList.map(activity => deleteExpiredActivityId(activity.name)));
+                            let deleteAtivityKeyAll = Promise.all(activityList.map(activity => deleteAtivityKey(activity.name)));
+
+                            Promise
+                                .all([deleteExpiredActivityIdAll, deleteAtivityKeyAll])
+                                .then(_ => {
+                                    cb();
+                                });
                         });
                     })
                     .catch((err) => {
@@ -388,3 +402,25 @@ module.exports = {
         });
     }
 };
+
+function deleteExpiredActivityId(activityName) {
+    return User
+        .updateMany({}, {
+            $pull: {
+                'roles.typeList': {
+                    $in: [`clerk_${activityName}`]
+                }
+            }
+        }, {
+            new: true
+        })
+        .exec();
+}
+
+function deleteAtivityKey(activityName) {
+    return UserKeys
+        .remove({
+            roleType: `clerk_${activityName}`
+        })
+        .exec();
+}

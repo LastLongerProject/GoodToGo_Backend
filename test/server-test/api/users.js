@@ -7,7 +7,6 @@ const UserKey = require('../../../models/DB/userKeysDB');
 const redis = require('../../../models/redis');
 const makeHexString = require('../tool.js').makeHexString;
 
-var typeList = [];
 var roles = {
     customer: {
         secretkey: '',
@@ -29,7 +28,7 @@ describe('api-users', function () {
     before(function (done) {
         setTimeout(done, 11000);
     });
-    describe.only('POST /login', function () {
+    describe('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -50,7 +49,7 @@ describe('api-users', function () {
                         console.log(res.body);
                         return done(err);
                     }
-                    
+
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     typeList = decode.roles.typeList;
                     delete decode.roles.typeList;
@@ -68,7 +67,7 @@ describe('api-users', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0977777777',
                     password: '',
                 })
                 .expect(205)
@@ -82,7 +81,7 @@ describe('api-users', function () {
         });
 
         it('should return a authorization header', function (done) {
-            redis.get('user_verifying:' + '0988888888', (err, reply) => {
+            redis.get('user_verifying:' + '0977777777', (err, reply) => {
                 if (err) return done(err);
                 request(app)
                     .post('/users/signup')
@@ -90,7 +89,7 @@ describe('api-users', function () {
                     .set('reqID', makeHexString())
                     .set('reqTime', Date.now())
                     .send({
-                        phone: '0988888888',
+                        phone: '0977777777',
                         password: '',
                         verification_code: reply,
                     })
@@ -101,7 +100,7 @@ describe('api-users', function () {
                             return done(err);
                         }
                         userDB.deleteOne({
-                                'user.phone': '0988888888',
+                                'user.phone': '0977777777',
                             },
                             (err, res) => {
                                 if (err) return done(err);
@@ -163,9 +162,9 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0981863876',
+                    phone: '0905519292',
                     password: '',
-                    storeID: 18
+                    storeID: 17
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -186,11 +185,11 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.encode(payload, roles['clerk_沒活動'].secretKey);
             request(app)
                 .post('/users/signup/root')
                 .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
+                .set('ApiKey', roles['clerk_沒活動'].apiKey)
                 .send({
                     phone: '0977777777',
                     password: '',

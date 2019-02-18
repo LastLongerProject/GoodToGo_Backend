@@ -21,14 +21,14 @@ var roles = {
     },
 };
 
-describe('api-manage', function() {
+describe('api-manage', function () {
 
-    before(function(done) {
+    before(function (done) {
         setTimeout(done, 8000);
     });
 
-    describe('POST /login', function() {
-        it('should response in json with roles', function(done) {
+    describe('POST /login', function () {
+        it('should response in json with roles', function (done) {
             request(app)
                 .post('/users/login')
                 .set('Content-Type', 'application/json')
@@ -39,11 +39,11 @@ describe('api-manage', function() {
                     password: '',
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     if (!('customer' || 'admin' || 'clerk' in decode.roles)) throw new Error("Missing roles");
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -57,9 +57,9 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/index', function() {
+    describe('GET /manage/index', function () {
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -72,13 +72,13 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('summary' in res.body)) throw new Error("Missing summary");
                     if (!('activityHistorySummary' in res.body)) throw new Error("Missing activityHistorySummary");
                     if (!('shopRecentHistorySummary' in res.body)) throw new Error("Missing shopRecentHistorySummary");
                     if (!('shopHistorySummary' in res.body)) throw new Error("Missing shopHistorySummary");
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -89,9 +89,9 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/shop', function() {
+    describe('GET /manage/shop', function () {
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -104,7 +104,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('id' in res.body.list[0])) throw new Error("Missing storeID in list object");
                     if (!('storeName' in res.body.list[0])) throw new Error("Missing storeName in list object");
                     if (!('toUsedAmount' in res.body.list[0])) throw new Error("Missing toUsedAmount in list object");
@@ -112,7 +112,7 @@ describe('api-manage', function() {
                     if (!('weekAmount' in res.body.list[0])) throw new Error("Missing weekAmount in list object");
                     if (!('weekAverage' in res.body.list[0])) throw new Error("Missing weekAverage in list object");
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -123,9 +123,9 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/shopDetail', function() {
+    describe('GET /manage/shopDetail', function () {
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -139,7 +139,7 @@ describe('api-manage', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkShopDetailKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -150,9 +150,9 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/user', function() {
+    describe('GET /manage/user', function () {
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -166,7 +166,7 @@ describe('api-manage', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkUserKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -177,10 +177,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/userDetail?id=0900000000', function() {
+    describe('GET /manage/userDetail?id=0900000000', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -194,7 +194,7 @@ describe('api-manage', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkUserDetailKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -205,10 +205,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/container', function() {
+    describe('GET /manage/container', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -222,7 +222,7 @@ describe('api-manage', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkContainerKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -232,10 +232,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/containerDetail', function() {
+    describe('GET /manage/containerDetail', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -249,7 +249,7 @@ describe('api-manage', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkContainerDetailKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -260,10 +260,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/console', function() {
+    describe('GET /manage/console', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -276,7 +276,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -286,10 +286,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('GET /manage/shopSummary', function() {
+    describe('GET /manage/shopSummary', function () {
         this.slow(1000);
 
-        it('status code should be 200 and write summary to google sheet', function(done) {
+        it('status code should be 200 and write summary to google sheet', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -302,7 +302,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -312,10 +312,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('PATCH /manage/refresh/store', function() {
+    describe('PATCH /manage/refresh/store', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -328,7 +328,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -339,10 +339,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('PATCH /manage/refresh/container', function() {
+    describe('PATCH /manage/refresh/container', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -355,7 +355,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(err);
                         return done(err);
@@ -366,10 +366,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('PATCH /manage/refresh/activity', function() {
+    describe('PATCH /manage/refresh/activity', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -382,7 +382,7 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(err);
                         return done(err);
@@ -393,10 +393,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('PATCH /manage/refresh/storeImg/:id', function() {
+    describe('PATCH /manage/refresh/storeImg/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with data', function(done) {
+        it('status code should be 200 and with data', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -409,10 +409,10 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('data' in res.body)) throw new Error('Missing data');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -422,10 +422,10 @@ describe('api-manage', function() {
         });
     });
 
-    describe('PATCH /manage/refresh/containerIcon/:id', function() {
+    describe('PATCH /manage/refresh/containerIcon/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -438,10 +438,10 @@ describe('api-manage', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('data' in res.body)) throw new Error('Missing data');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);

@@ -1701,7 +1701,7 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
  */
 router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    refreshActivity(dbAdmin, function (err) {
+    refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
