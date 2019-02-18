@@ -512,7 +512,7 @@ router.get(
             if (err) return next(err);
             for (let box of boxes) {
                 if (!box.storeID) continue;
-                
+
                 result.forEach(obj => {
                     if (obj.storeID === box.storeID) {
                         obj.boxObjs.push({
@@ -531,7 +531,7 @@ router.get(
                 });
             }
             result = result.filter(obj => {
-                return obj.boxObjs.length > 0; 
+                return obj.boxObjs.length > 0;
             });
             return res.status(200).json(result);
         });
@@ -545,6 +545,14 @@ router.get(
  * @api {get} /deliveryList/box/list/:status Specific status box list
  * @apiPermission admin
  * @apiUse JWT
+ * @apiDescription
+ * **Status**
+ * - Created: "Created",
+ * - Boxing: "Boxing",
+ * - Delivering: "Delivering",
+ * - Signed: "Signed",
+ * - Stocked: "Stocked"
+ * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         [   
@@ -594,11 +602,13 @@ router.get(
                 boxObjs: []
             });
         }
-        Box.find({ 'status': boxStatus }, (err, boxes) => {
+        Box.find({
+            'status': boxStatus
+        }, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
                 if (!box.storeID) continue;
-                
+
                 result.forEach(obj => {
                     if (obj.storeID === box.storeID) {
                         obj.boxObjs.push({
@@ -617,7 +627,7 @@ router.get(
                 });
             }
             result = result.filter(obj => {
-                return obj.boxObjs.length > 0; 
+                return obj.boxObjs.length > 0;
             });
             return res.status(200).json(result);
         });

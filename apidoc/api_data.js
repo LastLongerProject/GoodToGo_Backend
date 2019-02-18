@@ -10,19 +10,6 @@ define({ "api": [
         "name": "clerk_manager"
       }
     ],
-    "parameter": {
-      "fields": {
-        "Parameter": [
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": true,
-            "field": "activity",
-            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
-          }
-        ]
-      }
-    },
     "success": {
       "examples": [
         {
@@ -707,10 +694,10 @@ define({ "api": [
         "Parameter": [
           {
             "group": "Parameter",
-            "type": "String",
-            "optional": true,
+            "type": "string",
+            "optional": false,
             "field": "activity",
-            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
+            "description": "<p>only pass if deliver to specific activity</p>"
           }
         ]
       }
@@ -1658,26 +1645,6 @@ define({ "api": [
         ]
       }
     },
-    "parameter": {
-      "fields": {
-        "Parameter": [
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": true,
-            "field": "activity",
-            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
-          },
-          {
-            "group": "Parameter",
-            "type": "Boolean",
-            "optional": true,
-            "field": "isOffLine",
-            "description": "<p>only pass when is off line, and give it true</p>"
-          }
-        ]
-      }
-    },
     "success": {
       "examples": [
         {
@@ -1818,26 +1785,6 @@ define({ "api": [
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
-    "parameter": {
-      "fields": {
-        "Parameter": [
-          {
-            "group": "Parameter",
-            "type": "Boolean",
-            "optional": true,
-            "field": "isOffLine",
-            "description": "<p>only pass when is off line, and give it true</p>"
-          },
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": true,
-            "field": "activity",
-            "description": "<p>if activity is &quot;no activity&quot;, would not give this param in body.</p>"
-          }
-        ]
-      }
-    },
     "success": {
       "examples": [
         {
@@ -2199,6 +2146,7 @@ define({ "api": [
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
+    "description": "<p><strong>Status</strong></p> <ul> <li>Created: &quot;Created&quot;,</li> <li>Boxing: &quot;Boxing&quot;,</li> <li>Delivering: &quot;Delivering&quot;,</li> <li>Signed: &quot;Signed&quot;,</li> <li>Stocked: &quot;Stocked&quot;</li> </ul>",
     "success": {
       "examples": [
         {
@@ -7984,6 +7932,176 @@ define({ "api": [
     }
   },
   {
+    "name": "SignUp_Activity",
+    "group": "Users",
+    "permission": [
+      {
+        "name": "admin_clerk",
+        "title": "Admin/Clerk access rights needed.",
+        "description": "<p>Please use admin/clerk identity to request this uri.</p>"
+      }
+    ],
+    "type": "post",
+    "url": "/users/signup/activity",
+    "title": "Sign up for customer from activity",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "phone",
+            "description": "<p>phone of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "password",
+            "description": "<p>password of the User.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 Signup Successfully\n{ \n     type: 'signupMessage',\n     message: 'Authentication succeeded' \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D001",
+            "description": "<p>status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D002",
+            "description": "<p>status : 401, type : signupMessage, msg : That phone is already taken - This phone has been register</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D003",
+            "description": "<p>status : 401, type : signupMessage, msg : Role structure invalid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D009",
+            "description": "<p>status : 401, type : signupMessage, msg : Phone is not valid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D010",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code expired</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D011",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code isn't correct</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "SignUp_Clerk",
     "group": "Users",
     "permission": [
@@ -8359,13 +8477,6 @@ define({ "api": [
             "optional": false,
             "field": "password",
             "description": "<p>password of the User.</p>"
-          },
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": true,
-            "field": "active",
-            "description": "<p>Add the param if the category of the store is 1, and set the value to false</p>"
           }
         ]
       }

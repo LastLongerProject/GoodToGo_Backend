@@ -110,7 +110,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
-    const activity = options.activity || "沒活動"; // Deliver Sign Rent Return NEED
+    const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -138,7 +138,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                     });
                 Container.findOne({
                     'ID': aContainerId
-                }, function(err, theContainer) {
+                }, function (err, theContainer) {
                     if (err)
                         return reject(err);
                     if (!theContainer)
@@ -158,17 +158,17 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
-                        ID: aContainerId,
-                        txt: "Already Return"
-                    });
-                    validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
+                            ID: aContainerId,
+                            txt: "Already Return"
+                        });
+                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
                         let exceptionLabel = false;
                         const condition = {
                             rentOrReturnBeforeSign: oriState === 2 || 3 && newState === 1,
                             rentOrReturn: newState === 2 || newState === 3,
 
                         }
-                        
+
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -200,14 +200,14 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         debug.error(err);
                                         return reject(err);
                                     });
-                            } 
+                            }
                             // need to validate
                             else if (condition.rentOrReturnBeforeSign) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
-                                }, function(err, aBox) {
+                                }, function (err, aBox) {
                                     if (err) return reject(err);
                                     if (!aBox) return resolveWithErr(errorMsg);
                                     return resolve({
@@ -222,7 +222,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
-                                }, function(err, aBox) {
+                                }, function (err, aBox) {
                                     if (err) return reject(err);
                                     if (!aBox) return resolveWithErr(errorMsg);
                                     errorList.push(aBox.boxID);
@@ -232,12 +232,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             } else {
                                 return resolveWithErr(errorMsg);
                             }
-                        } 
+                        }
 
-                        if(succeed || (newState === 2 || newState === 3)) {
+                        if (succeed || (newState === 2 || newState === 3)) {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
-                            }, function(err, oriUser) {
+                            }, function (err, oriUser) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {
