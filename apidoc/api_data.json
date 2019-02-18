@@ -2789,7 +2789,7 @@
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
-    "description": "<p><strong>Can modify</strong></p> <ol> <li> <p>&quot;storeID: Number&quot;</p> </li> <li> <p>&quot;dueDate: Date&quot;</p> </li> <li> <p>&quot;boxOrderContent: [{containerType, amount},...]&quot;</p> </li> <li> <p>&quot;boxDeliverContent: [{containerType, amount},...]&quot;</p> </li> <li> <p>&quot;containerList: Array<Number>&quot;</p> </li> <li> <p>&quot;comment: String&quot;</p> </li> <li> <p>&quot;boxName: String&quot;</p> </li> </ol> <p><strong>&quot;boxDeliveryContent&quot; and &quot;containerList&quot; should always pass at the same time</strong></p>",
+    "description": "<p><strong>Can modify</strong></p> <ol> <li> <p>&quot;storeID: Number&quot;</p> </li> <li> <p>&quot;dueDate: Date&quot;</p> </li> <li> <p>&quot;boxOrderContent: [{containerType, amount},...]&quot;</p> </li> <li> <p>&quot;containerList: Array<Number>&quot;</p> </li> <li> <p>&quot;comment: String&quot;</p> </li> <li> <p>&quot;boxName: String&quot;</p> </li> </ol> <p><strong>&quot;boxDeliveryContent&quot; and &quot;containerList&quot; should always pass at the same time</strong></p>",
     "parameter": {
       "examples": [
         {

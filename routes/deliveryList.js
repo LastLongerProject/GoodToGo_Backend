@@ -650,13 +650,11 @@ router.get(
  * 
  * 3. "boxOrderContent: [{containerType, amount},...]"
  * 
- * 4. "boxDeliverContent: [{containerType, amount},...]"
+ * 4. "containerList: Array<Number>"
  * 
- * 5. "containerList: Array<Number>"
+ * 5. "comment: String"
  * 
- * 6. "comment: String"
- * 
- * 7. "boxName: String" 
+ * 6. "boxName: String" 
  * 
  * **"boxDeliveryContent" and "containerList" should always pass at the same time**
  * @apiParamExample {json} Request-Example:
