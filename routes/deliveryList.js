@@ -656,7 +656,6 @@ router.get(
  * 
  * 6. "boxName: String" 
  * 
- * **"boxDeliveryContent" and "containerList" should always pass at the same time**
  * @apiParamExample {json} Request-Example:
  *      {
  *          <the key wanna modify> : <new value>,
