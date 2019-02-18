@@ -42,8 +42,8 @@ module.exports = {
             });
         });
     },
-    refreshActivity: function (dbUser, cb) {
-        sheet.getActivity(dbUser, () => {
+    refreshActivity: function (cb) {
+        sheet.getActivity(data => {
             activityListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('activityList refresh');

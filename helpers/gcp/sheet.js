@@ -332,7 +332,7 @@ module.exports = {
             });
         });
     },
-    getActivity: function(dbAdmin, cb) {
+    getActivity: function(cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.get({
                 auth: auth,
@@ -376,6 +376,8 @@ module.exports = {
                             'active': false
                         }, (err) => {
                             if (err) return debug.error(err);
+                            console.log(dataList);
+                            // User.find({'roles.typeList': `clerk_${}`})
                             cb();
                         });
                     })
