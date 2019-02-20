@@ -2259,7 +2259,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxId: String,\n            containerList: Array,\n            comment: String\n        },...\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            ID: Number,\n            containerList: Array,\n            comment: String\n        },...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -2620,7 +2620,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            boxOrderContent: [\n                {\n                    containerType: String,\n                    amount: Number\n                },...\n            ]\n            dueDate: Date\n        }\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            boxName: String,\n            boxOrderContent: [\n                {\n                    containerType: String,\n                    amount: Number\n                },...\n            ],\n            dueDate: Date\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -2918,7 +2918,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Request-Example:",
-          "content": "{\n    phone: String,\n    boxList: [\n        {\n            id: String\n        },...\n    ]\n}",
+          "content": "{\n    phone: String,\n    boxList: [\n        {\n            ID: String\n        },...\n    ]\n}",
           "type": "json"
         }
       ]
