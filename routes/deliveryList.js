@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
+const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
@@ -47,7 +48,7 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  *                          containerType: String,
  *                          amount: Number
  *                      },...
- *                  ]
+ *                  ],
  *                  dueDate: Date
  *              }
  *          ]
@@ -70,19 +71,6 @@ router.post(
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
 
-        DeliveryList.find({
-                listID: req._listID,
-            })
-            .exec()
-            .then(result => {
-                if (result.length !== 0) {
-                    return res.status(403).json(ErrorResponse.H001);
-                }
-            })
-            .catch(err => {
-                debug.error(err);
-                return next(err);
-            });
         Promise.all(req._boxArray.map(box => box.save()))
             .then(success => {
                 let list = new DeliveryList({
@@ -118,7 +106,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  boxId: String,
+ *                  ID: Number,
  *                  containerList: Array,
  *                  comment: String
  *              },...
@@ -143,7 +131,7 @@ router.post(
         let phone = req.body.phone;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
+            let boxID = element.ID;
             const containerList = element.containerList;
             const comment = element.comment;
 
@@ -158,7 +146,6 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
-
                     changeContainersState(
                         containerList,
                         dbAdmin, {
@@ -235,47 +222,38 @@ router.post(
     validateRequest,
     validateStockApiContent,
     function (req, res, next) {
-        let dbAdmin = req._user;
-        let boxList = req.body.boxList;
+        const dbAdmin = req._user;
+        const boxList = req.body.boxList;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
             const containerList = element.containerList;
+            const boxID = element.boxID;
 
-            Box.findOne({
-                    boxID: boxID,
+            changeContainersState(
+                containerList,
+                dbAdmin, {
+                    action: 'Boxing',
+                    newState: 5,
+                }, {
+                    boxID,
                 },
-                function (err, aBox) {
-                    if (err) return next(err);
-                    if (aBox) return res.status(403).json(ErrorResponse.F012);
-
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            Promise.all(req._boxArray.map(box => box.save()))
-                                .then(success => {
-                                    return res.status(200).json({
-                                        type: 'StockMessage',
-                                        message: 'Stock successfully',
-                                        boxIDs: req._boxIDs
-                                    });
-                                })
-                                .catch(err => {
-                                    debug.error(err);
-                                    return res.status(500).json(ErrorResponse.H006);
-                                });
-                        }
-                    );
+                (err, tradeSuccess, reply) => {
+                    if (err) {
+                        return next(err);
+                    }
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    Promise.all(req._boxArray.map(box => box.save()))
+                        .then(success => {
+                            return res.status(200).json({
+                                type: 'StockMessage',
+                                message: 'Stock successfully',
+                                boxIDs: req._boxIDs
+                            });
+                        })
+                        .catch(err => {
+                            debug.error(err);
+                            return res.status(500).json(ErrorResponse.H006);
+                        });
                 }
             );
         }
@@ -378,7 +356,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  id: String
+ *                  ID: String
  *              },...
  *          ]
  *      }
@@ -404,7 +382,7 @@ router.post(
         var reqByAdmin = req._key.roleType === 'admin';
 
         for (let element of boxList) {
-            var boxID = element.id;
+            var boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
                     boxID: boxID,
@@ -467,7 +445,7 @@ router.post(
                 storeID: Number
                 boxObjs: [{
                     ID: Number //boxID,
-                    name: String,
+                    boxName: String,
                     dueDate: Date,
                     status: String,
                     action: [
@@ -517,7 +495,7 @@ router.get(
                     if (obj.storeID === box.storeID) {
                         obj.boxObjs.push({
                             ID: box.boxID,
-                            name: box.boxName || "",
+                            boxName: box.boxName || "",
                             dueDate: box.dueDate || "",
                             status: box.status || "",
                             action: box.action || [],
@@ -560,7 +538,7 @@ router.get(
                 storeID: Number
                 boxObjs: [{
                     ID: Number //boxID,
-                    name: String,
+                    boxName: String,
                     dueDate: Date,
                     status: String,
                     action: [
@@ -613,7 +591,7 @@ router.get(
                     if (obj.storeID === box.storeID) {
                         obj.boxObjs.push({
                             ID: box.boxID,
-                            name: box.boxName || "",
+                            boxName: box.boxName || "",
                             dueDate: box.dueDate || "",
                             status: box.status || "",
                             action: box.action || [],
@@ -720,26 +698,3 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 });
 
 module.exports = router;
-
-function transContainerType(typeCode) {
-    let storeList = DataCacheFactory.get('store');
-    return storeList[String(typeCode)].name;
-}
-
-function getDeliverContent(containerList) {
-    let container = DataCacheFactory.get('container');
-    let deliverContent = {};
-    containerList.forEach(element => {
-        if (!deliverContent[container[element]]) deliverContent[container[element]] = {
-            amount: 0
-        };
-        deliverContent[container[element]]['amount']++;
-    });
-
-    return Object.keys(deliverContent).map(containerType => {
-        return {
-            containerType,
-            amount: deliverContent[containerType]['amount']
-        }
-    });
-}

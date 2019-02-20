@@ -1,6 +1,7 @@
 const Trade = require('../../../models/DB/tradeDB');
 const User = require('../../../models/DB/userDB');
 const UserKey = require('../../../models/DB/userKeysDB');
+const Container = require('../../../models/DB/containerDB');
 
 const config = require('../../../config/config.js');
 
@@ -61,4 +62,29 @@ describe('migration', function () {
             });
         });
     });
+
+    describe.only('migrate-container', function () {
+        it('should succeed', function (done) {
+            for (let i = 99900; i < 100000; i++) {
+                Container.update({
+                    'ID': i
+                }, {
+                    'active': true,
+                    'typeCode': (i % 10) + 1,
+                    'checkedAt': Date.now(),
+                    '$setOnInsert': {
+                        'conbineTo': '0900000000'
+                    }
+                }, {
+                    upsert: true,
+                    setDefaultsOnInsert: true
+                }).exec().then(_ => {
+                    done();
+                }).catch(err => {
+                    done();
+                });
+            }
+        });
+    });
+
 });

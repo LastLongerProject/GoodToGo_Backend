@@ -7,6 +7,7 @@ const BoxStatus = require('../../../models/variables/boxEnum.js').BoxStatus;
 const ErrorResponse = require('../../../models/variables/error.js')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
+const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
 
 let fullDateStringWithoutYear = function (date) {
     dayFormatted = intReLength(dayFormatter(date), 2);
@@ -72,15 +73,19 @@ function validateCreateApiContent(req, res, next) {
 }
 
 function validateStockApiContent(req, res, next) {
+
     let boxArray = [];
     let boxIDs = [];
     let boxList = req.body.boxList;
     let date = new Date();
+
     let listID =
-        fullDateString(date).replace(/\//g, '') +
+        fullDateStringWithoutYear(date).replace(/\//g, '') +
         '' +
         timeFormatter(date).replace(/\:/g, '');
+
     let index = 0;
+
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
     } else if (req.body.phone === undefined)
@@ -88,21 +93,21 @@ function validateStockApiContent(req, res, next) {
 
     for (let element of boxList) {
         index++;
-        let pass = validateBoxListContent(element, BoxContentType.deliver, [
+        let pass = validateBoxListContent(element, null, [
             'boxName',
             'containerList'
         ]);
-
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
             let boxID = parseInt(listID + String(index));
-
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
                 dueDate: Date.now(),
                 storeID: 99999,
+                boxOrderContent: getDeliverContent(element.containerList),
+                containerList: element.containerList,
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
@@ -113,6 +118,7 @@ function validateStockApiContent(req, res, next) {
                 },
                 status: BoxStatus.Stocked,
             });
+            element.boxID = boxID;
             boxArray.push(box);
             boxIDs.push(boxID);
         }
@@ -129,10 +135,10 @@ function validateBoxingApiContent(req, res, next) {
     else if (req.body.phone === undefined)
         return res.status(403).json(ErrorResponse.H001_2);
     for (let element of boxList) {
-        let pass = validateBoxListContent(element, BoxContentType.deliver, [
+        let pass = validateBoxListContent(element, null, [
             'comment',
             'containerList',
-            'boxId',
+            'ID',
         ]);
 
         if (!pass.bool) {
@@ -173,7 +179,7 @@ function validateSignApiContent(req, res, next) {
 
     for (let element of boxList) {
         let pass = validateBoxListContent(element, BoxContentType.changeState, [
-            "id"
+            "ID"
         ]);
 
         if (!pass.bool) {

@@ -181,7 +181,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorDict
                             };
 
-                            if (rentOrReturn) {
+                            if (condition.rentOrReturn) {
                                 // not to reject rent or return action in any situation
 
                                 let exception = new Exception({
