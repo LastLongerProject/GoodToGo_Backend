@@ -4,8 +4,8 @@ const config = require('../../../config/config.js');
 
 const mongoose = require('mongoose');
 
-describe('migration', function() {
-    before(function(done) {
+describe('migration', function () {
+    before(function (done) {
         mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
             if (err) {
                 console.log(err);
@@ -16,9 +16,13 @@ describe('migration', function() {
         });
     });
 
-    describe('migrate-trade', function() {
-        it('should succeed', function(done) {
-            Trade.updateMany({}, {$set: {'exception': false}}).exec().then(_ =>{
+    describe('migrate-trade', function () {
+        it('should succeed', function (done) {
+            Trade.updateMany({}, {
+                $set: {
+                    'exception': false
+                }
+            }).exec().then(_ => {
                 console.log(_);
                 done();
             }).catch(err => {
@@ -28,9 +32,11 @@ describe('migration', function() {
         });
     });
 
-    describe.only('migrate-user', function() {
-        it('should succeed', function(done) {
-            User.find({'roles.clerk.storeID': 17}).exec().then(users =>{
+    describe('migrate-user', function () {
+        it('should succeed', function (done) {
+            User.find({
+                'roles.clerk.storeID': 17
+            }).exec().then(users => {
                 console.log(users[0].user.phone);
                 done();
             }).catch(err => {
