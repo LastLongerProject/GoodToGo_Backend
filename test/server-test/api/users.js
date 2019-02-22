@@ -28,7 +28,7 @@ describe('api-users', function () {
     before(function (done) {
         setTimeout(done, 11000);
     });
-    describe('POST /login', function () {
+    describe.only('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -36,7 +36,7 @@ describe('api-users', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0911789727',
                     password: '',
                 })
                 .expect(200)
@@ -242,7 +242,7 @@ describe('api-users', function () {
         });
     });
 
-    describe('GET /data', function () {
+    describe.only('GET /data', function () {
         it('status code should be 200 and correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -280,7 +280,7 @@ describe('api-users', function () {
 
                 let auth = jwt.encode(payload, roles.clerk.secretKey);
                 request(app)
-                    .get('/stores/getUser/0900000000')
+                    .get('/stores/getUser/0911789727')
                     .set('Authorization', auth)
                     .set('ApiKey', roles.clerk.apiKey)
                     .expect(200)
