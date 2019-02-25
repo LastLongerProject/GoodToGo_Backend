@@ -24,12 +24,6 @@ const manage = require('./routes/manage');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
-const graphqlHttp = require('express-graphql');
-const {
-    schema,
-    rootValue
-} = require('./GraphQL/graphQLSchema.js');
-
 const app = express();
 let io = require('socket.io');
 let esm;
@@ -64,13 +58,6 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
-
-app.use('/graphql', graphqlHttp({
-    schema,
-    rootValue,
-    graphiql: process.env.NODE_ENV !== 'production' ? true : false
-}));
-
 app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
@@ -115,6 +102,23 @@ app.use(function (err, req, res, next) {
 
 require("./models/redis");
 require("./models/mongo")(startServer);
+
+process.on('SIGINT', () => {
+    debug.log('SIGINT signal received.')
+    let server = app.get('server');
+    let mongoose = app.get('mongoose');
+    server.close(function (err) {
+        if (err) {
+            debug.error(err)
+            process.exit(1)
+        }
+
+        mongoose.connection.close(function () {
+            debug.log('Mongoose connection disconnected')
+            process.exit(0)
+        })
+    })
+})
 
 function startServer() {
     /**

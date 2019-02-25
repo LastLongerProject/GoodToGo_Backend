@@ -6,6 +6,7 @@ const scheduler = require('../helpers/scheduler');
 
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
+app.set('mongoose', mongoose);
 
 module.exports = function (done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
