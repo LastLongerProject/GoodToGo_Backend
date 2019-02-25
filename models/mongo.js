@@ -3,7 +3,7 @@ const config = require('../config/config');
 const debug = require('../helpers/debugger')('mongo');
 const appInit = require('../helpers/appInit');
 const scheduler = require('../helpers/scheduler');
-
+const app = require('../app.js');
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
