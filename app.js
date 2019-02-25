@@ -10,6 +10,8 @@ const uuid = require('uuid/v4');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
+const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 
 const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
@@ -101,7 +103,23 @@ app.use(function (err, req, res, next) {
 });
 
 require("./models/redis");
-require("./models/mongo")(startServer);
+require("./models/mongo")(mongoose, startServer);
+
+process.on('SIGINT', () => {
+    debug.log('SIGINT signal received.')
+    let server = app.get('server');
+    server.close(function (err) {
+        if (err) {
+            debug.error(err)
+            process.exit(1)
+        }
+
+        mongoose.connection.close(function () {
+            debug.log('Mongoose connection disconnected')
+            process.exit(0)
+        })
+    })
+})
 
 function startServer() {
     /**
@@ -121,7 +139,7 @@ function startServer() {
     server.listen(port);
     server.on('error', onError());
     server.on('listening', onListening(server));
-
+    app.set('server', server);
     io = io(server);
     io.of(mSocket.namespace.CHALLENGE)
         .use(mSocket.auth)
