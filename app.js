@@ -103,22 +103,6 @@ app.use(function (err, req, res, next) {
 require("./models/redis");
 require("./models/mongo")(startServer);
 
-process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.')
-
-    server.close(function (err) {
-        if (err) {
-            debug.error(err)
-            process.exit(1)
-        }
-
-        mongoose.connection.close(function () {
-            debug.log('Mongoose connection disconnected')
-            process.exit(0)
-        })
-    })
-})
-
 function startServer() {
     /**
      * Get port from environment and store in Express.
