@@ -10,6 +10,7 @@ const uuid = require('uuid/v4');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
+const mongoose = require('mongoose');
 
 const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
@@ -101,7 +102,7 @@ app.use(function (err, req, res, next) {
 });
 
 require("./models/redis");
-let mongoose = require("./models/mongo")(startServer);
+require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
     debug.log('SIGINT signal received.')

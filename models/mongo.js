@@ -3,10 +3,9 @@ const config = require('../config/config');
 const debug = require('../helpers/debugger')('mongo');
 const appInit = require('../helpers/appInit');
 const scheduler = require('../helpers/scheduler');
-const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
-module.exports = function (done) {
+module.exports = function (mongoose, done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug.log('mongoDB connect succeed');
