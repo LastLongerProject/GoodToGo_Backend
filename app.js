@@ -118,7 +118,7 @@ require("./models/mongo")(startServer);
 
 process.on('SIGINT', () => {
     console.info('SIGINT signal received.')
-
+    let server = app.get('server');
     // Stops the server from accepting new connections and finishes existing connections.
     server.close(function (err) {
         // if error, log and exit with error (1 code)
@@ -154,7 +154,7 @@ function startServer() {
     server.listen(port);
     server.on('error', onError());
     server.on('listening', onListening(server));
-
+    app.set('server', server);
     io = io(server);
     io.of(mSocket.namespace.CHALLENGE)
         .use(mSocket.auth)
