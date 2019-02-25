@@ -25,7 +25,10 @@ const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
 const graphqlHttp = require('express-graphql');
-const { schema, rootValue } = require('./GraphQL/graphQLSchema.js');
+const {
+    schema,
+    rootValue
+} = require('./GraphQL/graphQLSchema.js');
 
 const app = express();
 let io = require('socket.io');
@@ -65,7 +68,7 @@ app.use((req, res, next) => {
 app.use('/graphql', graphqlHttp({
     schema,
     rootValue,
-    graphiql: process.env.NODE_ENV !== 'production'? true : false
+    graphiql: process.env.NODE_ENV !== 'production' ? true : false
 }));
 
 app.use('/stores', stores);
@@ -75,13 +78,13 @@ app.use('/images', images);
 app.use('/deliveryList', deliveryList);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (!err.status) {
         debug.error(err);
         req._errorLevel = 3;
@@ -112,6 +115,26 @@ app.use(function(err, req, res, next) {
 
 require("./models/redis");
 require("./models/mongo")(startServer);
+
+process.on('SIGINT', () => {
+    console.info('SIGINT signal received.')
+
+    // Stops the server from accepting new connections and finishes existing connections.
+    server.close(function (err) {
+        // if error, log and exit with error (1 code)
+        if (err) {
+            console.error(err)
+            process.exit(1)
+        }
+
+        // close your database connection and exit with success (0 code)
+        // for example with mongoose
+        mongoose.connection.close(function () {
+            console.log('Mongoose connection disconnected')
+            process.exit(0)
+        })
+    })
+})
 
 function startServer() {
     /**
@@ -188,7 +211,7 @@ function resBodyParser(req, res, next) {
 
     var chunks = [];
 
-    res.write = function(chunk) {
+    res.write = function (chunk) {
         if (!Buffer.isBuffer(chunk))
             chunk = new Buffer.from(chunk);
         chunks.push(chunk);
@@ -196,7 +219,7 @@ function resBodyParser(req, res, next) {
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function(chunk) {
+    res.end = function (chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer.from(chunk);

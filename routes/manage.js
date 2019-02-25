@@ -496,7 +496,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                     let usedContainer = dataCached.usedContainer || {};
                     let unusedContainer = dataCached.unusedContainer || {};
                     for (let aTrade of tradeList) {
-                        let  containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                        let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                         if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
                             unusedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
@@ -523,7 +523,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 
                     for (let usedContainerKey of Object.keys(usedContainer)) {
                         let usedContainerRecord = usedContainer[usedContainerKey];
-                        
+
                         if (storeIdDict.hasOwnProperty(usedContainerRecord.storeID)) {
                             if (!weeklyAmountByStore[usedContainerRecord.storeID]) {
                                 weeklyAmountByStore[usedContainerRecord.storeID] = {};
@@ -699,7 +699,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 for (var i in containers) {
                     var timeToNow = now - lastUsed[containers[i].ID].time;
                     tmpTypeCode = containers[i].typeCode;
-                    if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) &&　timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                    if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) && timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         result.toUsedAmount++;
                     }
                 }
@@ -997,7 +997,6 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                 Object.assign(userUsingDict, dataCached.userUsingDict);
                 result.totalUsageAmount = dataCached.totalUsageAmount;
             }
-
             Trade.find(tradeQuery, (err, tradeList) => {
                 if (err) return next(err);
                 tradeList.sort((a, b) => (a.tradeTime - b.tradeTime));
