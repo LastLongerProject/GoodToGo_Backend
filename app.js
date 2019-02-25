@@ -101,12 +101,11 @@ app.use(function (err, req, res, next) {
 });
 
 require("./models/redis");
-require("./models/mongo")(startServer);
+let mongoose = require("./models/mongo")(startServer);
 
 process.on('SIGINT', () => {
     debug.log('SIGINT signal received.')
     let server = app.get('server');
-    let mongoose = app.get('mongoose');
     server.close(function (err) {
         if (err) {
             debug.error(err)
