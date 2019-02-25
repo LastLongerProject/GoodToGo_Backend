@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
 const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 
 const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');

@@ -3,7 +3,6 @@ const config = require('../config/config');
 const debug = require('../helpers/debugger')('mongo');
 const appInit = require('../helpers/appInit');
 const scheduler = require('../helpers/scheduler');
-mongoose.Promise = global.Promise;
 
 module.exports = function (mongoose, done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
@@ -35,7 +34,6 @@ module.exports = function (mongoose, done) {
                     debug.log("Deploy Server no scheduler");
                 }
                 done();
-                return mongoose;
             })
             .catch(err => debug.error(err));
     });
