@@ -3,7 +3,6 @@ const config = require('../config/config');
 const debug = require('../helpers/debugger')('mongo');
 const appInit = require('../helpers/appInit');
 const scheduler = require('../helpers/scheduler');
-const app = require('../app.js');
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
@@ -11,7 +10,6 @@ module.exports = function (done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug.log('mongoDB connect succeed');
-        app.set('mongoose', mongoose);
         // require('../tmp/modifyContainerSchema.js')
         Promise
             .all([
@@ -38,6 +36,7 @@ module.exports = function (done) {
                     debug.log("Deploy Server no scheduler");
                 }
                 done();
+                return mongoose;
             })
             .catch(err => debug.error(err));
     });
