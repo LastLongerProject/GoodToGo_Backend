@@ -164,6 +164,7 @@ function startServer() {
         .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
     DataCacheFactory.set('SocketEmitter', SocketEmitter);
+    process.send('ready');
 }
 
 // cookie middleware (just for identify user)
