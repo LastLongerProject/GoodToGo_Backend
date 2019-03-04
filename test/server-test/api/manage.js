@@ -27,7 +27,7 @@ describe('api-manage', function () {
         setTimeout(done, 8000);
     });
 
-    describe.only('POST /login', function () {
+    describe('POST /login', function () {
         it('should response in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -89,7 +89,7 @@ describe('api-manage', function () {
         });
     });
 
-    describe.only('GET /manage/shop', function () {
+    describe('GET /manage/shop', function () {
 
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
@@ -178,7 +178,7 @@ describe('api-manage', function () {
         });
     });
 
-    describe.only('GET /manage/userDetail?id=0911789727', function () {
+    describe('GET /manage/userDetail?id=0911789727', function () {
         this.slow(1000);
 
         it('status code should be 200 and with correct keys', function (done) {
