@@ -75,10 +75,10 @@ describe('api-stores', function () {
         });
     });
 
-    describe('GET /stores/list/12', function () {
+    describe.only('GET /stores/list/17', function () {
         it('should return 200', function (done) {
             request(app)
-                .get('/stores/list/12')
+                .get('/stores/list/17')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
@@ -200,8 +200,8 @@ describe('api-stores', function () {
                         return done(err);
                     }
                     userDB.deleteOne({
-                            'user.phone': '0966666666',
-                        },
+                        'user.phone': '0966666666',
+                    },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -336,7 +336,7 @@ describe('api-stores', function () {
                             time: '09:00',
                             day: 1,
                         },
-                    }, ],
+                    },],
                 })
                 .expect(200)
                 .end(function (err, res) {
