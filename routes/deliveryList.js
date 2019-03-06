@@ -650,6 +650,8 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
+    req.body['dueDate'] ? req.body['dueDate'] = new Date(req.body['dueDate']) : undefined;
+
     Box.findOne({
         boxID
     }, async (err, box) => {
