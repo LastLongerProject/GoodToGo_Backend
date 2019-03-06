@@ -2428,7 +2428,7 @@
         "description": "<p>Please use admin identity to request this uri.</p>"
       }
     ],
-    "description": "<p>available state changing list: Boxing -&gt; Stocked , Boxing -&gt; BoxStatus , Delivering -&gt; Boxing , Signed -&gt; Stocked , Stocked -&gt; Boxing</p>",
+    "description": "<p><strong>available state changing list</strong>: - Boxing -&gt; Stocked - Boxing -&gt; Delivering - Delivering -&gt; Boxing - Signed -&gt; Stocked - Stocked -&gt; Boxing</p>",
     "parameter": {
       "examples": [
         {

@@ -268,12 +268,12 @@ router.post(
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription
- *      available state changing list: 
- *      Boxing -> Stocked 
- *      , Boxing -> BoxStatus 
- *      , Delivering -> Boxing 
- *      , Signed -> Stocked 
- *      , Stocked -> Boxing 
+ *      **available state changing list**: 
+ *      - Boxing -> Stocked 
+ *      - Boxing -> Delivering 
+ *      - Delivering -> Boxing 
+ *      - Signed -> Stocked 
+ *      - Stocked -> Boxing 
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
