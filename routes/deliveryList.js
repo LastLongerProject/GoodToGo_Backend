@@ -616,7 +616,7 @@ router.get(
  * @apiName DeliveryList modify box info
  * @apiGroup DeliveryList
  *
- * @api {post} /deliveryList/modifyBoxInfo/:boxID Modify box info
+ * @api {patch} /deliveryList/modifyBoxInfo/:boxID Modify box info
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription 
@@ -649,7 +649,7 @@ router.get(
 router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
-    let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
+    let containerList = req.body['containerList'] ? req.body['containerList'] : [];
     Box.findOne({
         boxID
     }, async (err, box) => {

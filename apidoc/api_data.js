@@ -2879,7 +2879,7 @@ define({ "api": [
   {
     "name": "DeliveryList_modify_box_info",
     "group": "DeliveryList",
-    "type": "post",
+    "type": "patch",
     "url": "/deliveryList/modifyBoxInfo/:boxID",
     "title": "Modify box info",
     "permission": [
