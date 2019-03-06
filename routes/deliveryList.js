@@ -649,7 +649,7 @@ router.get(
 router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
-    let containerList = req.body['containerList'] ? req.body['containerList'] : [];
+    let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
     Box.findOne({
         boxID
     }, async (err, box) => {
