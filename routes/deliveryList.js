@@ -136,8 +136,8 @@ router.post(
             const comment = element.comment;
 
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -161,17 +161,17 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        }
-                                    },
-                                    status: BoxStatus.Boxing,
-                                }, {
+                                containerList: containerList,
+                                comment: comment,
+                                $push: {
+                                    action: {
+                                        phone: phone,
+                                        boxStatus: BoxStatus.Boxing,
+                                        timestamps: Date.now(),
+                                    }
+                                },
+                                status: BoxStatus.Boxing,
+                            }, {
                                     upsert: true,
                                 }).exec()
                                 .then(result => {
@@ -309,8 +309,8 @@ router.post(
             var boxID = element.id;
 
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -385,8 +385,8 @@ router.post(
             var boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -695,6 +695,40 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
             return next(err);
         }
     });
+});
+
+/**
+ * @apiName DeliveryList delete box info
+ * @apiGroup DeliveryList
+ *
+ * @api {delete} /deliveryList/deleteBox/:boxID Delete box info
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription 
+
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        }
+ */
+
+router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
+    let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+
+    Box.remove({
+        boxID
+    })
+        .exec()
+        .then(_ => res.status(200).json({
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        })).catch(err => {
+            debug(err);
+            return next(err);
+        });
 });
 
 module.exports = router;

@@ -34,7 +34,7 @@ describe('api-stores', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0933361429',
                     password: '',
                 })
                 .expect(200)
@@ -75,7 +75,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe.only('GET /stores/list/12', function () {
+    describe('GET /stores/list/12', function () {
         it('should return 200', function (done) {
             request(app)
                 .get('/stores/list/12')

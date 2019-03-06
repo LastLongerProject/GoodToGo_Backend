@@ -27,7 +27,7 @@ describe('api-deliveryList', function () {
         setTimeout(done, 10000);
     });
 
-    describe('POST /login', function () {
+    describe.only('POST /login', function () {
         it('should response in json with roles', function (done) {
             request(app)
                 .post('/users/login')
