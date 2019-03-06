@@ -690,6 +690,15 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                     }
                 );
             }
+
+            let result = await box.update(req.body).exec();
+            if (result.ok === 1) {
+                return res.status(200).json({
+                    type: "ModifyMessage",
+                    message: "Modify successfully"
+                });
+            }
+            return res.status(500).json(ErrorResponse.H011);
         } catch (err) {
             debug.error(err);
             return next(err);

@@ -172,7 +172,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe.only('POST /changeState', function () {
+    describe('POST /changeState', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -288,7 +288,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe('PATCH /modifyBoxInfo', function () {
+    describe.only('PATCH /modifyBoxInfo', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -298,22 +298,11 @@ describe('api-deliveryList', function () {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .patch('/deliveryList/modifyBoxInfo/11800231')
+                .patch('/deliveryList/modifyBoxInfo/21914321')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    boxName: 'test',
                     storeID: 17,
-                    boxDeliverContent: [{
-                        containerType: 0,
-                        amount: 1
-                    },
-                    {
-                        containerType: 9,
-                        amount: 1
-                    }
-                    ],
-                    containerList: [99999, 7424]
                 })
                 .expect(200)
                 .end(function (err, res) {
