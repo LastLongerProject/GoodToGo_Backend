@@ -107,8 +107,8 @@ describe('api-deliveryList', function () {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             Box.findOne({
-                    boxName: "test_2"
-                }).exec()
+                boxName: "test_2"
+            }).exec()
                 .then(box => {
                     console.log(box)
                     request(app)
@@ -172,7 +172,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe('POST /changeState', function () {
+    describe.only('POST /changeState', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -188,8 +188,8 @@ describe('api-deliveryList', function () {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 21914280,
-                        newState: "Delivering"
+                        id: 21914321,
+                        newState: "Stocked",
                     }]
                 })
                 .expect(200)
@@ -305,13 +305,13 @@ describe('api-deliveryList', function () {
                     boxName: 'test',
                     storeID: 17,
                     boxDeliverContent: [{
-                            containerType: 0,
-                            amount: 1
-                        },
-                        {
-                            containerType: 9,
-                            amount: 1
-                        }
+                        containerType: 0,
+                        amount: 1
+                    },
+                    {
+                        containerType: 9,
+                        amount: 1
+                    }
                     ],
                     containerList: [99999, 7424]
                 })
