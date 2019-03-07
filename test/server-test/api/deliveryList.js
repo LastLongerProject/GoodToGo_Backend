@@ -234,7 +234,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe.only('GET /box/list', function () {
+    describe('GET /box/list', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -261,7 +261,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe('GET /box/list/:status', function () {
+    describe.only('GET /box/list/:status', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
