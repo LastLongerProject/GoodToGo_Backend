@@ -489,10 +489,10 @@ router.get(
         Box.find({}, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
-                if (!box.storeID) continue;
+                if (!String(box.storeID)) continue;
 
                 result.forEach(obj => {
-                    if (obj.storeID === box.storeID) {
+                    if (String(obj.storeID) === String(box.storeID)) {
                         obj.boxObjs.push({
                             ID: box.boxID,
                             boxName: box.boxName || "",
