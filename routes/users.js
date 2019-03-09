@@ -26,7 +26,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
-
+const UserId = require('./enum/userEnum.js').userId;
 
 /**
  * @apiName SignUp
@@ -68,10 +68,10 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
  * @apiUse SignupError
  */
 
-router.post('/signup', validateDefault, function(req, res, next) {
+router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
     req.body.active = true; // !!! Need to send by client when need purchasing !!!
-    userQuery.signup(req, function(err, user, info) {
+    userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -109,26 +109,26 @@ router.post(
     regAsStoreManager,
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (dbKey.roleType === UserId.clerk) {
             req.body.role = {
-                typeCode: 'clerk',
+                typeCode: UserId.clerk,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === 'admin') {
+        } else if (dbKey.roleType === UserId.admin) {
             req.body.role = {
-                typeCode: 'admin',
+                typeCode: UserId.admin,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
         }
         req.body.active = true;
         req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -165,18 +165,18 @@ router.post(
     '/signup/storeManager',
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
         req.body.role = {
-            typeCode: 'clerk',
+            typeCode: UserId.clerk,
             manager: true,
             storeID: req.body.storeID
         };
         req.body.active = true;
         req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -198,7 +198,6 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} [active] Add the param if the category of the store is 1, and set the value to false 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -212,18 +211,64 @@ router.post(
     regAsStore,
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for ADMIN and CLERK
-        req.body.active = req.body.active ? req.body.active : true;
-        var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        req.body.active = String(dbKey.roleType).startsWith(`${UserId.clerk}_`) ? false : true;
+        if (dbKey.roleType === UserId.clerk) {
             req.body.role = {
-                typeCode: 'customer'
+                typeCode: UserId.customer
+            };
+        }
+
+        req._passCode = true;
+        userQuery.signup(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else {
+                res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-Activity
+ * @apiGroup Users
+ * @apiPermission admin_clerk
+ *
+ * @api {post} /users/signup/activity Sign up for customer from activity
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} password password of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+router.post(
+    '/signup/activity',
+    regAsStore,
+    regAsAdminManager,
+    validateRequest,
+    function (req, res, next) {
+        // for ADMIN and CLERK
+        req.body.active = true;
+        var dbKey = req._key;
+        if (dbKey.roleType === UserId.clerk) {
+            req.body.role = {
+                typeCode: UserId.customer
             };
         }
         req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        req._activity = true;
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -266,8 +311,8 @@ router.post(
  * @apiUse LoginError
  */
 
-router.post('/login', validateDefault, function(req, res, next) {
-    userQuery.login(req, function(err, user, info) {
+router.post('/login', validateDefault, function (req, res, next) {
+    userQuery.login(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -298,8 +343,8 @@ router.post('/login', validateDefault, function(req, res, next) {
  * @apiUse ChangePwdError
  */
 
-router.post('/modifypassword', validateRequest, function(req, res, next) {
-    userQuery.chanpass(req, function(err, user, info) {
+router.post('/modifypassword', validateRequest, function (req, res, next) {
+    userQuery.chanpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -347,8 +392,8 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
  * @apiUse ForgetPwdError
  */
 
-router.post('/forgotpassword', validateDefault, function(req, res, next) {
-    userQuery.forgotpass(req, function(err, user, info) {
+router.post('/forgotpassword', validateDefault, function (req, res, next) {
+    userQuery.forgotpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -377,8 +422,8 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
  * @apiError {String} Others Remember ‘jti’ and contact me
  */
 
-router.post('/logout', validateRequest, function(req, res, next) {
-    userQuery.logout(req, function(err, user, info) {
+router.post('/logout', validateRequest, function (req, res, next) {
+    userQuery.logout(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -409,12 +454,12 @@ router.post('/logout', validateRequest, function(req, res, next) {
  *     }
  * @apiUse AddbotError
  */
-router.post('/addbot', regAsAdminManager, validateRequest, function(
+router.post('/addbot', regAsAdminManager, validateRequest, function (
     req,
     res,
     next
 ) {
-    userQuery.addBot(req, function(err, user, info) {
+    userQuery.addBot(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -443,12 +488,12 @@ router.post('/addbot', regAsAdminManager, validateRequest, function(
  *          } 
  *     }
  */
-router.post('/createBotKey', regAsAdminManager, validateRequest, function(
+router.post('/createBotKey', regAsAdminManager, validateRequest, function (
     req,
     res,
     next
 ) {
-    userQuery.createBotKey(req, function(err, user, info) {
+    userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -475,7 +520,7 @@ router.post('/createBotKey', regAsAdminManager, validateRequest, function(
  *     }
  * @apiUse SubscribeSNSError
  */
-router.post('/subscribeSNS', validateRequest, function(req, res, next) {
+router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     var deviceToken = req.body.deviceToken
         .replace(/\s/g, '')
         .replace('<', '')
@@ -505,7 +550,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     });
     if (deviceToken !== 'HEYBITCH') {
         var dbUser = req._user;
-        subscribeSNS(system, type, deviceToken, function(err, arn) {
+        subscribeSNS(system, type, deviceToken, function (err, arn) {
             if (err) return debug.error(err);
             var newObject = {};
             if (dbUser.pushNotificationArn)
@@ -545,7 +590,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
  *      }
  */
 
-router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
+router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
     req,
     res,
     next
@@ -581,7 +626,7 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
                             },
                         ],
                     },
-                    function(err, tradeList) {
+                    function (err, tradeList) {
                         if (err) return next(err);
 
                         tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
@@ -659,7 +704,7 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
  *      }
  */
 
-router.get('/data', validateRequest, function(req, res, next) {
+router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var store = DataCacheFactory.get('store');
     var containerType = DataCacheFactory.get('containerType');
@@ -678,7 +723,7 @@ router.get('/data', validateRequest, function(req, res, next) {
                 },
             ],
         },
-        function(err, tradeList) {
+        function (err, tradeList) {
             if (err) return next(err);
 
             tradeList.sort((a, b) => a.tradeTime - b.tradeTime);

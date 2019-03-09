@@ -21,29 +21,29 @@ var roles = {
     },
 };
 
-describe('api-stores', function() {
-    before(function(done) {
+describe('api-stores', function () {
+    before(function (done) {
         setTimeout(done, 11000);
     });
 
-    describe('POST /login', function() {
-        it('respond in json with roles', function(done) {
+    describe('POST /login', function () {
+        it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0933361429',
                     password: '',
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     if (!('customer' || 'admin' || 'clerk' in decode.roles))
                         throw new Error('Missing roles');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -56,8 +56,8 @@ describe('api-stores', function() {
                 });
         });
     });
-    describe('GET /stores/list', function() {
-        it('should return 200', function(done) {
+    describe('GET /stores/list', function () {
+        it('should return 200', function (done) {
             request(app)
                 .get('/stores/list')
                 .set('Content-Type', 'application/json')
@@ -65,7 +65,7 @@ describe('api-stores', function() {
                 .set('reqTime', Date.now())
                 .expect(200)
                 .expect(checkStoreListKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -75,16 +75,15 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/list/12', function() {
-        it('should return 200', function(done) {
+    describe('GET /stores/list/12', function () {
+        it('should return 200', function (done) {
             request(app)
                 .get('/stores/list/12')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .expect(200)
-                .expect(checkStoreListKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -94,8 +93,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/dict', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/dict', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -108,7 +107,7 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -118,8 +117,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/clerkList', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/clerkList', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -132,7 +131,7 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('clerkList' in res.body))
                         throw new Error('Missing clerk list');
                     if (!('phone' in res.body.clerkList[0]))
@@ -142,7 +141,7 @@ describe('api-stores', function() {
                     if (!('isManager' in res.body.clerkList[0]))
                         throw new Error('Missing isManager in clerk list');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -152,8 +151,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('POST /signup/clerk', function() {
-        it('status code should be 200', function(done) {
+    describe('POST /signup/clerk', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -170,7 +169,7 @@ describe('api-stores', function() {
                     password: '',
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -180,8 +179,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('POST /stores/layoff/:id', function() {
-        it('status code should be 200', function(done) {
+    describe('POST /stores/layoff/:id', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -194,14 +193,14 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
                     userDB.deleteOne({
-                            'user.phone': '0966666666',
-                        },
+                        'user.phone': '0966666666',
+                    },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -211,8 +210,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/status', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/status', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -226,7 +225,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkStoreStatusKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -239,8 +238,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/openingTime', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/openingTime', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -254,7 +253,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkOpeningTimeKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -264,8 +263,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('POST /stores/unsetDefaultOpeningTime', function() {
-        it('status code should be 204', function(done) {
+    describe('POST /stores/unsetDefaultOpeningTime', function () {
+        it('status code should be 204', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -278,7 +277,7 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(204)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -288,8 +287,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/checkUnReturned', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/checkUnReturned', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -302,10 +301,10 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('data' in res.body)) throw new Error('Missing data')
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -315,8 +314,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('POST /stores/changeOpeningTime', function() {
-        it('status code should be 200', function(done) {
+    describe('POST /stores/changeOpeningTime', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -338,10 +337,10 @@ describe('api-stores', function() {
                             time: '09:00',
                             day: 1,
                         },
-                    }, ],
+                    },],
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -351,8 +350,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/boxToSign', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/boxToSign', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -366,7 +365,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkBoxToSignKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -376,8 +375,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/usedAmount', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/usedAmount', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -391,7 +390,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkUsedAmountKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -401,8 +400,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/history', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/history', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -416,7 +415,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkGetHistoryKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -428,8 +427,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/history/byContainerType', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/history/byContainerType', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -443,7 +442,7 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkGetHistoryByContainerKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -455,8 +454,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/history/byCustomer', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/history/byCustomer', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -469,11 +468,11 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('totalDistinctCustomer' in res.body)) throw new Error('Missing totalDistinctCustomer');
                     if (!('customerSummary' in res.body)) throw new Error('Missing customerSummary');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -484,8 +483,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/performance?date', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/performance?date', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -498,7 +497,7 @@ describe('api-stores', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -508,8 +507,8 @@ describe('api-stores', function() {
         });
     });
 
-    describe('GET /stores/favorite', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /stores/favorite', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -523,11 +522,49 @@ describe('api-stores', function() {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkFavoriteKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
+                    done();
+                });
+        });
+    });
+
+    describe('GET /stores/activity/0', function () {
+        it('status code should be 200', function (done) {
+            request(app)
+                .get('/stores/activity/0')
+                .set('Content-Type', 'application/json')
+                .set('reqID', makeHexString())
+                .set('reqTime', Date.now())
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
+                    done();
+                });
+        });
+    });
+
+    describe('GET /stores/activityList', function () {
+        it('status code should be 200', function (done) {
+            request(app)
+                .get('/stores/activityList')
+                .set('Content-Type', 'application/json')
+                .set('reqID', makeHexString())
+                .set('reqTime', Date.now())
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
                     done();
                 });
         });

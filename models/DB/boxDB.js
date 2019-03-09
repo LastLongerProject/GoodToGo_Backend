@@ -6,11 +6,7 @@ var userSchema = mongoose.Schema({
     boxID: Number,
     boxName: String,
     boxOrderContent: [{
-        containerType: Number,
-        amount: Number
-    }],
-    boxDeliverContent: [{
-        containerType: Number,
+        containerType: String,
         amount: Number
     }],
     dueDate: Date,

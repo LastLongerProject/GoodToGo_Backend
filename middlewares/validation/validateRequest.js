@@ -2,6 +2,7 @@ const jwt = require('jwt-simple');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB'); // load up the user model
 const UserKeys = require('../../models/DB/userKeysDB');
+const UserId = require('../../routes/enum/userEnum.js').userId;
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -13,7 +14,7 @@ function isAuthorized(conditions, userRoles, thisKeyRole) {
     if (!Array.isArray(conditions) || conditions.length === 0) return true; // Customer
     for (let conditionIndex in conditions) {
         let aCondition = conditions[conditionIndex];
-        if (userRoles[aCondition.role] && aCondition.role === thisKeyRole) {
+        if (userRoles[aCondition.role] && String(thisKeyRole).startsWith(aCondition.role)) {
             if (aCondition.manager) {
                 return userRoles[aCondition.role].manager === true;
             }
@@ -35,17 +36,17 @@ function addRoleToCheck(req, theRole, shouldBeManager, cb) {
 }
 
 module.exports = {
-    JWT: function(req, res, next) {
+    JWT: function (req, res, next) {
         var jwtToken = req.headers['authorization'];
         var key = req.headers['apikey'];
 
         if (jwtToken && key) {
-            process.nextTick(function() {
+            process.nextTick(function () {
                 UserKeys.findOneAndUpdate({
                     'apiKey': key
                 }, {
                     'updatedAt': Date.now()
-                }, function(err, dbKey) {
+                }, function (err, dbKey) {
                     if (err)
                         return next(err);
                     if (!dbKey)
@@ -54,7 +55,7 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has logout'
                         });
-                    User.findById(dbKey.user, function(err, dbUser) {
+                    User.findById(dbKey.user, function (err, dbUser) {
                         if (err)
                             return next(err);
                         if (!dbUser)
@@ -140,9 +141,9 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: (req, res, next) => addRoleToCheck(req, "clerk", true, next),
-    regAsStore: (req, res, next) => addRoleToCheck(req, "clerk", false, next),
-    regAsAdminManager: (req, res, next) => addRoleToCheck(req, "admin", true, next),
-    regAsAdmin: (req, res, next) => addRoleToCheck(req, "admin", false, next),
-    regAsBot: (req, res, next) => addRoleToCheck(req, "bot", false, next)
+    regAsStoreManager: (req, res, next) => addRoleToCheck(req, UserId.clerk, true, next),
+    regAsStore: (req, res, next) => addRoleToCheck(req, UserId.clerk, false, next),
+    regAsAdminManager: (req, res, next) => addRoleToCheck(req, UserId.admin, true, next),
+    regAsAdmin: (req, res, next) => addRoleToCheck(req, UserId.admin, false, next),
+    regAsBot: (req, res, next) => addRoleToCheck(req, UserId.bot, false, next)
 };

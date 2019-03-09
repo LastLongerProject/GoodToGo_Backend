@@ -9,21 +9,24 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
+const ActivityUser = require('../models/DB/activityUserDB.js');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const UserId = require('../routes/enum/userEnum').userId;
 
 module.exports = {
-    signup: function(req, done) {
+    signup: function (req, done) {
         var role = req.body.role || {
-            typeCode: 'customer'
+            typeCode: UserId.customer
         };
         var roles = req.body.roles;
         var phone = req.body.phone.replace(/tel:|-/g, "");
         var password = req.body.password;
         var code = req.body.verification_code;
+
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
-                !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
+                !(typeof req._user !== 'undefined' && role.typeCode === UserId.clerk))) {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
@@ -37,9 +40,9 @@ module.exports = {
             });
         } else if (
             typeof roles === 'undefined' &&
-            ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            ((role.typeCode === UserId.clerk && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === UserId.admin && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === UserId.customer && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -48,28 +51,28 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (err)
                 return done(err);
-            if (dbUser) {
-                if ((role.typeCode === 'clerk' || role.typeCode === 'admin') && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+            if (dbUser && dbUser.active) {
+                if ((role.typeCode === UserId.clerk || role.typeCode === UserId.admin) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
-                        case "clerk":
-                            dbUser.roles.typeList.push("clerk");
+                        case UserId.clerk:
+                            dbUser.roles.typeList.push(UserId.clerk);
                             dbUser.roles.clerk = {
                                 storeID: role.storeID,
                                 manager: role.manager,
                             };
                             break;
-                        case "admin":
-                            dbUser.roles.typeList.push("admin");
+                        case UserId.admin:
+                            dbUser.roles.typeList.push(UserId.admin);
                             dbUser.roles.admin = {
                                 stationID: role.stationID,
                                 manager: role.manager
                             };
                             break;
                     }
-                    dbUser.save(function(err) {
+                    dbUser.save(function (err) {
                         if (err) return done(err);
                         return done(null, dbUser, {
                             body: {
@@ -88,7 +91,7 @@ module.exports = {
             } else {
                 if (req._passCode !== true && typeof code === 'undefined') {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
                         redis.set('user_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -119,50 +122,70 @@ module.exports = {
                             type: 'signupMessage',
                             message: "Verification Code isn't correct"
                         });
-                        var newUser = new User();
-                        newUser.user.phone = phone;
-                        newUser.user.password = newUser.generateHash(password);
-                        newUser.active = req.body.active;
-                        if (typeof roles !== 'undefined') { // v2 api
-                            newUser.roles = roles;
-                        } else {
-                            switch (role.typeCode) { // v1 api
-                                case "clerk":
-                                    newUser.roles.typeList.push("clerk");
-                                    newUser.roles.clerk = {
-                                        storeID: role.storeID,
-                                        manager: role.manager || false,
-                                    };
-                                    break;
-                                case "admin":
-                                    newUser.roles.typeList.push("admin");
-                                    newUser.roles.admin = {
-                                        stationID: role.stationID,
-                                        manager: role.manager || false
-                                    };
-                                    break;
-                            }
-                            newUser.roles.typeList.push("customer");
-                        }
-                        newUser.save(function(err) {
-                            if (err) return done(err);
-                            redis.del('user_verifying:' + phone, (err, delReply) => {
-                                if (err && req._passCode !== true) return done(err);
-                                if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
-                                return done(null, true, {
-                                    body: {
-                                        type: 'signupMessage',
-                                        message: 'Authentication succeeded'
-                                    }
+                        // if !active
+                        if (dbUser) {
+                            dbUser.active = true;
+                            dbUser.save(function (err) {
+                                if (err) return done(err);
+                                redis.del('user_verifying:' + phone, (err, delReply) => {
+                                    if (err && req._passCode !== true) return done(err);
+                                    if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
+                                    return done(null, true, {
+                                        body: {
+                                            type: 'signupMessage',
+                                            message: 'Authentication succeeded'
+                                        }
+                                    });
                                 });
                             });
-                        });
+                        } else {
+                            var newUser;
+                            newUser = new User();
+
+                            newUser.user.phone = phone;
+                            newUser.user.password = newUser.generateHash(password);
+                            newUser.active = req.body.active;
+                            if (typeof roles !== 'undefined') { // v2 api
+                                newUser.roles = roles;
+                            } else {
+                                switch (role.typeCode) { // v1 api
+                                    case UserId.clerk:
+                                        newUser.roles.typeList.push(UserId.clerk);
+                                        newUser.roles.clerk = {
+                                            storeID: role.storeID,
+                                            manager: role.manager || false,
+                                        };
+                                        break;
+                                    case UserId.admin:
+                                        newUser.roles.typeList.push(UserId.admin);
+                                        newUser.roles.admin = {
+                                            stationID: role.stationID,
+                                            manager: role.manager || false
+                                        };
+                                        break;
+                                }
+                                newUser.roles.typeList.push(UserId.customer);
+                            }
+                            newUser.save(function (err) {
+                                if (err) return done(err);
+                                redis.del('user_verifying:' + phone, (err, delReply) => {
+                                    if (err && req._passCode !== true) return done(err);
+                                    if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
+                                    return done(null, true, {
+                                        body: {
+                                            type: 'signupMessage',
+                                            message: 'Authentication succeeded'
+                                        }
+                                    });
+                                });
+                            });
+                        }
                     });
                 }
             }
         });
     },
-    login: function(req, done) {
+    login: function (req, done) {
         var phone = req.body.phone;
         var password = req.body.password;
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -172,10 +195,10 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function() {
+        process.nextTick(function () {
             User.findOne({
                 'user.phone': phone
-            }, function(err, dbUser) {
+            }, function (err, dbUser) {
                 if (err)
                     return done(err);
                 if (!dbUser)
@@ -184,6 +207,13 @@ module.exports = {
                         type: 'loginMessage',
                         message: 'No user found'
                     });
+                if (!dbUser.active) {
+                    return done(null, false, {
+                        code: 'D005',
+                        type: 'loginMessage',
+                        message: 'No user found'
+                    });
+                }
                 if (!dbUser.validPassword(password))
                     return done(null, false, {
                         code: 'D006',
@@ -195,7 +225,7 @@ module.exports = {
                 for (var i = 0; i < typeList.length; i++) {
                     funcList.push(new Promise((resolve, reject) => {
                         var thisCtr = i;
-                        keys.keyPair(function(err, returnKeys) {
+                        keys.keyPair(function (err, returnKeys) {
                             if (err) return reject(err);
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
@@ -241,7 +271,7 @@ module.exports = {
             });
         });
     },
-    chanpass: function(req, done) {
+    chanpass: function (req, done) {
         var oriPassword = req.body.oriPassword;
         var newPassword = req.body.newPassword;
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
@@ -259,7 +289,7 @@ module.exports = {
                 message: 'Wrong password'
             });
         dbUser.user.password = dbUser.generateHash(newPassword);
-        dbUser.save(function(err) {
+        dbUser.save(function (err) {
             if (err) return done(err);
             UserKeys.deleteMany({
                 'phone': dbUser.user.phone
@@ -274,7 +304,7 @@ module.exports = {
             });
         });
     },
-    forgotpass: function(req, done) {
+    forgotpass: function (req, done) {
         var phone = req.body.phone;
         var code = req.body.verification_code;
         var newPassword = req.body.new_password;
@@ -287,7 +317,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (err) return done(err);
             if (!dbUser) return done(null, false, {
                 code: 'D013',
@@ -297,7 +327,7 @@ module.exports = {
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
                 if (typeof phone === 'string' && isMobilePhone(phone)) {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
                         redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -339,7 +369,7 @@ module.exports = {
                     }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        dbUser.save(function(err) {
+                        dbUser.save(function (err) {
                             if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
@@ -357,7 +387,7 @@ module.exports = {
             }
         });
     },
-    logout: function(req, done) {
+    logout: function (req, done) {
         var dbKey = req._key;
         var dbUser = req._user;
         UserKeys.deleteMany({
@@ -371,7 +401,7 @@ module.exports = {
             });
         });
     },
-    addBot: function(req, done) {
+    addBot: function (req, done) {
         if (typeof req.body.scopeID === "undefined" || typeof req.body.botName === "undefined") {
             return done(null, false, {
                 code: 'D001',
@@ -392,11 +422,11 @@ module.exports = {
         var botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': "bot"
-            }, function(err, botAmount) {
+                'role.typeCode': UserId.bot
+            }, function (err, botAmount) {
                 if (err) return done(err);
                 var botID = `bot${intReLength(botAmount + 1, 5)}`;
-                keys.apiKey(function(err, returnKeys) {
+                keys.apiKey(function (err, returnKeys) {
                     if (err) return done(err);
                     var newUser = new User({
                         user: {
@@ -405,7 +435,7 @@ module.exports = {
                         },
                         role: role,
                         roles: {
-                            typeList: ["bot"],
+                            typeList: [UserId.bot],
                             bot: role
                         },
                         active: true
@@ -416,12 +446,12 @@ module.exports = {
                         secretKey: returnKeys.secretKey,
                         clientId: req.signedCookies.uid,
                         userAgent: req.headers['user-agent'],
-                        roleType: "bot",
+                        roleType: UserId.bot,
                         user: newUser._id
                     });
-                    newUser.save(function(err) {
+                    newUser.save(function (err) {
                         if (err) return done(err);
-                        newUserKey.save(function(err) {
+                        newUserKey.save(function (err) {
                             if (err) return done(err);
                             done(null, true, {
                                 body: {
@@ -440,11 +470,11 @@ module.exports = {
             });
         });
     },
-    createBotKey: function(req, done) {
+    createBotKey: function (req, done) {
         User.findOne({
             'user.name': req.body.bot,
-            'role.typeCode': "bot"
-        }, function(err, theBot) {
+            'role.typeCode': UserId.bot
+        }, function (err, theBot) {
             if (err) return done(err);
             if (!theBot)
                 return done(null, false, {
@@ -452,11 +482,11 @@ module.exports = {
                     type: 'botMessage',
                     message: 'No Bot Find'
                 });
-            keys.apiKey(function(err, returnKeys) {
+            keys.apiKey(function (err, returnKeys) {
                 if (err) return done(err);
                 UserKeys.findOneAndUpdate({
                     'phone': theBot.user.phone,
-                    'roleType': "bot",
+                    'roleType': UserId.bot,
                     'user': theBot._id
                 }, {
                     'secretKey': returnKeys.secretKey,
@@ -528,20 +558,20 @@ function tokenBuilder(serverSecretKey, userKey, dbUser) {
 }
 
 function payloadBuilder(payload, dbUser, userKey) {
-    if (userKey.roleType === "customer") {
+    if (userKey.roleType === UserId.customer) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (userKey.roleType === "clerk") {
-        payload.roles.clerk = {
+    } else if (String(userKey.roleType).startsWith(`${UserId.clerk}`)) {
+        payload.roles[userKey.roleType] = {
             storeID: dbUser.roles.clerk.storeID,
             manager: dbUser.roles.clerk.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
             storeName: getStoreName(dbUser),
         };
-    } else if (userKey.roleType === "admin") {
+    } else if (userKey.roleType === UserId.admin) {
         payload.roles.admin = {
             stationID: dbUser.roles.admin.stationID,
             manager: dbUser.roles.admin.manager,

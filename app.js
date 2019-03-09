@@ -10,6 +10,8 @@ const uuid = require('uuid/v4');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
+const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 
 const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
@@ -65,13 +67,13 @@ app.use('/images', images);
 app.use('/deliveryList', deliveryList);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
     if (!err.status) {
         debug.error(err);
         req._errorLevel = 3;
@@ -101,7 +103,23 @@ app.use(function(err, req, res, next) {
 });
 
 require("./models/redis");
-require("./models/mongo")(startServer);
+require("./models/mongo")(mongoose, startServer);
+
+process.on('SIGINT', () => {
+    debug.log('SIGINT signal received.')
+    let server = app.get('server');
+    server.close(function (err) {
+        if (err) {
+            debug.error(err)
+            process.exit(1)
+        }
+
+        mongoose.connection.close(function () {
+            debug.log('Mongoose connection disconnected')
+            process.exit(0)
+        })
+    })
+})
 
 function startServer() {
     /**
@@ -121,7 +139,7 @@ function startServer() {
     server.listen(port);
     server.on('error', onError());
     server.on('listening', onListening(server));
-
+    app.set('server', server);
     io = io(server);
     io.of(mSocket.namespace.CHALLENGE)
         .use(mSocket.auth)
@@ -131,6 +149,7 @@ function startServer() {
         .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
     DataCacheFactory.set('SocketEmitter', SocketEmitter);
+    process.send('ready');
 }
 
 // cookie middleware (just for identify user)
@@ -178,7 +197,7 @@ function resBodyParser(req, res, next) {
 
     var chunks = [];
 
-    res.write = function(chunk) {
+    res.write = function (chunk) {
         if (!Buffer.isBuffer(chunk))
             chunk = new Buffer.from(chunk);
         chunks.push(chunk);
@@ -186,7 +205,7 @@ function resBodyParser(req, res, next) {
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function(chunk) {
+    res.end = function (chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
                 chunk = new Buffer.from(chunk);

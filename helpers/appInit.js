@@ -2,6 +2,7 @@ const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const Store = require('../models/DB/storeDB');
 const PlaceID = require('../models/DB/placeIdDB');
+const Activity = require('../models/DB/activityDB');
 const Container = require('../models/DB/containerDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
@@ -37,6 +38,15 @@ module.exports = {
             containerListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('containerList refresh');
+                cb();
+            });
+        });
+    },
+    refreshActivity: function (cb) {
+        sheet.getActivity(data => {
+            activityListGenerator(err => {
+                if (err) return cb(err);
+                debug.log('activityList refresh');
                 cb();
             });
         });
@@ -127,7 +137,23 @@ module.exports = {
             }
         });
     }
-};
+}
+
+function activityListGenerator(cb) {
+    Activity.find({}, {}, {
+        sort: {
+            ID: 1
+        }
+    }, (err, activities) => {
+        if (err) return cb(err);
+        var activityDict = {};
+        activities.forEach((aActivity) => {
+            activityDict[aActivity.ID] = aActivity;
+        });
+        DataCacheFactory.set('activity', activityDict);
+        cb();
+    });
+}
 
 function storeListGenerator(cb) {
     PlaceID.find({}, {}, {

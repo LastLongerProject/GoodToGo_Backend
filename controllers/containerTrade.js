@@ -12,6 +12,7 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
+const Exception = require('../models/DB/exceptionDB.js');
 
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
@@ -22,8 +23,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     if (containers.length < 1)
         return done(null, false, {
             code: 'F002',
-            message: 'No container found',
-            data: aContainerId
+            message: 'No container found'
         });
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
@@ -109,6 +109,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
+    const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -136,7 +137,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                     });
                 Container.findOne({
                     'ID': aContainerId
-                }, function(err, theContainer) {
+                }, function (err, theContainer) {
                     if (err)
                         return reject(err);
                     if (!theContainer)
@@ -153,19 +154,20 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
-                        return reject({
-                            code: 'F010',
-                            message: "Container not belone to user's store"
-                        });
-
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
-                        ID: aContainerId,
-                        txt: "Already Return"
-                    });
-                    validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
+                            ID: aContainerId,
+                            txt: "Already Return"
+                        });
+                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                        let exceptionLabel = false;
+                        const condition = {
+                            rentOrReturnBeforeSign: oriState === 2 || 3 && newState === 1,
+                            rentOrReturn: newState === 2 || newState === 3,
+
+                        }
+
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -177,12 +179,49 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorList,
                                 errorDict
                             };
-                            if (oriState === 0 || oriState === 1) {
+
+                            if (condition.rentOrReturn) {
+                                // not to reject rent or return action in any situation
+
+                                let exception = new Exception({
+                                    containerID: theContainer.ID,
+                                    storeID: theContainer.storeID,
+                                    operator: (action === 'Rent') ? rentToUser : theContainer.conbineTo,
+                                    oriState,
+                                    newState,
+                                    description: errorMsg
+                                });
+                                exceptionLabel = true;
+
+                                exception
+                                    .save()
+                                    .catch(err => {
+                                        debug.error(err);
+                                        return reject(err);
+                                    });
+                            }
+                            // need to validate
+                            else if (condition.rentOrReturnBeforeSign) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
-                                }, function(err, aBox) {
+                                }, function (err, aBox) {
+                                    if (err) return reject(err);
+                                    if (!aBox) return resolveWithErr(errorMsg);
+                                    return resolve({
+                                        ID: aContainerId,
+                                        oriUser: "",
+                                        dataSaver: (doneSave, getErr) => { },
+                                        tradeDetail: null
+                                    });
+                                });
+                            } else if (oriState === 0 || oriState === 1) {
+                                Box.findOne({
+                                    'containerList': {
+                                        '$all': [aContainerId]
+                                    }
+                                }, function (err, aBox) {
                                     if (err) return reject(err);
                                     if (!aBox) return resolveWithErr(errorMsg);
                                     errorList.push(aBox.boxID);
@@ -192,10 +231,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             } else {
                                 return resolveWithErr(errorMsg);
                             }
-                        } else {
+                        }
+
+                        if (succeed || (newState === 2 || newState === 3)) {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
-                            }, function(err, oriUser) {
+                            }, function (err, oriUser) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {
@@ -261,7 +302,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         typeCode: theContainer.typeCode,
                                         cycleCtr: theContainer.cycleCtr,
                                         box: boxID
-                                    }
+                                    },
+                                    activity,
+                                    exception: exceptionLabel
                                 });
 
                                 containerStateCache[aContainerId] = newState;

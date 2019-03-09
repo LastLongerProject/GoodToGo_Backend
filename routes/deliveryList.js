@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
+const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
@@ -33,7 +34,7 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  * @apiName DeliveryList create delivery list
  * @apiGroup DeliveryList
  *
- * @api {post} /create/:destiantionStoreId Create delivery list
+ * @api {post} /deliveryList/create/:destiantionStoreId Create delivery list
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -44,10 +45,10 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  *                  boxName: String,
  *                  boxOrderContent: [
  *                      {
- *                          containerType: Number,
+ *                          containerType: String,
  *                          amount: Number
  *                      },...
- *                  ]
+ *                  ],
  *                  dueDate: Date
  *              }
  *          ]
@@ -66,23 +67,10 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateCreateApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
 
-        DeliveryList.find({
-                listID: req._listID,
-            })
-            .exec()
-            .then(result => {
-                if (result.length !== 0) {
-                    return res.status(403).json(ErrorResponse.H001);
-                }
-            })
-            .catch(err => {
-                debug.error(err);
-                return next(err);
-            });
         Promise.all(req._boxArray.map(box => box.save()))
             .then(success => {
                 let list = new DeliveryList({
@@ -110,7 +98,7 @@ router.post(
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /box Boxing
+ * @api {post} /deliveryList/box Boxing
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -118,13 +106,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  boxId: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
+ *                  ID: Number,
  *                  containerList: Array,
  *                  comment: String
  *              },...
@@ -143,21 +125,20 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateBoxingApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let boxList = req.body.boxList;
         let phone = req.body.phone;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
+            let boxID = element.ID;
             const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
             const comment = element.comment;
 
             Box.findOne({
-                    boxID: boxID,
-                },
-                function(err, aBox) {
+                boxID: boxID,
+            },
+                function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -165,7 +146,6 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
-
                     changeContainersState(
                         containerList,
                         dbAdmin, {
@@ -181,18 +161,17 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                    boxDeliverContent: boxDeliverContent,
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        }
-                                    },
-                                    status: BoxStatus.Boxing,
-                                }, {
+                                containerList: containerList,
+                                comment: comment,
+                                $push: {
+                                    action: {
+                                        phone: phone,
+                                        boxStatus: BoxStatus.Boxing,
+                                        timestamps: Date.now(),
+                                    }
+                                },
+                                status: BoxStatus.Boxing,
+                            }, {
                                     upsert: true,
                                 }).exec()
                                 .then(result => {
@@ -215,7 +194,7 @@ router.post(
  * @apiName DeliveryList stock
  * @apiGroup DeliveryList
  *
- * @api {post} /box Create stock box
+ * @api {post} /deliveryList/stock Create stock box
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -224,12 +203,6 @@ router.post(
  *          boxList: [
  *              {
  *                  boxName: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
  *                  containerList: Array,
  *              },...
  *          ]
@@ -248,48 +221,39 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateStockApiContent,
-    function(req, res, next) {
-        let dbAdmin = req._user;
-        let boxList = req.body.boxList;
+    function (req, res, next) {
+        const dbAdmin = req._user;
+        const boxList = req.body.boxList;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
             const containerList = element.containerList;
+            const boxID = element.boxID;
 
-            Box.findOne({
-                    boxID: boxID,
+            changeContainersState(
+                containerList,
+                dbAdmin, {
+                    action: 'Boxing',
+                    newState: 5,
+                }, {
+                    boxID,
                 },
-                function(err, aBox) {
-                    if (err) return next(err);
-                    if (aBox) return res.status(403).json(ErrorResponse.F012);
-
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            Promise.all(req._boxArray.map(box => box.save()))
-                                .then(success => {
-                                    return res.status(200).json({
-                                        type: 'StockMessage',
-                                        message: 'Stock successfully',
-                                        boxIDs: req._boxIDs
-                                    });
-                                })
-                                .catch(err => {
-                                    debug.error(err);
-                                    return res.status(500).json(ErrorResponse.H006);
-                                });
-                        }
-                    );
+                (err, tradeSuccess, reply) => {
+                    if (err) {
+                        return next(err);
+                    }
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    Promise.all(req._boxArray.map(box => box.save()))
+                        .then(success => {
+                            return res.status(200).json({
+                                type: 'StockMessage',
+                                message: 'Stock successfully',
+                                boxIDs: req._boxIDs
+                            });
+                        })
+                        .catch(err => {
+                            debug.error(err);
+                            return res.status(500).json(ErrorResponse.H006);
+                        });
                 }
             );
         }
@@ -300,16 +264,16 @@ router.post(
  * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
- * @api {post} /box Change state
+ * @api {post} /deliveryList/changeState Change state
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription
- *      available state changing list: 
- *      Boxing -> Stocked 
- *      , Boxing -> BoxStatus 
- *      , Delivering -> Boxing 
- *      , Signed -> Stocked 
- *      , Stocked -> Boxing 
+ *      **available state changing list**: 
+ *      - Boxing -> Stocked 
+ *      - Boxing -> Delivering 
+ *      - Delivering -> Boxing 
+ *      - Signed -> Stocked 
+ *      - Stocked -> Boxing 
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
@@ -335,7 +299,7 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateChangeStateApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
@@ -345,9 +309,9 @@ router.post(
             var boxID = element.id;
 
             Box.findOne({
-                    boxID: boxID,
-                },
-                async function(err, aBox) {
+                boxID: boxID,
+            },
+                async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -362,9 +326,10 @@ router.post(
                         return res.status(403).json(ErrorResponse.H008);
                     }
                     try {
-                        let result = await changeStateProcess(element, aBox, phone);
-                        if (result.status === ProgramStatus.Success) {
-                            return containerStateFactory(newState, aBox, dbAdmin, res, next);
+                        let boxInfo = await changeStateProcess(element, aBox, phone);
+                        console.log(boxInfo)
+                        if (boxInfo.status === ProgramStatus.Success) {
+                            return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
                         } else {
                             ErrorResponse.H007.message = result.message;
                             return res.status(403).json(ErrorResponse.H007);
@@ -384,7 +349,7 @@ router.post(
  * @apiName DeliveryList sign
  * @apiGroup DeliveryList
  *
- * @api {post} /box Sign
+ * @api {post} /deliveryList/sign Sign
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -392,7 +357,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  id: String
+ *                  ID: String
  *              },...
  *          ]
  *      }
@@ -411,19 +376,19 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateSignApiContent,
-    async function(req, res, next) {
+    async function (req, res, next) {
         let dbUser = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
         var reqByAdmin = req._key.roleType === 'admin';
 
         for (let element of boxList) {
-            var boxID = element.id;
+            var boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
-                    boxID: boxID,
-                },
-                async function(err, aBox) {
+                boxID: boxID,
+            },
+                async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -471,74 +436,178 @@ router.post(
  * @apiName DeliveryList Get list
  * @apiGroup DeliveryList
  *
- * @api {get} /box/list Box list
+ * @api {get} /deliveryList/box/list Box list
  * @apiPermission admin
  * @apiUse JWT
- * @apiDescription If see "before upgrade" as the value of key, means that the box is in old version.
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
-        {
-            "{storeID}": {
-                ID: Number //boxID,
-                name: String,
-                dueDate: Date,
-                status: String,
-                action: [
-                    {
-                        phone: String,
-                        boxStatus: String,
-                        timestamps: Date
-                    },...
-                ],
-                deliverContent: [
-                    {
-                        amount: Number,
-                        containerType: Number
-                    },...
-                ],
-                orderContent: [
-                    {
-                        amount: Number,
-                        containerType: Number
-                    },...
-                ],
-                containerList: Array //boxID,
-                comment: String // If comment === "" means no error
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
             },...
-        }
+        ]
  */
 router.get(
     '/box/list',
     regAsAdmin,
     validateRequest,
-    async function(req, res, next) {
-        let dbUser = req._user;
-        let result = {};
+    async function (req, res, next) {
+        let result = [];
         let storeList = DataCacheFactory.get('store');
         for (let i = 0; i < Object.keys(storeList).length; i++) {
-            if (Object.keys(storeList)[i] !== "null") {
-                result[Object.keys(storeList)[i]] = [];
-            }
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
         }
         Box.find({}, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
-                if (!box.storeID) continue;
-                result[box.storeID].push({
-                    ID: box.boxID,
-                    name: box.boxName || "before upgrade",
-                    dueDate: box.dueDate || "before upgrade",
-                    status: box.status || "before upgrade",
-                    action: box.action || "before upgrade",
-                    deliverContent: box.boxDeliverContent || "before upgrade",
-                    orderContent: box.orderContent || "before upgrade",
-                    containerList: box.containerList,
-                    comment: box.comment || ""
+                if (!String(box.storeID)) continue;
+
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
                 });
             }
-            for (let key in result) {
-                if (!result[key].length) delete result[key];
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
+            return res.status(200).json(result);
+        });
+    }
+);
+
+/**
+ * @apiName DeliveryList Get specific status list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list/:status Specific status box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription
+ * **Status**
+ * - Created: "Created",
+ * - Boxing: "Boxing",
+ * - Delivering: "Delivering",
+ * - Signed: "Signed",
+ * - Stocked: "Stocked"
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+router.get(
+    '/box/list/:status',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get('store');
+        let boxStatus = req.params.status;
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({
+            'status': boxStatus
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!String(box.storeID)) continue;
+
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
+                });
             }
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
             return res.status(200).json(result);
         });
     }
@@ -548,7 +617,7 @@ router.get(
  * @apiName DeliveryList modify box info
  * @apiGroup DeliveryList
  *
- * @api {post} /modifyBoxInfo/:boxID Modify box info
+ * @api {patch} /deliveryList/modifyBoxInfo/:boxID Modify box info
  * @apiPermission admin
  * @apiUse JWT
  * @apiDescription 
@@ -560,15 +629,12 @@ router.get(
  * 
  * 3. "boxOrderContent: [{containerType, amount},...]"
  * 
- * 4. "boxDeliverContent: [{containerType, amount},...]"
+ * 4. "containerList: Array<Number>"
  * 
- * 5. "containerList: Array<Number>"
+ * 5. "comment: String"
  * 
- * 6. "comment: String"
+ * 6. "boxName: String" 
  * 
- * 7. "boxName: String" 
- * 
- * **"boxDeliveryContent" and "containerList" should always pass at the same time**
  * @apiParamExample {json} Request-Example:
  *      {
  *          <the key wanna modify> : <new value>,
@@ -581,13 +647,15 @@ router.get(
         }
  * @apiUse ModifyError
  */
-router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function(req, res, next) {
+router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
+    req.body['dueDate'] ? req.body['dueDate'] = new Date(req.body['dueDate']) : undefined;
+
     Box.findOne({
         boxID
-    }, async(err, box) => {
+    }, async (err, box) => {
         try {
             if (containerList) {
                 changeContainersState(
@@ -609,7 +677,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             }, {
                                 boxID,
                             },
-                            async(err, tradeSuccess, reply) => {
+                            async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
                                 let result = await box.update(req.body).exec();
@@ -625,11 +693,54 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                     }
                 );
             }
+
+            let result = await box.update(req.body).exec();
+            if (result.ok === 1) {
+                return res.status(200).json({
+                    type: "ModifyMessage",
+                    message: "Modify successfully"
+                });
+            }
+            return res.status(500).json(ErrorResponse.H011);
         } catch (err) {
             debug.error(err);
             return next(err);
         }
     });
+});
+
+/**
+ * @apiName DeliveryList delete box info
+ * @apiGroup DeliveryList
+ *
+ * @api {delete} /deliveryList/deleteBox/:boxID Delete box info
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription 
+
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        }
+ */
+
+router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
+    let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+
+    Box.remove({
+        boxID
+    })
+        .exec()
+        .then(_ => res.status(200).json({
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        })).catch(err => {
+            debug(err);
+            return next(err);
+        });
 });
 
 module.exports = router;

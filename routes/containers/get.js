@@ -20,6 +20,8 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
+const UserId = require('../enum/userEnum.js').userId;
+
 const historyDays = 14;
 
 /**
@@ -341,7 +343,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === 'clerk')
+    if (dbKey.roleType === UserId.clerk)
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
@@ -390,10 +392,10 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === 'clerk') ? undefined : {
+                        phone: (dbKey.roleType === UserId.clerk) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === 'clerk') ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === UserId.clerk) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

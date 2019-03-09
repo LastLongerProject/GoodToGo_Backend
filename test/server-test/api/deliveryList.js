@@ -21,14 +21,14 @@ var roles = {
     },
 };
 
-describe('api-deliveryList', function() {
+describe('api-deliveryList', function () {
 
-    before(function(done) {
+    before(function (done) {
         setTimeout(done, 10000);
     });
 
-    describe('POST /login', function() {
-        it('should response in json with roles', function(done) {
+    describe.only('POST /login', function () {
+        it('should response in json with roles', function (done) {
             request(app)
                 .post('/users/login')
                 .set('Content-Type', 'application/json')
@@ -39,11 +39,11 @@ describe('api-deliveryList', function() {
                     password: '',
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     if (!('customer' || 'admin' || 'clerk' in decode.roles)) throw new Error("Missing roles");
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -57,9 +57,9 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /create/:storeID', function() {
+    describe('POST /create/:storeID', function () {
 
-        it('status code should be 200 and with correct keys', function(done) {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -75,19 +75,19 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        boxName: "test",
+                        boxName: "test_4",
                         boxOrderContent: [{
-                            containerType: 0,
+                            containerType: "16oz 玻璃杯",
                             amount: 4
                         }],
                         dueDate: Date.now()
                     }]
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('boxIDs' in res.body)) throw new Error('missing boxIDs')
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -97,8 +97,8 @@ describe('api-deliveryList', function() {
                 });
         });
     });
-    describe('POST /box', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('POST /box', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -107,9 +107,10 @@ describe('api-deliveryList', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             Box.findOne({
-                    boxName: "test"
-                }).exec()
+                boxName: "test_2"
+            }).exec()
                 .then(box => {
+                    console.log(box)
                     request(app)
                         .post('/deliveryList/box')
                         .set('Authorization', auth)
@@ -117,17 +118,13 @@ describe('api-deliveryList', function() {
                         .send({
                             phone: "0900000000",
                             boxList: [{
-                                boxId: box.boxID,
-                                boxDeliverContent: [{
-                                    containerType: 0,
-                                    amount: 1
-                                }],
-                                containerList: [99999, 7424],
+                                ID: box.boxID,
+                                containerList: [99990, 99989, 99988, 99987],
                                 comment: "test"
                             }]
                         })
                         .expect(200)
-                        .end(function(err, res) {
+                        .end(function (err, res) {
                             if (err) {
                                 console.log(res.body);
                                 return done(err);
@@ -143,8 +140,8 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /stock', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('POST /stock', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -160,15 +157,11 @@ describe('api-deliveryList', function() {
                     phone: "0900000000",
                     boxList: [{
                         boxName: 'test',
-                        boxDeliverContent: [{
-                            containerType: 0,
-                            amount: 1
-                        }],
                         containerList: ["99999"]
                     }]
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -179,8 +172,8 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /changeState', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('POST /changeState', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -195,12 +188,12 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 12202181,
-                        newState: "Delivering"
+                        id: 21914111,
+                        newState: "Delivering",
                     }]
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -211,8 +204,8 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('POST /sign', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('POST /sign', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -227,11 +220,11 @@ describe('api-deliveryList', function() {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 12202181
+                        ID: 21914280
                     }]
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -242,8 +235,8 @@ describe('api-deliveryList', function() {
         });
     });
 
-    describe('GET /box/list', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('GET /box/list', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -257,18 +250,20 @@ describe('api-deliveryList', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkBoxListKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
+
                     done();
                 });
         });
     });
 
-    describe('PATCH /modifyBoxInfo', function() {
-        it('status code should be 200 and with correct keys', function(done) {
+    describe('GET /box/list/:status', function () {
+        it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -277,25 +272,42 @@ describe('api-deliveryList', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .patch('/deliveryList/modifyBoxInfo/11800231')
+                .get('/deliveryList/box/list/Delivering')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .expect(200)
+                .expect(checkBoxListKeys)
+                .end(function (err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    console.log(res.body);
+
+                    done();
+                });
+        });
+    });
+
+    describe.only('PATCH /modifyBoxInfo', function () {
+        it('status code should be 200 and with correct keys', function (done) {
+            let payload = {
+                jti: makeHexString(),
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .patch('/deliveryList/modifyBoxInfo/21914111')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    boxName: 'test',
                     storeID: 17,
-                    boxDeliverContent: [{
-                            containerType: 0,
-                            amount: 1
-                        },
-                        {
-                            containerType: 9,
-                            amount: 1
-                        }
-                    ],
-                    containerList: [99999, 7424]
+                    containerList: [99986]
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -309,14 +321,7 @@ describe('api-deliveryList', function() {
 function checkBoxListKeys(res) {
     let list = res.body;
     for (let key in list) {
-        if (!('ID' in list[key][0])) return new Error('Missing ID');
-        if (!('name' in list[key][0])) return new Error('Missing name');
-        if (!('dueDate' in list[key][0])) return new Error('Missing dueDate');
-        if (!('status' in list[key][0])) return new Error('Missing status');
-        if (!('action' in list[key][0])) return new Error('Missing action');
-        if (!('deliverContent' in list[key][0])) return new Error('Missing deliverContent');
-        if (!('orderContent' in list[key][0])) return new Error('Missing orderContent');
-        if (!('containerList' in list[key][0])) return new Error('Missing containerList');
-        if (!('comment' in list[key][0])) return new Error('Missing comment');
+        if (!('storeID' in list[key])) return new Error('Missing storeID');
+        if (!('boxObjs' in list[key])) return new Error('Missing boxObjs');
     }
 }

@@ -23,7 +23,7 @@ module.exports = {
                             }
                         },
                         errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
-                    };
+                    }
                 case SnsEvent.CONTAINER_RENT:
                     containers = {};
                     amount = 0;
@@ -69,7 +69,6 @@ module.exports = {
                         },
                         errMsgPrefix: `[歸還]通知推播失敗：[${user}]`
                     };
-
             }
         } catch (error) {
             debug.error(error);
@@ -108,3 +107,4 @@ module.exports = {
         }
     }
 };
+

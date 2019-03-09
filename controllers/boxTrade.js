@@ -1,5 +1,6 @@
-let BoxStatus = require('../models/variables/boxEnum').BoxStatus;
-let ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
+const BoxStatus = require('../models/variables/boxEnum').BoxStatus;
+const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
+const BoxSaveType = require('../models/variables/programEnum.js').BoxSaveType;
 const changeContainersState = require('./containerTrade');
 
 const validChange = [
@@ -12,7 +13,7 @@ const validChange = [
     [BoxStatus.Delivering, BoxStatus.Signed]
 ];
 
-let checkStateChanging = function(stateChanging) {
+let checkStateChanging = function (stateChanging) {
     for (let element of validChange) {
 
         if (stateChanging[0] === element[0] && stateChanging[1] === element[1]) {
@@ -22,7 +23,7 @@ let checkStateChanging = function(stateChanging) {
     return false;
 }
 
-let changeStateProcess = async function(element, box, phone) {
+let changeStateProcess = async function (element, box, phone) {
     const newState = element.newState;
     let stateChanging = [box.status, newState];
     let result = checkStateChanging(stateChanging);
@@ -32,24 +33,40 @@ let changeStateProcess = async function(element, box, phone) {
     });
 
     if (result === validChange[0]) {
-        let res = await box.update({
+        // let res = await box.update({
+        //     status: BoxStatus.Stocked,
+        //     storeID: 99999,
+        // }).exec();
+        let info = {
             status: BoxStatus.Stocked,
             storeID: 99999,
-        }).exec();
-
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Boxing to Stock"
-            });
         }
+
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Boxing to Stock"
+        //     });
+        // }
         return Promise.resolve({
-            status: ProgramStatus.Error,
-            message: "Box update failed in changing state from Boxing to Stock"
+            status: ProgramStatus.Success,
+            message: "State is validate, update box after change container successfully",
+            info,
+            type: BoxSaveType.Update
         });
 
     } else if (result === validChange[1]) {
-        let res = await box.update({
+        // let res = await box.update({
+        //     status: BoxStatus.Delivering,
+        //     $push: {
+        //         action: {
+        //             phone: phone,
+        //             boxStatus: BoxStatus.Delivering,
+        //             timestamps: Date.now()
+        //         }
+        //     }
+        // }).exec();
+        let info = {
             status: BoxStatus.Delivering,
             $push: {
                 action: {
@@ -58,99 +75,146 @@ let changeStateProcess = async function(element, box, phone) {
                     timestamps: Date.now()
                 }
             }
-        }).exec();
-
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Boxing to Delivering"
-            });
         }
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Boxing to Delivering"
+        //     });
+        // }
         return Promise.resolve({
-            status: ProgramStatus.Error,
-            message: "Box update failed in changing state from Boxing to Delivering"
+            status: ProgramStatus.Success,
+            message: "State is validate, update box after change container successfully",
+            info,
+            type: BoxSaveType.Update
         });
     } else if (result === validChange[2]) {
-        let res = await box.update({
+        // let res = await box.update({
+        //     status: BoxStatus.Boxing,
+        //     $pull: {
+        //         action: {
+        //             boxStatus: BoxStatus.Delivering
+        //         }
+        //     }
+        // }).exec();
+
+        let info = {
             status: BoxStatus.Boxing,
             $pull: {
                 action: {
                     boxStatus: BoxStatus.Delivering
                 }
             }
-        }).exec();
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Delivering to Boxing"
-            });
         }
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Delivering to Boxing"
+        //     });
+        // }
         return Promise.resolve({
-            status: ProgramStatus.Error,
-            message: "Box update failed in changing state from Delivering to Boxing"
+            status: ProgramStatus.Success,
+            message: "State is validate, update box after change container successfully",
+            info,
+            type: BoxSaveType.Update
         });
 
     } else if (result === validChange[3]) {
-        let res = await box.update({
+        // let res = await box.update({
+        //     status: BoxStatus.Stocked,
+        //     storeID: 99999,
+        //     dueDate: Date.now(),
+        //     $pull: {
+        //         action: {
+        //             $or: [{
+        //                 boxStatus: BoxStatus.Delivering
+        //             },
+        //             {
+        //                 boxStatus: BoxStatus.Signed
+        //             }
+        //             ]
+        //         }
+        //     }
+        // }).exec();
+
+        let info = {
             status: BoxStatus.Stocked,
             storeID: 99999,
             dueDate: Date.now(),
             $pull: {
                 action: {
                     $or: [{
-                            boxStatus: BoxStatus.Delivering
-                        },
-                        {
-                            boxStatus: BoxStatus.Signed
-                        }
+                        boxStatus: BoxStatus.Delivering
+                    },
+                    {
+                        boxStatus: BoxStatus.Signed
+                    }
                     ]
                 }
             }
-        }).exec();
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Signed to Stocked"
-            });
         }
 
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Signed to Stocked"
+        //     });
+        // }
+
         return Promise.resolve({
-            status: ProgramStatus.Error,
-            message: "Box update failed in changing state from Signed to Stocked"
+            status: ProgramStatus.Success,
+            message: "State is validate, update box after change container successfully",
+            info,
+            type: BoxSaveType.Update
         });
 
     } else if (result === validChange[4]) {
-        let res = await box.update({
+
+
+        let info = {
             status: BoxStatus.Boxing,
             storeID: element.destinationStoreId
-        }).exec();
-
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Stocked to Boxing"
-            });
         }
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Stocked to Boxing"
+        //     });
+        // }
 
         return Promise.resolve({
-            status: ProgramStatus.Error,
-            message: "Box update failed in changing state from Stocked to Boxing"
+            status: ProgramStatus.Success,
+            message: "State is validate, update box after change container successfully",
+            box,
+            info,
+            type: BoxSaveType.Update
         });
 
     } else if (result === validChange[5]) {
-        let res = await box.remove();
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Signed to Archived"
-            });
-        }
+        // let res = await box.remove();
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Signed to Archived"
+        //     });
+        // }
         return Promise.resolve({
             status: ProgramStatus.Success,
-            message: "Successfully change state from Signed to Archived"
+            message: "State is validate, update box after change container successfully",
+            type: BoxSaveType.Remove
         });
     } else if (result === validChange[6]) {
-        let res = await box.update({
+        // let res = await box.update({
+        //     status: BoxStatus.Signed,
+        //     $push: {
+        //         action: {
+        //             phone: phone,
+        //             boxStatus: BoxStatus.Signed,
+        //             timestamps: Date.now()
+        //         }
+        //     }
+        // }).exec();
+        let info = {
             status: BoxStatus.Signed,
             $push: {
                 action: {
@@ -159,23 +223,27 @@ let changeStateProcess = async function(element, box, phone) {
                     timestamps: Date.now()
                 }
             }
-        }).exec();
-        if (res) {
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Successfully change state from Delivering to Signed"
-            });
         }
+        // if (res) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Successfully change state from Delivering to Signed"
+        //     });
+        // }
         return Promise.resolve({
             status: ProgramStatus.Success,
-            message: "Successfully change state from Delivering to Signed"
+            message: "State is validate, update box after change container successfully",
+            info,
+            type: BoxSaveType.Update
         });
     }
 }
 
-let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
+let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, res, next) {
     let boxID = aBox.boxID;
     let storeID = aBox.storeID;
+    console.log("hi")
+
     if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
         changeContainersState(
             aBox.containerList,
@@ -186,14 +254,17 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
                 boxID,
                 storeID,
             },
-            async(err, tradeSuccess, reply) => {
+            async (err, tradeSuccess, reply) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = true;
                 aBox.stocking = false;
                 aBox.user.delivery = dbAdmin.user.phone;
-                let result = await aBox.save();
-                if (result) return res.status(200).json({
+                console.log("hi1")
+                await aBox.update(boxInfo.info).exec();
+                console.log("hi2")
+                await aBox.save();
+                return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -210,13 +281,14 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
             }, {
                 bypassStateValidation: true,
             },
-            async(err, tradeSuccess, reply) => {
+            async (err, tradeSuccess, reply) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
-                let result = await aBox.save();
-                if (result) return res.status(200).json({
+                await aBox.update(boxInfo.info).exec();
+                await aBox.save();
+                return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -233,14 +305,15 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
             }, {
                 bypassStateValidation: true,
             },
-            async(err, tradeSuccess, reply) => {
+            async (err, tradeSuccess, reply) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
                 aBox.stocking = true;
-                let result = await aBox.save();
-                if (result) return res.status(200).json({
+                await aBox.update(boxInfo.info).exec();
+                await aBox.save();
+                return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
                 });
@@ -249,6 +322,8 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
     }
 
     if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+        await aBox.update(boxInfo.info).exec();
+
         return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
@@ -256,13 +331,16 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
     }
 
     if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+        await aBox.remove();
         return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
         });
     }
 
-    if (aBox.status === BoxStatus.Signed && newState === BoxStatus.Archived) {
+    if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Stocked) {
+        await aBox.update(boxInfo.info).exec();
+
         return res.status(200).json({
             type: "ChangeStateMessage",
             message: "Change state successfully"
@@ -270,6 +348,8 @@ let containerStateFactory = function(newState, aBox, dbAdmin, res, next) {
     }
 
     if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+        await aBox.update(boxInfo.info).exec();
+
         return Promise.resolve({
             type: "ChangeStateMessage",
             message: "Change state successfully"

@@ -42,25 +42,21 @@ var userSchema = mongoose.Schema({
         expiryTime: Date
     }]
 }, {
-    usePushEach: true
+    timestamps: true,
+    usePushEach: true,
 });
 
-userSchema.index({
-    "user.phone": 1
-});
-userSchema.index({
-    "user.apiKey": 1
-});
+userSchema.index({createdAt: 1},{expires: '10s'});
 
 // generating a hash
-userSchema.methods.generateHash = function (password) {
+userSchema.methods.generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
 // checking if password is valid
-userSchema.methods.validPassword = function (password) {
+userSchema.methods.validPassword = function(password) {
     return bcrypt.compareSync(password, this.user.password);
 };
 
 // create the model for users and expose it to our app
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('ActivityUser', userSchema);
