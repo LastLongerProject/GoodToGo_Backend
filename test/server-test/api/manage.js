@@ -21,13 +21,13 @@ var roles = {
     },
 };
 
-describe.only('api-manage', function() {
+describe('api-manage', function() {
 
     before(function(done) {
         setTimeout(done, 13000);
     });
 
-    describe.only('POST /login', function() {
+    describe('POST /login', function() {
         it('should response in json with roles', function(done) {
             request(app)
                 .post('/users/login')
@@ -117,13 +117,12 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    // console.log(res.body);
                     done();
                 });
         });
     });
 
-    describe.only('GET /manage/shopDetail', function() {
+    describe('GET /manage/shopDetail', function() {
 
         it('status code should be 200 and with correct keys', function(done) {
             let payload = {
@@ -134,7 +133,7 @@ describe.only('api-manage', function() {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .get('/manage/shopDetail?id=12')
+                .get('/manage/shopDetail?id=17')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
@@ -144,8 +143,6 @@ describe.only('api-manage', function() {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
                     done();
                 });
         });
