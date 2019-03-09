@@ -680,7 +680,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
-                                let result = await box.update(req.body).exec();
+                                await box.update(req.body).exec();
                                 if (result.ok === 1) {
                                     return res.status(200).json({
                                         type: "ModifyMessage",
@@ -694,13 +694,12 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                 );
             }
 
-            let result = await box.update(req.body).exec();
-            if (result.ok === 1) {
-                return res.status(200).json({
-                    type: "ModifyMessage",
-                    message: "Modify successfully"
-                });
-            }
+            await box.update(req.body).exec();
+            return res.status(200).json({
+                type: "ModifyMessage",
+                message: "Modify successfully"
+            });
+
             return res.status(500).json(ErrorResponse.H011);
         } catch (err) {
             debug.error(err);
