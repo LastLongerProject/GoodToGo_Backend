@@ -204,7 +204,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe('POST /sign', function () {
+    describe.only('POST /sign', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -220,7 +220,7 @@ describe('api-deliveryList', function () {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        ID: 21914280
+                        ID: 21914111
                     }]
                 })
                 .expect(200)
@@ -289,7 +289,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe.only('PATCH /modifyBoxInfo', function () {
+    describe('PATCH /modifyBoxInfo', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -312,6 +312,7 @@ describe('api-deliveryList', function () {
                         console.log(res.body);
                         return done(err);
                     }
+
                     done();
                 });
         });

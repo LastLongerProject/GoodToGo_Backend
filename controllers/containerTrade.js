@@ -16,6 +16,7 @@ const Exception = require('../models/DB/exceptionDB.js');
 
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
+const REAL_ID_RANGE = 99900;
 
 function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
@@ -59,13 +60,17 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 });
                 if (aResult.tradeDetail) tradeDetail.push(aResult.tradeDetail);
             });
+
             let allSucceed = taskResults.every(aResult => aResult.succeed);
+
             if (allSucceed) {
+
                 Promise
                     .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
                         const cleanStateCache = () => {
                             delete containerStateCache[aDataSaver.containerID];
                         };
+
                         const resolve = bindFunction(cleanStateCache, oriResolve);
                         const reject = bindFunction(cleanStateCache, oriReject);
                         aDataSaver.saver(resolve, reject);
@@ -77,7 +82,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                             oriUser: oriUser,
                             containerList
                         }, tradeDetail);
-                    }).catch(done);
+                    }).catch(err => {
+                        done
+                    });
             } else {
                 return done(null, false, {
                     code: 'F001',
@@ -95,9 +102,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 Object.assign(err, {
                     type: messageType
                 });
-                done(null, false, err);
+                return done(null, false, err);
             } else {
-                done(err);
+                return done(err);
             }
         });
 }
@@ -146,7 +153,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             message: 'No container found',
                             data: aContainerId
                         });
-                    if (!theContainer.active)
+                    if (!theContainer.active && theContainer.ID < REAL_ID_RANGE)
                         return reject({
                             code: 'F003',
                             message: 'Container not available',
@@ -165,7 +172,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         const condition = {
                             rentOrReturnBeforeSign: oriState === 2 || 3 && newState === 1,
                             rentOrReturn: newState === 2 || newState === 3,
-
                         }
 
                         if (!succeed) {
@@ -216,7 +222,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         tradeDetail: null
                                     });
                                 });
-                            } else if (oriState === 0 || oriState === 1) {
+                            }
+                            else if (oriState === 0 || oriState === 1) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]

@@ -327,8 +327,8 @@ router.post(
                     }
                     try {
                         let boxInfo = await changeStateProcess(element, aBox, phone);
-                        console.log(boxInfo)
                         if (boxInfo.status === ProgramStatus.Success) {
+                            console.log("hi")
                             return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
                         } else {
                             ErrorResponse.H007.message = result.message;
@@ -681,26 +681,22 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
                                 await box.update(req.body).exec();
-                                if (result.ok === 1) {
-                                    return res.status(200).json({
-                                        type: "ModifyMessage",
-                                        message: "Modify successfully"
-                                    });
-                                }
-                                return res.status(500).json(ErrorResponse.H011);
+                                return res.status(200).json({
+                                    type: "ModifyMessage",
+                                    message: "Modify successfully"
+                                });
                             }
                         );
                     }
                 );
             }
-
-            await box.update(req.body).exec();
-            return res.status(200).json({
-                type: "ModifyMessage",
-                message: "Modify successfully"
-            });
-
-            return res.status(500).json(ErrorResponse.H011);
+            else {
+                await box.update(req.body).exec();
+                return res.status(200).json({
+                    type: "ModifyMessage",
+                    message: "Modify successfully"
+                });
+            }
         } catch (err) {
             debug.error(err);
             return next(err);

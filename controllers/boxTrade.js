@@ -242,7 +242,6 @@ let changeStateProcess = async function (element, box, phone) {
 let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, res, next) {
     let boxID = aBox.boxID;
     let storeID = aBox.storeID;
-    console.log("hi")
 
     if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
         changeContainersState(
@@ -260,10 +259,9 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
                 aBox.delivering = true;
                 aBox.stocking = false;
                 aBox.user.delivery = dbAdmin.user.phone;
-                console.log("hi1")
-                await aBox.update(boxInfo.info).exec();
-                console.log("hi2")
+                await aBox.update(boxInfo).exec();
                 await aBox.save();
+
                 return res.status(200).json({
                     type: "ChangeStateMessage",
                     message: "Change state successfully"
@@ -286,7 +284,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
                 if (!tradeSuccess) return res.status(403).json(reply);
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
-                await aBox.update(boxInfo.info).exec();
+                await aBox.update(boxInfo).exec();
                 await aBox.save();
                 return res.status(200).json({
                     type: "ChangeStateMessage",
@@ -311,7 +309,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
                 aBox.delivering = false;
                 aBox.user.delivery = undefined;
                 aBox.stocking = true;
-                await aBox.update(boxInfo.info).exec();
+                await aBox.update(boxInfo).exec();
                 await aBox.save();
                 return res.status(200).json({
                     type: "ChangeStateMessage",
@@ -322,7 +320,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
     }
 
     if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
-        await aBox.update(boxInfo.info).exec();
+        await aBox.update(boxInfo).exec();
 
         return res.status(200).json({
             type: "ChangeStateMessage",
@@ -339,7 +337,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
     }
 
     if (aBox.status === BoxStatus.Boxing && newState === BoxStatus.Stocked) {
-        await aBox.update(boxInfo.info).exec();
+        await aBox.update(boxInfo).exec();
 
         return res.status(200).json({
             type: "ChangeStateMessage",
@@ -348,7 +346,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
     }
 
     if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
-        await aBox.update(boxInfo.info).exec();
+        await aBox.update(boxInfo).exec();
 
         return Promise.resolve({
             type: "ChangeStateMessage",
