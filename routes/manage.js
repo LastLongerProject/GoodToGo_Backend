@@ -636,6 +636,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
+    console.log(STORE_ID)
     Store.findOne({
         id: STORE_ID
     }, function (err, theStore) {

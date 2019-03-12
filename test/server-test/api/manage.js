@@ -134,7 +134,7 @@ describe('api-manage', function () {
 
             let auth = jwt.encode(payload, roles.admin.secretKey);
             request(app)
-                .get('/manage/shopDetail?id=32')
+                .get('/manage/shopDetail?id=12')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)

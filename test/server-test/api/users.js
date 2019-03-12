@@ -162,9 +162,9 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0905519292',
+                    phone: '0978345374',
                     password: '',
-                    storeID: 17
+                    storeID: 35
                 })
                 .expect(200)
                 .end(function (err, res) {

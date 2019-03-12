@@ -1268,6 +1268,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                 '$lt': dateCheckpoint(1)
             }
         });
+
     Trade.find(tradeQuery, {}, {
         sort: {
             tradeTime: 1
@@ -1283,6 +1284,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         var rentTrades = [];
         var returnTrades = [];
         var cleanReloadTrades = [];
+
         tradeList.forEach(aTrade => {
             let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
             if (aTrade.tradeType.action === "Sign") {
@@ -1300,20 +1302,21 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
-                if (aTrade.newUser.storeID === dbStore.roles.clerk.storeID) {
-                    storeLostTradesDict[containerKey] = aTrade;
-                }
+                // if (aTrade.newUser.storeID === dbStore.roles.clerk.storeID) {
+                //     storeLostTradesDict[containerKey] = aTrade;
+                // }
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
                 }
             } else if (aTrade.tradeType.action === "ReadyToClean") {
                 if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.roles.clerk.storeID) {
-                    cleanReloadTrades.push(aTrade);
+                    cleanReloadTrades.push(aTrade.tradeTime);
+
                     if (storeLostTradesDict[containerKey]) {
                         delete storeLostTradesDict[containerKey];
                     }
                 } else if (aTrade.tradeType.oriState === 3 && storeLostTradesDict[containerKey]) {
-                    usedTrades.push(aTrade);
+                    usedTrades.push(aTrade.tradeTime);
                     delete storeLostTradesDict[containerKey];
                 }
                 if (personalLostTradesDict[containerKey]) {
@@ -1323,7 +1326,6 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         });
 
         var newTypeArrGenerator = newTypeArrGeneratorFunction(type);
-
         var resJson = {
             personalLostHistory: [],
             storeLostHistory: [],
@@ -1386,10 +1388,12 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
                 });
                 i--;
             } else {
-                tmpTypeCode = theTrade.container.typeCode;
-                // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
-                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-                resultArr[resultArr.length - 1].amount++;
+                if (theTrade.container) {
+                    tmpTypeCode = theTrade.container.typeCode;
+                    // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                    resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                    resultArr[resultArr.length - 1].amount++;
+                }
             }
         }
     }
