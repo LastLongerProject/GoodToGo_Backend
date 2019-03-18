@@ -1638,7 +1638,7 @@ function addContent(lastHistory, newHistory) {
 
 router.post(
     '/create/:storeID',
-    regAsAdmin,
+    regAsAdminManager,
     validateRequest,
     validateCreateApiContent,
     function (req, res, next) {
@@ -1670,7 +1670,7 @@ router.post(
 
 router.get(
     '/box/list',
-    regAsAdmin,
+    regAsAdminManager,
     validateRequest,
     async function (req, res, next) {
         let result = [];
@@ -1713,7 +1713,7 @@ router.get(
 
 router.get(
     '/box/list/:status',
-    regAsAdmin,
+    regAsAdminManager,
     validateRequest,
     async function (req, res, next) {
         let result = [];
