@@ -2,7 +2,6 @@ const DataCacheFactory = require("../models/dataCacheFactory.js");
 
 exports.getDeliverContent = function (containerList) {
     let container = DataCacheFactory.get('containerWithDeactive');
-    console.log(containerList)
     let deliverContent = {};
     containerList.forEach(element => {
         if (!deliverContent[container[element]]) deliverContent[container[element]] = {

@@ -188,8 +188,8 @@ describe('api-deliveryList', function () {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        id: 21914321,
-                        newState: "Stocked",
+                        id: 21914111,
+                        newState: "Delivering",
                     }]
                 })
                 .expect(200)
@@ -198,12 +198,13 @@ describe('api-deliveryList', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });
     });
 
-    describe('POST /sign', function () {
+    describe.only('POST /sign', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -219,7 +220,7 @@ describe('api-deliveryList', function () {
                 .send({
                     phone: "0900000000",
                     boxList: [{
-                        ID: 21914280
+                        ID: 21914111
                     }]
                 })
                 .expect(200)
@@ -302,7 +303,8 @@ describe('api-deliveryList', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    storeID: 0
+                    storeID: 17,
+                    containerList: [99986]
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -310,6 +312,7 @@ describe('api-deliveryList', function () {
                         console.log(res.body);
                         return done(err);
                     }
+
                     done();
                 });
         });

@@ -100,8 +100,8 @@ describe('api-users', function () {
                             return done(err);
                         }
                         userDB.deleteOne({
-                                'user.phone': '0977777777',
-                            },
+                            'user.phone': '0977777777',
+                        },
                             (err, res) => {
                                 if (err) return done(err);
                             }
@@ -137,8 +137,8 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                            'user.phone': '0999999999',
-                        },
+                        'user.phone': '0999999999',
+                    },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -164,7 +164,7 @@ describe('api-users', function () {
                 .send({
                     phone: '0978345374',
                     password: '',
-                    storeID: 35
+                    storeID: 13
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -202,8 +202,8 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                            'user.phone': '0977777777',
-                        },
+                        'user.phone': '0977777777',
+                    },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -387,8 +387,8 @@ describe('api-users', function () {
                         return done(err);
                     }
                     userDB.deleteOne({
-                            'user.name': 'test_bot',
-                        },
+                        'user.name': 'test_bot',
+                    },
                         (err, res) => {
                             if (err) return done(err);
                         }

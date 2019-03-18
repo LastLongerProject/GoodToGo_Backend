@@ -326,9 +326,10 @@ router.post(
                         return res.status(403).json(ErrorResponse.H008);
                     }
                     try {
-                        let result = await changeStateProcess(element, aBox, phone);
-                        if (result.status === ProgramStatus.Success) {
-                            return containerStateFactory(newState, aBox, dbAdmin, res, next);
+                        let boxInfo = await changeStateProcess(element, aBox, phone);
+                        if (boxInfo.status === ProgramStatus.Success) {
+                            console.log("hi")
+                            return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
                         } else {
                             ErrorResponse.H007.message = result.message;
                             return res.status(403).json(ErrorResponse.H007);
@@ -679,28 +680,23 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
-                                let result = await box.update(req.body).exec();
-                                if (result.ok === 1) {
-                                    return res.status(200).json({
-                                        type: "ModifyMessage",
-                                        message: "Modify successfully"
-                                    });
-                                }
-                                return res.status(500).json(ErrorResponse.H011);
+                                await box.update(req.body).exec();
+                                return res.status(200).json({
+                                    type: "ModifyMessage",
+                                    message: "Modify successfully"
+                                });
                             }
                         );
                     }
                 );
             }
-
-            let result = await box.update(req.body).exec();
-            if (result.ok === 1) {
+            else {
+                await box.update(req.body).exec();
                 return res.status(200).json({
                     type: "ModifyMessage",
                     message: "Modify successfully"
                 });
             }
-            return res.status(500).json(ErrorResponse.H011);
         } catch (err) {
             debug.error(err);
             return next(err);

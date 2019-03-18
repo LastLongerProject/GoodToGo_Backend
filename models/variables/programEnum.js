@@ -3,6 +3,12 @@ let ProgramStatus = Object.freeze({
     Success: "success"
 });
 
+let BoxSaveType = Object.freeze({
+    Update: "update",
+    Remove: "remove"
+});
+
 module.exports = {
-    ProgramStatus
+    ProgramStatus,
+    BoxSaveType
 }
