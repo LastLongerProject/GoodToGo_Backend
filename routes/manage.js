@@ -1760,7 +1760,7 @@ router.get(
     }
 );
 
-router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
+router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
 
