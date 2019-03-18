@@ -27,6 +27,9 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
+const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateCreateApiContent;
+
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
