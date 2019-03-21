@@ -23,7 +23,7 @@ var roles = {
 
 describe('api-stores', function () {
     before(function (done) {
-        setTimeout(done, 11000);
+        setTimeout(done, 15000);
     });
 
     describe.only('POST /login', function () {
@@ -434,7 +434,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe('GET /stores/history/byContainerType', function () {
+    describe.only('GET /stores/history/byContainerType', function () {
         it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),

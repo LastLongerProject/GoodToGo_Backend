@@ -27,6 +27,9 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
+const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateCreateApiContent;
+
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
@@ -635,6 +638,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
+    console.log(STORE_ID)
     Store.findOne({
         id: STORE_ID
     }, function (err, theStore) {
@@ -1634,6 +1638,144 @@ function addContent(lastHistory, newHistory) {
     else
         lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
+
+router.post(
+    '/create/:storeID',
+    regAsAdminManager,
+    validateRequest,
+    validateCreateApiContent,
+    function (req, res, next) {
+        let creator = req.body.phone;
+        let storeID = parseInt(req.params.storeID);
+
+        Promise.all(req._boxArray.map(box => box.save()))
+            .then(success => {
+                let list = new DeliveryList({
+                    listID: req._listID,
+                    boxList: req._boxIDs,
+                    storeID,
+                    creator: creator,
+                });
+                list.save().then(result => {
+                    return res.status(200).json({
+                        type: 'CreateMessage',
+                        message: 'Create delivery list successfully',
+                        boxIDs: req._boxIDs,
+                    });
+                });
+            })
+            .catch(err => {
+                debug.error(err);
+                return res.status(500).json(ErrorResponse.H006);
+            });
+    }
+);
+
+router.get(
+    '/box/list',
+    regAsAdminManager,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get('store');
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({}, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!String(box.storeID)) continue;
+
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
+                });
+            }
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
+            return res.status(200).json(result);
+        });
+    }
+);
+
+router.get(
+    '/box/list/:status',
+    regAsAdminManager,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get('store');
+        let boxStatus = req.params.status;
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({
+            'status': boxStatus
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!String(box.storeID)) continue;
+
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
+                });
+            }
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
+            return res.status(200).json(result);
+        });
+    }
+);
+
+router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function (req, res, next) {
+    let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+
+    Box.remove({
+        boxID
+    })
+        .exec()
+        .then(_ => res.status(200).json({
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        })).catch(err => {
+            debug(err);
+            return next(err);
+        });
+});
 
 /**
  * @apiName Manage refresh store

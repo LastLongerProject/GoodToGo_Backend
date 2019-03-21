@@ -1387,10 +1387,12 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
                 });
                 i--;
             } else {
-                tmpTypeCode = theTrade.container.typeCode;
-                // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
-                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-                resultArr[resultArr.length - 1].amount++;
+                if (theTrade.container) {
+                    tmpTypeCode = theTrade.container.typeCode;
+                    // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                    resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                    resultArr[resultArr.length - 1].amount++;
+                }
             }
         }
     }
