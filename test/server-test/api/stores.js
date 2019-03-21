@@ -370,11 +370,11 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
-                    // for (let i = 0; i < 7; i++) {
-                    //     console.log(res.body.toSign[i].boxID);
-                    //     console.log(res.body.toSign[i].typeList);
-                    //     console.log(res.body.toSign[i].containerList);
-                    // }
+                    for (let i = 0; i < 7; i++) {
+                        console.log(res.body.toSign[i].boxID);
+                        console.log(res.body.toSign[i].typeList);
+                        console.log(res.body.toSign[i].containerList);
+                    }
 
 
                     done();
