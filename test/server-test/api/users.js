@@ -36,7 +36,7 @@ describe('api-users', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0911789727',
+                    phone: '0905519292',
                     password: '',
                 })
                 .expect(200)
@@ -120,11 +120,11 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
                 .post('/users/signup/clerk')
                 .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
+                .set('ApiKey', roles.clerk.apiKey)
                 .send({
                     phone: '0999999999',
                     password: '',
@@ -162,9 +162,9 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0905519292',
+                    phone: '0911222339',
                     password: '',
-                    storeID: 13
+                    storeID: 36
                 })
                 .expect(200)
                 .end(function (err, res) {
