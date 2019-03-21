@@ -979,7 +979,6 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
     process.nextTick(function () {
         var containerDict = DataCacheFactory.get('containerWithDeactive');
         var type = DataCacheFactory.get('containerType');
-        console.log(type)
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
         }, {}, {
