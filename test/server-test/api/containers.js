@@ -21,13 +21,13 @@ var roles = {
     },
 };
 
-describe('api-containers', function() {
-    before(function(done) {
+describe('api-containers', function () {
+    before(function (done) {
         setTimeout(done, 13000);
     });
 
-    describe('POST /login', function() {
-        it('respond in json with roles', function(done) {
+    describe.only('POST /login', function () {
+        it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
                 .set('Content-Type', 'application/json')
@@ -38,12 +38,12 @@ describe('api-containers', function() {
                     password: '',
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     if (!('customer' || 'admin' || 'clerk' in decode.roles))
                         throw new Error('Missing roles');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -57,15 +57,15 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/globalUsedAmount', function() {
-        it('status code should be 200', function(done) {
+    describe('GET /containers/globalUsedAmount', function () {
+        it('status code should be 200', function (done) {
             request(app)
                 .get('/containers/globalUsedAmount')
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!res.text) throw new Error('Missing amount in text')
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -76,10 +76,10 @@ describe('api-containers', function() {
         });
     });
 
-    describe.skip('GET /containers/stock/:id', function() {
+    describe.skip('GET /containers/stock/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -92,10 +92,10 @@ describe('api-containers', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     res.body.message = 'refresh succeed' && Array.isArray(res.body.data)
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -106,10 +106,10 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/challenge/token', function() {
+    describe('GET /containers/challenge/token', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -122,11 +122,11 @@ describe('api-containers', function() {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!res.body.uri) throw new Error('Missing uri');
                     if (!res.body.token) throw new Error('Missing token');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -137,17 +137,17 @@ describe('api-containers', function() {
         });
     });
 
-    describe('POST /containers/add/:id/:type', function() {
+    describe('POST /containers/add/:id/:type', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             request(app)
                 .post('/containers/add/99998/0')
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     res.body.message === 'Add succeeded'
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -163,15 +163,15 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/get/list', function() {
-        it('should return 200', function(done) {
+    describe.only('GET /containers/get/list', function () {
+        it('should return 200', function (done) {
             request(app)
                 .get('/containers/get/list')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!res.body.containerType) throw new Error('Missing containerType');
                     if (!res.body.containerDict) throw new Error('Missing containerDict');
                     if (!(res.body.containerType[0].typeCode === 0 ? 1 : res.body.containerType[0].typeCode)) throw new Error('Missing typeCode in containerType');
@@ -180,20 +180,22 @@ describe('api-containers', function() {
                     if (!res.body.containerType[0].icon) throw new Error('Missing icon in containerType');
 
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body.containerType[0].typeCode);
                         return done(err);
                     }
+                    console.log(res.body.containerDict["3378"]);
+
                     done();
                 });
         });
     });
 
-    describe('GET /containers/get/toDelivery', function() {
+    describe('GET /containers/get/toDelivery', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -207,7 +209,7 @@ describe('api-containers', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(checkToDeliveryKeys)
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body.toDelivery[0]);
                         return done(err);
@@ -218,10 +220,10 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/get/deliveryHistory', function() {
+    describe('GET /containers/get/deliveryHistory', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -235,7 +237,7 @@ describe('api-containers', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkDeliveryHistoryKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -246,10 +248,10 @@ describe('api-containers', function() {
         });
     });
 
-    describe('GET /containers/get/reloadHistory', function() {
+    describe('GET /containers/get/reloadHistory', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
@@ -263,7 +265,7 @@ describe('api-containers', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkReloadHistoryKeys)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);

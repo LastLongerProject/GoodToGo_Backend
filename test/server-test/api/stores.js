@@ -75,7 +75,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe.only('GET /stores/list/17', function () {
+    describe('GET /stores/list/17', function () {
         it('should return 200', function (done) {
             request(app)
                 .get('/stores/list/17')
