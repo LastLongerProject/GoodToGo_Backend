@@ -977,7 +977,7 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
 router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var containerDict = DataCacheFactory.get('container');
+        var containerDict = DataCacheFactory.get('containerWithDeactive');
         var type = DataCacheFactory.get('containerType');
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
