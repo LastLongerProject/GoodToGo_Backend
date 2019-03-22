@@ -204,7 +204,7 @@ describe('api-deliveryList', function () {
         });
     });
 
-    describe.only('POST /sign', function () {
+    describe('POST /sign', function () {
         it('status code should be 200 and with correct keys', function (done) {
             let payload = {
                 jti: makeHexString(),

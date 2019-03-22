@@ -144,7 +144,33 @@ describe('api-manage', function () {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+                    // console.log(res.body);
+                    done();
+                });
+        });
+    });
+
+    describe('GET /manage/shopDetail/byCustomer', function () {
+
+        it('status code should be 200 and with correct keys', function (done) {
+            let payload = {
+                jti: 'manager',
+                iat: Date.now(),
+                exp: Date.now() + 86400000 * 3,
+            };
+
+            let auth = jwt.encode(payload, roles.admin.secretKey);
+            request(app)
+                .get('/manage/shopDetail/byCustomer?id=12')
+                .set('Authorization', auth)
+                .set('ApiKey', roles.admin.apiKey)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) {
+                        console.log(res.body);
+                        return done(err);
+                    }
+                    // console.log(res.body);
                     done();
                 });
         });

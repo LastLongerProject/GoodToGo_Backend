@@ -341,7 +341,7 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    botName: 'test_bot',
+                    botName: 'linebot_2019',
                     scopeID: 999,
                 })
                 .expect(200)
@@ -373,26 +373,23 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    bot: 'test_bot'
+                    bot: 'linebot_2019'
                 })
                 .expect(200)
-                .expect(function (res) {
-                    if (!('keys' in res.body)) throw new Error("Missing keys");
-                    if (!('apiKey' in res.body.keys)) throw new Error("Missing apiKey in keys");
-                    if (!('secretKey' in res.body.keys)) throw new Error("Missing secretKey in keys");
-                })
                 .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    userDB.deleteOne({
-                        'user.name': 'test_bot',
-                    },
-                        (err, res) => {
-                            if (err) return done(err);
-                        }
-                    );
+                    console.log(res.body);
+
+                    // userDB.deleteOne({
+                    //     'user.name': 'test_bot',
+                    // },
+                    //     (err, res) => {
+                    //         if (err) return done(err);
+                    //     }
+                    // );
                     done();
                 });
         });

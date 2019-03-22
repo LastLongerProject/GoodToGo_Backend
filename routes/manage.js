@@ -595,6 +595,161 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
  * @apiName Manage shop detail
  * @apiGroup Manage
  *
+ * @api {get} /manage/shopDetail/byCustomer?id={shopid} Get shop detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            storeName: String,
+            customersDetail:[
+                {
+                    phone: String,
+                    usedAmount: Number,
+                    lostAmount: Number
+                }
+            ]
+        }
+ * 
+ */
+
+router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, function (req, res, next) {
+    if (!req.query.id) return res.status(404).end();
+    const STORE_ID = parseInt(req.query.id);
+    Store.findOne({
+        id: STORE_ID
+    }, function (err, theStore) {
+        if (err) return next(err);
+        var result = {
+            storeName: theStore.name,
+            customersDetail: []
+        };
+
+        if (STORE_ID === 17) {
+            containerQuery = {
+                "$or": [{
+                    'storeID': STORE_ID,
+                    'active': true
+                },
+                {
+                    "ID": {
+                        "$in": DEMO_CONTAINER_ID_LIST
+                    }
+                }
+                ]
+            };
+        } else {
+            containerQuery = {
+                'storeID': STORE_ID,
+                'active': true
+            };
+        }
+
+
+        var tradeQuery = {
+            '$or': [{
+                'tradeType.action': 'Sign',
+                'newUser.storeID': STORE_ID
+            },
+            {
+                'tradeType.action': 'Rent',
+                'oriUser.storeID': STORE_ID
+            },
+            {
+                'tradeType.action': 'Return',
+                'newUser.storeID': STORE_ID
+            },
+            {
+                'tradeType.action': 'UndoReturn',
+                'oriUser.storeID': STORE_ID
+            },
+            {
+                'tradeType.action': 'ReadyToClean',
+            },
+            {
+                'tradeType.action': 'UndoReadyToClean'
+            }
+            ]
+        };
+
+        Trade.find(tradeQuery, {}, {
+            sort: {
+                tradeTime: 1
+            }
+        }, function (err, tradeList) {
+            if (err) return next(err);
+
+            cleanUndo(['Return', 'ReadyToClean'], tradeList);
+
+            var lastUsed = {};
+            var usedContainer = {};
+            var unusedContainer = {};
+
+            tradeList.forEach(function (aTrade) {
+                var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+                lastUsed[aTrade.container.id] = {
+                    newUser: aTrade.newUser.phone,
+                    oriUser: aTrade.oriUser.phone,
+                    time: aTrade.tradeTime.valueOf(),
+                    action: aTrade.tradeType.action
+                };
+                if (aTrade.tradeType.action === "Sign") {
+                    unusedContainer[containerKey] = {
+                        time: aTrade.tradeTime.valueOf(),
+                        storeID: aTrade.newUser.storeID
+                    };
+                } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
+                    if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                        usedContainer[containerKey] = {
+                            user: aTrade.newUser.phone,
+                            time: aTrade.tradeTime.valueOf(),
+                            storeID: unusedContainer[containerKey].storeID
+                        };
+                        if (result.customersDetail.every(element => {
+                            if (element.phone === aTrade.newUser.phone) element.usedAmount++;
+                            return element.phone !== aTrade.newUser.phone
+                        })) {
+                            let customerDetail = {
+                                phone: aTrade.newUser.phone,
+                                usedAmount: 1,
+                                lostAmount: 0
+                            }
+                            result.customersDetail.push(customerDetail)
+                        }
+                    }
+                    delete unusedContainer[containerKey];
+                }
+            });
+
+            var now = Date.now();
+            for (var containerID in lastUsed) {
+                var timeToNow = now - lastUsed[containerID].time;
+                if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                    console.log(lastUsed[containerID])
+                    if (result.customersDetail.every(element => {
+                        if (element.phone === lastUsed[containerID].newUser) element.lostAmount++;
+                        return element.phone !== lastUsed[containerID].newUser
+                    })) {
+                        let customerDetail = {
+                            phone: lastUsed[containerID].newUser,
+                            usedAmount: 0,
+                            lostAmount: 1
+                        }
+                        result.customersDetail.push(customerDetail)
+                    }
+                }
+            }
+            res.json(result);
+
+        });
+    });
+});
+
+/**
+ * @apiName Manage shop detail
+ * @apiGroup Manage
+ *
  * @api {get} /manage/shopDetail?id={shopid} Get shop detail
  * @apiPermission admin_manager
  * @apiUse JWT
@@ -635,10 +790,10 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
         }
  * 
  */
+
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
-    console.log(STORE_ID)
     Store.findOne({
         id: STORE_ID
     }, function (err, theStore) {
@@ -707,6 +862,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     }
                 }
             }
+
             var tradeQuery = {
                 '$or': [{
                     'tradeType.action': 'Sign',
@@ -894,7 +1050,6 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         result.weekAverage = Math.round(weeklySum / weights);
                         result.weekAmountPercentage = (result.weekAmount - result.weekAverage) / result.weekAverage;
                         result.chartData = result.chartData.concat(Object.entries(weeklyAmount));
-                        console.log(weeklySum);
                     }
 
                     res.json(result);
