@@ -26,7 +26,7 @@ describe('api-stores', function () {
         setTimeout(done, 15000);
     });
 
-    describe('POST /login', function () {
+    describe.only('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -34,7 +34,7 @@ describe('api-stores', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0958381551',
                     password: '',
                 })
                 .expect(200)
@@ -309,6 +309,8 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
+
                     done();
                 });
         });
@@ -350,7 +352,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe.only('GET /stores/boxToSign', function () {
+    describe('GET /stores/boxToSign', function () {
         it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -434,7 +436,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe('GET /stores/history/byContainerType', function () {
+    describe.only('GET /stores/history/byContainerType', function () {
         it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -454,7 +456,10 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
+
+                    for (let data of res.body.personalLostHistory) {
+                        console.log(data);
+                    }
 
                     done();
                 });
