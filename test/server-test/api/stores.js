@@ -34,7 +34,7 @@ describe('api-stores', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0958381551',
+                    phone: '0911222339',
                     password: '',
                 })
                 .expect(200)
@@ -456,6 +456,7 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
 
                     for (let data of res.body.personalLostHistory) {
                         console.log(data);
