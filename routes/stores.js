@@ -262,7 +262,7 @@ router.get('/list/:id', validateDefault, function(req, res, next) {
  * 
  */
 
-router.get('/dict', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/dict', regAsStore ,regAsAdmin, validateRequest, function(req, res, next) {
     process.nextTick(function() {
         Store.find({}, {}, {
             sort: {
