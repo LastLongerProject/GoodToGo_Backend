@@ -45,7 +45,6 @@
         "express-graphql": "^0.7.1",
         "express-status-monitor": "^1.0.1",
         "googleapis": "^32.0.0",
-        "graphql": "^14.1.1",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.1",
         "mongoose": "^4.13.17",
@@ -55,7 +54,7 @@
         "queue": "^4.5.0",
         "redis": "^2.8.0",
         "serve-favicon": "~2.4.3",
-        "sharp": "^0.18.4",
+        "sharp": "^0.22.0",
         "socket.io": "^2.1.0",
         "universal-analytics": "^0.4.20",
         "uuid": "^3.3.2"
