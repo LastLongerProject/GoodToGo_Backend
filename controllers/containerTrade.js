@@ -62,9 +62,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             });
 
             let allSucceed = taskResults.every(aResult => aResult.succeed);
-
             if (allSucceed) {
-
                 Promise
                     .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
                         const cleanStateCache = () => {
@@ -82,9 +80,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                             oriUser: oriUser,
                             containerList
                         }, tradeDetail);
-                    }).catch(err => {
-                        done
-                    });
+                    }).catch(done);
             } else {
                 return done(null, false, {
                     code: 'F001',
@@ -218,12 +214,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     return resolve({
                                         ID: aContainerId,
                                         oriUser: "",
-                                        dataSaver: (doneSave, getErr) => { },
+                                        dataSaver: (doneSave, getErr) => {},
                                         tradeDetail: null
                                     });
                                 });
-                            }
-                            else if (oriState === 0 || oriState === 1) {
+                            } else if (oriState === 0 || oriState === 1) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]

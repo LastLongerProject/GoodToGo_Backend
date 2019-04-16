@@ -30,7 +30,7 @@ module.exports = function () {
                 debug.log('scheduler start');
                 setTimeout(appInit.refreshContainer, 0, bot, cb);
                 setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
-                setTimeout(appInit.refreshActivity, 1000*60*5, cb);
+                setTimeout(appInit.refreshActivity, 1000 * 60 * 20, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
                 setTimeout(function () {

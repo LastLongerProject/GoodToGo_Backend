@@ -9,7 +9,6 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
-const ActivityUser = require('../models/DB/activityUserDB.js');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const UserId = require('../routes/enum/userEnum').userId;

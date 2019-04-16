@@ -106,20 +106,20 @@ require("./models/redis");
 require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.')
+    debug.log('SIGINT signal received.');
     let server = app.get('server');
     server.close(function (err) {
         if (err) {
-            debug.error(err)
-            process.exit(1)
+            debug.error(err);
+            process.exit(1);
         }
 
         mongoose.connection.close(function () {
-            debug.log('Mongoose connection disconnected')
-            process.exit(0)
-        })
-    })
-})
+            debug.error('Mongoose connection disconnected');
+            process.exit(0);
+        });
+    });
+});
 
 function startServer() {
     /**
@@ -225,7 +225,7 @@ function cors() {
     return function cors(req, res, next) {
         if (!res.headersSent) {
             res.header("Access-Control-Allow-Origin", "*");
-            res.header("Accrss-Control-Expose-Headers", "Authorization");
+            res.header("Access-Control-Expose-Headers", "Authorization");
             res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime");
         }
         return next();
