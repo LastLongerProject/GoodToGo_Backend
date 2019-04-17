@@ -26,6 +26,18 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
+router.post('/signup', function (req, res, next) {
+    req._setSignupVerification = function (options) {
+        if (typeof options === "undefined" ||
+            typeof options.passVerify === "undefined" ||
+            typeof options.passVerify === "undefined")
+            return next(new Error("Server Internal Error: Signup"));
+        req._options.passVerify = options.passVerify;
+        req._options.needVerified = options.needVerified;
+    };
+    next();
+});
+
 /**
  * @apiName SignUp
  * @apiGroup Users
@@ -68,6 +80,7 @@ const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
+    req._options.registerMethod = RegisterMethod.CUSTOMER_APP;
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -116,14 +129,19 @@ router.post(
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
+            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
         } else if (dbKey.roleType === UserRole.ADMIN) {
             req.body.role = {
                 typeCode: UserRole.ADMIN,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req._options.passVerify = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -163,14 +181,16 @@ router.post(
     validateRequest,
     function (req, res, next) {
         // for CLERK
-        var dbUser = req._user;
-        var dbKey = req._key;
         req.body.role = {
             typeCode: UserRole.CLERK,
             manager: true,
             storeID: req.body.storeID
         };
-        req._options.passVerify = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -278,8 +298,10 @@ router.post(
         } else {
             req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req._options.needVerified = String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`);
-        req._options.passVerify = true;
+        req._setSignupVerification({
+            needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);

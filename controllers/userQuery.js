@@ -19,9 +19,9 @@ module.exports = {
             typeCode: UserRole.CUSTOMER
         };
         let roles = req.body.roles;
-        let phone = req.body.phone.replace(/tel:|-/g, "");
-        let password = req.body.password;
-        let code = req.body.verification_code;
+        const phone = req.body.phone.replace(/tel:|-/g, "");
+        const password = req.body.password;
+        const verificationCode = req.body.verification_code;
         let options = req._options || {};
 
         if (typeof phone === 'undefined' ||
@@ -89,7 +89,7 @@ module.exports = {
                     });
                 }
             } else {
-                if (options.passVerify !== true && typeof code === 'undefined') {
+                if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     var newCode = keys.getVerificationCode();
                     sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
@@ -119,7 +119,7 @@ module.exports = {
                                 type: 'signupMessage',
                                 message: 'Verification Code expired'
                             });
-                            else if (reply !== code) return done(null, false, {
+                            else if (reply !== verificationCode) return done(null, false, {
                                 code: 'D011',
                                 type: 'signupMessage',
                                 message: "Verification Code isn't correct"
@@ -133,9 +133,10 @@ module.exports = {
                         if (dbUser) { // has NOT verified
                             userToSave = dbUser;
                         } else {
-                            var newUser = new User();
+                            let newUser = new User();
                             newUser.user.phone = phone;
                             newUser.user.password = newUser.generateHash(password);
+                            newUser.registerMethod = options.registerMethod;
 
                             if (typeof roles !== 'undefined') { // v2 api
                                 newUser.roles = roles;
