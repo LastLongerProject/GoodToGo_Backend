@@ -75,7 +75,7 @@ const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
  * 
  */
 
-router.get('/list', validateDefault, function(req, res, next) {
+router.get('/list', validateDefault, function (req, res, next) {
     var jsonData = {
         title: "Stores list",
         contract_code_explanation: {
@@ -85,7 +85,7 @@ router.get('/list', validateDefault, function(req, res, next) {
         }
     };
     var tmpArr = [];
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.find({
             "project": {
                 "$ne": "測試用"
@@ -95,7 +95,7 @@ router.get('/list', validateDefault, function(req, res, next) {
             sort: {
                 id: 1
             }
-        }, function(err, storeList) {
+        }, function (err, storeList) {
             if (err) return next(err);
             jsonData.globalAmount = 0;
             keys.serverSecretKey((err, key) => {
@@ -172,7 +172,7 @@ router.get('/list', validateDefault, function(req, res, next) {
  * 
  */
 
-router.get('/list/:id', validateDefault, function(req, res, next) {
+router.get('/list/:id', validateDefault, function (req, res, next) {
     let storeId = req.params.id;
     var jsonData = {
         title: "Store info",
@@ -183,7 +183,7 @@ router.get('/list/:id', validateDefault, function(req, res, next) {
         }
     };
     var tmpArr = [];
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.find({
             "project": {
                 "$ne": "測試用"
@@ -193,7 +193,7 @@ router.get('/list/:id', validateDefault, function(req, res, next) {
             sort: {
                 id: 1
             }
-        }, function(err, store) {
+        }, function (err, store) {
             if (err) return next(err);
             if (!store) {
                 return res.status(403).json({
@@ -262,13 +262,13 @@ router.get('/list/:id', validateDefault, function(req, res, next) {
  * 
  */
 
-router.get('/dict', regAsAdmin, validateRequest, function(req, res, next) {
-    process.nextTick(function() {
+router.get('/dict', regAsAdmin, validateRequest, function (req, res, next) {
+    process.nextTick(function () {
         Store.find({}, {}, {
             sort: {
                 id: 1
             }
-        }, function(err, storeList) {
+        }, function (err, storeList) {
             if (err) return next(err);
             let storeDict = {};
             storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
@@ -290,9 +290,9 @@ router.get('/dict', regAsAdmin, validateRequest, function(req, res, next) {
  * 
  * 
  */
-router.get('/list.js', function(req, res, next) {
+router.get('/list.js', function (req, res, next) {
     var tmpArr = [];
-    process.nextTick(function() {
+    process.nextTick(function () {
         Place.find({
             "project": {
                 "$in": ["正興杯杯", "咖啡店連線"]
@@ -302,7 +302,7 @@ router.get('/list.js', function(req, res, next) {
             sort: {
                 id: 1
             }
-        }, function(err, storeList) {
+        }, function (err, storeList) {
             if (err) return next(err);
             for (var i = 0; i < storeList.length; i++) {
                 tmpArr.push({
@@ -338,7 +338,7 @@ router.get('/list.js', function(req, res, next) {
         }
  * 
  */
-router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function(req, res, next) {
+router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
     const dbUser = req._user;
     const dbKey = req._key;
     const TYPE_CODE = dbKey.roleType;
@@ -357,8 +357,8 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
         default:
             next();
     }
-    process.nextTick(function() {
-        User.find(condition, function(err, dbClerks) {
+    process.nextTick(function () {
+        User.find(condition, function (err, dbClerks) {
             if (err) return next(err);
             dbClerks.sort((a, b) => (a.roles[TYPE_CODE].manager === b.roles[TYPE_CODE].manager) ? 0 : a.roles[TYPE_CODE].manager ? -1 : 1);
             res.json({
@@ -390,13 +390,13 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
  * @apiUse LayoffError
  */
 
-router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var toLayoff = req.params.id;
-    process.nextTick(function() {
+    process.nextTick(function () {
         User.findOne({
             'user.phone': toLayoff
-        }, function(err, clerk) {
+        }, function (err, clerk) {
             if (err) return next(err);
             if (!clerk)
                 return res.status(403).json({
@@ -413,7 +413,7 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
                 });
             clerk.roles.clerk = null;
             clerk.roles.typeList.splice(clerk.roles.typeList.indexOf("clerk"), 1);
-            clerk.save(function(err) {
+            clerk.save(function (err) {
                 if (err) return next(err);
                 res.json({
                     type: 'LayoffMessage',
@@ -453,7 +453,7 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function(req, res
         }
  * 
  */
-router.get('/status', regAsStore, validateRequest, function(req, res, next) {
+router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
@@ -484,7 +484,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         lostList: []
     };
     var tmpTypeCode;
-    process.nextTick(function() {
+    process.nextTick(function () {
         var containerQuery;
         if (dbStore.roles.clerk.storeID === 17) {
             containerQuery = {
@@ -505,7 +505,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                 'active': true
             };
         }
-        Container.find(containerQuery, function(err, containers) {
+        Container.find(containerQuery, function (err, containers) {
             for (let container of containers) {
                 lastUsed[container.ID] = {
                     time: container.lastUsedAt.valueOf(),
@@ -538,7 +538,7 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
                         'oriUser.storeID': dbStore.roles.clerk.storeID
                     }
                 ]
-            }, function(err, trades) {
+            }, function (err, trades) {
                 if (err) return next(err);
                 if (typeof containers !== 'undefined') {
                     for (var i in containers) {
@@ -594,13 +594,13 @@ router.get('/status', regAsStore, validateRequest, function(req, res, next) {
         }
  * 
  */
-router.get('/openingTime', regAsStore, validateRequest, function(req, res, next) {
+router.get('/openingTime', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.findOne({
             'id': dbStore.roles.clerk.storeID,
             'active': true
-        }, function(err, store) {
+        }, function (err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
             res.json({
@@ -624,13 +624,13 @@ router.get('/openingTime', regAsStore, validateRequest, function(req, res, next)
         { }
  * 
  */
-router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(req, res, next) {
+router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Store.findOne({
             'id': dbStore.roles.clerk.storeID,
             'active': true
-        }, function(err, store) {
+        }, function (err, store) {
             if (err) return next(err);
             if (!store) return next('Mapping store ID failed');
             store.opening_default = false;
@@ -659,14 +659,14 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function(re
         }
  * 
  */
-router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function(req, res, next) {
+router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var phone = req.params.phone.replace(/tel:|-/g, "");
     const thisRedisKey = redisKey(dbStore.roles.clerk.storeID); // BOT??
-    process.nextTick(function() {
+    process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(phone.toString() + '$', "i")
-        }, function(err, user) {
+        }, function (err, user) {
             if (err)
                 return next(err);
             if (!user) {
@@ -711,13 +711,13 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function(re
         }
  * 
  */
-router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, next) {
+router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var rentedIdList = [];
     var resJson = {
         data: []
     };
-    process.nextTick(function() {
+    process.nextTick(function () {
         Trade.find({
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays),
@@ -725,9 +725,9 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
             },
             'tradeType.action': "Rent",
             'oriUser.storeID': dbStore.roles.clerk.storeID
-        }, function(err, rentedList) {
+        }, function (err, rentedList) {
             if (err) return next(err);
-            rentedList.sort(function(a, b) {
+            rentedList.sort(function (a, b) {
                 return b.tradeTime - a.tradeTime;
             });
             for (var i in rentedList)
@@ -741,13 +741,13 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function(req, res, n
                 'container.id': {
                     '$in': rentedIdList
                 }
-            }, function(err, returnedList) {
+            }, function (err, returnedList) {
                 if (err) return next(err);
-                returnedList.sort(function(a, b) {
+                returnedList.sort(function (a, b) {
                     return b.tradeTime - a.tradeTime;
                 });
                 for (var i in returnedList) {
-                    var index = rentedList.findIndex(function(ele) {
+                    var index = rentedList.findIndex(function (ele) {
                         return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
                     });
                     if (index !== -1) {
@@ -803,7 +803,7 @@ const dayFormat = /^[0-6]{1}$/;
         }
  * @apiUse ChangeOpeningTimeError
  */
-router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(req, res, next) {
+router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var newData = req.body;
     var days = newData.opening_hours;
@@ -870,10 +870,10 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function(r
         }
  * 
  */
-router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
+router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
-        var containerDict = DataCacheFactory.get('containerWithDeactive');
+    process.nextTick(function () {
+        var containerDict = DataCacheFactory.get('container');
         var type = DataCacheFactory.get('containerType');
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
@@ -881,7 +881,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
             "sort": {
                 "updatedAt": -1
             }
-        }, function(err, boxList) {
+        }, function (err, boxList) {
             if (err) return next(err);
             var boxArr = [];
             if (boxList.length !== 0) {
@@ -924,7 +924,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
                 'tradeTime': {
                     '$gte': dateCheckpoint(1 - historyDays)
                 }
-            }, function(err, list) {
+            }, function (err, list) {
                 if (err) return next(err);
                 if (list.length !== 0) {
                     list.sort((a, b) => b.tradeTime - a.tradeTime);
@@ -998,9 +998,9 @@ router.get('/boxToSign', regAsStore, validateRequest, function(req, res, next) {
         }
  * 
  */
-router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) {
+router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    process.nextTick(function() {
+    process.nextTick(function () {
         var type = DataCacheFactory.get('containerType');
         Promise
             .all([new Promise((resolve, reject) => {
@@ -1060,10 +1060,10 @@ router.get('/usedAmount', regAsStore, validateRequest, function(req, res, next) 
         }
  * 
  */
-router.get('/history', regAsStore, validateRequest, function(req, res, next) {
+router.get('/history', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = DataCacheFactory.get('containerType');
-    process.nextTick(function() {
+    process.nextTick(function () {
         Trade.find({
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays),
@@ -1071,7 +1071,7 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
             },
             'tradeType.action': 'Rent',
             'oriUser.storeID': dbStore.roles.clerk.storeID
-        }, function(err, rentTrades) {
+        }, function (err, rentTrades) {
             if (err) return next(err);
             Trade.find({
                 'tradeTime': {
@@ -1080,17 +1080,17 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
                 },
                 'tradeType.action': 'Return',
                 'newUser.storeID': dbStore.roles.clerk.storeID
-            }, function(err, returnTrades) {
+            }, function (err, returnTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                    parseHistory(rentTrades, 'Rent', type, function(parsedRent) {
+                    parseHistory(rentTrades, 'Rent', type, function (parsedRent) {
                         resJson = {
                             rentHistory: {
                                 amount: parsedRent.length,
                                 dataList: parsedRent
                             }
                         };
-                        parseHistory(returnTrades, 'Return', type, function(parsedReturn) {
+                        parseHistory(returnTrades, 'Return', type, function (parsedReturn) {
                             resJson.returnHistory = {
                                 amount: parsedReturn.length,
                                 dataList: parsedReturn
@@ -1124,7 +1124,7 @@ router.get('/history', regAsStore, validateRequest, function(req, res, next) {
         }
  * 
  */
-router.get('/history/byContainerType', regAsStore, validateRequest, function(req, res, next) {
+router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = DataCacheFactory.get('containerType');
     req.clearTimeout();
@@ -1168,7 +1168,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
         sort: {
             tradeTime: 1
         }
-    }, function(err, tradeList) {
+    }, function (err, tradeList) {
         if (err) return next(err);
 
         cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
@@ -1248,7 +1248,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function(req
 });
 
 function newTypeArrGeneratorFunction(type) {
-    return function() {
+    return function () {
         var tmpArr = [];
         for (var aType in type) {
             tmpArr.push({
@@ -1307,7 +1307,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
         }
  * 
  */
-router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res, next) {
+router.get('/history/byCustomer', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     let tradeQuery = {
         "tradeType.action": "Rent",
@@ -1369,14 +1369,14 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function(req, res
         }
  * 
  */
-router.get('/performance', regAsStore, validateRequest, function(req, res, next) {
+router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     let orderBy = req.query.by;
 
     Trade.find({
         'tradeType.action': 'Rent',
         'oriUser.storeID': dbStore.roles.clerk.storeID
-    }, function(err, rentTrades) {
+    }, function (err, rentTrades) {
         if (err) return next(err);
         let clerkDict = {};
         if (orderBy && orderBy === "date") {
@@ -1416,7 +1416,7 @@ router.get('/performance', regAsStore, validateRequest, function(req, res, next)
     }
  * 
  */
-router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
+router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     const thisRedisKey = redisKey(dbStore.roles.clerk.storeID);
     redis.exists(thisRedisKey, (err, keyIsExists) => {
@@ -1444,10 +1444,10 @@ router.get('/favorite', regAsStore, validateRequest, function(req, res, next) {
             Trade.find({
                 'tradeType.action': 'Rent',
                 'oriUser.storeID': dbStore.roles.clerk.storeID
-            }, function(err, rentTrades) {
+            }, function (err, rentTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined') {
-                    getFavorite(rentTrades, function(userList) {
+                    getFavorite(rentTrades, function (userList) {
                         let favoriteList = userList.slice(0, 5);
                         res.json({
                             userList: favoriteList
@@ -1474,7 +1474,7 @@ function parseHistory(data, dataType, type, callback) {
         else if (dataType === 'Return')
             lastPhone = aHistory.oriUser.phone;
     } else {
-        data.sort(function(a, b) {
+        data.sort(function (a, b) {
             return b.tradeTime - a.tradeTime;
         });
     }
@@ -1550,7 +1550,7 @@ function parseHistory(data, dataType, type, callback) {
 
 function getFavorite(data, callback) {
     if (data.length === 0) return callback([]);
-    data.sort(function(a, b) {
+    data.sort(function (a, b) {
         return b.tradeTime - a.tradeTime;
     });
     var byOrderArr = [];
@@ -1583,7 +1583,7 @@ function getFavorite(data, callback) {
             times: count[phone]
         });
     }
-    sortable.sort(function(a, b) {
+    sortable.sort(function (a, b) {
         return b.times - a.times;
     });
     return callback(sortable);
