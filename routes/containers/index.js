@@ -5,6 +5,7 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
+const User = require('../../models/DB/userDB.js');
 
 const Container = require('../../models/DB/containerDB');
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
@@ -51,7 +52,7 @@ router.use('/get', require('./get'));
         res.text: String //amount
  * 
  */
-router.get('/globalUsedAmount', function(req, res, next) {
+router.get('/globalUsedAmount', function (req, res, next) {
     getGlobalUsedAmount((err, count) => {
         if (err) return next(err);
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -76,7 +77,7 @@ router.get('/globalUsedAmount', function(req, res, next) {
         }
  * @apiUse StockError
  */
-router.post('/stock/:id', regAsAdmin, validateRequest, function(
+router.post('/stock/:id', regAsAdmin, validateRequest, function (
     req,
     res,
     next
@@ -86,7 +87,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(
     Box.findOne({
             boxID: boxID,
         },
-        function(err, aBox) {
+        function (err, aBox) {
             if (err) return next(err);
             if (!aBox)
                 return res.status(403).json({
@@ -95,7 +96,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(
                     message: "Can't Find The Box",
                 });
             aBox.stocking = true;
-            aBox.save(function(err) {
+            aBox.save(function (err) {
                 if (err) return next(err);
                 return res.json({
                     type: 'stockBoxMessage',
@@ -123,7 +124,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function(
  * @apiUse DeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
+router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
     req,
     res,
     next
@@ -135,7 +136,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
         Box.findOne({
                 boxID: boxID,
             },
-            function(err, aBox) {
+            function (err, aBox) {
                 if (err) return next(err);
                 if (!aBox)
                     return res.status(403).json({
@@ -165,21 +166,21 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
                         aBox.stocking = false;
                         aBox.storeID = storeID;
                         aBox.user.delivery = dbAdmin.user.phone;
-                        aBox.save(function(err) {
+                        aBox.save(function (err) {
                             if (err) return next(err);
                             res.json(reply);
-                            /*
-                                  User.find({
-                                      'roles.clerk.storeID': storeID
-                                  }, function (err, userList) {
-                                      if (err) return debug(err);
-                                      userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                          clerk: aClerk
-                                      }, {
-                                          boxID
-                                      }));
-                                  });
-                                  */
+                            //test
+                            User.find({
+                                'roles.clerk.storeID': Number(storeID)
+                            }, function (err, userList) {
+                                if (err) return debug(err);
+                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
+                                    clerk: aClerk
+                                }, {
+                                    boxID
+                                }));
+                            });
+
                         });
                     }
                 );
@@ -205,7 +206,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function(
  * @apiUse CancelDeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
+router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (
     req,
     res,
     next
@@ -215,7 +216,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
     Box.findOne({
             boxID: boxID,
         },
-        function(err, aBox) {
+        function (err, aBox) {
             if (err) return next(err);
             if (!aBox)
                 return res.status(403).json({
@@ -243,7 +244,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
                     aBox.delivering = false;
                     aBox.storeID = undefined;
                     aBox.user.delivery = undefined;
-                    aBox.save(function(err) {
+                    aBox.save(function (err) {
                         if (err) return next(err);
                         return res.json(reply);
                     });
@@ -271,7 +272,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function(
  * @apiUse ChangeStateError
  */
 
-router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
+router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
     req,
     res,
     next
@@ -282,7 +283,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
     Box.findOne({
             boxID: boxID,
         },
-        function(err, aDelivery) {
+        function (err, aDelivery) {
             if (err) return next(err);
             if (!aDelivery)
                 return res.status(403).json({
@@ -311,7 +312,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
                     Box.remove({
                             boxID: boxID,
                         },
-                        function(err) {
+                        function (err) {
                             if (err) return next(err);
                             return res.json(reply);
                         }
@@ -349,7 +350,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function(
  * @apiUse RentError
  * @apiUse ChangeStateError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function(
+router.post('/rent/:id', regAsStore, validateRequest, function (
     req,
     res,
     next
@@ -434,7 +435,7 @@ router.post(
     regAsStore,
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         var dbStore = req._user;
         if (!res._payload.orderTime)
             return res.status(403).json({
@@ -496,7 +497,7 @@ router.post(
  * @apiUse ReadyToCleanError
  * @apiUse ChangeStateError
  */
-router.post('/readyToClean/:id', regAsAdmin, validateRequest, function(
+router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (
     req,
     res,
     next
@@ -551,7 +552,7 @@ router.post(
     ['/cleanStation/box', '/box'],
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         var dbAdmin = req._user;
         let boxID = req.body.boxId;
         const containerList = req.body.containerList;
@@ -561,11 +562,11 @@ router.post(
                 type: 'BoxingMessage',
                 message: 'Boxing req body invalid'
             });
-        var task = function(done) {
+        var task = function (done) {
             Box.findOne({
                     boxID: boxID,
                 },
-                function(err, aBox) {
+                function (err, aBox) {
                     if (err) return next(err);
                     if (aBox)
                         return res.status(403).json({
@@ -594,7 +595,7 @@ router.post(
                             Object.assign(reply, {
                                 data: newBox,
                             });
-                            newBox.save(function(err) {
+                            newBox.save(function (err) {
                                 if (err) return next(err);
                                 return done(reply);
                             });
@@ -671,13 +672,13 @@ router.post(
     ['/cleanStation/unbox/:id', '/unbox/:id'],
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         var dbAdmin = req._user;
         var boxID = req.params.id;
         Box.findOne({
                 boxID: boxID,
             },
-            function(err, aBox) {
+            function (err, aBox) {
                 if (err) return next(err);
                 if (!aBox)
                     return res.status(403).json({
@@ -699,7 +700,7 @@ router.post(
                         Box.remove({
                                 boxID: boxID
                             },
-                            function(err) {
+                            function (err) {
                                 if (err) return next(err);
                                 return res.json(reply);
                             }
@@ -732,7 +733,7 @@ var actionCanUndo = {
     Return: 3,
     ReadyToClean: 4,
 };
-router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
+router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
     req,
     res,
     next
@@ -750,12 +751,12 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function(
                     logTime: -1,
                 },
             },
-            function(err, theTrade) {
+            function (err, theTrade) {
                 if (err) return next(err);
                 Container.findOne({
                         ID: containerID
                     },
-                    function(err, theContainer) {
+                    function (err, theContainer) {
                         if (err) return next(err);
                         if (!theContainer || !theTrade)
                             return res.json({
@@ -870,7 +871,7 @@ router.get(
     regAsStore,
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         var action = req.params.action;
         var containerID = parseInt(req.params.id);
         var newState = actionTodo.indexOf(action);
@@ -885,7 +886,7 @@ router.get(
             Container.findOne({
                     ID: containerID,
                 },
-                function(err, theContainer) {
+                function (err, theContainer) {
                     if (err) return next(err);
                     if (!theContainer)
                         return res.status(403).json({
@@ -898,7 +899,7 @@ router.get(
                         false,
                         theContainer.statusCode,
                         newState,
-                        function(succeed) {
+                        function (succeed) {
                             if (!succeed) {
                                 return res.status(403).json({
                                     code: 'F001',
@@ -945,14 +946,14 @@ router.get(
         }
  * @apiError 403 type: addContainerMessage, message: That ID is already exist.
  */
-router.post('/add/:id/:type', function(req, res, next) {
+router.post('/add/:id/:type', function (req, res, next) {
     var id = req.params.id;
     var typeCode = req.params.type;
-    process.nextTick(function() {
+    process.nextTick(function () {
         Container.findOne({
                 ID: id,
             },
-            function(err, container) {
+            function (err, container) {
                 if (err) return next(err);
                 if (container) {
                     return res.status(403).json({
@@ -965,7 +966,7 @@ router.post('/add/:id/:type', function(req, res, next) {
                     newContainer.typeCode = typeCode;
                     newContainer.statusCode = 4;
                     newContainer.conbineTo = '0900000000';
-                    newContainer.save(function(err) {
+                    newContainer.save(function (err) {
                         // save the container
                         if (err) return next(err);
                         res.status(200).json({
