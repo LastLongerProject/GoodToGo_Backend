@@ -1,26 +1,25 @@
-var config = require('../config/config');
+const config = require('../config/config');
 
-var debug = require('debug')('goodtogo_backend:redis');
-debug.log = console.log.bind(console);
-var debugError = require('debug')('goodtogo_backend:redisERR');
-var redis = require('redis');
-var redisClient = redis.createClient(6379, config.redisUrl, {
+const debug = require('../helpers/debugger')('redis');
+
+const redis = require('redis');
+const redisClient = redis.createClient(6379, config.redisUrl, {
     password: config.redisPass
 });
 redisClient.on('ready', function () {
-    debug('redisDB ready');
+    debug.log('redisDB ready');
 });
 
 redisClient.on('connect', function () {
-    debug('redisDB connect');
+    debug.log('redisDB connect');
 });
 
 redisClient.on('reconnecting', function (delay, attempt) {
-    debug('redisDB reconnecting');
+    debug.log('redisDB reconnecting');
 });
 
 redisClient.on('error', function (err) {
-    debugError('redisDB err ', err);
+    debug.error('redisDB err ', err);
 });
 
 module.exports = redisClient;

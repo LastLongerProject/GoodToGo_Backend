@@ -1,6 +1,6 @@
 var AWS = require('aws-sdk');
 var configData = require('../../config/config.js');
-var debug = require('debug')('goodtogo_backend:sns');
+var debug = require('../debugger')('sns');
 
 AWS.config = {
     accessKeyId: configData.AWS.Access_Key_ID,
@@ -28,7 +28,7 @@ module.exports = {
             else callback(null, data);
         });
         sns.subscribe(subscribeParams, function (err, data) {
-            if (err) debug(err, err.stack);
+            if (err) debug.error(err, err.stack);
         });
     },
     sms_publish: function (msg, callback) {

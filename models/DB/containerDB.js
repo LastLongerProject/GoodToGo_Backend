@@ -9,7 +9,10 @@ var userSchema = mongoose.Schema({
         default: 4
     },
     conbineTo: String,
-    storeID: Number,
+    storeID: {
+        type: Number,
+        default: null
+    },
     cycleCtr: {
         type: Number,
         default: 0
@@ -22,9 +25,11 @@ var userSchema = mongoose.Schema({
     lastUsedAt: {
         type: Date,
         default: Date.now()
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now()
     }
-}, {
-    timestamps: true
 });
 
 userSchema.index({

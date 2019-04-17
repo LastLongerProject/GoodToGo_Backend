@@ -2,11 +2,12 @@ const queue = require('queue')({
     concurrency: 1,
     autostart: true
 });
-var debug = require('debug')('goodtogo_backend:containerTrade');
 
+const debug = require('../helpers/debugger')('containerTrade');
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
+const DataCacheFactory = require("../models/dataCacheFactory");
 const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
@@ -18,11 +19,17 @@ const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'b
 function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
         containers = [containers];
+    if (containers.length < 1)
+        return done(null, false, {
+            code: 'F002',
+            message: 'No container found',
+            data: aContainerId
+        });
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
     const consts = {
-        containerTypeDict: done.res.app.get("containerType")
+        containerTypeDict: DataCacheFactory.get("containerType")
     };
 
     let tradeTime;
@@ -36,6 +43,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         .all(containers.map(stateChangingTask(reqUser, stateChanging, options, consts)))
         .then(taskResults => {
             let oriUser;
+            let tradeDetail = [];
             let replyTxt;
             let dataSavers = [];
             let errorListArr = [];
@@ -49,6 +57,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                     containerID: aResult.ID,
                     saver: aResult.dataSaver
                 });
+                if (aResult.tradeDetail) tradeDetail.push(aResult.tradeDetail);
             });
             let allSucceed = taskResults.every(aResult => aResult.succeed);
             if (allSucceed) {
@@ -61,17 +70,16 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         const reject = bindFunction(cleanStateCache, oriReject);
                         aDataSaver.saver(resolve, reject);
                     })))
-                    .then((containerList) => {
-                        if (done.callback) return done.callback();
-                        done.res.status(200).json({
+                    .then(containerList => {
+                        return done(null, true, {
                             type: messageType,
                             message: replyTxt || stateChanging.action + ' Succeeded',
                             oriUser: oriUser,
-                            containerList: containerList
-                        });
-                    }).catch(done.next);
+                            containerList
+                        }, tradeDetail);
+                    }).catch(done);
             } else {
-                return done.res.status(403).json({
+                return done(null, false, {
                     code: 'F001',
                     type: messageType,
                     message: "State Changing Invalid",
@@ -87,9 +95,9 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 Object.assign(err, {
                     type: messageType
                 });
-                done.res.status(403).json(err);
+                return done(null, false, err);
             } else {
-                done.next(err);
+                done(err);
             }
         });
 }
@@ -106,6 +114,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     return function trade(aContainer) {
         return new Promise((oriResolve, oriReject) => {
             queue.push(doneThisTask => {
+                let newUser = reqUser;
                 const resolve = bindFunction(doneThisTask, oriResolve, {
                     succeed: true
                 });
@@ -127,7 +136,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                     });
                 Container.findOne({
                     'ID': aContainerId
-                }, function (err, theContainer) {
+                }, function(err, theContainer) {
                     if (err)
                         return reject(err);
                     if (!theContainer)
@@ -143,18 +152,20 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== reqUser.roles.clerk.storeID)
+                    const oriState = theContainer.statusCode;
+                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
                         return reject({
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
+
+
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
-                            ID: aContainerId,
-                            txt: "Already Return"
-                        });
-                    validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                        ID: aContainerId,
+                        txt: "Already Return"
+                    });
+                    validateStateChanging(bypassStateValidation, oriState, newState, function(succeed) {
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -171,7 +182,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
-                                }, function (err, aBox) {
+                                }, function(err, aBox) {
                                     if (err) return reject(err);
                                     if (!aBox) return resolveWithErr(errorMsg);
                                     errorList.push(aBox.boxID);
@@ -184,11 +195,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         } else {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
-                            }, function (err, oriUser) {
+                            }, function(err, oriUser) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {
-                                    debug('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
+                                    debug.error('Containers state changing unexpect err. Data : ' + JSON.stringify(theContainer) +
                                         ' ID in uri : ' + aContainerId);
                                     return reject({
                                         code: 'F004',
@@ -204,15 +215,15 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 let storeID_newUser, storeID_oriUser;
                                 if (action === 'Sign') {
                                     if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 代簽收
-                                    else storeID_newUser = reqUser.roles.clerk.storeID;
+                                    else storeID_newUser = newUser.roles.clerk.storeID;
                                 } else if (action === 'Rent') {
                                     let tmp = oriUser;
-                                    oriUser = reqUser;
-                                    reqUser = tmp;
+                                    oriUser = newUser;
+                                    newUser = tmp;
                                     storeID_oriUser = oriUser.roles.clerk.storeID;
                                 } else if (action === 'Return') {
                                     if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 髒杯回收代歸還
-                                    else storeID_newUser = reqUser.roles.clerk.storeID;
+                                    else storeID_newUser = newUser.roles.clerk.storeID;
                                     if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
                                 } else if (action === 'ReadyToClean') {
                                     storeID_oriUser = theContainer.storeID;
@@ -224,10 +235,10 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 }
 
                                 theContainer.statusCode = newState;
-                                theContainer.conbineTo = reqUser.user.phone;
+                                theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
-                                else theContainer.storeID = undefined;
+                                else theContainer.storeID = null;
 
                                 let newTrade = new Trade({
                                     tradeTime,
@@ -241,7 +252,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         storeID: storeID_oriUser
                                     },
                                     newUser: {
-                                        phone: reqUser.user.phone,
+                                        phone: newUser.user.phone,
                                         storeID: storeID_newUser
                                     },
                                     container: {
@@ -268,7 +279,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                                 });
                                             });
                                         });
-                                    }
+                                    },
+                                    tradeDetail: action === "Rent" || action === "Return" ? {
+                                        oriUser,
+                                        newUser,
+                                        containerID: theContainer.ID
+                                    } : null
                                 });
                             });
                         }
