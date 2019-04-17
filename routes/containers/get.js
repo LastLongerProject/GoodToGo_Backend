@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jwt-simple');
-const debug = require('debug')('goodtogo_backend:containers_get');
+const debug = require('../../helpers/debugger')('containers_get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
@@ -13,6 +13,7 @@ const baseUrl = require('../../config/config.js').serverBaseUrl;
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
+const DataCacheFactory = require("../../models/dataCacheFactory");
 
 const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
@@ -21,9 +22,39 @@ const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const historyDays = 14;
 
-router.get('/list', validateDefault, function (req, res, next) {
-    var typeDict = req.app.get('containerType');
-    var containerDict = req.app.get('container');
+/**
+ * @apiName Containers get list 
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/get/list Get list 
+ * 
+ * @apiUse DefaultSecurityMethod
+ * @apiHeader If-None-Match : // ‘Etag’ header value from last /stores/list response
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "containerType" : [
+                {
+                    typeCode : Number, // 0
+                    name : String, // 12oz 玻璃杯
+                    version : Number,
+                    icon : {
+                        "1x": "https://app.goodtogo.tw/images/icon/00_1x/:token",
+                        "2x": "https://app.goodtogo.tw/images/icon/00_2x/:token",
+                        "3x": "https://app.goodtogo.tw/images/icon/00_3x/:token"
+                    }
+                }, ...
+            ],
+            "containerDict": {
+                "1": "12oz 玻璃杯",...
+            }
+        }
+ *
+ */
+router.get('/list', validateDefault, function(req, res, next) {
+    var typeDict = DataCacheFactory.get('containerType');
+    var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
     var tmpArr = [];
     var date = new Date();
@@ -54,11 +85,53 @@ router.get('/list', validateDefault, function (req, res, next) {
     });
 });
 
-router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
+/**
+ * @apiName Containers get toDelivery list
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/get/toDelivery Get toDelivery list
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            toDelivery:
+            [ 
+                { 
+                    boxID: String //102457,
+                    boxTime: Date // '2018-10-26T09:13:40.267Z',
+                    phone: {
+                        "box": String
+                    },
+                    typeList: [
+                        "12oz 玻璃杯"
+                    ],
+                    containerList: {
+                        "12oz 玻璃杯": [
+                            1,...
+                        ]
+                    },
+                    stocking: Boolean,
+                    isDelivering: Boolean,
+                    containerOverview: [
+                            {
+                                "containerType": "12oz 玻璃杯",
+                                "amount": 1
+                            },...
+                        ] 
+                    },
+                    ...
+            ]
+        }
+ *
+ */
+router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    var containerDict = req.app.get('containerWithDeactive');
-    process.nextTick(function () {
-        Box.find(function (err, boxList) {
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
+    process.nextTick(function() {
+        Box.find(function(err, boxList) {
             if (err) return next(err);
             if (boxList.length === 0) return res.json({
                 toDelivery: []
@@ -109,15 +182,56 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
     });
 });
 
-router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
+/**
+ * @apiName Containers get delivery history
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/get/toDelivery Get delivery history
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            pastDelivery:
+            [
+                { 
+                    "boxID": 1,
+                    "boxTime": "2017-11-05T15:05:37.456Z",
+                    "phone": {
+                        "delivery": String // 配送的人
+                    },
+                    "typeList": [
+                        "12oz 玻璃杯"
+                    ],
+                    "containerList": {
+                        "12oz 玻璃杯": [
+                            1,...
+                        ]
+                    },
+                    "containerOverview": [
+                        {
+                            "containerType": "12oz 玻璃杯",
+                            "amount": 1
+                        },...
+                    ],
+                    "destinationStore": Number // store ID 
+                },
+                ...
+            ]
+        }
+ *
+ */
+router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    var typeDict = req.app.get('containerType');
+    var typeDict = DataCacheFactory.get('containerType');
     Trade.find({
         'tradeType.action': 'Sign',
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
-    }, function (err, list) {
+    }, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             pastDelivery: []
@@ -175,18 +289,62 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
     });
 });
 
-router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var typeDict = req.app.get('containerType');
+/**
+ * @apiName Containers reload history
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/get/reloadHistory Reload history
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * @apiPermission clerk
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            reloadHistory::
+            [
+                { 
+                    {
+                        "boxTime": "2017-11-05T15:05:37.456Z",
+                        "typeList": [
+                            "12oz 玻璃杯"
+                        ],
+                        "phone": {
+                            "reload": String // (清洗站)回收的人
+                        },
+                        "from": 1, // (清洗站)storeID
+                        "containerList": {
+                            "12oz 玻璃杯": [
+                                1,...
+                            ]
+                        },
+                        "containerOverview": [
+                            {
+                                "containerType": "12oz 玻璃杯",
+                                "amount": 1
+                            },...
+                        ],
+                        "cleanReload": Boolean // if TRUE, 為乾淨回收
+                    },
+                    ...
+                }
+            ]
+        }
+ *
+ */
+router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
+    var dbUser = req._user;
+    var dbKey = req._key;
+    var typeDict = DataCacheFactory.get('containerType');
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbStore.role.typeCode === 'clerk')
+    if (dbKey.roleType === 'clerk')
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbStore.role.storeID
+                'oriUser.storeID': dbUser.roles.clerk.storeID
             }, {
                 'tradeType.action': 'UndoReadyToClean'
             }],
@@ -203,7 +361,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 '$gte': dateCheckpoint(1 - queryDays)
             }
         };
-    Trade.find(queryCond, function (err, list) {
+    Trade.find(queryCond, function(err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
@@ -231,10 +389,10 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbStore.role.typeCode === 'clerk') ? undefined : {
+                        phone: (dbKey.roleType === 'clerk') ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbStore.role.typeCode === 'clerk') ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === 'clerk') ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

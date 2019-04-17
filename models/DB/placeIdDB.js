@@ -10,7 +10,8 @@ var userSchema = mongoose.Schema({
     },
     active: Boolean,
     project: String,
-    type: String
+    type: String,
+    category: Number
 }, {
     timestamps: true
 });

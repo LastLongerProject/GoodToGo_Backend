@@ -1,33 +1,35 @@
-var express = require('express');
-var router = express.Router();
-var debugError = require('debug')('goodtogo_backend:managerERR');
-var debug = require('debug')('goodtogo_backend:manager');
-var redis = require("../models/redis");
-debug.log = console.log.bind(console);
+const express = require('express');
+const router = express.Router();
+const debug = require('../helpers/debugger')('manager');
+const redis = require("../models/redis");
 
-var validateRequest = require('../middlewares/validation/validateRequest').JWT;
-var regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
-var getConst = require('../helpers/appInit').getConst;
-var refreshStore = require('../helpers/appInit').refreshStore;
-var refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
-var refreshContainer = require('../helpers/appInit').refreshContainer;
-var refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
-var cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
-var dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-var fullDateString = require('@lastlongerproject/toolkit').fullDateString;
-var getWeekCheckpoint = require('@lastlongerproject/toolkit').getWeekCheckpoint;
-var updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const SocketNamespace = require('../controllers/socket').namespace;
+const generateSocketToken = require('../controllers/socket').generateToken;
 
-var Box = require('../models/DB/boxDB');
-var User = require('../models/DB/userDB');
-var Store = require('../models/DB/storeDB');
-var Trade = require('../models/DB/tradeDB');
-var Container = require('../models/DB/containerDB');
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+const refreshStore = require('../helpers/appInit').refreshStore;
+const refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
+const refreshContainer = require('../helpers/appInit').refreshContainer;
+const refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
+const cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
+const getWeekCheckpoint = require('@lastlongerproject/toolkit').getWeekCheckpoint;
+const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+
+const Box = require('../models/DB/boxDB');
+const User = require('../models/DB/userDB');
+const Store = require('../models/DB/storeDB');
+const Trade = require('../models/DB/tradeDB');
+const Container = require('../models/DB/containerDB');
+const DataCacheFactory = require("../models/dataCacheFactory");
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
-const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 15;
-const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 3;
+const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
+const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
 
 const CACHE = {
     index: "manage_cache:index",
@@ -39,7 +41,47 @@ const CACHE = {
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
 const baseUrl = require("../config/config").serverBaseUrl + "/manager";
 
-router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
+
+
+/**
+ * @apiName Manage index
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/index Get manage index
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            summary: {
+                userAmount: Number,
+                storeAmount: Number,
+                activityAmount: Number 
+            },
+            activityHistorySummary: { 
+                usedAmount: Number,
+                lostAmount: Number,
+                totalDuration: Number
+            },
+            shopRecentHistorySummary: {
+                usedAmount: Number,
+                customerLostAmount: Number,
+                totalDuration: Number,
+                quantityOfBorrowingFromDiffPlace: Number
+            },
+            shopHistorySummary: {
+                usedAmount: Number,
+                shopLostAmount: Number,
+                customerLostAmount: Number,
+                totalDuration: Number,
+                quantityOfBorrowingFromDiffPlace: Number
+            }
+        }
+ * 
+ */
+router.get('/index', regAsAdminManager, validateRequest, function(req, res, next) {
     var result = {
         summary: {
             userAmount: 0,
@@ -89,14 +131,13 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                         '$gte': new Date(dataCached.timestamp)
                     };
 
-                Trade.find(tradeQuery, function (err, tradeList) {
+                Trade.find(tradeQuery, function(err, tradeList) {
                     if (err) return next(err);
 
                     tradeList.sort((a, b) => {
                         return a.tradeTime - b.tradeTime;
                     });
                     cleanUndo(['Return', 'ReadyToClean'], tradeList);
-
                     var now = Date.now();
                     var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
                     var lastUsed = dataCached.lastUsed || {};
@@ -109,9 +150,10 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     var usedTime = [];
                     var usedTime_recent = [];
 
-                    var success = tradeList.every(function (aTrade) {
+                    var success = tradeList.every(function(aTrade) {
                         try {
                             var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+
                             lastUsed[aTrade.container.id] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 action: aTrade.tradeType.action
@@ -143,6 +185,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                         delete rentedContainer[containerKey];
                                     }
                                 }
+
                                 if (aTrade.newUser.storeID !== signedContainer[containerKey].storeID) {
                                     result.shopHistorySummary.quantityOfBorrowingFromDiffPlace++;
                                     if (recent) {
@@ -155,7 +198,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                             return true;
                         } catch (error) {
                             redis.del(CACHE.index);
-                            debugError(error);
+                            debug.error(error);
                             return false;
                         }
                     });
@@ -209,9 +252,9 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                             if (dataCached.usedTime.weight) toCache.usedTime.weight += dataCached.usedTime.weight;
                         }
                         redis.set(CACHE.index, JSON.stringify(toCache), (err, reply) => {
-                            if (err) return debugError(CACHE.index, err);
-                            if (reply != "OK") return debugError(CACHE.index, reply);
-                            debug("[" + CACHE.index + "] Cached!");
+                            if (err) return debug.error(CACHE.index, err);
+                            if (reply != "OK") return debug.error(CACHE.index, reply);
+                            debug.log("[" + CACHE.index + "] Cached!");
                         });
                     }
                 });
@@ -220,7 +263,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
     });
 });
 
-router.get('/search', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/search', regAsAdminManager, validateRequest, function(req, res, next) {
     var fields = req.query.fields.split(",");
     var searchTxt = req.query.txt;
     var txtArr = searchTxt.split(" ").filter(ele => ele !== "");
@@ -255,24 +298,22 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
             "ID": 1,
             "typeCode": 1,
             "_id": 0
+        }).sort({
+            "ID": 1
         })
     };
-    var funcList = [];
-    fields.forEach((aField) => {
-        funcList.push(new Promise((resolve, reject) => {
-            var localField = aField;
-            if (fieldDict.hasOwnProperty(aField))
-                fieldDict[aField].exec((err, dataList) => {
-                    if (err) return reject(err);
-                    else return resolve([localField, dataList]);
-                });
-            else resolve([aField, []]);
-        }));
-    });
     Promise
-        .all(funcList)
+        .all(
+            fields.map(aField => new Promise((resolve, reject) => {
+                if (fieldDict.hasOwnProperty(aField))
+                    fieldDict[aField].exec((err, dataList) => {
+                        if (err) return reject(err);
+                        else return resolve([aField, dataList]);
+                    });
+                else resolve([aField, []]);
+            })))
         .then((data) => {
-            var containerDict = req.app.get('containerType');
+            var containerDict = DataCacheFactory.get('containerType');
             var result = {
                 user: {
                     show: true,
@@ -347,13 +388,38 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
         });
 });
 
-router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage shop
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shop Get shop
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            list:
+            [ 
+                { 
+                    id: Number, //storeID
+                    storeName: String,
+                    toUsedAmount: Number,
+                    todayAmount: Number,
+                    weekAmount: Number,
+                    weekAverage: Number },
+                ...
+                ]
+        }
+ * 
+ */
+router.get('/shop', regAsAdminManager, validateRequest, function(req, res, next) {
     Store.find({
         active: true
-    }, function (err, activeStoreList) {
+    }, function(err, activeStoreList) {
         if (err) return next(err);
         var storeIdDict = {};
-        activeStoreList.forEach(function (aStoreData) {
+        activeStoreList.forEach(function(aStoreData) {
             storeIdDict[aStoreData.id] = {
                 id: aStoreData.id,
                 storeName: aStoreData.name,
@@ -378,7 +444,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 for (var aCachedStoreIndex in activeStoreList) {
                     var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
                     if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
-                        debug("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
+                        debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
                         dataCached = {};
                         break;
                     }
@@ -393,14 +459,14 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                 sort: {
                     tradeTime: 1
                 }
-            }, function (err, tradeList) {
+            }, function(err, tradeList) {
                 if (err) return next(err);
 
                 cleanUndo('ReadyToClean', tradeList);
 
                 var usedContainer = dataCached.usedContainer || {};
                 var unusedContainer = dataCached.unusedContainer || {};
-                tradeList.forEach(function (aTrade) {
+                tradeList.forEach(function(aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                     if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
                         unusedContainer[containerKey] = {
@@ -483,9 +549,9 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                         activeStoreNameList
                     };
                     redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(CACHE.shop, err);
-                        if (reply != "OK") return debugError(CACHE.shop, reply);
-                        debug("[" + CACHE.shop + "] Cached!");
+                        if (err) return debug.error(CACHE.shop, err);
+                        if (reply != "OK") return debug.error(CACHE.shop, reply);
+                        debug.log("[" + CACHE.shop + "] Cached!");
                     });
                 }
             });
@@ -493,12 +559,56 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
     });
 });
 
-router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage shop detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shopDetail?id={shopid} Get shop detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            storeName: String,
+            toUsedAmount: Number,
+            todayAmount: Number,
+            weekAmount: Number,
+            weekAmountPercentage: Float,
+            totalAmount: Number,
+            joinedDate: Date,
+            contactNickname: String,
+            contactPhone: '09XXXXXXXX',
+            weekAverage: Number,
+            shopLostAmount: Number,
+            customerLostAmount: Number,
+            history:
+            [ 
+                { 
+                    time: Date,
+                    action: '歸還',
+                    content: '野餐方碗 x 2',
+                    contentDetail: '野餐方碗\n#xx01、#xx02',
+                    owner: '好盒器基地',
+                    by: '09xx-***-xxx' 
+                },
+                    ...
+            ],
+            chartData:
+            [ 
+                [ '週', '數量' ],
+                [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],
+                ...
+            ]
+        }
+ * 
+ */
+router.get('/shopDetail', regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
         id: STORE_ID
-    }, function (err, theStore) {
+    }, function(err, theStore) {
         if (err) return next(err);
         var result = {
             storeName: theStore.name,
@@ -559,7 +669,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 sort: {
                     tradeTime: 1
                 }
-            }, function (err, tradeList) {
+            }, function(err, tradeList) {
                 if (err) return next(err);
 
                 cleanUndo(['Return', 'ReadyToClean'], tradeList);
@@ -569,7 +679,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 var unusedContainer = dataCached.unusedContainer || {};
                 result.history = dataCached.history || [];
 
-                tradeList.forEach(function (aTrade) {
+                tradeList.forEach(function(aTrade) {
                     var containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
                     lastUsed[aTrade.container.id] = {
                         time: aTrade.tradeTime.valueOf(),
@@ -644,7 +754,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     }
                 });
 
-                var containerType = req.app.get('containerType');
+                var containerType = DataCacheFactory.get('containerType');
                 for (var index in result.history) {
                     var theHistory = result.history[index];
                     if (typeof theHistory.content === "object") {
@@ -671,6 +781,8 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
                         timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         result.shopLostAmount++;
+                        console.log(containerID)
+
                     } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                         result.customerLostAmount++;
                     }
@@ -726,12 +838,12 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         history: result.history
                     };
                     redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(cacheKey, err);
-                        if (reply != "OK") return debugError(cacheKey, reply);
-                        debug("[" + cacheKey + "] Cached!");
+                        if (err) return debug.error(cacheKey, err);
+                        if (reply != "OK") return debug.error(cacheKey, reply);
+                        debug.log("[" + cacheKey + "] Cached!");
                         redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
-                            if (err) return debugError(err);
-                            if (reply !== 1) return debugError(reply);
+                            if (err) return debug.error(err);
+                            if (reply !== 1) return debug.error(reply);
                         });
                     });
                 }
@@ -740,7 +852,36 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
     });
 });
 
-router.get('/user', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage user
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/user Get user
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            totalUserAmount: Number,
+            totalUsageAmount: Number,
+            weeklyAverageUsage: Number,
+            totalLostAmount: Number,
+            list:
+            [ 
+                { 
+                    id: String,
+                    phone: String,
+                    usingAmount: Number,
+                    lostAmount: Number,
+                    totalUsageAmount: Number 
+                },
+                ...
+            ]
+        }
+ * 
+ */
+router.get('/user', regAsAdminManager, validateRequest, function(req, res, next) {
     var result = {
         totalUserAmount: 0,
         totalUsageAmount: 0,
@@ -749,9 +890,9 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         list: []
     };
     User.find({
-        "role.typeCode": {
-            "$ne": "bot"
-        }
+        // "role.typeCode": {
+        //     "$ne": "bot"
+        // }
     }, (err, userList) => {
         if (err) return next(err);
         var userDict = {};
@@ -803,12 +944,12 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 tradeList.forEach(aTrade => {
                     containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === "Rent") {
+                    if (aTrade.tradeType.action === "Rent" && userUsingDict[aTrade.newUser.phone]) {
                         userUsingDict[aTrade.newUser.phone][containerKey] = {
                             time: aTrade.tradeTime.valueOf()
                         };
                         userDict[aTrade.newUser.phone].totalUsageAmount++;
-                    } else {
+                    } else if (aTrade.tradeType.action === "Return" && userUsingDict[aTrade.oriUser.phone]) {
                         if (!weekCheckpoint) {
                             weekCheckpoint = getWeekCheckpoint(aTrade.tradeTime);
                             if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
@@ -862,9 +1003,9 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                         totalUsageAmount: result.totalUsageAmount - recentTotalUsageAmount
                     };
                     redis.set(CACHE.user, JSON.stringify(toCache), (err, reply) => {
-                        if (err) return debugError(CACHE.user, err);
-                        if (reply != "OK") return debugError(CACHE.user, reply);
-                        debug("[" + CACHE.user + "] Cached!");
+                        if (err) return debug.error(CACHE.user, err);
+                        if (reply != "OK") return debug.error(CACHE.user, reply);
+                        debug.log("[" + CACHE.user + "] Cached!");
                     });
                 }
             });
@@ -872,20 +1013,63 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
     });
 });
 
-router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage user detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/userDetail?id={userid} Get user detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            userPhone: String,
+            usingAmount: Number,
+            lostAmount: Number,
+            totalUsageAmount: Number,
+            joinedDate: Date,
+            joinedMethod: '店鋪 (方糖咖啡)',
+            recentAmount: Number,
+            recentAmountPercentage: Number,
+            weekAverage: Number,
+            averageUsingDuration: Number,
+            amountOfBorrowingFromDiffPlace: Number,
+            history:
+            [ 
+                { 
+                    containerType: String,
+                    containerID: String,
+                    rentTime: Date,
+                    rentPlace: String,
+                    returnTime: Date,
+                    returnPlace: String,
+                    usingDuration: Number 
+                },... 
+            ] 
+        }
+ * 
+ */
+router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
-    var containerDict = req.app.get('containerWithDeactive');
-    var storeDict = req.app.get('store');
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
+    var storeDict = DataCacheFactory.get('store');
     User.findOne({
         'user.phone': USER_ID
     }, (err, theUser) => {
         if (err || !theUser) return next(err);
         var result = {
             userPhone: phoneEncoder(theUser.user.phone, true),
+            userLineToken: theUser.user.lineId,
             usingAmount: 0,
             lostAmount: 0,
             totalUsageAmount: 0,
+            contribution: {
+                tree: 0.0,
+                water: 0.0,
+                co2: 0.0
+            },
             joinedDate: theUser.registerTime,
             joinedMethod: "店鋪 (方糖咖啡)", // 待更新
             recentAmount: 0,
@@ -895,6 +1079,7 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
             amountOfBorrowingFromDiffPlace: 0,
             history: []
         };
+
         var tradeQuery = {
             '$or': [{
                     'tradeType.action': 'Rent',
@@ -949,6 +1134,10 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
                 }
             });
 
+            result.contribution.tree = result.totalUsageAmount * 0.0004;
+            result.contribution.water = result.totalUsageAmount * 0.9;
+            result.contribution.co2 = result.totalUsageAmount * 0.1;
+
             var notReturnedList = Object.values(tradeDict).sort((a, b) => b.rentTime - a.rentTime);
             notReturnedList.forEach((aNotReturnedTrade) => {
                 aNotReturnedTrade.usingDuration = now - aNotReturnedTrade.rentTime;
@@ -976,8 +1165,41 @@ router.get('/userDetail', regAsAdminManager, validateRequest, function (req, res
     });
 });
 
-router.get('/container', regAsAdminManager, validateRequest, function (req, res, next) {
-    Container.find((err, containerList) => {
+/**
+ * @apiName Manage container
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/container Get container
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            list:
+            [ 
+                { 
+                    id: Number,
+                    type: '12oz 玻璃杯',
+                    totalAmount: Number,
+                    toUsedAmount: Number,
+                    usingAmount: Number,
+                    returnedAmount: Number,
+                    toCleanAmount: Number,
+                    toDeliveryAmount: Number,
+                    toSignAmount: Number,
+                    inStorageAmount: Number,
+                    lostAmount: Number 
+                },
+                ...
+            ]
+        }
+ * 
+ */
+router.get('/container', regAsAdminManager, validateRequest, function(req, res, next) {
+    Container.find({
+        'active': true
+    }, (err, containerList) => {
         if (err) return next(err);
         Box.find({
             'stocking': true
@@ -989,7 +1211,7 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
                 stockedContainerList = stockedContainerList.concat(aBox.containerList);
             });
             var typeDict = {};
-            var containerType = req.app.get('containerType');
+            var containerType = DataCacheFactory.get('containerType');
             for (var aType in containerType) {
                 typeDict[containerType[aType].typeCode] = {
                     id: containerType[aType].typeCode,
@@ -1065,10 +1287,45 @@ const actionTxtDict = {
     "Boxing": "裝箱",
     "Unboxing": "取消裝箱"
 };
-router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+
+/**
+ * @apiName Manage container detail
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/containerDetail?id={containerid} Get container detail
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            containerID: '#3',
+            containerType: { 
+                txt: '12oz 玻璃杯', 
+                code: 0 
+            },
+            reuseTime: 1,
+            status: '庫存',
+            bindedUser: '09**-***-***',
+            joinedDate: Date,
+            history:
+            [ 
+                { 
+                    tradeTime: Date,
+                    action: '回收',
+                    newUser: '09**-***-***',
+                    oriUser: '09**-***-***',
+                    comment: '' 
+                },
+                ...
+            ]
+        }
+ * 
+ */
+router.get('/containerDetail', regAsAdminManager, validateRequest, function(req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
-    var containerDict = req.app.get('containerWithDeactive');
+    var containerDict = DataCacheFactory.get('containerWithDeactive');
     Container.findOne({
         "ID": CONTAINER_ID
     }, (err, theContainer) => {
@@ -1107,12 +1364,39 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
     });
 });
 
-router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage console
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/console Console
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {}
+ * 
+ */
+router.get('/console', regAsAdminManager, validateRequest, function(req, res, next) {
     res.json({});
 });
 
-router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
-    const storeDict = req.app.get("store");
+/**
+ * @apiName Manage shop summary
+ * @apiGroup Manage
+ *
+ * @api {get} /manage/shopSummary Put stores summary to google sheet
+ * @apiPrivate
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {}
+ * 
+ */
+router.get('/shopSummary', regAsAdminManager, validateRequest, function(req, res, next) {
+    const storeDict = DataCacheFactory.get("store");
     let storesSummary = {};
     let storesTmpData = {};
     for (let aStoreKey in storeDict) {
@@ -1135,16 +1419,16 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
         sort: {
             tradeTime: 1
         }
-    }, function (err, tradeList) {
+    }, function(err, tradeList) {
         if (err) return next(err);
 
-        debug("[Manage/shopSummary] Get DB Response!");
+        debug.log("[Manage/shopSummary] Get DB Response!");
         cleanUndo(['Return', 'ReadyToClean'], tradeList);
 
         var lastUsed = {};
         var unusedContainer = {};
 
-        tradeList.forEach(function (aTrade) {
+        tradeList.forEach(function(aTrade) {
             let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
             lastUsed[aTrade.container.id] = {
                 time: aTrade.tradeTime,
@@ -1188,7 +1472,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
         }
         lastUsed = null;
 
-        debug("[Manage/shopSummary] Finish Parse!");
+        debug.log("[Manage/shopSummary] Finish Parse!");
         // trade to rawdata
         let dataSets = [];
         let sheetNames = [];
@@ -1229,7 +1513,6 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
                     }
                 }
             }
-
             // rawdata to gsheet
             let sheetName = `${theStoreSummary.ID}_${theStoreSummary.name}`;
             let range = `${sheetName}!A1:F`;
@@ -1255,7 +1538,9 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
             });
         }
         updateSummary(dataSets, sheetNames, (err) => {
-            if (err) return next(err);
+            if (err) {
+                return next(err);
+            }
             res.status(200).end("Done");
         });
     });
@@ -1281,31 +1566,107 @@ function addContent(lastHistory, newHistory) {
         lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
 
-router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshStore(req.app, function (err) {
+/**
+ * @apiName Manage refresh store
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/store Refresh store
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
+router.patch('/refresh/store', regAsAdminManager, validateRequest, function(req, res, next) {
+    refreshStore(function(err) {
         if (err) return next(err);
-        res.status(200).end("Done");
+        res.json({
+            "success": true
+        });
     });
 });
 
-router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage refresh container
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/container Refresh container
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
+router.patch('/refresh/container', regAsAdminManager, validateRequest, function(req, res, next) {
     var dbAdmin = req._user;
-    refreshContainer(req.app, dbAdmin, function (err) {
+    refreshContainer(dbAdmin, function(err) {
         if (err) return next(err);
-        res.status(200).end("Done");
+        res.json({
+            "success": true
+        });
     });
 });
 
-router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage refresh specific store image
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/storeImg/:id Refresh specific store image
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshStoreImg',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '00000.jpg',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
+router.patch('/refresh/storeImg/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
-    refreshStoreImg(forceRenew, function (succeed, resData) {
+    refreshStoreImg(forceRenew, function(succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
 
-router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, function (req, res, next) {
+/**
+ * @apiName Manage refresh specific container icon
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/containerIcon/:id Refresh specific container icon
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshContainerIcon',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '08@3x.png',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
+router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, function(req, res, next) {
     var forceRenew = (req.params.id === '1');
-    refreshContainerIcon(forceRenew, function (succeed, resData) {
+    refreshContainerIcon(forceRenew, function(succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });

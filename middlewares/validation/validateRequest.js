@@ -1,7 +1,7 @@
-var jwt = require('jwt-simple');
-var redis = require("../../models/redis");
-var User = require('../../models/DB/userDB'); // load up the user model
-var UserKeys = require('../../models/DB/userKeysDB');
+const jwt = require('jwt-simple');
+const redis = require("../../models/redis");
+const User = require('../../models/DB/userDB'); // load up the user model
+const UserKeys = require('../../models/DB/userKeysDB');
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -35,17 +35,17 @@ function addRoleToCheck(req, theRole, shouldBeManager, cb) {
 }
 
 module.exports = {
-    JWT: function (req, res, next) {
+    JWT: function(req, res, next) {
         var jwtToken = req.headers['authorization'];
         var key = req.headers['apikey'];
 
         if (jwtToken && key) {
-            process.nextTick(function () {
+            process.nextTick(function() {
                 UserKeys.findOneAndUpdate({
                     'apiKey': key
                 }, {
                     'updatedAt': Date.now()
-                }, function (err, dbKey) {
+                }, function(err, dbKey) {
                     if (err)
                         return next(err);
                     if (!dbKey)
@@ -54,7 +54,7 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has logout'
                         });
-                    User.findById(dbKey.user, function (err, dbUser) {
+                    User.findById(dbKey.user, function(err, dbUser) {
                         if (err)
                             return next(err);
                         if (!dbUser)
@@ -125,10 +125,6 @@ module.exports = {
                                     if (reply !== 1) return next(reply);
                                     req._user = dbUser;
                                     req._key = dbKey;
-                                    req._user.role = dbUser.roles[dbKey.roleType || dbUser.role.typeCode];
-                                    req._user.role.typeCode = dbKey.roleType || dbUser.role.typeCode;
-                                    // console.log(req._user.role);
-                                    // console.log(req._thisUserRole);
                                     next();
                                 });
                             });

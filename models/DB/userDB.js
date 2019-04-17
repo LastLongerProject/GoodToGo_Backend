@@ -9,7 +9,8 @@ var userSchema = mongoose.Schema({
         name: {
             type: String,
             default: null
-        }
+        },
+        lineId: String
     },
     role: {
         typeCode: String,
@@ -40,6 +41,8 @@ var userSchema = mongoose.Schema({
         },
         expiryTime: Date
     }]
+}, {
+    usePushEach: true
 });
 
 userSchema.index({
@@ -50,12 +53,12 @@ userSchema.index({
 });
 
 // generating a hash
-userSchema.methods.generateHash = function (password) {
+userSchema.methods.generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
 // checking if password is valid
-userSchema.methods.validPassword = function (password) {
+userSchema.methods.validPassword = function(password) {
     return bcrypt.compareSync(password, this.user.password);
 };
 

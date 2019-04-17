@@ -1,40 +1,46 @@
-var jwt = require('jwt-simple');
-var debug = require('debug')('goodtogo_backend:socket');
-debug.log = console.log.bind(console);
-var keys = require('../config/keys');
-var User = require('../models/DB/userDB');
-var Trade = require('../models/DB/tradeDB');
-var UserKeys = require('../models/DB/userKeysDB');
-var Container = require('../models/DB/containerDB');
-var validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+const jwt = require('jwt-simple');
+const debug = require('../helpers/debugger')('socket');
+const keys = require('../config/keys');
+const User = require('../models/DB/userDB');
+const Trade = require('../models/DB/tradeDB');
+const UserKeys = require('../models/DB/userKeysDB');
+const Container = require('../models/DB/containerDB');
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
-var status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
-var actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
+const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
+const actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
+
+const namespace = Object.freeze({
+    CHALLENGE: "/containers/challenge/socket",
+    SERVER_EVENT: "/serverEvent"
+});
 
 module.exports = {
-    generateToken: function (req, res, next) {
-        var dbUser = req._user;
-        var uri = "/containers/challenge/socket";
-        keys.serverSecretKey(function (err, serverSecretKey) {
-            if (err) return next(err);
-            var date = new Date();
-            var token = jwt.encode({
-                'iat': Date.now(),
-                'exp': date.setMinutes(date.getMinutes() + 5),
-                'user': dbUser.user.phone
-            }, serverSecretKey);
-            res.json({
-                uri: uri,
-                token: token
+    namespace,
+    generateToken: function (thisNamespace) {
+        return function (req, res, next) {
+            var dbUser = req._user;
+            keys.serverSecretKey(function (err, serverSecretKey) {
+                if (err) return next(err);
+                var date = new Date();
+                var token = jwt.encode({
+                    'iat': Date.now(),
+                    'exp': date.setMinutes(date.getMinutes() + 5),
+                    'user': dbUser.user.phone
+                }, serverSecretKey);
+                res.json({
+                    uri: thisNamespace,
+                    token: token
+                });
             });
-        });
+        };
     },
     auth: function (socket, next) {
         var handShakeData = socket.request;
-        debug(handShakeData.url);
+        debug.log(handShakeData.url);
         if (!handShakeData._query.token || !handShakeData._query.apikey) {
-            debug('[SOCKET] EMIT "error": "Authentication error (Missing Something)"');
+            debug.log('[SOCKET] EMIT "error": "Authentication error (Missing Something)"');
             return next(new Error('Authentication error (Missing Something)'));
         }
         UserKeys.findOneAndUpdate({
@@ -42,6 +48,7 @@ module.exports = {
         }, {
             'updatedAt': Date.now()
         }, function (err, dbKey) {
+            if (err) return debug.error(err);
             keys.serverSecretKey(function (err, serverSecretKey) {
                 var decoded;
                 var thisErr;
@@ -51,7 +58,7 @@ module.exports = {
                     thisErr = err;
                 }
                 if (!decoded || !decoded.user || !decoded.exp || !decoded.iat || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
-                    if (thisErr) debug(thisErr);
+                    if (thisErr) debug.log(thisErr);
                     if (!decoded) {
                         thisErr = "Can't Decode";
                     } else if (!decoded.user || !decoded.exp || !decoded.iat) {
@@ -65,7 +72,7 @@ module.exports = {
                     } else {
                         thisErr = "Unknown Err";
                     }
-                    debug('[SOCKET] EMIT "error": "Authentication error (' + thisErr + ')"');
+                    debug.log('[SOCKET] EMIT "error": "Authentication error (' + thisErr + ')"');
                     return next(new Error('Authentication error (' + thisErr + ')'));
                 } else {
                     socket._user = decoded.user;
@@ -75,7 +82,7 @@ module.exports = {
         });
 
     },
-    init: function (socket) {
+    challenge: function (socket) {
         socket.emitWithLog = addLog(socket);
         let next = nextInit(socket);
 
@@ -91,7 +98,7 @@ module.exports = {
             }
             var containerID = data.containerID;
             var action = data.action;
-            debug("[" + socket._user + "] ON \"challenge\": " + containerID + ", " + action);
+            debug.log("[" + socket._user + "] ON \"challenge\": " + containerID + ", " + action);
             if (typeof containerID !== 'number' || typeof action !== "string") {
                 return next({
                     code: "Err1",
@@ -145,7 +152,7 @@ module.exports = {
             });
         });
         socket.on('data_get', function (data) {
-            debug("[" + socket._user + "] ON \"data_get\": " + data);
+            debug.log("[" + socket._user + "] ON \"data_get\": " + data);
             if (typeof data !== "string") {
                 return next({
                     code: "Err1",
@@ -173,11 +180,14 @@ module.exports = {
                 });
             }
         });
+    },
+    serverEvent: function (socket) {
+
     }
 };
 
 var addLog = socket => (flag, data) => {
-    debug("[" + socket._user + "] EMIT \"" + flag + "\": " + JSON.stringify(data));
+    debug.log("[" + socket._user + "] EMIT \"" + flag + "\": " + JSON.stringify(data));
     return socket.emit(flag, data);
 };
 

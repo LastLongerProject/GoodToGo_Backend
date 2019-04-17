@@ -7,32 +7,28 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const URL = require('url');
 const uuid = require('uuid/v4');
-const mongoose = require('mongoose');
 const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const ua = require('universal-analytics');
-const debug = require('debug')('goodtogo_backend:app');
-debug.log = console.log.bind(console);
-const debugError = require('debug')('goodtogo_backend:appERR');
+const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 
+const debug = require('./helpers/debugger')('app');
 const config = require('./config/config');
-const appInit = require('./helpers/appInit');
-const scheduler = require('./helpers/scheduler');
 const logModel = require('./models/DB/logDB');
-const socketCb = require('./controllers/socket');
+const DataCacheFactory = require('./models/dataCacheFactory');
+const mSocket = require('./controllers/socket');
 const logSystem = require('./middlewares/logSystem');
 const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
+const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
 const app = express();
 let io = require('socket.io');
 let esm;
-
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
 
 app.use(favicon(path.join(__dirname, 'public/favicon.ico')));
 app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
@@ -57,10 +53,6 @@ app.use((req, res, next) => {
     esm(req, res, next);
 });
 
-mongoose.Promise = global.Promise;
-connectMongoDB();
-require("./models/redis");
-
 app.use('/manage', manage);
 
 app.use(timeout('10s'));
@@ -72,18 +64,18 @@ app.use('/stores', stores);
 app.use('/users', users);
 app.use('/containers', containers);
 app.use('/images', images);
+app.use('/deliveryList', deliveryList);
 
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
+app.use(function(req, res, next) {
     var err = new Error('Not Found');
     err.status = 404;
     next(err);
 });
-
 // error handler
-app.use(function (err, req, res, next) {
+app.use(function(err, req, res, next) {
     if (!err.status) {
-        debugError(err);
+        debug.error(err);
         req._errorLevel = 3;
         res.status(500);
         res.json({
@@ -110,30 +102,57 @@ app.use(function (err, req, res, next) {
     }
 });
 
+require("./models/redis");
+require("./models/mongo")(mongoose, startServer);
 
-/**
- * Get port from environment and store in Express.
- */
-var port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+process.on('SIGINT', () => {
+    debug.log('SIGINT signal received');
+    let server = app.get('server');
 
-/**
- * Create HTTP server.
- */
-var server = http.createServer(app);
+    server.close(function(err) {
+        if (err) {
+            debug.error(err);
+            process.exit(1);
+        }
 
-/**
- * Listen on provided port, on all network interfaces.
- */
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+        mongoose.connection.close(function() {
+            debug.log('Mongoose connection disconnected');
+            process.exit(0);
+        })
+    });
+    
+});
 
-io = io(server);
-io.of('/containers/challenge/socket')
-    .use(socketCb.auth)
-    .on('connection', socketCb.init);
-app.set('socket.io', io);
+function startServer() {
+    /**
+     * Get port from environment and store in Express.
+     */
+    var port = normalizePort(process.env.PORT || '3030');
+    app.set('port', port);
+
+    /**
+     * Create HTTP server.
+     */
+    var server = http.createServer(app);
+
+    /**
+     * Listen on provided port, on all network interfaces.
+     */
+    server.listen(port);
+    server.on('error', onError());
+    server.on('listening', onListening(server));
+    app.set('server', server);
+
+    io = io(server);
+    io.of(mSocket.namespace.CHALLENGE)
+        .use(mSocket.auth)
+        .on('connection', mSocket.challenge);
+    let SocketEmitter = io.of(mSocket.namespace.SERVER_EVENT)
+        .use(mSocket.auth)
+        .on('connection', mSocket.serverEvent);
+    app.set('socket.io', io);
+    DataCacheFactory.set('SocketEmitter', SocketEmitter);
+}
 
 // cookie middleware (just for identify user)
 function cookieMid() {
@@ -161,7 +180,7 @@ function cookieMid() {
 // GA
 function GAtrigger() {
     const gaErrHandler = err => {
-        if (err) debugError('Failed to trigger GA: ' + err);
+        if (err) debug.error('Failed to trigger GA: ' + err);
     };
     return function GAtrigger(req, res, next) {
         if (req._realIp) {
@@ -174,41 +193,24 @@ function GAtrigger() {
     };
 }
 
-function connectMongoDB() {
-    mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
-        if (err) throw err;
-        debug('mongoDB connect succeed');
-        // require('./tmp/refactorTradeDM.js')
-        appInit.container(app);
-        appInit.store(app);
-        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
-            scheduler(app);
-        } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-            debug("Local Testing no scheduler");
-        } else {
-            debug("Deploy Server no scheduler");
-        }
-    });
-}
-
 function resBodyParser(req, res, next) {
     var oldWrite = res.write,
         oldEnd = res.end;
 
     var chunks = [];
 
-    res.write = function (chunk) {
+    res.write = function(chunk) {
         if (!Buffer.isBuffer(chunk))
-            chunk = new Buffer(chunk);
+            chunk = new Buffer.from(chunk);
         chunks.push(chunk);
 
         oldWrite.apply(res, arguments);
     };
 
-    res.end = function (chunk) {
+    res.end = function(chunk) {
         if (typeof chunk !== 'undefined') {
             if (!Buffer.isBuffer(chunk))
-                chunk = new Buffer(chunk);
+                chunk = new Buffer.from(chunk);
             chunks.push(chunk);
         }
 
@@ -253,37 +255,43 @@ function normalizePort(val) {
 /**
  * Event listener for HTTP server "error" event.
  */
-function onError(error) {
-    if (error.syscall !== 'listen') {
-        throw error;
-    }
-
-    var bind = typeof port === 'string' ?
-        'Pipe ' + port :
-        'Port ' + port;
-
-    // handle specific listen errors with friendly messages
-    switch (error.code) {
-        case 'EACCES':
-            console.error(bind + ' requires elevated privileges');
-            process.exit(1);
-            break;
-        case 'EADDRINUSE':
-            console.error(bind + ' is already in use');
-            process.exit(1);
-            break;
-        default:
+function onError() {
+    return function onErrorfunction(error) {
+        if (error.syscall !== 'listen') {
             throw error;
-    }
+        }
+
+        var bind = typeof port === 'string' ?
+            'Pipe ' + app.get('port') :
+            'Port ' + app.get('port');
+
+        // handle specific listen errors with friendly messages
+        switch (error.code) {
+            case 'EACCES':
+                console.error(bind + ' requires elevated privileges');
+                process.exit(1);
+                break;
+            case 'EADDRINUSE':
+                console.error(bind + ' is already in use');
+                process.exit(1);
+                break;
+            default:
+                throw error;
+        }
+    };
 }
 
 /**
  * Event listener for HTTP server "listening" event.
  */
-function onListening() {
-    var addr = server.address();
-    var bind = typeof addr === 'string' ?
-        'pipe ' + addr :
-        'port ' + addr.port;
-    debug('Listening on ' + bind);
+function onListening(server) {
+    return function onListening() {
+        var addr = server.address();
+        var bind = typeof addr === 'string' ?
+            'pipe ' + addr :
+            'port ' + addr.port;
+        debug.log('Listening on ' + bind);
+    };
 }
+
+module.exports = app;

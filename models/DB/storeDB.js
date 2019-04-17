@@ -37,7 +37,8 @@ var userSchema = mongoose.Schema({
     active: {
         type: Boolean,
         default: true
-    }
+    },
+    category: Number
 }, {
     timestamps: true
 });
