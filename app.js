@@ -111,12 +111,9 @@ process.on('SIGINT', () => {
     server.close(function (err) {
         if (err) {
             debug.error(err);
-            process.exit(1);
         }
-
         mongoose.connection.close(function () {
-            debug.error('Mongoose connection disconnected');
-            process.exit(0);
+            debug.log('Mongoose connection disconnected');
         });
     });
 });
