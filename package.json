@@ -9,8 +9,8 @@
         "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=testing & set NODE_DEBUG=redis & nodemon app.js",
         "nodemonDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon app.js --verbose",
         "ngrok": "ngrok http -region ap 3030",
-        "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:* && PORT=3030' NODE_ENV=\"testing\" nodemon --trace-warnings app.js",
-        "start": "nodemon app.js --ignore tmp/",
+        "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:*' && PORT='3030' NODE_ENV=\"testing\" && nodemon --trace-warnings app.js",
+        "start": "echo \"Debudding Mode\" && set DEBUG='goodtogo_backend:*' && set PORT='3050' && set NODE_ENV=\"testing\" && nodemon app.js",
         "unitTest": "mocha --grep api",
         "apidoc": "apidoc -i routes/ -o ./apidoc"
     },
