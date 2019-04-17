@@ -24,11 +24,11 @@ const changeStateProcess = require('../controllers/boxTrade.js').changeStateProc
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
 const DeliveryList = require('../models/DB/deliveryListDB.js');
-const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
-const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
+const ErrorResponse = require('../models/enums/error').ErrorResponse;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 
 const changeContainersState = require('../controllers/containerTrade');
-const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
+const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 
 /**
  * @apiName DeliveryList create delivery list

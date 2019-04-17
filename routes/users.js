@@ -26,7 +26,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
-const UserId = require('./enum/userEnum.js').userId;
+const UserRole = require('../models/enums/userEnum').UserRole;
 
 /**
  * @apiName SignUp
@@ -113,15 +113,15 @@ router.post(
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === UserId.clerk) {
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: UserId.clerk,
+                typeCode: UserRole.CLERK,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === UserId.admin) {
+        } else if (dbKey.roleType === UserRole.ADMIN) {
             req.body.role = {
-                typeCode: UserId.admin,
+                typeCode: UserRole.ADMIN,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
@@ -170,7 +170,7 @@ router.post(
         var dbUser = req._user;
         var dbKey = req._key;
         req.body.role = {
-            typeCode: UserId.clerk,
+            typeCode: UserRole.CLERK,
             manager: true,
             storeID: req.body.storeID
         };
@@ -214,10 +214,10 @@ router.post(
     function (req, res, next) {
         // for ADMIN and CLERK
         var dbKey = req._key;
-        req.body.active = String(dbKey.roleType).startsWith(`${UserId.clerk}_`) ? false : true;
-        if (dbKey.roleType === UserId.clerk) {
+        req.body.active = String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`) ? false : true;
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: UserId.customer
+                typeCode: UserRole.CUSTOMER
             };
         }
 
@@ -261,9 +261,9 @@ router.post(
         // for ADMIN and CLERK
         req.body.active = true;
         var dbKey = req._key;
-        if (dbKey.roleType === UserId.clerk) {
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: UserId.customer
+                typeCode: UserRole.CUSTOMER
             };
         }
         req._passCode = true;

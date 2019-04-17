@@ -20,7 +20,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
-const UserId = require('../enum/userEnum.js').userId;
+const UserRole = require('../../models/enums/userEnum').UserRole;
 
 const historyDays = 14;
 
@@ -54,7 +54,7 @@ const historyDays = 14;
         }
  *
  */
-router.get('/list', validateDefault, function(req, res, next) {
+router.get('/list', validateDefault, function (req, res, next) {
     var typeDict = DataCacheFactory.get('containerType');
     var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
@@ -129,11 +129,11 @@ router.get('/list', validateDefault, function(req, res, next) {
         }
  *
  */
-router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var containerDict = DataCacheFactory.get('containerWithDeactive');
-    process.nextTick(function() {
-        Box.find(function(err, boxList) {
+    process.nextTick(function () {
+        Box.find(function (err, boxList) {
             if (err) return next(err);
             if (boxList.length === 0) return res.json({
                 toDelivery: []
@@ -226,7 +226,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) 
         }
  *
  */
-router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var typeDict = DataCacheFactory.get('containerType');
     Trade.find({
@@ -234,7 +234,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, n
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
-    }, function(err, list) {
+    }, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             pastDelivery: []
@@ -335,7 +335,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, n
         }
  *
  */
-router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
+router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
     var typeDict = DataCacheFactory.get('containerType');
@@ -343,7 +343,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === UserId.clerk)
+    if (dbKey.roleType === UserRole.CLERK)
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
@@ -364,7 +364,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
                 '$gte': dateCheckpoint(1 - queryDays)
             }
         };
-    Trade.find(queryCond, function(err, list) {
+    Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
@@ -392,10 +392,10 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === UserId.clerk) ? undefined : {
+                        phone: (dbKey.roleType === UserRole.CLERK) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === UserId.clerk) ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

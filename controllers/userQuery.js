@@ -11,12 +11,12 @@ const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
-const UserId = require('../routes/enum/userEnum').userId;
+const UserRole = require('../models/enums/userEnum').UserRole;
 
 module.exports = {
     signup: function (req, done) {
         var role = req.body.role || {
-            typeCode: UserId.customer
+            typeCode: UserRole.CUSTOMER
         };
         var roles = req.body.roles;
         var phone = req.body.phone.replace(/tel:|-/g, "");
@@ -25,7 +25,7 @@ module.exports = {
 
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
-                !(typeof req._user !== 'undefined' && role.typeCode === UserId.clerk))) {
+                !(typeof req._user !== 'undefined' && role.typeCode === UserRole.CLERK))) {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
@@ -39,9 +39,9 @@ module.exports = {
             });
         } else if (
             typeof roles === 'undefined' &&
-            ((role.typeCode === UserId.clerk && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === UserId.admin && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === UserId.customer && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            ((role.typeCode === UserRole.CLERK && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === UserRole.ADMIN && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === UserRole.CUSTOMER && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -54,17 +54,17 @@ module.exports = {
             if (err)
                 return done(err);
             if (dbUser && dbUser.active) {
-                if ((role.typeCode === UserId.clerk || role.typeCode === UserId.admin) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
-                        case UserId.clerk:
-                            dbUser.roles.typeList.push(UserId.clerk);
+                        case UserRole.CLERK:
+                            dbUser.roles.typeList.push(UserRole.CLERK);
                             dbUser.roles.clerk = {
                                 storeID: role.storeID,
                                 manager: role.manager,
                             };
                             break;
-                        case UserId.admin:
-                            dbUser.roles.typeList.push(UserId.admin);
+                        case UserRole.ADMIN:
+                            dbUser.roles.typeList.push(UserRole.ADMIN);
                             dbUser.roles.admin = {
                                 stationID: role.stationID,
                                 manager: role.manager
@@ -148,22 +148,22 @@ module.exports = {
                                 newUser.roles = roles;
                             } else {
                                 switch (role.typeCode) { // v1 api
-                                    case UserId.clerk:
-                                        newUser.roles.typeList.push(UserId.clerk);
+                                    case UserRole.CLERK:
+                                        newUser.roles.typeList.push(UserRole.CLERK);
                                         newUser.roles.clerk = {
                                             storeID: role.storeID,
                                             manager: role.manager || false,
                                         };
                                         break;
-                                    case UserId.admin:
-                                        newUser.roles.typeList.push(UserId.admin);
+                                    case UserRole.ADMIN:
+                                        newUser.roles.typeList.push(UserRole.ADMIN);
                                         newUser.roles.admin = {
                                             stationID: role.stationID,
                                             manager: role.manager || false
                                         };
                                         break;
                                 }
-                                newUser.roles.typeList.push(UserId.customer);
+                                newUser.roles.typeList.push(UserRole.CUSTOMER);
                             }
                             newUser.save(function (err) {
                                 if (err) return done(err);
@@ -421,7 +421,7 @@ module.exports = {
         var botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': UserId.bot
+                'role.typeCode': UserRole.BOT
             }, function (err, botAmount) {
                 if (err) return done(err);
                 var botID = `bot${intReLength(botAmount + 1, 5)}`;
@@ -434,7 +434,7 @@ module.exports = {
                         },
                         role: role,
                         roles: {
-                            typeList: [UserId.bot],
+                            typeList: [UserRole.BOT],
                             bot: role
                         },
                         active: true
@@ -445,7 +445,7 @@ module.exports = {
                         secretKey: returnKeys.secretKey,
                         clientId: req.signedCookies.uid,
                         userAgent: req.headers['user-agent'],
-                        roleType: UserId.bot,
+                        roleType: UserRole.BOT,
                         user: newUser._id
                     });
                     newUser.save(function (err) {
@@ -472,7 +472,7 @@ module.exports = {
     createBotKey: function (req, done) {
         User.findOne({
             'user.name': req.body.bot,
-            'role.typeCode': UserId.bot
+            'role.typeCode': UserRole.BOT
         }, function (err, theBot) {
             if (err) return done(err);
             if (!theBot)
@@ -485,7 +485,7 @@ module.exports = {
                 if (err) return done(err);
                 UserKeys.findOneAndUpdate({
                     'phone': theBot.user.phone,
-                    'roleType': UserId.bot,
+                    'roleType': UserRole.BOT,
                     'user': theBot._id
                 }, {
                     'secretKey': returnKeys.secretKey,
@@ -557,12 +557,12 @@ function tokenBuilder(serverSecretKey, userKey, dbUser) {
 }
 
 function payloadBuilder(payload, dbUser, userKey) {
-    if (userKey.roleType === UserId.customer) {
+    if (userKey.roleType === UserRole.CUSTOMER) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (String(userKey.roleType).startsWith(`${UserId.clerk}`)) {
+    } else if (String(userKey.roleType).startsWith(`${UserRole.CLERK}`)) {
         payload.roles[userKey.roleType] = {
             storeID: dbUser.roles.clerk.storeID,
             manager: dbUser.roles.clerk.manager,
@@ -570,7 +570,7 @@ function payloadBuilder(payload, dbUser, userKey) {
             secretKey: userKey.secretKey,
             storeName: getStoreName(dbUser),
         };
-    } else if (userKey.roleType === UserId.admin) {
+    } else if (userKey.roleType === UserRole.ADMIN) {
         payload.roles.admin = {
             stationID: dbUser.roles.admin.stationID,
             manager: dbUser.roles.admin.manager,

@@ -2,7 +2,7 @@ const jwt = require('jwt-simple');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB'); // load up the user model
 const UserKeys = require('../../models/DB/userKeysDB');
-const UserId = require('../../routes/enum/userEnum.js').userId;
+const UserRole = require('../../models/enums/userEnum').UserRole;
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -141,9 +141,9 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: (req, res, next) => addRoleToCheck(req, UserId.clerk, true, next),
-    regAsStore: (req, res, next) => addRoleToCheck(req, UserId.clerk, false, next),
-    regAsAdminManager: (req, res, next) => addRoleToCheck(req, UserId.admin, true, next),
-    regAsAdmin: (req, res, next) => addRoleToCheck(req, UserId.admin, false, next),
-    regAsBot: (req, res, next) => addRoleToCheck(req, UserId.bot, false, next)
+    regAsStoreManager: (req, res, next) => addRoleToCheck(req, UserRole.CLERK, true, next),
+    regAsStore: (req, res, next) => addRoleToCheck(req, UserRole.CLERK, false, next),
+    regAsAdminManager: (req, res, next) => addRoleToCheck(req, UserRole.ADMIN, true, next),
+    regAsAdmin: (req, res, next) => addRoleToCheck(req, UserRole.ADMIN, false, next),
+    regAsBot: (req, res, next) => addRoleToCheck(req, UserRole.BOT, false, next)
 };
