@@ -139,12 +139,7 @@ function startServer() {
     server.listen(port);
     server.on('error', onError());
     server.on('listening', onListening(server));
-    app.set('server', server); <<
-    << << < HEAD
-
-        ===
-        === = >>>
-        >>> > bce5f145c1422f3222db2f37b73c82a29ad2aaf9
+    app.set('server', server);
     io = io(server);
     io.of(mSocket.namespace.CHALLENGE)
         .use(mSocket.auth)
