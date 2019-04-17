@@ -15,13 +15,14 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 
 module.exports = {
     signup: function (req, done) {
-        var role = req.body.role || {
+        let role = req.body.role || {
             typeCode: UserRole.CUSTOMER
         };
-        var roles = req.body.roles;
-        var phone = req.body.phone.replace(/tel:|-/g, "");
-        var password = req.body.password;
-        var code = req.body.verification_code;
+        let roles = req.body.roles;
+        let phone = req.body.phone.replace(/tel:|-/g, "");
+        let password = req.body.password;
+        let code = req.body.verification_code;
+        let options = req._options || {};
 
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
@@ -53,7 +54,7 @@ module.exports = {
         }, function (err, dbUser) {
             if (err)
                 return done(err);
-            if (dbUser && dbUser.active) {
+            if (dbUser && dbUser.hasVerified) {
                 if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
                         case UserRole.CLERK:
@@ -88,7 +89,7 @@ module.exports = {
                     });
                 }
             } else {
-                if (req._passCode !== true && typeof code === 'undefined') {
+                if (options.passVerify !== true && typeof code === 'undefined') {
                     var newCode = keys.getVerificationCode();
                     sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
@@ -99,7 +100,7 @@ module.exports = {
                                 if (err) return done(err);
                                 if (reply !== 1) return done(reply);
                                 done(null, true, {
-                                    needCode: true,
+                                    needVerificationCode: true,
                                     body: {
                                         type: 'signupMessage',
                                         message: 'Send Again With Verification Code'
@@ -111,39 +112,31 @@ module.exports = {
                 } else {
                     redis.get('user_verifying:' + phone, (err, reply) => {
                         if (err) return done(err);
-                        if (reply === null && req._passCode !== true) return done(null, false, {
-                            code: 'D010',
-                            type: 'signupMessage',
-                            message: 'Verification Code expired'
-                        });
-                        else if (reply !== code && req._passCode !== true) return done(null, false, {
-                            code: 'D011',
-                            type: 'signupMessage',
-                            message: "Verification Code isn't correct"
-                        });
-                        // if !active
-                        if (dbUser) {
-                            dbUser.active = true;
-                            dbUser.save(function (err) {
-                                if (err) return done(err);
-                                redis.del('user_verifying:' + phone, (err, delReply) => {
-                                    if (err && req._passCode !== true) return done(err);
-                                    if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
-                                    return done(null, true, {
-                                        body: {
-                                            type: 'signupMessage',
-                                            message: 'Authentication succeeded'
-                                        }
-                                    });
-                                });
+                        let hasVerified = false;
+                        if (options.passVerify !== true) {
+                            if (reply === null) return done(null, false, {
+                                code: 'D010',
+                                type: 'signupMessage',
+                                message: 'Verification Code expired'
                             });
-                        } else {
-                            var newUser;
-                            newUser = new User();
+                            else if (reply !== code) return done(null, false, {
+                                code: 'D011',
+                                type: 'signupMessage',
+                                message: "Verification Code isn't correct"
+                            });
+                            hasVerified = true;
+                        } else if (options.needVerified === false) {
+                            hasVerified = true;
+                        }
 
+                        let userToSave;
+                        if (dbUser) { // has NOT verified
+                            userToSave = dbUser;
+                        } else {
+                            var newUser = new User();
                             newUser.user.phone = phone;
                             newUser.user.password = newUser.generateHash(password);
-                            newUser.active = req.body.active;
+
                             if (typeof roles !== 'undefined') { // v2 api
                                 newUser.roles = roles;
                             } else {
@@ -165,20 +158,23 @@ module.exports = {
                                 }
                                 newUser.roles.typeList.push(UserRole.CUSTOMER);
                             }
-                            newUser.save(function (err) {
-                                if (err) return done(err);
-                                redis.del('user_verifying:' + phone, (err, delReply) => {
-                                    if (err && req._passCode !== true) return done(err);
-                                    if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
-                                    return done(null, true, {
-                                        body: {
-                                            type: 'signupMessage',
-                                            message: 'Authentication succeeded'
-                                        }
-                                    });
+                            userToSave = newUser;
+                        }
+
+                        userToSave.hasVerified = hasVerified;
+                        userToSave.save(function (err) {
+                            if (err) return done(err);
+                            redis.del('user_verifying:' + phone, (err, delReply) => {
+                                if (err && options.passVerify !== true) return done(err);
+                                if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
+                                return done(null, true, {
+                                    body: {
+                                        type: 'signupMessage',
+                                        message: 'Authentication succeeded'
+                                    }
                                 });
                             });
-                        }
+                        });
                     });
                 }
             }
@@ -335,7 +331,7 @@ module.exports = {
                                 if (err) return done(err);
                                 if (reply !== 1) return done(reply);
                                 done(null, true, {
-                                    needCode: true,
+                                    needVerificationCode: true,
                                     body: {
                                         type: 'forgotPassMessage',
                                         message: 'Send Again With Verification Code'

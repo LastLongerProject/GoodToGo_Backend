@@ -5,15 +5,11 @@ const debug = require('../helpers/debugger')('users');
 const userQuery = require('../controllers/userQuery');
 
 const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest')
-    .JWT;
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
@@ -26,7 +22,9 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+
 const UserRole = require('../models/enums/userEnum').UserRole;
+const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 /**
  * @apiName SignUp
@@ -70,13 +68,12 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 
 router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
-    req.body.active = true; // !!! Need to send by client when need purchasing !!!
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -126,8 +123,7 @@ router.post(
                 stationID: dbUser.roles.admin.stationID,
             };
         }
-        req.body.active = true;
-        req._passCode = true;
+        req._options.passVerify = true;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -174,13 +170,73 @@ router.post(
             manager: true,
             storeID: req.body.storeID
         };
-        req.body.active = true;
-        req._passCode = true;
+        req._options.passVerify = true;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
                 return res.status(401).json(info);
+            } else {
+                res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-LineUser
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} lineId lineId of the User.
+ * @apiParam {String} phone phone of the User.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse SignupError
+ */
+
+/**
+ * @apiName SignUp-LineUser (add verification code)
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} lineId lineId of the User.
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} verification code from sms.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+
+router.post(
+    '/signup/lineUser',
+    validateDefault,
+    function (req, res, next) {
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.LINE;
+        userQuery.signup(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
             } else {
                 res.json(info.body);
             }
@@ -214,14 +270,16 @@ router.post(
     function (req, res, next) {
         // for ADMIN and CLERK
         var dbKey = req._key;
-        req.body.active = String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`) ? false : true;
-        if (dbKey.roleType === UserRole.CLERK) {
+        if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
             req.body.role = {
                 typeCode: UserRole.CUSTOMER
             };
+            req._options.registerMethod = RegisterMethod.CLECK_APP;
+        } else {
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-
-        req._passCode = true;
+        req._options.needVerified = String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`);
+        req._options.passVerify = true;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -233,53 +291,6 @@ router.post(
         });
     }
 );
-
-/**
- * @apiName SignUp-Activity
- * @apiGroup Users
- * @apiPermission admin_clerk
- *
- * @api {post} /users/signup/activity Sign up for customer from activity
- * @apiUse JWT
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-router.post(
-    '/signup/activity',
-    regAsStore,
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        // for ADMIN and CLERK
-        req.body.active = true;
-        var dbKey = req._key;
-        if (dbKey.roleType === UserRole.CLERK) {
-            req.body.role = {
-                typeCode: UserRole.CUSTOMER
-            };
-        }
-        req._passCode = true;
-        req._activity = true;
-        userQuery.signup(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else {
-                res.json(info.body);
-            }
-        });
-    }
-);
-
 
 /**
  * @apiName Login
@@ -398,7 +409,7 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);

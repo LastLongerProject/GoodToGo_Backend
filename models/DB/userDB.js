@@ -30,7 +30,19 @@ var userSchema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    registerMethod: {
+        type: String,
+        default: "default"
+    },
     active: {
+        type: Boolean,
+        default: true
+    },
+    agreeTerms: {
+        type: Boolean,
+        default: false
+    },
+    hasVerified: {
         type: Boolean,
         default: false
     },
