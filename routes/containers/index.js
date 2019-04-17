@@ -5,6 +5,7 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
+const User = require('../../models/DB/userDB.js');
 
 const Container = require('../../models/DB/containerDB');
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
@@ -170,6 +171,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                         aBox.save(function (err) {
                             if (err) return next(err);
                             res.json(reply);
+                            //test
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {

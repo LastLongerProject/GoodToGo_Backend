@@ -6,7 +6,7 @@ const SocketEvent = require("./enums/socket/events");
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
 module.exports = {
-    sns: function(event, user, data) {
+    sns: function (event, user, data) {
         let containerType = DataCacheFactory.get('containerType');
         let containers = {};
         let amount = 0;
@@ -75,7 +75,7 @@ module.exports = {
             return null;
         }
     },
-    webhook: function(event, data) {
+    webhook: function (event, data) {
         let para;
         try {
             switch (event) {
@@ -95,7 +95,7 @@ module.exports = {
             return null;
         }
     },
-    socket: function(event, data) {
+    socket: function (event, data) {
         try {
             switch (event) {
                 case SocketEvent.GLOBAL_USAGE_UPDATE:
@@ -107,4 +107,3 @@ module.exports = {
         }
     }
 };
-
