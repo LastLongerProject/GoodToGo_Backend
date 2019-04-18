@@ -8979,8 +8979,8 @@ define({ "api": [
             "group": "Parameter",
             "type": "String",
             "optional": false,
-            "field": "verification",
-            "description": "<p>code from sms.</p>"
+            "field": "verification_code",
+            "description": "<p>verification code from sms.</p>"
           }
         ]
       }
@@ -9461,8 +9461,8 @@ define({ "api": [
             "group": "Parameter",
             "type": "String",
             "optional": false,
-            "field": "verification",
-            "description": "<p>code from sms</p>"
+            "field": "verification_code",
+            "description": "<p>verification code from sms</p>"
           }
         ]
       }

@@ -12,12 +12,13 @@ var userSchema = mongoose.Schema({
         },
         lineId: String
     },
-    subscriptionPlan: {
-        name: String,
-        price: String,
-        expireTime: Date
+    role: {
+        typeCode: String,
+        storeID: Number,
+        stationID: Number,
+        scopeID: Number,
+        manager: Boolean
     },
-    inNewSystem: Boolean,
     roles: {
         typeList: [],
         clerk: Object,

@@ -72,7 +72,7 @@ router.post(['/signup', '/signup/*'], function (req, res, next) {
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} verification code from sms
+ * @apiParam {String} verification_code verification code from sms
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -237,7 +237,7 @@ router.post(
  * 
  * @apiParam {String} lineId lineId of the User.
  * @apiParam {String} phone phone of the User.
- * @apiParam {String} verification code from sms.
+ * @apiParam {String} verification_code verification code from sms.
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
