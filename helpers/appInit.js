@@ -55,9 +55,14 @@ module.exports = {
         drive.getStore(forceRenew, (succeed, storeIdList) => {
             if (succeed) {
                 Promise
-                    .all(storeIdList.map(aStoreID => new Promise((resolve, reject) => {
+                    .all(storeIdList.map(aStoreImgFileName => new Promise((resolve, reject) => {
+                        const aStoreID = parseInt(aStoreImgFileName.match(/(\d*)\.jpg/)[1]);
+                        if (isNaN(aStoreID)) {
+                            debug(`aStoreImgFileName Parse To aStoreID ERR. aStoreImgFileName: ${aStoreImgFileName}, aStoreID: ${aStoreID}`);
+                            resolve();
+                        }
                         Store.findOne({
-                            'id': aStoreID.slice(0, 2)
+                            'id': aStoreID
                         }, (err, aStore) => {
                             if (err) return debug.error(err);
                             if (!aStore) return resolve();
