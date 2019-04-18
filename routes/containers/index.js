@@ -13,22 +13,16 @@ const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const validateStateChanging = require('@lastlongerproject/toolkit')
-    .validateStateChanging;
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');
-const validateRequest = require('../../middlewares/validation/validateRequest')
-    .JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest')
-    .regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest')
-    .regAsAdmin;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
+const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
+const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
+const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
 
 const status = [
     'delivering',
@@ -398,27 +392,28 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
                     containerList: reply.containerList
                 });
             }
-            Container.find({
-                ID: parseInt(container)
-            }).exec().then(container => {
-                if (!container) return res.status(403).json({
-                    code: 'Fxxx',
-                    type: 'borrowContainerMessage',
-                    message: 'can not find container id'
-                });
-                let boxID = container[0].boxID;
-                Box.deleteOne({
-                    boxID
-                }).exec().then(result => {
-                    return res.json(reply);
-                }).catch(err => {
-                    debug.error(err);
-                    return next(err);
-                });
-            }).catch(err => {
-                debug.error(err);
-                return next(err);
-            });
+            return res.json(reply);
+            // Container.find({
+            //     ID: parseInt(container) *** BUG HERE ***
+            // }).exec().then(container => {
+            //     if (!container) return res.status(403).json({
+            //         code: 'Fxxx',
+            //         type: 'borrowContainerMessage',
+            //         message: 'can not find container id'
+            //     });
+            //     let boxID = container[0].boxID;
+            //     Box.deleteOne({
+            //         boxID
+            //     }).exec().then(result => {
+            //         return res.json(reply);
+            //     }).catch(err => {
+            //         debug.error(err);
+            //         return next(err);
+            //     });
+            // }).catch(err => {
+            //     debug.error(err);
+            //     return next(err);
+            // });
         });
     });
 });

@@ -199,3 +199,5 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
         });
     });
 });
+
+module.exports = router;

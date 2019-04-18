@@ -156,7 +156,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = theContainer.statusCode;
+                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ?
+                        containerStateCache[aContainerId] :
+                        theContainer.statusCode;
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
