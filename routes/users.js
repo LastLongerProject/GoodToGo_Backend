@@ -29,6 +29,7 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 router.post('/signup', function (req, res, next) {
+    req._options = {};
     req._setSignupVerification = function (options) {
         if (typeof options === "undefined" ||
             typeof options.passVerify === "undefined" ||
