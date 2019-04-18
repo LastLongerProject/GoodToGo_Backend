@@ -803,7 +803,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
                             ) >= 0 ?
                             theTrade.oriUser.storeID :
                             undefined;
-                        newTrade = new Trade();
+                        let newTrade = new Trade();
                         newTrade.tradeTime = Date.now();
                         newTrade.tradeType = {
                             action: 'Undo' + action,
