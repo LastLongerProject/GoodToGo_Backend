@@ -81,7 +81,7 @@ describe('api-users', function () {
         });
 
         it('should return a authorization header', function (done) {
-            redis.get('user_verifying:' + '0977777777', (err, reply) => {
+            redis.get('user_verifying:' + '0988888888', (err, reply) => {
                 if (err) return done(err);
                 request(app)
                     .post('/users/signup')
@@ -100,8 +100,8 @@ describe('api-users', function () {
                             return done(err);
                         }
                         userDB.deleteOne({
-                            'user.phone': '0977777777',
-                        },
+                                'user.phone': '0988888888',
+                            },
                             (err, res) => {
                                 if (err) return done(err);
                             }
@@ -137,8 +137,8 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                        'user.phone': '0999999999',
-                    },
+                            'user.phone': '0999999999',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -162,9 +162,9 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0953517569 ',
+                    phone: '0933361429',
                     password: '',
-                    storeID: 43
+                    storeID: 32
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -202,41 +202,12 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                        'user.phone': '0977777777',
-                    },
+                            'user.phone': '0977777777',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
                     );
-                    done();
-                });
-        });
-    });
-
-    describe('POST /signup/activity', function () {
-        it('status code should be 200', function (done) {
-            let payload = {
-                jti: makeHexString(),
-                iat: Date.now(),
-                exp: Date.now() + 86400000 * 3,
-            };
-
-            let auth = jwt.encode(payload, roles.admin.secretKey);
-            request(app)
-                .post('/users/signup/activity')
-                .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
-                .send({
-                    phone: '0999999999',
-                    password: '',
-                })
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        console.log(res.body);
-                        return done(err);
-                    }
-                    console.log(res.body);
                     done();
                 });
         });
@@ -376,20 +347,23 @@ describe('api-users', function () {
                     bot: 'bot00004'
                 })
                 .expect(200)
+                .expect(function (res) {
+                    if (!('keys' in res.body)) throw new Error("Missing keys");
+                    if (!('apiKey' in res.body.keys)) throw new Error("Missing apiKey in keys");
+                    if (!('secretKey' in res.body.keys)) throw new Error("Missing secretKey in keys");
+                })
                 .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body);
-
-                    // userDB.deleteOne({
-                    //     'user.name': 'test_bot',
-                    // },
-                    //     (err, res) => {
-                    //         if (err) return done(err);
-                    //     }
-                    // );
+                    userDB.deleteOne({
+                            'user.name': 'test_bot',
+                        },
+                        (err, res) => {
+                            if (err) return done(err);
+                        }
+                    );
                     done();
                 });
         });

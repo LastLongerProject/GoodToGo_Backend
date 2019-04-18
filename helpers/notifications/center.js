@@ -6,6 +6,8 @@ const SnsAppType = require("./enums/sns/appType");
 const WebhookEvent = require("./enums/webhook/events");
 const SocketEvent = require("./enums/socket/events");
 
+const User = require('../../models/DB/userDB');
+
 const pushBy = require("./push");
 
 module.exports = {

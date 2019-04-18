@@ -1,5 +1,14 @@
 define({ "api": [
   {
+    "version": "0.0.1",
+    "type": "",
+    "url": "",
+    "filename": "routes/doc/apidoc_version.js",
+    "group": "C__Users_Benjamin_Documents_Code_GoodToGo_Backend_routes_doc_apidoc_version_js",
+    "groupTitle": "C__Users_Benjamin_Documents_Code_GoodToGo_Backend_routes_doc_apidoc_version_js",
+    "name": ""
+  },
+  {
     "name": "Containers_Sign_box_id",
     "group": "Containers",
     "type": "post",
@@ -2017,13 +2026,240 @@ define({ "api": [
     }
   },
   {
-    "version": "0.0.1",
-    "type": "",
-    "url": "",
-    "filename": "routes/doc/apidoc_version.js",
-    "group": "D__GoodToGo_Project_GoodToGo_Backend_routes_doc_apidoc_version_js",
-    "groupTitle": "D__GoodToGo_Project_GoodToGo_Backend_routes_doc_apidoc_version_js",
-    "name": ""
+    "name": "GetAllCoupons",
+    "group": "Coupons",
+    "type": "get",
+    "url": "/coupon/allCoupons",
+    "title": "Get All Coupons",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n         userPoint : Number,\n\t        allCouponList : [\n\t\t    {\n\t\t\t    couponTypeID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    price : Number,\n\t\t\t    amount : Number,\n\t\t\t    extraNotice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"sold_out\" or \"available\" or \"cannot_afford\")\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "GetUserCoupons",
+    "group": "Coupons",
+    "type": "get",
+    "url": "/coupon/myCoupons",
+    "title": "Get User's Coupons",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        myCouponList : [\n\t\t    {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    extraNotice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "PurchaseCoupon",
+    "group": "Coupons",
+    "type": "post",
+    "url": "/coupon/purchase/:couponTypeID",
+    "title": "Purchase Coupon",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'couponMessage',\n     message: 'Purchase Coupon Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "UseCoupon",
+    "group": "Coupons",
+    "type": "post",
+    "url": "/coupon/use/:couponID",
+    "title": "Use User's Coupon",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'couponMessage',\n     message: 'Use Coupon Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
   },
   {
     "name": "DeliveryList_Get_list",
@@ -4124,11 +4360,119 @@ define({ "api": [
     }
   },
   {
-    "name": "Manage_refresh_specific_store_image",
+    "name": "Manage_refresh_store",
     "group": "Manage",
     "type": "patch",
-    "url": "/manage/refresh/storeImg/:id",
-    "title": "Refresh specific store image",
+    "url": "/manage/refresh/store",
+    "title": "Refresh store",
+    "permission": [
+      {
+        "name": "admin_manager",
+        "title": "Admin manager access rights needed.",
+        "description": "<p>Please use admin manager identity to request this uri.</p>"
+      }
+    ],
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n    \"success\": true\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/manage.js",
+    "groupTitle": "Manage",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Manage_refresh_store_image",
+    "group": "Manage",
+    "type": "patch",
+    "url": "/manage/refresh/storeImg/:forceRenew",
+    "title": "Refresh store image",
     "permission": [
       {
         "name": "admin_manager",
@@ -4232,114 +4576,6 @@ define({ "api": [
             "optional": false,
             "field": "ApiKey",
             "description": "<p>You can get ApiKey by signup or login</p>"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "name": "Manage_refresh_store",
-    "group": "Manage",
-    "type": "patch",
-    "url": "/manage/refresh/store",
-    "title": "Refresh store",
-    "permission": [
-      {
-        "name": "admin_manager",
-        "title": "Admin manager access rights needed.",
-        "description": "<p>Please use admin manager identity to request this uri.</p>"
-      }
-    ],
-    "success": {
-      "examples": [
-        {
-          "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n    \"success\": true\n}",
-          "type": "json"
-        }
-      ]
-    },
-    "version": "0.0.0",
-    "filename": "routes/manage.js",
-    "groupTitle": "Manage",
-    "header": {
-      "fields": {
-        "Header": [
-          {
-            "group": "Header",
-            "type": "String",
-            "optional": false,
-            "field": "Authorization",
-            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
-          },
-          {
-            "group": "Header",
-            "type": "String",
-            "optional": false,
-            "field": "ApiKey",
-            "description": "<p>You can get ApiKey by signup or login</p>"
-          }
-        ]
-      }
-    },
-    "error": {
-      "fields": {
-        "Error 4xx": [
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B001",
-            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B002",
-            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B003",
-            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B004",
-            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B005",
-            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B006",
-            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B007",
-            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B008",
-            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
           }
         ]
       }
@@ -6121,13 +6357,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list",
-    "title": "Get store list",
+    "url": "/stores/list/:id",
+    "title": "Get store specific store info",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
           "type": "json"
         }
       ]
@@ -6180,13 +6416,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list/:id",
-    "title": "Get store specific store info",
+    "url": "/stores/list",
+    "title": "Get store list",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
           "type": "json"
         }
       ]
@@ -6969,6 +7205,223 @@ define({ "api": [
     }
   },
   {
+    "name": "AddUserOrder",
+    "group": "UserOrder",
+    "type": "post",
+    "url": "/userOrder/add",
+    "title": "Add User Order",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "storeCode",
+            "description": "<p>storeCode.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "Number",
+            "optional": false,
+            "field": "containerAmount",
+            "description": "<p>containerAmount.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'userOrderMessage',\n     message: 'Add UserOrder Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "DataForLine",
+    "group": "UserOrder",
+    "type": "get",
+    "url": "/userOrder/list",
+    "title": "Get user data for Line",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        orderListWithoutID : [\n\t\t    {\n\t\t\t    orderID : String,\n\t\t\t    containerAmount : Number,\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ],\n\t        orderListWithID : [\n\t\t    {\n\t\t\t    containerID : String, // #001\n\t\t\t    containerType : String, // 12oz 玻璃杯\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "RegisterContainerID",
+    "group": "UserOrder",
+    "type": "post",
+    "url": "/userOrder/registerContainer",
+    "title": "Register ContainerID of UserOrder",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "orderID",
+            "description": "<p>orderID.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "containerID",
+            "description": "<p>containerID.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'userOrderMessage',\n     message: 'Register ContainerID of UserOrder Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "AddBot",
     "group": "Users",
     "permission": [
@@ -7336,7 +7789,7 @@ define({ "api": [
     "name": "DataByToken",
     "group": "Users",
     "type": "get",
-    "url": "/users/data/:token",
+    "url": "/users/byToken",
     "title": "Get user data by token",
     "success": {
       "examples": [
@@ -8012,6 +8465,65 @@ define({ "api": [
     }
   },
   {
+    "name": "PointLog",
+    "group": "Users",
+    "type": "get",
+    "url": "/users/pointLog",
+    "title": "Get user pointLog",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        pointLogs : [\n\t\t    {\n\t\t\t    logTime : Date,\n\t\t\t    title : String,\n\t\t\t    body : String,\n\t\t\t    quantityChange : Number\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "SignUp",
     "group": "Users",
     "permission": [
@@ -8092,176 +8604,6 @@ define({ "api": [
             "optional": false,
             "field": "A002",
             "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D001",
-            "description": "<p>status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D002",
-            "description": "<p>status : 401, type : signupMessage, msg : That phone is already taken - This phone has been register</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D003",
-            "description": "<p>status : 401, type : signupMessage, msg : Role structure invalid</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D009",
-            "description": "<p>status : 401, type : signupMessage, msg : Phone is not valid</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D010",
-            "description": "<p>status : 401, type : signupMessage, msg : Verification Code expired</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "D011",
-            "description": "<p>status : 401, type : signupMessage, msg : Verification Code isn't correct</p>"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "name": "SignUp_Activity",
-    "group": "Users",
-    "permission": [
-      {
-        "name": "admin_clerk",
-        "title": "Admin/Clerk access rights needed.",
-        "description": "<p>Please use admin/clerk identity to request this uri.</p>"
-      }
-    ],
-    "type": "post",
-    "url": "/users/signup/activity",
-    "title": "Sign up for customer from activity",
-    "parameter": {
-      "fields": {
-        "Parameter": [
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": false,
-            "field": "phone",
-            "description": "<p>phone of the User.</p>"
-          },
-          {
-            "group": "Parameter",
-            "type": "String",
-            "optional": false,
-            "field": "password",
-            "description": "<p>password of the User.</p>"
-          }
-        ]
-      }
-    },
-    "success": {
-      "examples": [
-        {
-          "title": "Success-Response:",
-          "content": "HTTP/1.1 200 Signup Successfully\n{ \n     type: 'signupMessage',\n     message: 'Authentication succeeded' \n}",
-          "type": "json"
-        }
-      ]
-    },
-    "version": "0.0.0",
-    "filename": "routes/users.js",
-    "groupTitle": "Users",
-    "header": {
-      "fields": {
-        "Header": [
-          {
-            "group": "Header",
-            "type": "String",
-            "optional": false,
-            "field": "Authorization",
-            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
-          },
-          {
-            "group": "Header",
-            "type": "String",
-            "optional": false,
-            "field": "ApiKey",
-            "description": "<p>You can get ApiKey by signup or login</p>"
-          }
-        ]
-      }
-    },
-    "error": {
-      "fields": {
-        "Error 4xx": [
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B001",
-            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B002",
-            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B003",
-            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B004",
-            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B005",
-            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B006",
-            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B007",
-            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B008",
-            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
           },
           {
             "group": "Error 4xx",
@@ -8432,6 +8774,265 @@ define({ "api": [
             "optional": false,
             "field": "B008",
             "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D001",
+            "description": "<p>status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D002",
+            "description": "<p>status : 401, type : signupMessage, msg : That phone is already taken - This phone has been register</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D003",
+            "description": "<p>status : 401, type : signupMessage, msg : Role structure invalid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D009",
+            "description": "<p>status : 401, type : signupMessage, msg : Phone is not valid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D010",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code expired</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D011",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code isn't correct</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "SignUp_LineUser",
+    "group": "Users",
+    "permission": [
+      {
+        "name": "none"
+      }
+    ],
+    "type": "post",
+    "url": "/users/signup/lineUser",
+    "title": "Sign up for new line user",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "lineId",
+            "description": "<p>lineId of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "phone",
+            "description": "<p>phone of the User.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 205 Need Verification Code\n{ \n     type: 'signupMessage',\n     message: 'Send Again With Verification Code' \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D001",
+            "description": "<p>status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D002",
+            "description": "<p>status : 401, type : signupMessage, msg : That phone is already taken - This phone has been register</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D003",
+            "description": "<p>status : 401, type : signupMessage, msg : Role structure invalid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D009",
+            "description": "<p>status : 401, type : signupMessage, msg : Phone is not valid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D010",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code expired</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D011",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code isn't correct</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "SignUp_LineUser__add_verification_code_",
+    "group": "Users",
+    "permission": [
+      {
+        "name": "none"
+      }
+    ],
+    "type": "post",
+    "url": "/users/signup/lineUser",
+    "title": "Sign up for new line user",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "lineId",
+            "description": "<p>lineId of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "phone",
+            "description": "<p>phone of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "verification",
+            "description": "<p>code from sms.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 Signup Successfully\n{ \n     type: 'signupMessage',\n     message: 'Authentication succeeded' \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
           },
           {
             "group": "Error 4xx",

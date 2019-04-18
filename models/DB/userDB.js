@@ -29,17 +29,26 @@ var userSchema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    registerMethod: {
+        type: String,
+        default: "default"
+    },
     active: {
+        type: Boolean,
+        default: true
+    },
+    agreeTerms: {
         type: Boolean,
         default: false
     },
-    purchase: [{
-        purchaseTime: {
-            type: Date,
-            default: Date.now
-        },
-        expiryTime: Date
-    }]
+    hasVerified: {
+        type: Boolean,
+        default: false
+    },
+    point: {
+        type: Number,
+        default: 0
+    }
 }, {
         usePushEach: true
     });

@@ -62,9 +62,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             });
 
             let allSucceed = taskResults.every(aResult => aResult.succeed);
-
             if (allSucceed) {
-
                 Promise
                     .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
                         const cleanStateCache = () => {
@@ -82,9 +80,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                             oriUser: oriUser,
                             containerList
                         }, tradeDetail);
-                    }).catch(err => {
-                        done
-                    });
+                    }).catch(done);
             } else {
                 return done(null, false, {
                     code: 'F001',
@@ -160,7 +156,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = theContainer.statusCode;
+                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ?
+                        containerStateCache[aContainerId] :
+                        theContainer.statusCode;
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
@@ -188,7 +186,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
 
                             if (condition.rentOrReturn) {
                                 // not to reject rent or return action in any situation
-
                                 let exception = new Exception({
                                     containerID: theContainer.ID,
                                     storeID: theContainer.storeID,
@@ -205,9 +202,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         debug.error(err);
                                         return reject(err);
                                     });
-                            }
-                            // need to validate
-                            else if (condition.rentOrReturnBeforeSign) {
+                            } else if (condition.rentOrReturnBeforeSign) { // need to validate
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
@@ -218,12 +213,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     return resolve({
                                         ID: aContainerId,
                                         oriUser: "",
-                                        dataSaver: (doneSave, getErr) => { },
+                                        dataSaver: (doneSave, getErr) => {},
                                         tradeDetail: null
                                     });
                                 });
-                            }
-                            else if (oriState === 0 || oriState === 1) {
+                            } else if (oriState === 0 || oriState === 1) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
@@ -334,7 +328,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     tradeDetail: action === "Rent" || action === "Return" ? {
                                         oriUser,
                                         newUser,
-                                        containerID: theContainer.ID
+                                        container: theContainer
                                     } : null
                                 });
                             });

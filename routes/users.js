@@ -4,16 +4,13 @@ const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
 
+const validateLine = require('../middlewares/validation/validateLine');
 const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest')
-    .JWT;
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
@@ -24,9 +21,25 @@ const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
+const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
-const UserId = require('./enum/userEnum.js').userId;
+
+const UserRole = require('../models/enums/userEnum').UserRole;
+const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
+
+router.post(['/signup', '/signup/*'], function (req, res, next) {
+    req._options = {};
+    req._setSignupVerification = function (options) {
+        if (typeof options === "undefined" ||
+            typeof options.passVerify === "undefined" ||
+            typeof options.passVerify === "undefined")
+            return next(new Error("Server Internal Error: Signup"));
+        req._options.passVerify = options.passVerify;
+        req._options.needVerified = options.needVerified;
+    };
+    next();
+});
 
 /**
  * @apiName SignUp
@@ -70,13 +83,13 @@ const UserId = require('./enum/userEnum.js').userId;
 
 router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
-    req.body.active = true; // !!! Need to send by client when need purchasing !!!
+    req._options.registerMethod = RegisterMethod.CUSTOMER_APP;
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -113,21 +126,25 @@ router.post(
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === UserId.clerk) {
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: UserId.clerk,
+                typeCode: UserRole.CLERK,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === UserId.admin) {
+            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
+        } else if (dbKey.roleType === UserRole.ADMIN) {
             req.body.role = {
-                typeCode: UserId.admin,
+                typeCode: UserRole.ADMIN,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req.body.active = true;
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -167,20 +184,82 @@ router.post(
     validateRequest,
     function (req, res, next) {
         // for CLERK
-        var dbUser = req._user;
-        var dbKey = req._key;
         req.body.role = {
-            typeCode: UserId.clerk,
+            typeCode: UserRole.CLERK,
             manager: true,
             storeID: req.body.storeID
         };
-        req.body.active = true;
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
                 return res.status(401).json(info);
+            } else {
+                res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-LineUser
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} lineId lineId of the User.
+ * @apiParam {String} phone phone of the User.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse SignupError
+ */
+
+/**
+ * @apiName SignUp-LineUser (add verification code)
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} lineId lineId of the User.
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} verification code from sms.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse SignupError
+ */
+
+router.post(
+    '/signup/lineUser',
+    validateDefault,
+    function (req, res, next) {
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.LINE;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
             } else {
                 res.json(info.body);
             }
@@ -214,14 +293,18 @@ router.post(
     function (req, res, next) {
         // for ADMIN and CLERK
         var dbKey = req._key;
-        req.body.active = String(dbKey.roleType).startsWith(`${UserId.clerk}_`) ? false : true;
-        if (dbKey.roleType === UserId.clerk) {
+        if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
             req.body.role = {
-                typeCode: UserId.customer
+                typeCode: UserRole.CUSTOMER
             };
+            req._options.registerMethod = RegisterMethod.CLECK_APP;
+        } else {
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -233,53 +316,6 @@ router.post(
         });
     }
 );
-
-/**
- * @apiName SignUp-Activity
- * @apiGroup Users
- * @apiPermission admin_clerk
- *
- * @api {post} /users/signup/activity Sign up for customer from activity
- * @apiUse JWT
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-router.post(
-    '/signup/activity',
-    regAsStore,
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        // for ADMIN and CLERK
-        req.body.active = true;
-        var dbKey = req._key;
-        if (dbKey.roleType === UserId.clerk) {
-            req.body.role = {
-                typeCode: UserId.customer
-            };
-        }
-        req._passCode = true;
-        req._activity = true;
-        userQuery.signup(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else {
-                res.json(info.body);
-            }
-        });
-    }
-);
-
 
 /**
  * @apiName Login
@@ -398,7 +434,7 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -569,7 +605,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
  * @apiName DataByToken
  * @apiGroup Users
  * 
- * @api {get} /users/data/:token Get user data by token
+ * @api {get} /users/byToken Get user data by token
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -774,6 +810,50 @@ router.get('/data', validateRequest, function (req, res, next) {
             });
         }
     );
+});
+
+/**
+ * @apiName PointLog
+ * @apiGroup Users
+ * 
+ * @api {get} /users/pointLog Get user pointLog
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        pointLogs : [
+ *		    {
+ *			    logTime : Date,
+ *			    title : String,
+ *			    body : String,
+ *			    quantityChange : Number
+ *		    }, ...
+ *	        ]
+ *      }
+ */
+
+router.get('/pointLog', validateLine, function (req, res, next) {
+    var dbUser = req._user;
+
+    PointLog.find({
+        "user": dbUser._id
+    }, {}, {
+        sort: {
+            logTime: -1
+        }
+    }, function (err, pointLogList) {
+        if (err) return next(err);
+
+        res.json({
+            pointLogs: pointLogList.map(aPointLog => ({
+                logTime: aPointLog.logTime,
+                title: aPointLog.title,
+                body: aPointLog.body,
+                quantityChange: aPointLog.quantityChange
+            }))
+        });
+    });
 });
 
 module.exports = router;

@@ -20,7 +20,13 @@
 - B001 ~ B008
 
 ## | Token Control
-### Headers
+### Url
 - The url you get from "/stores/list"
 ### Error Code
 - C001 ~ C003
+
+## | LINE
+### Headers
+- line-id
+### Error Code
+- B001 ~ B004

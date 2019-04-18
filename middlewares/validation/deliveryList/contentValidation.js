@@ -3,8 +3,8 @@ const dayFormatter = require('@lastlongerproject/toolkit').dayFormatter;
 const monthFormatter = require('@lastlongerproject/toolkit').monthFormatter;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
-const BoxStatus = require('../../../models/variables/boxEnum.js').BoxStatus;
-const ErrorResponse = require('../../../models/variables/error.js')
+const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
+const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;

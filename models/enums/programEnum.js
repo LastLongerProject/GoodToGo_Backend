@@ -11,4 +11,4 @@ let BoxSaveType = Object.freeze({
 module.exports = {
     ProgramStatus,
     BoxSaveType
-}
+};
