@@ -202,7 +202,7 @@ module.exports = {
         const lineId = req.body.lineId;
         let options = req._options || {};
 
-        if (typeof phone === 'undefined') {
+        if (typeof phone === 'undefined' || typeof lineId === 'undefined') {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
