@@ -4,6 +4,7 @@ const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
 
+const validateLine = require('../middlewares/validation/validateLine');
 const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
@@ -20,6 +21,7 @@ const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
+const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
@@ -807,6 +809,50 @@ router.get('/data', validateRequest, function (req, res, next) {
             });
         }
     );
+});
+
+/**
+ * @apiName PointLog
+ * @apiGroup Users
+ * 
+ * @api {get} /users/pointLog Get user pointLog
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        pointLogs : [
+ *		    {
+ *			    logTime : Date,
+ *			    title : String,
+ *			    body : String,
+ *			    quantityChange : Number
+ *		    }, ...
+ *	        ]
+ *      }
+ */
+
+router.get('/pointLog', validateLine, function (req, res, next) {
+    var dbUser = req._user;
+
+    PointLog.find({
+        "user": dbUser._id
+    }, {}, {
+        sort: {
+            logTime: -1
+        }
+    }, function (err, pointLogList) {
+        if (err) return next(err);
+
+        res.json({
+            pointLogs: pointLogList.map(aPointLog => ({
+                logTime: aPointLog.logTime,
+                title: aPointLog.title,
+                body: aPointLog.body,
+                quantityChange: aPointLog.quantityChange
+            }))
+        });
+    });
 });
 
 module.exports = router;

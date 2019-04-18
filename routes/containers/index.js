@@ -6,10 +6,12 @@ const redis = require("../../models/redis");
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
+const PointLog = require('../models/DB/pointLogDB');
 const Container = require('../../models/DB/containerDB');
 const UserOrder = require('../../models/DB/userOrderDB');
 
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
+const DataCacheFactory = require('../../models/dataCacheFactory');
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
@@ -345,14 +347,10 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
  * @apiUse RentError
  * @apiUse ChangeStateError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var key = req.headers.userapikey;
-    if (typeof key === 'undefined' || typeof key === null || key.length === 0)
+    if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
             code: 'F009',
             type: 'borrowContainerMessage',
@@ -385,15 +383,16 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
             if (tradeDetail) {
-                integrateTradeDetail(tradeDetail,
-                    aTradeDetail => aTradeDetail.newUser,
-                    aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
-                    NotificationCenter.emit("container_rent", {
-                        customer: aCustomerTradeDetail.customer
-                    }, {
-                        containerList: aCustomerTradeDetail.containerList
+                integrateTradeDetailForNotification(tradeDetail,
+                        aTradeDetail => aTradeDetail.newUser,
+                        aTradeDetail => aTradeDetail.container.ID)
+                    .forEach(aCustomerTradeDetail => {
+                        NotificationCenter.emit("container_rent", {
+                            customer: aCustomerTradeDetail.customer
+                        }, {
+                            containerList: aCustomerTradeDetail.containerList
+                        });
                     });
-                });
             }
             return res.json(reply);
             // Container.find({
@@ -464,6 +463,7 @@ router.post(
                 message: 'Missing Order Time'
             });
         var container = req.params.id;
+        const storeID = req.body.storeId
         if (container === 'list') container = req.body.containers;
         else container = [container];
         changeContainersState(
@@ -472,7 +472,7 @@ router.post(
                 action: 'Return',
                 newState: 3
             }, {
-                storeID: req.body.storeId,
+                storeID,
                 orderTime: res._payload.orderTime,
                 activity: "沒活動"
             },
@@ -480,17 +480,6 @@ router.post(
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
-                if (tradeDetail) {
-                    integrateTradeDetail(tradeDetail,
-                        aTradeDetail => aTradeDetail.oriUser,
-                        aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
-                        NotificationCenter.emit("container_return", {
-                            customer: aCustomerTradeDetail.customer
-                        }, {
-                            containerList: aCustomerTradeDetail.containerList
-                        });
-                    });
-                }
                 container.forEach((aContainerID) => {
                     UserOrder.remove({
                         "containerID": aContainerID
@@ -498,6 +487,45 @@ router.post(
                         if (err) return debug(err);
                     });
                 });
+                if (tradeDetail && tradeDetail.length > 0) {
+                    integrateTradeDetailForNotification(tradeDetail,
+                            aTradeDetail => aTradeDetail.oriUser,
+                            aTradeDetail => aTradeDetail.container.ID)
+                        .forEach(aCustomerTradeDetail => {
+                            NotificationCenter.emit("container_return", {
+                                customer: aCustomerTradeDetail.customer
+                            }, {
+                                containerList: aCustomerTradeDetail.containerList
+                            });
+                        });
+                    const toStore = typeof storeID === "undefined" ?
+                        tradeDetail[0].newUser.roles.clerk.storeID :
+                        storeID;
+                    integrateTradeDetailForPoint(tradeDetail,
+                            aTradeDetail => `${aTradeDetail.oriUser.user.phone}-${toStore}`, {
+                                container: aTradeDetail => aTradeDetail.container.ID,
+                                customer: aTradeDetail => aTradeDetail.oriUser
+                            })
+                        .forEach(aTradeDetail => {
+                            const dbCustomer = aTradeDetail.customer;
+                            const containerList = aTradeDetail.containerList;
+                            const quantity = containerList.length;
+                            const storeDict = DataCacheFactory.get("store");
+                            let newPointLog = new PointLog({
+                                user: dbCustomer._id,
+                                title: `歸還了${quantity}個容器`,
+                                body: `${storeDict[toStore]}`,
+                                quantityChange: quantity
+                            });
+                            newPointLog.save((err) => {
+                                if (err) debug(err);
+                            });
+                            dbCustomer.point += quantity;
+                            dbCustomer.save((err) => {
+                                if (err) debug(err);
+                            });
+                        });
+                }
             }
         );
     }
@@ -1015,15 +1043,29 @@ router.post('/add/:id/:type', function (req, res, next) {
 
 module.exports = router;
 
-function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
+function integrateTradeDetailForNotification(oriTradeDetail, keyGenerator, dataExtractor) {
     let seen = {};
     oriTradeDetail.forEach(ele => {
         let thisKey = keyGenerator(ele);
         let thisData = dataExtractor(ele);
-        if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
+        if (seen.hasOwnProperty(thisKey)) seen[thisKey].containerList.push(thisData);
         else seen[thisKey] = {
             customer: thisKey,
             containerList: [thisData]
+        };
+    });
+    return Object.values(seen);
+}
+
+function integrateTradeDetailForPoint(oriTradeDetail, keyGenerator, dataExtractor) {
+    let seen = {};
+    oriTradeDetail.forEach(ele => {
+        let thisKey = keyGenerator(ele);
+        let thisContainerID = dataExtractor.container(ele);
+        if (seen.hasOwnProperty(thisKey)) seen[thisKey].containerList.push(thisContainerID);
+        else seen[thisKey] = {
+            customer: dataExtractor.customer(ele),
+            containerList: [thisContainerID]
         };
     });
     return Object.values(seen);

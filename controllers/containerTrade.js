@@ -328,7 +328,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     tradeDetail: action === "Rent" || action === "Return" ? {
                                         oriUser,
                                         newUser,
-                                        containerID: theContainer.ID
+                                        container: theContainer
                                     } : null
                                 });
                             });
