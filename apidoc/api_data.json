@@ -6998,7 +6998,7 @@
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n      code: '???',\n     type: 'userOrderMessage',\n     message: 'Add UserOrder Success'\n }",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'userOrderMessage',\n     message: 'Add UserOrder Success'\n }",
           "type": "json"
         }
       ]
@@ -7136,7 +7136,7 @@
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n      code: '???',\n     type: 'userOrderMessage',\n     message: 'Register ContainerID of UserOrder Success'\n }",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'userOrderMessage',\n     message: 'Register ContainerID of UserOrder Success'\n }",
           "type": "json"
         }
       ]
