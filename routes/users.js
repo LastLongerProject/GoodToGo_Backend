@@ -28,7 +28,7 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
-router.post('/signup', function (req, res, next) {
+router.post(['/signup', '/signup/*'], function (req, res, next) {
     req._options = {};
     req._setSignupVerification = function (options) {
         if (typeof options === "undefined" ||
