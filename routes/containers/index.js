@@ -995,7 +995,7 @@ function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
     oriTradeDetail.forEach(ele => {
         let thisKey = keyGenerator(ele);
         let thisData = dataExtractor(ele);
-        if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
+        if (seen.hasOwnProperty(thisKey)) seen[thisKey].containerList.push(thisData);
         else seen[thisKey] = {
             customer: thisKey,
             containerList: [thisData]
