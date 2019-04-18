@@ -3,6 +3,7 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
+const couponTrade = require('../controllers/couponTrade');
 
 const validateLine = require('../middlewares/validation/validateLine');
 const validateDefault = require('../middlewares/validation/validateDefault');
@@ -262,6 +263,9 @@ router.post(
                 return res.status(205).json(info.body);
             } else {
                 res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug(err);
+                });
             }
         });
     }

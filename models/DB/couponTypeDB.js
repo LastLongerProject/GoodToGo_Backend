@@ -18,6 +18,10 @@ var userSchema = mongoose.Schema({
     order: {
         type: Number,
         default: 5
+    },
+    welcomeGift: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
