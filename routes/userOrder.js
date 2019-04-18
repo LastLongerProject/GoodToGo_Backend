@@ -105,7 +105,7 @@ router.get('/list', validateLine, function (req, res, next) {
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
- *           code: '???',
+ *          code: '???',
  *          type: 'userOrderMessage',
  *          message: 'Add UserOrder Success'
  *      }
@@ -152,7 +152,7 @@ router.post('/add', validateLine, function (req, res, next) {
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
- *           code: '???',
+ *          code: '???',
  *          type: 'userOrderMessage',
  *          message: 'Register ContainerID of UserOrder Success'
  *      }
