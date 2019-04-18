@@ -46,13 +46,10 @@ var userSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-    purchase: [{
-        purchaseTime: {
-            type: Date,
-            default: Date.now
-        },
-        expiryTime: Date
-    }]
+    point: {
+        type: Number,
+        default: 0
+    }
 }, {
     usePushEach: true
 });
