@@ -162,9 +162,9 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    phone: '0911222339',
+                    phone: '0953517569 ',
                     password: '',
-                    storeID: 36
+                    storeID: 43
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -341,7 +341,7 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    botName: 'linebot_2019',
+                    botName: 'bot00004',
                     scopeID: 999,
                 })
                 .expect(200)
@@ -373,7 +373,7 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    bot: 'linebot_2019'
+                    bot: 'bot00004'
                 })
                 .expect(200)
                 .end(function (err, res) {
