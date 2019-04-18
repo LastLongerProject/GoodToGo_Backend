@@ -4,9 +4,14 @@ const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine');
 
+const changeContainersState = require('../controllers/containerTrade');
+
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
+const NotificationCenter = require('../helpers/notifications/center');
+
 const UserOrder = require('../models/DB/userOrderDB');
+const User = require('../models/DB/userDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 const storeCodeValidater = /\d{4}/;
@@ -192,10 +197,34 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             });
 
         theUserOrder.containerID = containerID;
-        res.json({
-            code: '???',
-            type: 'userOrderMessage',
-            message: 'Register ContainerID of UserOrder Success'
+        User.findOne({
+            "user.phone": "bot00003"
+        }, (err, dbBot) => {
+            if (err) return next(err);
+            changeContainersState(containerID, dbBot, {
+                action: "Rent",
+                newState: 2
+            }, {
+                rentToUser: dbUser.user.phone,
+                orderTime: theUserOrder.orderTime,
+                activity: "沒活動"
+            }, (err, tradeSuccess, reply, tradeDetail) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                res.json({
+                    code: '???',
+                    type: 'userOrderMessage',
+                    message: 'Register ContainerID of UserOrder Success'
+                });
+                if (tradeDetail) {
+                    NotificationCenter.emit("container_rent", {
+                        customer: tradeDetail[0].newUser
+                    }, {
+                        containerList: reply.containerList
+                    });
+                }
+            });
+
         });
     });
 });

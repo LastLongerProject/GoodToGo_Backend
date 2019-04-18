@@ -6,8 +6,9 @@ const redis = require("../../models/redis");
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
-
 const Container = require('../../models/DB/containerDB');
+const UserOrder = require('../../models/DB/userOrderDB');
+
 const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
@@ -306,13 +307,11 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
                     Box.remove({
-                            boxID: boxID,
-                        },
-                        function (err) {
-                            if (err) return next(err);
-                            return res.json(reply);
-                        }
-                    );
+                        boxID: boxID,
+                    }, (err) => {
+                        if (err) return next(err);
+                        return res.json(reply);
+                    });
                 }
             );
         }
@@ -462,6 +461,7 @@ router.post(
             });
         var container = req.params.id;
         if (container === 'list') container = req.body.containers;
+        else container = [container];
         changeContainersState(
             container,
             dbStore, {
@@ -483,6 +483,13 @@ router.post(
                         containerList: reply.containerList
                     });
                 }
+                container.forEach((aContainerID) => {
+                    UserOrder.remove({
+                        "containerID": aContainerID
+                    }, (err) => {
+                        if (err) return debug(err);
+                    });
+                });
             }
         );
     }
