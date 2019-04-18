@@ -13,6 +13,28 @@ const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const UserRole = require('../models/enums/userEnum').UserRole;
 
+function sendVerificationCode(phone, done) {
+    var newCode = keys.getVerificationCode();
+    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
+        if (err) return done(err);
+        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
+            if (err) return done(err);
+            if (reply !== 'OK') return done(reply);
+            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
+                if (err) return done(err);
+                if (reply !== 1) return done(reply);
+                done(null, true, {
+                    needVerificationCode: true,
+                    body: {
+                        type: 'signupMessage',
+                        message: 'Send Again With Verification Code'
+                    }
+                });
+            });
+        });
+    });
+}
+
 module.exports = {
     signup: function (req, done) {
         let role = req.body.role || {
@@ -55,7 +77,18 @@ module.exports = {
             if (err)
                 return done(err);
             if (dbUser && dbUser.hasVerified) {
-                if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                if (dbUser.user.password === null) {
+                    dbUser.user.password = dbUser.generateHash(password);
+                    dbUser.save(function (err) {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            body: {
+                                type: 'signupMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
+                } else if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
                         case UserRole.CLERK:
                             dbUser.roles.typeList.push(UserRole.CLERK);
@@ -90,25 +123,7 @@ module.exports = {
                 }
             } else {
                 if (options.passVerify !== true && typeof verificationCode === 'undefined') {
-                    var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
-                        if (err) return done(err);
-                        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
-                            if (err) return done(err);
-                            if (reply !== 'OK') return done(reply);
-                            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
-                                if (err) return done(err);
-                                if (reply !== 1) return done(reply);
-                                done(null, true, {
-                                    needVerificationCode: true,
-                                    body: {
-                                        type: 'signupMessage',
-                                        message: 'Send Again With Verification Code'
-                                    }
-                                });
-                            });
-                        });
-                    });
+                    sendVerificationCode(phone, done);
                 } else {
                     redis.get('user_verifying:' + phone, (err, reply) => {
                         if (err) return done(err);
@@ -181,6 +196,87 @@ module.exports = {
             }
         });
     },
+    signupLineUser: function (req, done) {
+        const phone = req.body.phone.replace(/tel:|-/g, "");
+        const password = "";
+        const verificationCode = req.body.verification_code;
+        const lineId = req.body.lineId;
+        let options = req._options || {};
+
+        if (typeof phone === 'undefined') {
+            return done(null, false, {
+                code: 'D001',
+                type: 'signupMessage',
+                message: 'Content not Complete'
+            });
+        } else if (!(typeof phone === 'string' && isMobilePhone(phone))) {
+            return done(null, false, {
+                code: 'D009',
+                type: 'signupMessage',
+                message: 'Phone is not valid'
+            });
+        }
+        User.findOne({
+            'user.phone': phone
+        }, function (err, dbUser) {
+            if (err)
+                return done(err);
+            if (dbUser && dbUser.agreeTerms) {
+                return done(null, false, {
+                    code: 'D002',
+                    type: 'signupMessage',
+                    message: 'That phone is already taken'
+                });
+            } else {
+                if (typeof verificationCode === 'undefined') {
+                    sendVerificationCode(phone, done);
+                } else {
+                    redis.get('user_verifying:' + phone, (err, reply) => {
+                        if (err) return done(err);
+                        if (reply === null) return done(null, false, {
+                            code: 'D010',
+                            type: 'signupMessage',
+                            message: 'Verification Code expired'
+                        });
+                        else if (reply !== verificationCode) return done(null, false, {
+                            code: 'D011',
+                            type: 'signupMessage',
+                            message: "Verification Code isn't correct"
+                        });
+
+                        let userToSave;
+                        if (dbUser) { // has NOT verified
+                            userToSave = dbUser;
+                        } else {
+                            let newUser = new User();
+                            newUser.user.phone = phone;
+                            newUser.user.password = null;
+                            newUser.registerMethod = options.registerMethod;
+                            newUser.roles.typeList.push(UserRole.CUSTOMER);
+                            userToSave = newUser;
+                        }
+
+                        userToSave.user.lineId = lineId;
+                        userToSave.hasVerified = true;
+                        userToSave.agreeTerms = true;
+                        userToSave.save(function (err) {
+                            if (err) return done(err);
+                            redis.del('user_verifying:' + phone, (err, delReply) => {
+                                if (err) return done(err);
+                                if (delReply !== 1) return done("delReply: " + delReply);
+                                return done(null, true, {
+                                    body: {
+                                        type: 'signupMessage',
+                                        message: 'Authentication succeeded'
+                                    }
+                                });
+                            });
+                        });
+                    });
+                }
+            }
+        });
+    },
     login: function (req, done) {
         var phone = req.body.phone;
         var password = req.body.password;
@@ -203,7 +299,7 @@ module.exports = {
                         type: 'loginMessage',
                         message: 'No user found'
                     });
-                if (!dbUser.active) {
+                if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
                     return done(null, false, {
                         code: 'D005',
                         type: 'loginMessage',

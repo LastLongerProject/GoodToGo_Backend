@@ -250,7 +250,7 @@ router.post(
     function (req, res, next) {
         req._options.agreeTerms = true;
         req._options.registerMethod = RegisterMethod.LINE;
-        userQuery.signup(req, function (err, user, info) {
+        userQuery.signupLineUser(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -602,7 +602,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
  * @apiName DataByToken
  * @apiGroup Users
  * 
- * @api {get} /users/data/:token Get user data by token
+ * @api {get} /users/byToken Get user data by token
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
