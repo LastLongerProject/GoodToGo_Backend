@@ -12,13 +12,12 @@ var userSchema = mongoose.Schema({
         },
         lineId: String
     },
-    role: {
-        typeCode: String,
-        storeID: Number,
-        stationID: Number,
-        scopeID: Number,
-        manager: Boolean
+    subscriptionPlan: {
+        name: String,
+        price: String,
+        expireTime: Date
     },
+    inNewSystem: Boolean,
     roles: {
         typeList: [],
         clerk: Object,
@@ -51,8 +50,8 @@ var userSchema = mongoose.Schema({
         default: 0
     }
 }, {
-    usePushEach: true
-});
+        usePushEach: true
+    });
 
 userSchema.index({
     "user.phone": 1
