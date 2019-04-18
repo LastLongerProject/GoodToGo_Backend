@@ -11,5 +11,9 @@ module.exports = {
         CLECK_APP_MANAGER: "cleck_app_manager",
         LINE: "line",
         BY_ADMIN: "by_admin"
+    }),
+    PurchaseStatus: Object.freeze({
+        FREE_USER: "free_user",
+        PURCHASED_USER: "purchased_user"
     })
 };

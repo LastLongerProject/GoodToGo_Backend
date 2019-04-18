@@ -13,6 +13,7 @@ const NotificationCenter = require('../helpers/notifications/center');
 
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
+const PurchaseStatus = require('../models/enums/userEnum').PurchaseStatus;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 const storeCodeValidater = /\d{4}/;
@@ -38,6 +39,8 @@ function getCheckCode(storeID) {
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
+ *          containerAmount: Number,
+ *          purchaseStatus: String, // "free_user" or "purchased_user"
  *	        orderListWithoutID : [
  *		    {
  *			    orderID : String,
@@ -92,6 +95,8 @@ router.get('/list', validateLine, function (req, res, next) {
             }
         });
         res.json({
+            containerAmount: userOrderList.length,
+            purchaseStatus: dbUser.hasPurchase ? PurchaseStatus.PURCHASED_USER : PurchaseStatus.FREE_USER,
             orderListWithoutID: Object.values(orderListWithoutID),
             orderListWithID
         });
@@ -121,12 +126,20 @@ router.post('/add', validateLine, function (req, res, next) {
     const storeCode = req.body.storeCode;
     const containerAmount = parseInt(req.body.containerAmount);
 
-    if (isValidStoreCode(storeCode) || isNaN(containerAmount))
+    if (isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(401).json({
             code: '???',
             type: 'userOrderMessage',
             message: `Content not in Correct Format. \n` +
                 `StoreID: ${storeID}, ContainerAmount: ${req.body.containerAmount}`
+        });
+    if ((!dbUser.hasPurchase && containerAmount > 1) ||
+        (dbUser.hasPurchase && containerAmount > 20))
+        return res.status(401).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `ContainerAmount is Over Quantity Limitation. \n` +
+                `ContainerAmount: ${req.body.containerAmount}`
         });
 
     const storeID = parseInt(storeCode.substring(0, 3));

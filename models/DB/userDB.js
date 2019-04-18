@@ -46,13 +46,21 @@ var userSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+    hasBanned: {
+        type: Boolean,
+        default: false
+    },
+    hasPurchase: {
+        type: Boolean,
+        default: false
+    },
     point: {
         type: Number,
         default: 0
     }
 }, {
-        usePushEach: true
-    });
+    usePushEach: true
+});
 
 userSchema.index({
     "user.phone": 1
