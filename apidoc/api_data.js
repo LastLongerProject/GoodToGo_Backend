@@ -2026,6 +2026,124 @@ define({ "api": [
     }
   },
   {
+    "name": "GetUserCoupons",
+    "group": "Coupons",
+    "type": "get",
+    "url": "/coupon/myCoupons",
+    "title": "Get User's Coupons",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        myCouponList : [\n\t\t    {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    extraNotice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "UseCoupon",
+    "group": "Coupons",
+    "type": "post",
+    "url": "/coupon/use/:couponID",
+    "title": "Use User's Coupon",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'couponMessage',\n     message: 'Use Coupon Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/coupon.js",
+    "groupTitle": "Coupons",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "DeliveryList_Get_list",
     "group": "DeliveryList",
     "type": "get",
@@ -4457,7 +4575,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail/byCustomer?id={shopid}",
+    "url": "/manage/shopDetail?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4470,7 +4588,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -4565,7 +4683,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail?id={shopid}",
+    "url": "/manage/shopDetail/byCustomer?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4578,7 +4696,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -7109,7 +7227,7 @@ define({ "api": [
   {
     "name": "RegisterContainerID",
     "group": "UserOrder",
-    "type": "get",
+    "type": "post",
     "url": "/userOrder/registerContainer",
     "title": "Register ContainerID of UserOrder",
     "parameter": {

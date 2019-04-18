@@ -148,7 +148,7 @@ router.post('/add', validateLine, function (req, res, next) {
  * @apiName RegisterContainerID
  * @apiGroup UserOrder
  * 
- * @api {get} /userOrder/registerContainer Register ContainerID of UserOrder
+ * @api {post} /userOrder/registerContainer Register ContainerID of UserOrder
  * @apiUse LINE
  * 
  * @apiParam {String} orderID orderID.
