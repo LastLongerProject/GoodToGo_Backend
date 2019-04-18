@@ -21,6 +21,9 @@ userSchema.index({
 userSchema.index({
     "user": 1
 });
+userSchema.index({
+    "containerID": 1
+});
 
 
 // create the model for users and expose it to our app
