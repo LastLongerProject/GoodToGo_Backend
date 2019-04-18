@@ -198,7 +198,6 @@ module.exports = {
     },
     signupLineUser: function (req, done) {
         const phone = req.body.phone.replace(/tel:|-/g, "");
-        const password = "";
         const verificationCode = req.body.verification_code;
         const lineId = req.body.lineId;
         let options = req._options || {};

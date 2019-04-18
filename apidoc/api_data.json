@@ -4457,7 +4457,7 @@
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail?id={shopid}",
+    "url": "/manage/shopDetail/byCustomer?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4470,7 +4470,7 @@
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -4565,7 +4565,7 @@
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail/byCustomer?id={shopid}",
+    "url": "/manage/shopDetail?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4578,7 +4578,7 @@
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -6121,13 +6121,13 @@
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list/:id",
-    "title": "Get store specific store info",
+    "url": "/stores/list",
+    "title": "Get store list",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
           "type": "json"
         }
       ]
@@ -6180,13 +6180,13 @@
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list",
-    "title": "Get store list",
+    "url": "/stores/list/:id",
+    "title": "Get store specific store info",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
           "type": "json"
         }
       ]
@@ -6969,6 +6969,223 @@
     }
   },
   {
+    "name": "AddUserOrder",
+    "group": "UserOrder",
+    "type": "post",
+    "url": "/userOrder/add",
+    "title": "Add User Order",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "storeCode",
+            "description": "<p>storeCode.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "Number",
+            "optional": false,
+            "field": "containerAmount",
+            "description": "<p>containerAmount.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n      code: '???',\n     type: 'userOrderMessage',\n     message: 'Add UserOrder Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "DataForLine",
+    "group": "UserOrder",
+    "type": "get",
+    "url": "/userOrder/list",
+    "title": "Get user data for Line",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        orderListWithoutID : [\n\t\t    {\n\t\t\t    orderID : String,\n\t\t\t    containerAmount : Number,\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ],\n\t        orderListWithID : [\n\t\t    {\n\t\t\t    containerID : String, // #001\n\t\t\t    containerType : String, // 12oz 玻璃杯\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "RegisterContainerID",
+    "group": "UserOrder",
+    "type": "get",
+    "url": "/userOrder/registerContainer",
+    "title": "Register ContainerID of UserOrder",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "orderID",
+            "description": "<p>orderID.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "containerID",
+            "description": "<p>containerID.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n      code: '???',\n     type: 'userOrderMessage',\n     message: 'Register ContainerID of UserOrder Success'\n }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/userOrder.js",
+    "groupTitle": "UserOrder",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "AddBot",
     "group": "Users",
     "permission": [
@@ -7336,7 +7553,7 @@
     "name": "DataByToken",
     "group": "Users",
     "type": "get",
-    "url": "/users/data/:token",
+    "url": "/users/byToken",
     "title": "Get user data by token",
     "success": {
       "examples": [
@@ -8140,18 +8357,18 @@
     }
   },
   {
-    "name": "SignUp_Activity",
+    "name": "SignUp_Clerk",
     "group": "Users",
     "permission": [
       {
-        "name": "admin_clerk",
-        "title": "Admin/Clerk access rights needed.",
-        "description": "<p>Please use admin/clerk identity to request this uri.</p>"
+        "name": "manager",
+        "title": "Manager access rights needed.",
+        "description": "<p>Please use manager identity to request this uri.</p>"
       }
     ],
     "type": "post",
-    "url": "/users/signup/activity",
-    "title": "Sign up for customer from activity",
+    "url": "/users/signup/clerk",
+    "title": "Sign up for new clerk",
     "parameter": {
       "fields": {
         "Parameter": [
@@ -8310,21 +8527,152 @@
     }
   },
   {
-    "name": "SignUp_Clerk",
+    "name": "SignUp_LineUser",
     "group": "Users",
     "permission": [
       {
-        "name": "manager",
-        "title": "Manager access rights needed.",
-        "description": "<p>Please use manager identity to request this uri.</p>"
+        "name": "none"
       }
     ],
     "type": "post",
-    "url": "/users/signup/clerk",
-    "title": "Sign up for new clerk",
+    "url": "/users/signup/lineUser",
+    "title": "Sign up for new line user",
     "parameter": {
       "fields": {
         "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "lineId",
+            "description": "<p>lineId of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "phone",
+            "description": "<p>phone of the User.</p>"
+          }
+        ]
+      }
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 205 Need Verification Code\n{ \n     type: 'signupMessage',\n     message: 'Send Again With Verification Code' \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D001",
+            "description": "<p>status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D002",
+            "description": "<p>status : 401, type : signupMessage, msg : That phone is already taken - This phone has been register</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D003",
+            "description": "<p>status : 401, type : signupMessage, msg : Role structure invalid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D009",
+            "description": "<p>status : 401, type : signupMessage, msg : Phone is not valid</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D010",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code expired</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "D011",
+            "description": "<p>status : 401, type : signupMessage, msg : Verification Code isn't correct</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "SignUp_LineUser__add_verification_code_",
+    "group": "Users",
+    "permission": [
+      {
+        "name": "none"
+      }
+    ],
+    "type": "post",
+    "url": "/users/signup/lineUser",
+    "title": "Sign up for new line user",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "lineId",
+            "description": "<p>lineId of the User.</p>"
+          },
           {
             "group": "Parameter",
             "type": "String",
@@ -8336,8 +8684,8 @@
             "group": "Parameter",
             "type": "String",
             "optional": false,
-            "field": "password",
-            "description": "<p>password of the User.</p>"
+            "field": "verification",
+            "description": "<p>code from sms.</p>"
           }
         ]
       }
@@ -8361,15 +8709,15 @@
             "group": "Header",
             "type": "String",
             "optional": false,
-            "field": "Authorization",
-            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+            "field": "reqID",
+            "description": "<p>random text ( suggestion -&gt; String that encode with ‘hex’, length = 10 )</p>"
           },
           {
             "group": "Header",
             "type": "String",
             "optional": false,
-            "field": "ApiKey",
-            "description": "<p>You can get ApiKey by signup or login</p>"
+            "field": "reqTime",
+            "description": "<p>Time.now()</p>"
           }
         ]
       }
@@ -8381,57 +8729,15 @@
             "group": "Error 4xx",
             "type": "String",
             "optional": false,
-            "field": "B001",
-            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+            "field": "A001",
+            "description": "<p>status : 401, msg : Req Invalid - Missing hashID or reqTime in headers</p>"
           },
           {
             "group": "Error 4xx",
             "type": "String",
             "optional": false,
-            "field": "B002",
-            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B003",
-            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B004",
-            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B005",
-            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B006",
-            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B007",
-            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
-          },
-          {
-            "group": "Error 4xx",
-            "type": "String",
-            "optional": false,
-            "field": "B008",
-            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+            "field": "A002",
+            "description": "<p>status : 401, msg : Req Expired - reqTime is not acceptable</p>"
           },
           {
             "group": "Error 4xx",
