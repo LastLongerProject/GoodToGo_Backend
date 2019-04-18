@@ -8465,6 +8465,65 @@
     }
   },
   {
+    "name": "PointLog",
+    "group": "Users",
+    "type": "get",
+    "url": "/users/pointLog",
+    "title": "Get user pointLog",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        pointLogs : [\n\t\t    {\n\t\t\t    logTime : Date,\n\t\t\t    title : String,\n\t\t\t    body : String,\n\t\t\t    quantityChange : Number\n\t\t    }, ...\n\t        ]\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>lineID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "SignUp",
     "group": "Users",
     "permission": [
