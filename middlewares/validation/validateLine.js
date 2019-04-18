@@ -9,7 +9,7 @@ module.exports = function (req, res, next) {
             message: 'lineId undefined'
         });
 
-    User.find({
+    User.findOne({
         "user.lineId": lineId
     }, function (err, dbUser) {
         if (err)
@@ -27,5 +27,6 @@ module.exports = function (req, res, next) {
                 message: 'User hasn\'t verify'
             });
         req._user = dbUser;
+        next();
     });
 };
