@@ -177,55 +177,53 @@ router.get('/list', validateDefault, function (req, res, next) {
 router.get('/list/:id', validateDefault, function (req, res, next) {
     let storeId = req.params.id;
 
-    process.nextTick(function () {
-        Store.findOne({
-            "project": {
-                "$ne": "測試用"
-            },
-            "id": storeId
-        }, function (err, store) {
+    Store.findOne({
+        "project": {
+            "$ne": "測試用"
+        },
+        "id": storeId
+    }, function (err, store) {
+        if (err) return next(err);
+        if (!store) {
+            return res.status(403).json({
+                code: "E004",
+                type: "StoresMessage",
+                message: "No store found, please check id"
+            });
+        }
+
+        keys.serverSecretKey((err, key) => {
             if (err) return next(err);
-            if (!store) {
-                return res.status(403).json({
-                    code: "E004",
-                    type: "StoresMessage",
-                    message: "No store found, please check id"
+            var date = new Date();
+            var payload = {
+                'iat': Date.now(),
+                'exp': date.setMinutes(date.getMinutes() + 5)
+            };
+            var token = jwt.encode(payload, key);
+            res.set('etag', wetag([store]));
+            var tmpOpening = [];
+            store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}`;
+            for (var i = 0; i < store.opening_hours.length; i++)
+                tmpOpening.push({
+                    close: store.opening_hours[i].close,
+                    open: store.opening_hours[i].open
                 });
-            }
+            tmpOpening.sort((a, b) => {
+                return a.close.day - b.close.day;
+            });
 
-            keys.serverSecretKey((err, key) => {
-                if (err) return next(err);
-                var date = new Date();
-                var payload = {
-                    'iat': Date.now(),
-                    'exp': date.setMinutes(date.getMinutes() + 5)
-                };
-                var token = jwt.encode(payload, key);
-                res.set('etag', wetag([store]));
-                var tmpOpening = [];
-                store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}`;
-                for (var i = 0; i < store.opening_hours.length; i++)
-                    tmpOpening.push({
-                        close: store.opening_hours[i].close,
-                        open: store.opening_hours[i].open
-                    });
-                tmpOpening.sort((a, b) => {
-                    return a.close.day - b.close.day;
-                });
-
-                res.json({
-                    id: store.id,
-                    name: store.name,
-                    img_info: store.img_info,
-                    opening_hours: tmpOpening,
-                    contract: store.contract,
-                    location: store.location,
-                    address: store.address,
-                    type: store.type,
-                    category: store.category,
-                    testing: (store.project === '正興杯杯') ? false : true,
-                    activity: store.activity
-                });
+            res.json({
+                id: store.id,
+                name: store.name,
+                img_info: store.img_info,
+                opening_hours: tmpOpening,
+                contract: store.contract,
+                location: store.location,
+                address: store.address,
+                type: store.type,
+                category: store.category,
+                testing: (store.project === '正興杯杯') ? false : true,
+                activity: store.activity
             });
         });
     });
@@ -407,7 +405,7 @@ router.get('/list.js', function (req, res, next) {
     process.nextTick(function () {
         Place.find({
             "project": {
-                "$in": ["正興杯杯", "咖啡店連線"]
+                "$in": ["正興杯杯", "咖啡店連線", "器喝茶"]
             },
             "active": true
         }, {}, {

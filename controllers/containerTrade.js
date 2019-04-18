@@ -186,7 +186,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
 
                             if (condition.rentOrReturn) {
                                 // not to reject rent or return action in any situation
-
                                 let exception = new Exception({
                                     containerID: theContainer.ID,
                                     storeID: theContainer.storeID,
@@ -203,9 +202,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         debug.error(err);
                                         return reject(err);
                                     });
-                            }
-                            // need to validate
-                            else if (condition.rentOrReturnBeforeSign) {
+                            } else if (condition.rentOrReturnBeforeSign) { // need to validate
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]

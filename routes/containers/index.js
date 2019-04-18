@@ -385,10 +385,14 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
             if (tradeDetail) {
-                NotificationCenter.emit("container_rent", {
-                    customer: tradeDetail[0].newUser
-                }, {
-                    containerList: reply.containerList
+                integrateTradeDetail(tradeDetail,
+                    aTradeDetail => aTradeDetail.newUser,
+                    aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
+                    NotificationCenter.emit("container_rent", {
+                        customer: aCustomerTradeDetail.customer
+                    }, {
+                        containerList: aCustomerTradeDetail.containerList
+                    });
                 });
             }
             return res.json(reply);
@@ -477,10 +481,14 @@ router.post(
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
                 if (tradeDetail) {
-                    NotificationCenter.emit("container_return", {
-                        customer: tradeDetail[0].oriUser
-                    }, {
-                        containerList: reply.containerList
+                    integrateTradeDetail(tradeDetail,
+                        aTradeDetail => aTradeDetail.oriUser,
+                        aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
+                        NotificationCenter.emit("container_return", {
+                            customer: aCustomerTradeDetail.customer
+                        }, {
+                            containerList: aCustomerTradeDetail.containerList
+                        });
                     });
                 }
                 container.forEach((aContainerID) => {
@@ -1007,15 +1015,15 @@ router.post('/add/:id/:type', function (req, res, next) {
 
 module.exports = router;
 
-function uniqArr(array, keyGenerator, dataExtractor) {
+function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
     let seen = {};
-    array.forEach(ele => {
+    oriTradeDetail.forEach(ele => {
         let thisKey = keyGenerator(ele);
         let thisData = dataExtractor(ele);
         if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
         else seen[thisKey] = {
-            key: thisKey,
-            data: [thisData]
+            customer: thisKey,
+            containerList: [thisData]
         };
     });
     return Object.values(seen);
