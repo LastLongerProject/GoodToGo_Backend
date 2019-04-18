@@ -22,3 +22,7 @@ exports.transContainerType = function (typeCode) {
     let storeList = DataCacheFactory.get('store');
     return storeList[String(typeCode)].name;
 }
+
+exports.generateUUID = function () {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}

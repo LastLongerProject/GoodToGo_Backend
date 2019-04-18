@@ -4,8 +4,14 @@ var userSchema = mongoose.Schema({
     couponID: String,
     user: mongoose.Schema.Types.ObjectId,
     couponType: mongoose.Schema.Types.ObjectId,
-    used: Boolean,
-    expired: Boolean
+    used: {
+        type: Boolean,
+        default: false
+    },
+    expired: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 });

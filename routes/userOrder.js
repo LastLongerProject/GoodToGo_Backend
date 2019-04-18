@@ -7,6 +7,7 @@ const validateLine = require('../middlewares/validation/validateLine');
 const changeContainersState = require('../controllers/containerTrade');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const generateUUID = require('../helpers/tools').generateUUID;
 
 const NotificationCenter = require('../helpers/notifications/center');
 
@@ -130,7 +131,7 @@ router.post('/add', validateLine, function (req, res, next) {
 
     const storeID = parseInt(storeCode.substring(0, 3));
     let newOrder = new UserOrder({
-        orderID: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+        orderID: generateUUID(),
         user: dbUser._id,
         storeID
     });

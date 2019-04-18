@@ -1,20 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../helpers/debugger')('userOrder');
+const debug = require('../helpers/debugger')('coupon');
 
+const couponTrade = require('../controllers/couponTrade');
 const validateLine = require('../middlewares/validation/validateLine');
 
-const changeContainersState = require('../controllers/containerTrade');
-
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-
-const NotificationCenter = require('../helpers/notifications/center');
-
 const Coupon = require('../models/DB/couponDB');
-const UserOrder = require('../models/DB/userOrderDB');
+const CouponType = require('../models/DB/couponTypeDB');
 const CouponState = require('../models/enums/couponEnum').CouponState;
+const CouponTypeState = require('../models/enums/couponEnum').CouponTypeState;
 const DataCacheFactory = require('../models/dataCacheFactory');
-
 
 /**
  * @apiName GetUserCoupons
@@ -112,7 +107,8 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
         });
 
     Coupon.findOne({
-        "couponID": CouponID
+        "couponID": CouponID,
+        "used": false
     }, (err, theCoupon) => {
         if (err) return next(err);
         if (!theCoupon || theCoupon.user !== dbUser._id)
@@ -121,20 +117,134 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
                 type: 'couponMessage',
                 message: `Can't find that Coupon`
             });
-        if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now())
-            return res.status(401).json({
-                code: '???',
-                type: 'couponMessage',
-                message: `Coupon Expired`
+        if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now()) {
+            theCoupon.expired = true
+            theCoupon.save((err) => {
+                if (err) return next(err);
+                res.status(401).json({
+                    code: '???',
+                    type: 'couponMessage',
+                    message: `Coupon Expired`
+                });
             });
-        theCoupon.used = true
-        theCoupon.save((err) => {
-            if (err) return next(err);
-            res.json({
-                code: '???',
-                type: 'couponMessage',
-                message: 'Use Coupon Success'
+        } else {
+            theCoupon.used = true
+            theCoupon.save((err) => {
+                if (err) return next(err);
+                res.json({
+                    code: '???',
+                    type: 'couponMessage',
+                    message: 'Use Coupon Success'
+                });
             });
+        }
+    });
+});
+
+/**
+ * @apiName GetAllCoupons
+ * @apiGroup Coupons
+ * 
+ * @api {get} /coupon/allCoupons Get All Coupons
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          userPoint : Number,
+ *	        allCouponList : [
+ *		    {
+ *			    couponTypeID : String,
+ *			    provider : String,
+ *			    title : String,
+ *			    expirationDate : Date,
+ *			    price : Number,
+ *			    amount : Number,
+ *			    extraNotice : String,
+ *			    imgSrc : Url,
+ *              state : String ("sold_out" or "available" or "cannot_afford")
+ *		    }, ...
+ *	        ]
+ *      }
+ */
+
+router.get('/allCoupons', validateLine, function (req, res, next) {
+    const dbUser = req._user;
+
+    CouponType.find({
+        "expirationDate": {
+            "$gt": Date.now()
+        }
+    }, (err, couponTypeList) => {
+        if (err) return next(err);
+
+        couponTypeList.sort((a, b) => {
+            if (a.order !== b.order) return b - a;
+            else return b.updatedAt - a.updatedAt;
+        });
+
+        let formattedCouponType = [];
+        couponTypeList.forEach(aCouponType => {
+            let aFormattedCouponType = {
+                couponTypeID: aCouponType.couponTypeID,
+                provider: aCouponType.provider,
+                title: aCouponType.title,
+                expirationDate: aCouponType.expirationDate,
+                price: aCouponType.price,
+                amount: aCouponType.amount.current,
+                extraNotice: aCouponType.extraNotice,
+                imgSrc: aCouponType.img_info.img_src // need update
+            };
+            if (aCouponType.amount.current <= 0) {
+                aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
+            } else if (aCouponType.price > dbUser.point) {
+                aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
+            } else {
+                aFormattedCouponType.state = CouponTypeState.AVAILABLE;
+            }
+            formattedCouponType.push(aFormattedCouponType);
+        });
+        res.json({
+            userPoint: dbUser.point,
+            allCouponList: formattedCouponType
+        })
+    });
+});
+
+/**
+ * @apiName PurchaseCoupon
+ * @apiGroup Coupons
+ * 
+ * @api {post} /coupon/purchase/:couponTypeID Purchase Coupon
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          code: '???',
+ *          type: 'couponMessage',
+ *          message: 'Purchase Coupon Success'
+ *      }
+ */
+
+router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
+    const dbUser = req._user;
+    const CouponTypeID = req.params.couponTypeID;
+
+    if (typeof CouponTypeID !== "string")
+        return res.status(401).json({
+            code: '???',
+            type: 'couponMessage',
+            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
+        });
+
+    couponTrade.purchaseCoupon(CouponTypeID, dbUser, (err, tradeInvalid) => {
+        if (err) return next(err);
+        if (tradeInvalid) return res.status(401).json(tradeInvalid);
+        res.json({
+            code: '???',
+            type: 'couponMessage',
+            message: 'Purchase Coupon Success'
         });
     });
 });
