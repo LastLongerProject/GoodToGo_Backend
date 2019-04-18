@@ -9,12 +9,25 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const UserOrder = require('../models/DB/userOrderDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 
+const storeCodeValidater = /\d{4}/;
+
+function isValidStoreCode(storeCode) {
+    if (typeof storeCode !== "string") return false;
+    if (storeCodeValidater.test(storeCode)) return false;
+    if (getCheckCode(parseInt(storeCode.substring(0, 3))) !== parseInt(storeCode.substring(3, 4))) return false;
+    return true;
+}
+
+function getCheckCode(storeID) {
+    return (parseInt(storeID / 100) % 10 * 1 + parseInt(storeID / 10) % 10 * 2 + parseInt(storeID / 1) % 10 * 3) % 10;
+}
+
 /**
  * @apiName DataForLine
- * @apiGroup Users
+ * @apiGroup UserOrder
  * 
  * @api {get} /userOrder/list Get user data for Line
- * @apiUse JWT
+ * @apiUse LINE
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
@@ -82,11 +95,13 @@ router.get('/list', validateLine, function (req, res, next) {
 
 /**
  * @apiName AddUserOrder
- * @apiGroup Users
+ * @apiGroup UserOrder
  * 
- * @api {get} /userOrder/add Get user data for Line
- * @apiUse JWT
+ * @api {post} /userOrder/add Add User Order
+ * @apiUse LINE
  * 
+ * @apiParam {String} storeCode storeCode.
+ * @apiParam {Number} containerAmount containerAmount.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
@@ -98,17 +113,18 @@ router.get('/list', validateLine, function (req, res, next) {
 
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const storeID = parseInt(req.body.storeID);
+    const storeCode = req.body.storeCode;
     const containerAmount = parseInt(req.body.containerAmount);
 
-    if (isNaN(storeID) || isNaN(containerAmount))
+    if (isValidStoreCode(storeCode) || isNaN(containerAmount))
         return res.status(401).json({
             code: '???',
             type: 'userOrderMessage',
             message: `Content not in Correct Format. \n` +
-                `StoreID: ${storeID}, ContainerAmount: ${containerAmount}`
+                `StoreID: ${storeID}, ContainerAmount: ${req.body.containerAmount}`
         });
 
+    const storeID = parseInt(storeCode.substring(0, 3));
     let newOrder = new UserOrder({
         orderID: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
         user: dbUser._id,
@@ -120,6 +136,66 @@ router.post('/add', validateLine, function (req, res, next) {
             code: '???',
             type: 'userOrderMessage',
             message: 'Add UserOrder Success'
+        });
+    });
+});
+
+/**
+ * @apiName RegisterContainerID
+ * @apiGroup UserOrder
+ * 
+ * @api {get} /userOrder/registerContainer Register ContainerID of UserOrder
+ * @apiUse LINE
+ * 
+ * @apiParam {String} orderID orderID.
+ * @apiParam {String} containerID containerID.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *           code: '???',
+ *          type: 'userOrderMessage',
+ *          message: 'Register ContainerID of UserOrder Success'
+ *      }
+ */
+
+router.post('/registerContainer', validateLine, function (req, res, next) {
+    const dbUser = req._user;
+    const orderID = req.body.orderID;
+    const containerID = parseInt(req.body.containerID);
+    const ContainerDict = DataCacheFactory.get('container');
+
+    if (typeof orderID !== "string" || isNaN(containerID))
+        return res.status(401).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `Content not in Correct Format. \n` +
+                `OrderID: ${orderID}, ContainerID: ${req.body.containerID}`
+        });
+    if (!ContainerDict[containerID])
+        return res.status(401).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `Can't find the Container. ContainerID: ${containerID}`
+        });
+
+    UserOrder.findOne({
+        "user": dbUser._id,
+        "orderID": orderID,
+        "containerID": null
+    }, (err, theUserOrder) => {
+        if (err) return next(err);
+        if (!theUserOrder)
+            return res.status(401).json({
+                code: '???',
+                type: 'userOrderMessage',
+                message: `Can't find the UserOrder. orderID: ${orderID}`
+            });
+
+        theUserOrder.containerID = containerID;
+        res.json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: 'Register ContainerID of UserOrder Success'
         });
     });
 });
