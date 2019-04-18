@@ -23,6 +23,7 @@ const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
+const coupon = require('./routes/coupon');
 const userOrder = require('./routes/userOrder');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
@@ -66,6 +67,7 @@ app.use('/users', users);
 app.use('/images', images);
 app.use('/containers', containers);
 app.use('/userOrder', userOrder);
+app.use('/coupon', coupon);
 app.use('/deliveryList', deliveryList);
 
 // catch 404 and forward to error handler

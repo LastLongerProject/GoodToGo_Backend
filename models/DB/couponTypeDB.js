@@ -23,4 +23,4 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model("Coupon", userSchema);
+module.exports = mongoose.model("CouponType", userSchema);

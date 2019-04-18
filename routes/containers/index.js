@@ -6,7 +6,7 @@ const redis = require("../../models/redis");
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
-const PointLog = require('../models/DB/pointLogDB');
+const PointLog = require('../../models/DB/pointLogDB');
 const Container = require('../../models/DB/containerDB');
 const UserOrder = require('../../models/DB/userOrderDB');
 
