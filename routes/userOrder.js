@@ -67,7 +67,6 @@ router.get('/list', validateLine, function (req, res, next) {
         let orderListWithoutID = {};
         let orderListWithID = [];
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
-        console.log(userOrderList);
         userOrderList.forEach(aUserOrder => {
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
