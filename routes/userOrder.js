@@ -14,6 +14,7 @@ const NotificationCenter = require('../helpers/notifications/center');
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
 const PurchaseStatus = require('../models/enums/userEnum').PurchaseStatus;
+const userUsingAmount = require('../models/variables/containerStatistic').user_using;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 const storeCodeValidater = /\d{4}/;
@@ -134,47 +135,51 @@ router.post('/add', validateLine, function (req, res, next) {
             message: `Content not in Correct Format. \n` +
                 `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`
         });
-    if ((!dbUser.hasPurchase && containerAmount > 1) ||
-        (dbUser.hasPurchase && containerAmount > 20))
-        return res.status(401).json({
-            code: '???',
-            type: 'userOrderMessage',
-            message: `ContainerAmount is Over Quantity Limitation. \n` +
-                `ContainerAmount: ${req.body.containerAmount}`
-        });
 
-    const storeID = parseInt(storeCode.substring(0, 3));
-    if (!StoreDict[storeID])
-        return res.status(401).json({
-            code: '???',
-            type: 'userOrderMessage',
-            message: `No Such StoreID. \nStoreID: ${storeID}`
-        });
+    userUsingAmount(dbUser, (err, usingAmount) => {
+        if (err) return next(err);
+        if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1) ||
+            (dbUser.hasPurchase && containerAmount + usingAmount > 20))
+            return res.status(401).json({
+                code: '???',
+                type: 'userOrderMessage',
+                message: `ContainerAmount is Over Quantity Limitation. \n` +
+                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`
+            });
 
-    const funcList = [];
-    for (let i = 0; i < containerAmount; i++) {
-        funcList.push(new Promise((resolve, reject) => {
-            let newOrder = new UserOrder({
-                orderID: generateUUID(),
-                user: dbUser._id,
-                storeID
+        const storeID = parseInt(storeCode.substring(0, 3));
+        if (!StoreDict[storeID])
+            return res.status(401).json({
+                code: '???',
+                type: 'userOrderMessage',
+                message: `No Such StoreID. \nStoreID: ${storeID}`
             });
-            newOrder.save((err) => {
-                if (err) return reject(err);
-                resolve();
-            });
-        }));
-    }
-    Promise
-        .all(funcList)
-        .then(() => {
-            res.json({
-                storeName: StoreDict[storeID].name,
-                containerAmount,
-                time: Date.now()
-            });
-        })
-        .catch(next);
+
+        const funcList = [];
+        for (let i = 0; i < containerAmount; i++) {
+            funcList.push(new Promise((resolve, reject) => {
+                let newOrder = new UserOrder({
+                    orderID: generateUUID(),
+                    user: dbUser._id,
+                    storeID
+                });
+                newOrder.save((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            }));
+        }
+        Promise
+            .all(funcList)
+            .then(() => {
+                res.json({
+                    storeName: StoreDict[storeID].name,
+                    containerAmount,
+                    time: Date.now()
+                });
+            })
+            .catch(next);
+    });
 });
 
 /**

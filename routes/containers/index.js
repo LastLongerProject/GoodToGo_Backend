@@ -10,7 +10,7 @@ const PointLog = require('../../models/DB/pointLogDB');
 const Container = require('../../models/DB/containerDB');
 const UserOrder = require('../../models/DB/userOrderDB');
 
-const getGlobalUsedAmount = require('../../models/variables/usedAmount').global;
+const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DataCacheFactory = require('../../models/dataCacheFactory');
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 

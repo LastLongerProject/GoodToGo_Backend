@@ -24,7 +24,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
-const getGlobalUsedAmount = require('../models/variables/usedAmount').global;
+const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
