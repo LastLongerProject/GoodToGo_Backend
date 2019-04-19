@@ -249,6 +249,12 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
     }, (err, theCouponType) => {
         if (err) return next(err);
 
+        if (!theCouponType)
+            return res.status(401).json({
+                code: '???',
+                type: 'couponMessage',
+                message: `Can't find that CouponType. \nCouponTypeID: ${CouponTypeID}`
+            });
         let aFormattedCouponType = {
             couponTypeID: theCouponType.couponTypeID,
             provider: theCouponType.provider,
