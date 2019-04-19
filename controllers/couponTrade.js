@@ -57,6 +57,7 @@ module.exports = {
                     body: `${theCouponType.provider} ${theCouponType.title}`,
                     quantityChange: theCouponType.price * -1
                 });
+                console.log(dbUser._id);
                 let newCoupon = new Coupon({
                     couponID: generateUUID(),
                     user: dbUser._id,
@@ -66,30 +67,30 @@ module.exports = {
 
                 Promise
                     .all([
-                        (resolve, reject) => {
+                        new Promise((resolve, reject) => {
                             dbUser.save((err) => {
                                 if (err) return reject(err);
                                 resolve();
                             });
-                        },
-                        (resolve, reject) => {
+                        }),
+                        new Promise((resolve, reject) => {
                             newPointLog.save((err) => {
                                 if (err) return reject(err);
                                 resolve();
                             });
-                        },
-                        (resolve, reject) => {
+                        }),
+                        new Promise((resolve, reject) => {
                             newCoupon.save((err) => {
                                 if (err) return reject(err);
                                 resolve();
                             });
-                        },
-                        (resolve, reject) => {
+                        }),
+                        new Promise((resolve, reject) => {
                             theCouponType.save((err) => {
                                 if (err) return reject(err);
                                 resolve();
                             });
-                        }
+                        })
                     ])
                     .then(() => {
                         generateImgToken((err, token) => {

@@ -208,11 +208,11 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (!(typeof phone === 'string' && isMobilePhone(phone))) {
+        } else if (!(typeof phone === 'string' && isMobilePhone(phone) && typeof lineId === 'string')) {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
-                message: 'Phone is not valid'
+                message: 'Phone or LineID is not valid'
             });
         }
         User.findOne({
