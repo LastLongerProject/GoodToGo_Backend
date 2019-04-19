@@ -9,7 +9,7 @@ const regAsAdminManager = require('../middlewares/validation/validateRequest').r
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 
-const rootDir = require("../config/config").rootDir;
+const rootDir = require("../config/config").staticFileDir;
 
 const getFakeNotificationContext = function (cb) {
     fs.readFile(rootDir + "/assets/json/fakeNotificationContext.json", (err, fackContext) => {

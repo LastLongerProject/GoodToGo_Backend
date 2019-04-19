@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 
-const ROOT_DIR = require("../config/config").rootDir;
+const ROOT_DIR = require("../config/config").staticFileDir;
 var intReLength = require('@lastlongerproject/toolkit').intReLength;
 var validateToken = require('../middlewares/validation/validateToken');
 var CouponType = require('../models/DB/couponTypeDB');
@@ -70,13 +70,14 @@ router.get('/coupon/:id/:a.:b.:c', function (req, res, next) {
             "couponTypeID": id
         }, (err, theCouponType) => {
             if (err) return next(err);
+            if (!theCouponType) return next();
             const s = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/' + theCouponType.img_info.img_src);
             s.on('open', function () {
                 res.set('Content-Type', 'image/png');
                 s.pipe(res);
             });
             s.on('error', function (err) {
-                const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/99999.png');
+                const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/9999.png');
                 s2.on('open', function () {
                     res.set('Content-Type', 'image/png');
                     s2.pipe(res);

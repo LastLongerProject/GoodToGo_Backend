@@ -8,7 +8,7 @@ const debug = require('../debugger')('google_drive');
 
 const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
-const ROOT_DIR = require("../../config/config").rootDir;
+const ROOT_DIR = require("../../config/config").staticFileDir;
 const GOOGLE_CONTENT_PATH = `${ROOT_DIR}/assets/json/googleContent.json`;
 
 let connectionCtr = 0;
