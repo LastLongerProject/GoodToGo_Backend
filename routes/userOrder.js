@@ -128,6 +128,12 @@ router.post('/add', validateLine, function (req, res, next) {
     const StoreDict = DataCacheFactory.get('store');
     const containerAmount = parseInt(req.body.containerAmount);
 
+    if (dbUser.hasBanned)
+        return res.status(403).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `User is Banned.`
+        });
     if (isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
             code: '???',

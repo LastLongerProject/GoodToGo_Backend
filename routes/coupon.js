@@ -108,6 +108,12 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
     const CouponID = req.params.couponID;
     const CouponTypeDict = DataCacheFactory.get('couponType');
 
+    if (dbUser.hasBanned)
+        return res.status(403).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `User is Banned.`
+        });
     if (typeof CouponID !== "string")
         return res.status(403).json({
             code: '???',
