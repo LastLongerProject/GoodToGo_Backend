@@ -10,10 +10,15 @@ const PointLog = require('../models/DB/pointLogDB');
 const CouponState = require('../models/enums/couponEnum').CouponState;
 
 const generateUUID = require('../helpers/tools').generateUUID;
+const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
+
+const baseUrl = require('../config/config.js').serverBaseUrl;
+const generateImgToken = require('../controllers/imageToken').generateToken;
 
 module.exports = {
-    purchaseCoupon: function (couponTypeID, dbUser, done) {
+    purchaseCoupon: function (couponTypeID, dbUser, oriDone) {
         queue.push(taskDone => {
+            const done = bindFunction(taskDone, oriDone);
             CouponType.findOne({
                 "couponTypeID": couponTypeID,
                 "announceDate": {
@@ -87,23 +92,26 @@ module.exports = {
                         }
                     ])
                     .then(() => {
-                        done(null, false, {
-                            couponID: newCoupon.couponID,
-                            provider: theCouponType.provider,
-                            title: theCouponType.title,
-                            expirationDate: theCouponType.expirationDate,
-                            notice: theCouponType.generateCoution(),
-                            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`,
-                            state: CouponState.AVAILABLE
+                        generateImgToken((err, token) => {
+                            if (err) return done(err);
+                            done(null, false, {
+                                couponID: newCoupon.couponID,
+                                provider: theCouponType.provider,
+                                title: theCouponType.title,
+                                expirationDate: theCouponType.expirationDate,
+                                notice: theCouponType.generateCoution(),
+                                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`,
+                                state: CouponState.AVAILABLE
+                            });
                         });
-                        taskDone();
                     })
                     .catch(done);
             });
         });
     },
-    welcomeCoupon: function (dbUser, done) {
+    welcomeCoupon: function (dbUser, oriDone) {
         queue.push(taskDone => {
+            const done = bindFunction(taskDone, oriDone);
             CouponType.find({
                 "welcomeGift": true,
                 "announceDate": {
@@ -158,7 +166,6 @@ module.exports = {
                     }))
                     .then(() => {
                         done(null);
-                        taskDone();
                     })
                     .catch(done);
             });
