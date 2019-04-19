@@ -218,7 +218,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  * @apiName CouponTypeDetail
  * @apiGroup Coupons
  * 
- * @api {get} /coupon/detail/:couponTypeID Coupon Detail
+ * @api {get} /coupon/detail/:couponTypeID Get Coupon Detail
  * @apiUse LINE
  * 
  * @apiSuccessExample {json} Success-Response:
