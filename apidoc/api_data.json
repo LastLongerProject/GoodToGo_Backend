@@ -8898,8 +8898,15 @@
             "group": "Parameter",
             "type": "String",
             "optional": false,
-            "field": "lineId",
-            "description": "<p>lineId of the User.</p>"
+            "field": "line_liff_userID",
+            "description": "<p>line_liff_userID of the User.</p>"
+          },
+          {
+            "group": "Parameter",
+            "type": "String",
+            "optional": false,
+            "field": "line_channel_userID",
+            "description": "<p>line_channel_userID of the User.</p>"
           },
           {
             "group": "Parameter",

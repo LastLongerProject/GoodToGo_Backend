@@ -215,7 +215,8 @@ router.post(
  * @api {post} /users/signup/lineUser Sign up for new line user
  * @apiUse DefaultSecurityMethod
  * 
- * @apiParam {String} lineId lineId of the User.
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
  * @apiParam {String} phone phone of the User.
  * 
  * @apiSuccessExample {json} Success-Response:
