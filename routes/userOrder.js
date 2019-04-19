@@ -258,10 +258,13 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             }, (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
-                res.json({
-                    code: '???',
-                    type: 'userOrderMessage',
-                    message: 'Register ContainerID of UserOrder Success'
+                theUserOrder.save(err => {
+                    if (err) return next(err);
+                    res.json({
+                        code: '???',
+                        type: 'userOrderMessage',
+                        message: 'Register ContainerID of UserOrder Success'
+                    });
                 });
                 if (tradeDetail) {
                     NotificationCenter.emit("container_rent", {
