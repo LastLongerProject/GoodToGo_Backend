@@ -109,7 +109,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
     const CouponTypeDict = DataCacheFactory.get('couponType');
 
     if (typeof CouponID !== "string")
-        return res.status(401).json({
+        return res.status(403).json({
             code: '???',
             type: 'couponMessage',
             message: `Content not in Correct Format.\nCouponID: ${CouponID}`
@@ -122,7 +122,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
         if (err) return next(err);
 
         if (!theCoupon || !theCoupon.user.equals(dbUser._id))
-            return res.status(401).json({
+            return res.status(403).json({
                 code: '???',
                 type: 'couponMessage',
                 message: `Can't find that Coupon.\nCouponID: ${CouponID}`
@@ -131,7 +131,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
             theCoupon.expired = true
             theCoupon.save((err) => {
                 if (err) return next(err);
-                res.status(401).json({
+                res.status(403).json({
                     code: '???',
                     type: 'couponMessage',
                     message: `Coupon Expired`
@@ -253,7 +253,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
     const CouponTypeID = req.params.couponTypeID;
 
     if (typeof CouponTypeID !== "string")
-        return res.status(401).json({
+        return res.status(403).json({
             code: '???',
             type: 'couponMessage',
             message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
@@ -271,7 +271,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
         if (err) return next(err);
 
         if (!theCouponType)
-            return res.status(401).json({
+            return res.status(403).json({
                 code: '???',
                 type: 'couponMessage',
                 message: `Can't find that CouponType. \nCouponTypeID: ${CouponTypeID}`
@@ -332,7 +332,7 @@ router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
     const CouponTypeID = req.params.couponTypeID;
 
     if (typeof CouponTypeID !== "string")
-        return res.status(401).json({
+        return res.status(403).json({
             code: '???',
             type: 'couponMessage',
             message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
@@ -340,7 +340,7 @@ router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
 
     couponTrade.purchaseCoupon(CouponTypeID, dbUser, (err, tradeInvalid, newCoupon) => {
         if (err) return next(err);
-        if (tradeInvalid) return res.status(401).json(tradeInvalid);
+        if (tradeInvalid) return res.status(403).json(tradeInvalid);
         res.json({
             code: '???',
             type: 'couponMessage',
