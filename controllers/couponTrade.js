@@ -142,24 +142,24 @@ module.exports = {
                         return new Promise((allResolve, allReject) => {
                             Promise
                                 .all([
-                                    (resolve, reject) => {
+                                    new Promise((resolve, reject) => {
                                         newPointLog.save((err) => {
                                             if (err) return reject(err);
                                             resolve();
                                         });
-                                    },
-                                    (resolve, reject) => {
+                                    }),
+                                    new Promise((resolve, reject) => {
                                         newCoupon.save((err) => {
                                             if (err) return reject(err);
                                             resolve();
                                         });
-                                    },
-                                    (resolve, reject) => {
+                                    }),
+                                    new Promise((resolve, reject) => {
                                         aCouponType.save((err) => {
                                             if (err) return reject(err);
                                             resolve();
                                         });
-                                    }
+                                    })
                                 ])
                                 .then(allResolve)
                                 .catch(allReject);
