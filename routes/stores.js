@@ -1562,12 +1562,12 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
 router.get("/bookedContainer", (req, res, next) => {
     getBookedAmount((err, result) => {
         if (err) return next(err);
-        res.json({
-            result: result.map(aResult => ({
-                storeID: aResult._id,
-                amount: aResult.amount
-            }))
-        });
+        const storeDict = DataCacheFactory.get("store");
+        let txt = "";
+        result.forEach(aResult => {
+            txt += `${storeDict[aResult._id].name}：${aResult.amount}\n`
+        })
+        res.end(txt);
     });
 });
 
