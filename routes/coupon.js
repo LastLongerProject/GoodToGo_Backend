@@ -212,6 +212,66 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
 });
 
 /**
+ * @apiName CouponTypeDetail
+ * @apiGroup Coupons
+ * 
+ * @api {get} /coupon/detail/:couponTypeID Coupon Detail
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *      HTTP/1.1 200 
+ *      {
+ *          couponTypeID : String,
+ *          provider : String,
+ *          title : String,
+ *          expirationDate : Date,
+ *          price : Number,
+ *          amount : Number,
+ *          extraNotice : String,
+ *          imgSrc : Url,
+ *          state : String ("sold_out" or "available" or "cannot_afford")
+ *      }
+ */
+
+router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
+    const dbUser = req._user;
+    const CouponTypeID = req.params.couponTypeID;
+
+    if (typeof CouponTypeID !== "string")
+        return res.status(401).json({
+            code: '???',
+            type: 'couponMessage',
+            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
+        });
+
+    CouponType.findOne({
+        "couponTypeID": CouponTypeID
+    }, (err, theCouponType) => {
+        if (err) return next(err);
+
+        let aFormattedCouponType = {
+            couponTypeID: theCouponType.couponTypeID,
+            provider: theCouponType.provider,
+            title: theCouponType.title,
+            expirationDate: theCouponType.expirationDate,
+            price: theCouponType.price,
+            amount: theCouponType.amount.current,
+            extraNotice: theCouponType.extraNotice,
+            imgSrc: theCouponType.img_info.img_src // need update
+        };
+        if (theCouponType.amount.current <= 0) {
+            aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
+        } else if (theCouponType.price > dbUser.point) {
+            aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
+        } else {
+            aFormattedCouponType.state = CouponTypeState.AVAILABLE;
+        }
+
+        res.json(aFormattedCouponType);
+    });
+});
+
+/**
  * @apiName PurchaseCoupon
  * @apiGroup Coupons
  * 
