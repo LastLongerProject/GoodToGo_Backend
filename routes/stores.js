@@ -1565,9 +1565,9 @@ router.get("/bookedContainer", (req, res, next) => {
         const storeDict = DataCacheFactory.get("store");
         let txt = "";
         result.forEach(aResult => {
-            txt += `${storeDict[aResult._id].name}：${aResult.amount}\n`
+            txt += `${storeDict[aResult._id].name}：${aResult.amount}、`
         })
-        res.end(txt);
+        res.send(txt).end();
     });
 });
 
