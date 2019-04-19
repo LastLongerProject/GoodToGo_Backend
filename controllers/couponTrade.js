@@ -23,7 +23,8 @@ module.exports = {
                 "couponTypeID": couponTypeID,
                 "announceDate": {
                     "$lt": Date.now()
-                }
+                },
+                "welcomeGift": false
             }, (err, theCouponType) => {
                 if (err) return done(err);
                 if (!theCouponType)
@@ -57,7 +58,6 @@ module.exports = {
                     body: `${theCouponType.provider} ${theCouponType.title}`,
                     quantityChange: theCouponType.price * -1
                 });
-                console.log(dbUser._id);
                 let newCoupon = new Coupon({
                     couponID: generateUUID(),
                     user: dbUser._id,

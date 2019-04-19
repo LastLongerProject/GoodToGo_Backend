@@ -185,7 +185,8 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
         },
         "purchaseDeadline": {
             "$gt": Date.now()
-        }
+        },
+        "welcomeGift": false
     }, (err, couponTypeList) => {
         if (err) return next(err);
 
