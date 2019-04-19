@@ -80,7 +80,7 @@ router.get('/list', validateLine, function (req, res, next) {
                         orderID: aUserOrder.orderID,
                         containerAmount: 1,
                         orderTime: aUserOrder.orderTime,
-                        storeName: StoreDict[aUserOrder.storeID]
+                        storeName: StoreDict[aUserOrder.storeID].name
                     };
                     orderListWithoutID[aUserOrder.orderID] = aFormattedUserOrder;
                 }
@@ -89,7 +89,7 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerID: `#${intReLength(aUserOrder.containerID, 4)}`,
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
-                    storeName: StoreDict[aUserOrder.storeID]
+                    storeName: StoreDict[aUserOrder.storeID].name
                 };
                 orderListWithID.push(aFormattedUserOrder);
             }
@@ -115,9 +115,9 @@ router.get('/list', validateLine, function (req, res, next) {
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
- *          code: '???',
- *          type: 'userOrderMessage',
- *          message: 'Add UserOrder Success'
+ *          storeName: String,
+ *          containerAmount: Number,
+ *          time: Date
  *      }
  */
 
@@ -150,19 +150,31 @@ router.post('/add', validateLine, function (req, res, next) {
             type: 'userOrderMessage',
             message: `No Such StoreID. \nStoreID: ${storeID}`
         });
-    let newOrder = new UserOrder({
-        orderID: generateUUID(),
-        user: dbUser._id,
-        storeID
-    });
-    newOrder.save((err) => {
-        if (err) return next(err);
-        res.json({
-            code: '???',
-            type: 'userOrderMessage',
-            message: 'Add UserOrder Success'
-        });
-    });
+
+    const funcList = [];
+    for (let i = 0; i < containerAmount; i++) {
+        funcList.push(new Promise((resolve, reject) => {
+            let newOrder = new UserOrder({
+                orderID: generateUUID(),
+                user: dbUser._id,
+                storeID
+            });
+            newOrder.save((err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        }));
+    }
+    Promise
+        .all(funcList)
+        .then(() => {
+            res.json({
+                storeName: StoreDict[storeID].name,
+                containerAmount,
+                time: Date.now()
+            });
+        })
+        .catch(next);
 });
 
 /**

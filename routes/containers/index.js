@@ -517,7 +517,7 @@ router.post(
                             let newPointLog = new PointLog({
                                 user: dbCustomer._id,
                                 title: `歸還了${quantity}個容器`,
-                                body: `${storeDict[toStore]}`,
+                                body: `${storeDict[toStore].name}`,
                                 quantityChange: quantity
                             });
                             newPointLog.save((err) => {
