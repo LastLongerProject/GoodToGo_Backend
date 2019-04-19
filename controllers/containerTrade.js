@@ -200,10 +200,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     .save()
                                     .catch(err => {
                                         debug.error(err);
-                                        return reject(err);
                                     });
                             } else if (condition.rentOrReturnBeforeSign) { // need to validate
-                                Box.findOne({
+                                return Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
@@ -218,7 +217,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     });
                                 });
                             } else if (oriState === 0 || oriState === 1) {
-                                Box.findOne({
+                                return Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
