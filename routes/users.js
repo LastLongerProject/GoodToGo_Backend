@@ -888,7 +888,7 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
     Promise
         .all(tasks)
         .then(result => {
-            debug.log("Add Purchase User: ", result);
+            debug.log(`Add ${result.length} Purchase User.`);
             res.json({
                 success: true
             });
