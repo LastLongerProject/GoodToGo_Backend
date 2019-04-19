@@ -172,7 +172,10 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
     const dbUser = req._user;
 
     CouponType.find({
-        "expirationDate": {
+        "announceDate": {
+            "$lt": Date.now()
+        },
+        "purchaseDeadline": {
             "$gt": Date.now()
         }
     }, (err, couponTypeList) => {
@@ -245,7 +248,13 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
         });
 
     CouponType.findOne({
-        "couponTypeID": CouponTypeID
+        "couponTypeID": CouponTypeID,
+        "announceDate": {
+            "$lt": Date.now()
+        },
+        "purchaseDeadline": {
+            "$gt": Date.now()
+        }
     }, (err, theCouponType) => {
         if (err) return next(err);
 

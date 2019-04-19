@@ -4,6 +4,8 @@ var userSchema = mongoose.Schema({
     couponTypeID: String,
     provider: String,
     title: String,
+    announceDate: Date,
+    purchaseDeadline: Date,
     expirationDate: Date,
     price: Number,
     amount: {

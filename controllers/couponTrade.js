@@ -13,7 +13,10 @@ module.exports = {
     purchaseCoupon: function (couponTypeID, dbUser, done) {
         queue.push(taskDone => {
             CouponType.findOne({
-                "couponTypeID": couponTypeID
+                "couponTypeID": couponTypeID,
+                "announceDate": {
+                    "$lt": Date.now()
+                }
             }, (err, theCouponType) => {
                 if (err) return done(err);
                 if (!theCouponType)
@@ -22,7 +25,7 @@ module.exports = {
                         type: 'couponTradeMessage',
                         message: `Can't find that CouponType`
                     });
-                if (theCouponType.expirationDate < Date.now())
+                if (theCouponType.purchaseDeadline < Date.now())
                     return done(null, {
                         code: '???',
                         type: 'couponTradeMessage',
@@ -93,8 +96,8 @@ module.exports = {
         queue.push(taskDone => {
             CouponType.find({
                 "welcomeGift": true,
-                "expirationDate": {
-                    "$gt": Date.now()
+                "announceDate": {
+                    "$lt": Date.now()
                 },
                 "amount.current": {
                     $gt: 0
