@@ -570,7 +570,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                     });
 
                     if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                        activeStoreNameList = activeStoreList.map(ele => ele.name);
+                        var activeStoreNameList = activeStoreList.map(ele => ele.name);
                         var timestamp = now - MILLISECONDS_OF_A_WEEK;
                         var toCache = {
                             timestamp,
@@ -792,7 +792,7 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
  */
 
 router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
-    if (!req.query.id) return res.status(404).end();
+    if (!req.query.id) return next();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
         id: STORE_ID

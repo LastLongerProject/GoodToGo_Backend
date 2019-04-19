@@ -29,6 +29,7 @@ const Place = require('../models/DB/placeIdDB');
 const Container = require('../models/DB/containerDB');
 const Activity = require('../models/DB/activityDB')
 const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
+const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const UserRole = require('../models/enums/userEnum').UserRole;
 const generateImgToken = require('../controllers/imageToken').generateToken;
@@ -1555,6 +1556,18 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
                 }
             });
         }
+    });
+});
+
+router.get("/bookedContainer", (req, res, next) => {
+    getBookedAmount((err, result) => {
+        if (err) return next(err);
+        res.json({
+            result: result.map(aResult => ({
+                storeID: aResult._id,
+                amount: aResult.amount
+            }))
+        });
     });
 });
 
