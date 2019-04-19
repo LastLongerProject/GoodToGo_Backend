@@ -268,7 +268,8 @@ module.exports = {
                                 return done(null, true, {
                                     body: {
                                         type: 'signupMessage',
-                                        message: 'Authentication succeeded'
+                                        message: 'Authentication succeeded',
+                                        userPurchaseStatus: userToSave.getPurchaseStatus()
                                     }
                                 });
                             });

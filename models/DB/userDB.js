@@ -75,14 +75,20 @@ userSchema.index({
     "user.apiKey": 1
 });
 
-// generating a hash
 userSchema.methods.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
-// checking if password is valid
 userSchema.methods.validPassword = function (password) {
     return bcrypt.compareSync(password, this.user.password);
+};
+
+const PurchaseStatus = require('../enums/userEnum').PurchaseStatus;
+
+userSchema.methods.getPurchaseStatus = function () {
+    return this.hasPurchase ?
+        PurchaseStatus.PURCHASED_USER :
+        PurchaseStatus.FREE_USER;
 };
 
 // create the model for users and expose it to our app

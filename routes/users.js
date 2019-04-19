@@ -245,7 +245,8 @@ router.post(
  *     HTTP/1.1 200 Signup Successfully
  *     { 
  *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
+ *          message: 'Authentication succeeded',
+ *          userPurchaseStatus: String ("free_user" or "purchased_user")
  *     }
  * @apiUse SignupError
  */

@@ -97,7 +97,7 @@ router.get('/list', validateLine, function (req, res, next) {
         });
         res.json({
             containerAmount: userOrderList.length,
-            purchaseStatus: dbUser.hasPurchase ? PurchaseStatus.PURCHASED_USER : PurchaseStatus.FREE_USER,
+            purchaseStatus: dbUser.getPurchaseStatus(),
             orderListWithoutID: Object.values(orderListWithoutID),
             orderListWithID
         });

@@ -9062,7 +9062,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 Signup Successfully\n{ \n     type: 'signupMessage',\n     message: 'Authentication succeeded' \n}",
+          "content": "HTTP/1.1 200 Signup Successfully\n{ \n     type: 'signupMessage',\n     message: 'Authentication succeeded',\n     userPurchaseStatus: String (\"free_user\" or \"purchased_user\")\n}",
           "type": "json"
         }
       ]
