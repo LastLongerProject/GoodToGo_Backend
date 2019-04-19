@@ -170,7 +170,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
  *			    price : Number,
  *			    amount : Number,
  *			    imgSrc : Url,
- *              state : String ("sold_out" or "available" or "cannot_afford")
+ *              state : String ("sold_out" or "purchasable" or "cannot_afford")
  *		    }, ...
  *	        ]
  *      }
@@ -202,7 +202,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                     couponTypeID: aCouponType.couponTypeID,
                     provider: aCouponType.provider,
                     title: aCouponType.title,
-                    expirationDate: aCouponType.expirationDate,
+                    expirationDate: aCouponType.purchaseDeadline,
                     price: aCouponType.price,
                     amount: aCouponType.amount.current,
                     imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}/${token}?ver=${aCouponType.img_info.img_version}`
@@ -242,7 +242,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *          amount : Number,
  *          notice : String,
  *          imgSrc : Url,
- *          state : String ("sold_out" or "available" or "cannot_afford")
+ *          state : String ("sold_out" or "purchasable" or "cannot_afford")
  *      }
  */
 
@@ -281,7 +281,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
                 couponTypeID: theCouponType.couponTypeID,
                 provider: theCouponType.provider,
                 title: theCouponType.title,
-                expirationDate: theCouponType.expirationDate,
+                expirationDate: theCouponType.purchaseDeadline,
                 price: theCouponType.price,
                 amount: theCouponType.amount.current,
                 notice: theCouponType.generateCoution(),
@@ -312,7 +312,16 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *     {
  *          code: '???',
  *          type: 'couponMessage',
- *          message: 'Purchase Coupon Success'
+ *          message: 'Purchase Coupon Success',
+ *          newCoupon: {
+ *			    couponID : String,
+ *			    provider : String,
+ *			    title : String,
+ *			    expirationDate : Date,
+ *			    notice : String,
+ *			    imgSrc : Url,
+ *              state : String ("used" or "available" or "expired" or "unknown")
+ *		    }
  *      }
  */
 
@@ -327,13 +336,14 @@ router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
             message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
         });
 
-    couponTrade.purchaseCoupon(CouponTypeID, dbUser, (err, tradeInvalid) => {
+    couponTrade.purchaseCoupon(CouponTypeID, dbUser, (err, tradeInvalid, newCoupon) => {
         if (err) return next(err);
         if (tradeInvalid) return res.status(401).json(tradeInvalid);
         res.json({
             code: '???',
             type: 'couponMessage',
-            message: 'Purchase Coupon Success'
+            message: 'Purchase Coupon Success',
+            newCoupon
         });
     });
 });

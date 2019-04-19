@@ -7,6 +7,8 @@ const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const PointLog = require('../models/DB/pointLogDB');
 
+const CouponState = require('../models/enums/couponEnum').CouponState;
+
 const generateUUID = require('../helpers/tools').generateUUID;
 
 module.exports = {
@@ -85,7 +87,15 @@ module.exports = {
                         }
                     ])
                     .then(() => {
-                        done(null, false);
+                        done(null, false, {
+                            couponID: newCoupon.couponID,
+                            provider: theCouponType.provider,
+                            title: theCouponType.title,
+                            expirationDate: theCouponType.expirationDate,
+                            notice: theCouponType.generateCoution(),
+                            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`,
+                            state: CouponState.AVAILABLE
+                        });
                         taskDone();
                     })
                     .catch(done);

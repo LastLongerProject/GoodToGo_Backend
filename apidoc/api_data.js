@@ -2035,7 +2035,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n    couponTypeID : String,\n    provider : String,\n    title : String,\n    expirationDate : Date,\n    price : Number,\n    amount : Number,\n    notice : String,\n    imgSrc : Url,\n    state : String (\"sold_out\" or \"available\" or \"cannot_afford\")\n}",
+          "content": "HTTP/1.1 200 \n{\n    couponTypeID : String,\n    provider : String,\n    title : String,\n    expirationDate : Date,\n    price : Number,\n    amount : Number,\n    notice : String,\n    imgSrc : Url,\n    state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n}",
           "type": "json"
         }
       ]
@@ -2094,7 +2094,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "    HTTP/1.1 200 \n    {\n         userPoint : Number,\n\t        allCouponList : [\n\t\t    {\n\t\t\t    couponTypeID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    price : Number,\n\t\t\t    amount : Number,\n\t\t\t    imgSrc : Url,\n             state : String (\"sold_out\" or \"available\" or \"cannot_afford\")\n\t\t    }, ...\n\t        ]\n     }",
+          "content": "    HTTP/1.1 200 \n    {\n         userPoint : Number,\n\t        allCouponList : [\n\t\t    {\n\t\t\t    couponTypeID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    price : Number,\n\t\t\t    amount : Number,\n\t\t\t    imgSrc : Url,\n             state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n\t\t    }, ...\n\t        ]\n     }",
           "type": "json"
         }
       ]
@@ -2212,7 +2212,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'couponMessage',\n     message: 'Purchase Coupon Success'\n }",
+          "content": "    HTTP/1.1 200 \n    {\n         code: '???',\n         type: 'couponMessage',\n         message: 'Purchase Coupon Success',\n         newCoupon: {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    notice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }\n     }",
           "type": "json"
         }
       ]
