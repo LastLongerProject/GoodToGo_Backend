@@ -124,6 +124,7 @@ router.get('/list', validateLine, function (req, res, next) {
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const storeCode = req.body.storeCode;
+    const StoreDict = DataCacheFactory.get('store');
     const containerAmount = parseInt(req.body.containerAmount);
 
     if (isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
@@ -143,6 +144,12 @@ router.post('/add', validateLine, function (req, res, next) {
         });
 
     const storeID = parseInt(storeCode.substring(0, 3));
+    if (!StoreDict[storeID])
+        return res.status(401).json({
+            code: '???',
+            type: 'userOrderMessage',
+            message: `No Such StoreID. \nStoreID: ${storeID}`
+        });
     let newOrder = new UserOrder({
         orderID: generateUUID(),
         user: dbUser._id,
