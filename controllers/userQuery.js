@@ -265,7 +265,7 @@ module.exports = {
                             redis.del('user_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
                                 if (delReply !== 1) return done("delReply: " + delReply);
-                                return done(null, true, {
+                                return done(null, userToSave, {
                                     body: {
                                         type: 'signupMessage',
                                         message: 'Authentication succeeded',
