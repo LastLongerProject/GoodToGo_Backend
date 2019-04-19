@@ -264,7 +264,7 @@ router.post(
             } else {
                 res.json(info.body);
                 couponTrade.welcomeCoupon(user, (err) => {
-                    if (err) debug(err);
+                    if (err) debug.error(err);
                 });
             }
         });

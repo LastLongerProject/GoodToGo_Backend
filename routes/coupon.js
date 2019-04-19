@@ -4,6 +4,8 @@ const debug = require('../helpers/debugger')('coupon');
 
 const couponTrade = require('../controllers/couponTrade');
 const validateLine = require('../middlewares/validation/validateLine');
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
@@ -160,7 +162,6 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
  *			    expirationDate : Date,
  *			    price : Number,
  *			    amount : Number,
- *			    extraNotice : String,
  *			    imgSrc : Url,
  *              state : String ("sold_out" or "available" or "cannot_afford")
  *		    }, ...
@@ -195,7 +196,6 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                 expirationDate: aCouponType.expirationDate,
                 price: aCouponType.price,
                 amount: aCouponType.amount.current,
-                extraNotice: aCouponType.extraNotice,
                 imgSrc: aCouponType.img_info.img_src // need update
             };
             if (aCouponType.amount.current <= 0) {
@@ -230,7 +230,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *          expirationDate : Date,
  *          price : Number,
  *          amount : Number,
- *          extraNotice : String,
+ *          notice : String,
  *          imgSrc : Url,
  *          state : String ("sold_out" or "available" or "cannot_afford")
  *      }
@@ -271,7 +271,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
             expirationDate: theCouponType.expirationDate,
             price: theCouponType.price,
             amount: theCouponType.amount.current,
-            extraNotice: theCouponType.extraNotice,
+            notice: theCouponType.extraNotice,
             imgSrc: theCouponType.img_info.img_src // need update
         };
         if (theCouponType.amount.current <= 0) {
@@ -322,6 +322,16 @@ router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
             message: 'Purchase Coupon Success'
         });
     });
+});
+
+router.post('/addCouponType', regAsAdminManager, validateRequest, function (req, res, next) {
+    const newCouponTypeData = req.body.data;
+
+    const newCouponType = new CouponType(newCouponTypeData);
+    newCouponType.save((err) => {
+        if (err) return next(err);
+        res.json({});
+    })
 });
 
 module.exports = router;

@@ -8,7 +8,7 @@ const DataCacheFactory = require("../../models/dataCacheFactory");
 module.exports = {
     sns: function (event, user, data) {
         let containerType = DataCacheFactory.get('containerType');
-        let containers = {};
+        let formattedContainer = {};
         let amount = 0;
         let reply = [];
         try {
@@ -25,16 +25,16 @@ module.exports = {
                         errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
                     }
                 case SnsEvent.CONTAINER_RENT:
-                    containers = {};
+                    formattedContainer = {};
                     amount = 0;
                     for (let container of data.containerList) {
                         let key = containerType[container.typeCode].name;
-                        if (!containers[key]) containers[key] = [];
-                        containers[key].push("#" + container.id);
+                        if (!formattedContainer[key]) formattedContainer[key] = [];
+                        formattedContainer[key].push("#" + container.ID);
                         amount++;
                     }
-                    reply = Object.keys(containers).map(key => {
-                        return `${key}(${containers[key].join("、")})`;
+                    reply = Object.keys(formattedContainer).map(key => {
+                        return `${key}（${formattedContainer[key].join("、")}）`;
                     });
                     return {
                         content: {
@@ -48,16 +48,16 @@ module.exports = {
                     };
 
                 case SnsEvent.CONTAINER_RETURN:
-                    containers = {};
+                    formattedContainer = {};
                     amount = 0;
                     for (let container of data.containerList) {
                         let key = containerType[container.typeCode].name;
-                        if (!containers[key]) containers[key] = [];
-                        containers[key].push("#" + container.id);
+                        if (!formattedContainer[key]) formattedContainer[key] = [];
+                        formattedContainer[key].push("#" + container.id);
                         amount++;
                     }
-                    reply = Object.keys(containers).map(key => {
-                        return `${key}(${containers[key].join("、")})`;
+                    reply = Object.keys(formattedContainer).map(key => {
+                        return `${key}(${formattedContainer[key].join("、")})`;
                     });
                     return {
                         content: {

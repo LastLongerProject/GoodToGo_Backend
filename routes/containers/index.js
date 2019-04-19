@@ -173,7 +173,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {
-                                if (err) return debug(err);
+                                if (err) return debug.error(err);
                                 userList.forEach(aClerk =>
                                     NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
                                         clerk: aClerk
@@ -487,7 +487,7 @@ router.post(
                     UserOrder.remove({
                         "containerID": aContainerID
                     }, (err) => {
-                        if (err) return debug(err);
+                        if (err) return debug.error(err);
                     });
                 });
                 if (tradeDetail && tradeDetail.length > 0) {
@@ -521,11 +521,11 @@ router.post(
                                 quantityChange: quantity
                             });
                             newPointLog.save((err) => {
-                                if (err) debug(err);
+                                if (err) debug.error(err);
                             });
                             dbCustomer.point += quantity;
                             dbCustomer.save((err) => {
-                                if (err) debug(err);
+                                if (err) debug.error(err);
                             });
                         });
                 }

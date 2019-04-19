@@ -1927,7 +1927,7 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
             type: "DeleteMessage",
             message: "Delete successfully"
         })).catch(err => {
-            debug(err);
+            debug.error(err);
             return next(err);
         });
 });

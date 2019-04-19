@@ -75,7 +75,7 @@ module.exports = {
                     .all(storeIdList.map(aStoreImgFileName => new Promise((resolve, reject) => {
                         const aStoreID = parseInt(aStoreImgFileName.match(/(\d*)\.jpg/)[1]);
                         if (isNaN(aStoreID)) {
-                            debug(`aStoreImgFileName Parse To aStoreID ERR. aStoreImgFileName: ${aStoreImgFileName}, aStoreID: ${aStoreID}`);
+                            debug.error(`aStoreImgFileName Parse To aStoreID ERR. aStoreImgFileName: ${aStoreImgFileName}, aStoreID: ${aStoreID}`);
                             resolve();
                         }
                         Store.findOne({
