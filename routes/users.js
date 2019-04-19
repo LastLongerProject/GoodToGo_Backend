@@ -864,11 +864,11 @@ router.get('/pointLog', validateLine.liff, function (req, res, next) {
 });
 
 /**
- * @apiName PointLog
+ * @apiName PurchaseStatus
  * @apiGroup Users
  * 
- * @api {get} /users/purchaseStatus Get user pointLog
- * @apiUse LINE-Channel
+ * @api {get} /users/purchaseStatus Get user purchaseStatus
+ * @apiUse LINE_Channel
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 

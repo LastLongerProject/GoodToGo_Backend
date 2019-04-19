@@ -2051,7 +2051,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -2110,7 +2110,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -2169,7 +2169,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -2228,7 +2228,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -2287,7 +2287,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -7309,7 +7309,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -7368,7 +7368,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -7447,7 +7447,7 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
           }
         ]
       }
@@ -8549,7 +8549,66 @@
             "type": "String",
             "optional": false,
             "field": "line-id",
-            "description": "<p>lineID</p>"
+            "description": "<p>line_liff_userID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "PurchaseStatus",
+    "group": "Users",
+    "type": "get",
+    "url": "/users/purchaseStatus",
+    "title": "Get user purchaseStatus",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "    HTTP/1.1 200 \n    {\n\t        purchaseStatus : String\n     }",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>line_channel_userID</p>"
           }
         ]
       }
@@ -9023,7 +9082,7 @@
     ],
     "type": "post",
     "url": "/users/signup/lineUser",
-    "title": "Sign up for new line user",
+    "title": "Sign up for new line user (step 2)",
     "parameter": {
       "fields": {
         "Parameter": [
