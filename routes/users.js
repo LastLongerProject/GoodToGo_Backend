@@ -840,7 +840,7 @@ router.get('/data', validateRequest, function (req, res, next) {
  *      }
  */
 
-router.get('/pointLog', validateLine, function (req, res, next) {
+router.get('/pointLog', validateLine.liff, function (req, res, next) {
     var dbUser = req._user;
 
     PointLog.find({
@@ -860,6 +860,28 @@ router.get('/pointLog', validateLine, function (req, res, next) {
                 quantityChange: aPointLog.quantityChange
             }))
         });
+    });
+});
+
+/**
+ * @apiName PointLog
+ * @apiGroup Users
+ * 
+ * @api {get} /users/purchaseStatus Get user pointLog
+ * @apiUse LINE-Channel
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        purchaseStatus : String
+ *      }
+ */
+
+router.get('/purchaseStatus', validateLine.channel, function (req, res, next) {
+    var dbUser = req._user;
+
+    res.json({
+        purchaseStatus: dbUser.getPurchaseStatus()
     });
 });
 

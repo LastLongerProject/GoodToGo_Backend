@@ -30,3 +30,9 @@
 - line-id (line_liff_userID)
 ### Error Code
 - B001 ~ B004
+
+## | -Channel
+### Headers
+- line-id (line_channel_userID)
+### Error Code
+- B001 ~ B004

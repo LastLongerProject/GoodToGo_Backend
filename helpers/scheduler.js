@@ -170,5 +170,5 @@ function unbanUser(dbUser) {
 }
 
 function computeDaysOfUsing(dateToCompute, now) {
-
+    return 10;
 }

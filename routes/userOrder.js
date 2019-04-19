@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
-const validateLine = require('../middlewares/validation/validateLine');
+const validateLine = require('../middlewares/validation/validateLine').liff;
 
 const changeContainersState = require('../controllers/containerTrade');
 

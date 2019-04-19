@@ -6,7 +6,7 @@ const baseUrl = require('../config/config.js').serverBaseUrl;
 
 const couponTrade = require('../controllers/couponTrade');
 const generateImgToken = require('../controllers/imageToken').generateToken;
-const validateLine = require('../middlewares/validation/validateLine');
+const validateLine = require('../middlewares/validation/validateLine').liff;
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
