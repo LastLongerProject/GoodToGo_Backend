@@ -6,7 +6,7 @@ define({
   "url": "https://app.goodtogo.tw",
   "header": {
     "title": "Auth",
-    "content": "<h1>§ Auth Method &amp; Security</h1>\n<h2>| Default</h2>\n<h3>Headers</h3>\n<ul>\n<li>reqID : random text ( suggestion -&gt; String that encode with 'hex', length = 10 )</li>\n<li>reqTime : Time.now();</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>A001 ~ A002</li>\n</ul>\n<h2>| JWT</h2>\n<h3>Headers</h3>\n<ul>\n<li>Authorization (A JWT string, encode using Secret key : // secretKey you get by signup or login. Shouldn't contain 'Bearer ' in string)</li>\n</ul>\n<blockquote>\n<p>JWT payload should contain :</p>\n<ul>\n<li>jti : random text ( suggestion -&gt; encode with 'hex', length = 10 )</li>\n<li>iat : Time.now();</li>\n<li>exp : Time.now(); plus 3 days</li>\n</ul>\n</blockquote>\n<ul>\n<li>ApiKey</li>\n</ul>\n<blockquote>\n<p>You can get ApiKey by signup or login</p>\n</blockquote>\n<h3>Error Code</h3>\n<ul>\n<li>B001 ~ B008</li>\n</ul>\n<h2>| Token Control</h2>\n<h3>Url</h3>\n<ul>\n<li>The url you get from &quot;/stores/list&quot;</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>C001 ~ C003</li>\n</ul>\n<h2>| LINE</h2>\n<h3>Headers</h3>\n<ul>\n<li>line-id</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>B001 ~ B004</li>\n</ul>\n"
+    "content": "<h1>§ Auth Method &amp; Security</h1>\n<h2>| Default</h2>\n<h3>Headers</h3>\n<ul>\n<li>reqID : random text ( suggestion -&gt; String that encode with 'hex', length = 10 )</li>\n<li>reqTime : Time.now();</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>A001 ~ A002</li>\n</ul>\n<h2>| JWT</h2>\n<h3>Headers</h3>\n<ul>\n<li>Authorization (A JWT string, encode using Secret key : // secretKey you get by signup or login. Shouldn't contain 'Bearer ' in string)</li>\n</ul>\n<blockquote>\n<p>JWT payload should contain :</p>\n<ul>\n<li>jti : random text ( suggestion -&gt; encode with 'hex', length = 10 )</li>\n<li>iat : Time.now();</li>\n<li>exp : Time.now(); plus 3 days</li>\n</ul>\n</blockquote>\n<ul>\n<li>ApiKey</li>\n</ul>\n<blockquote>\n<p>You can get ApiKey by signup or login</p>\n</blockquote>\n<h3>Error Code</h3>\n<ul>\n<li>B001 ~ B008</li>\n</ul>\n<h2>| Token Control</h2>\n<h3>Url</h3>\n<ul>\n<li>The url you get from &quot;/stores/list&quot;</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>C001 ~ C003</li>\n</ul>\n<h2>| LINE</h2>\n<h3>Headers</h3>\n<ul>\n<li>line-id (line_liff_userID)</li>\n</ul>\n<h3>Error Code</h3>\n<ul>\n<li>B001 ~ B004</li>\n</ul>\n"
   },
   "footer": {
     "title": "Error reference",
@@ -17,7 +17,7 @@ define({
   "apidoc": "0.3.0",
   "generator": {
     "name": "apidoc",
-    "time": "2019-04-19T09:06:15.834Z",
+    "time": "2019-04-19T16:43:48.791Z",
     "url": "http://apidocjs.com",
     "version": "0.17.7"
   }

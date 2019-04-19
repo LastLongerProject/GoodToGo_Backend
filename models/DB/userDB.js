@@ -10,7 +10,9 @@ var userSchema = mongoose.Schema({
             type: String,
             default: null
         },
-        lineId: String
+        lineId: String,
+        line_liff_userID: String,
+        line_channel_userID: String
     },
     role: {
         typeCode: String,

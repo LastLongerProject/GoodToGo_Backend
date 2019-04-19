@@ -27,6 +27,6 @@
 
 ## | LINE
 ### Headers
-- line-id
+- line-id (line_liff_userID)
 ### Error Code
 - B001 ~ B004

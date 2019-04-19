@@ -199,16 +199,17 @@ module.exports = {
     signupLineUser: function (req, done) {
         const phone = req.body.phone.replace(/tel:|-/g, "");
         const verificationCode = req.body.verification_code;
-        const lineId = req.body.lineId;
+        const line_liff_userID = req.body.line_liff_userID;
+        const line_channel_userID = req.body.line_channel_userID;
         let options = req._options || {};
 
-        if (typeof phone === 'undefined' || typeof lineId === 'undefined') {
+        if (typeof phone === 'undefined' || typeof line_liff_userID === 'undefined' || typeof line_channel_userID === 'undefined') {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (!(typeof phone === 'string' && isMobilePhone(phone) && typeof lineId === 'string')) {
+        } else if (!(typeof phone === 'string' && isMobilePhone(phone) && typeof line_liff_userID === 'string' && typeof line_channel_userID === 'string')) {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
@@ -255,7 +256,8 @@ module.exports = {
                             userToSave = newUser;
                         }
 
-                        userToSave.user.lineId = lineId;
+                        userToSave.user.line_liff_userID = line_liff_userID;
+                        userToSave.user.line_channel_userID = line_channel_userID;
                         userToSave.hasVerified = true;
                         userToSave.agreeTerms = true;
                         userToSave.save(function (err) {
