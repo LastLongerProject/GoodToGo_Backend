@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
 const crypto = require('crypto');
 const debug = require('../helpers/debugger')('stores');
 const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const keys = require('../config/keys');
 const baseUrl = require('../config/config.js').serverBaseUrl;
 const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
@@ -33,6 +31,7 @@ const Activity = require('../models/DB/activityDB')
 const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const UserRole = require('../models/enums/userEnum').UserRole;
+const generateImgToken = require('../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -100,18 +99,12 @@ router.get('/list', validateDefault, function (req, res, next) {
         }, function (err, storeList) {
             if (err) return next(err);
             jsonData.globalAmount = 0;
-            keys.serverSecretKey((err, key) => {
+            generateImgToken((err, token) => {
                 if (err) return next(err);
-                var date = new Date();
-                var payload = {
-                    'iat': Date.now(),
-                    'exp': date.setMinutes(date.getMinutes() + 5)
-                };
-                var token = jwt.encode(payload, key);
                 res.set('etag', wetag(storeList));
                 for (var i = 0; i < storeList.length; i++) {
                     var tmpOpening = [];
-                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
+                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}?ver=${storeList[i].img_info.img_version}`;
                     for (var j = 0; j < storeList[i].opening_hours.length; j++)
                         tmpOpening.push({
                             close: storeList[i].opening_hours[j].close,
@@ -192,17 +185,11 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
             });
         }
 
-        keys.serverSecretKey((err, key) => {
+        generateImgToken((err, token) => {
             if (err) return next(err);
-            var date = new Date();
-            var payload = {
-                'iat': Date.now(),
-                'exp': date.setMinutes(date.getMinutes() + 5)
-            };
-            var token = jwt.encode(payload, key);
             res.set('etag', wetag([store]));
             var tmpOpening = [];
-            store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}`;
+            store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}?ver=${store.img_info.img_version}`;;
             for (var i = 0; i < store.opening_hours.length; i++)
                 tmpOpening.push({
                     close: store.opening_hours[i].close,

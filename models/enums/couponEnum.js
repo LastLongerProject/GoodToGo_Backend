@@ -1,7 +1,7 @@
 module.exports = {
     CouponTypeState: Object.freeze({
         SOLD_OUT: "sold_out",
-        AVAILABLE: "available",
+        PURCHASEABLE: "purchasable",
         CANNOT_AFFORD: "cannot_afford"
     }),
     CouponState: Object.freeze({

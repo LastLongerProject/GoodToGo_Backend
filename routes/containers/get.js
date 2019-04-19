@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
 const debug = require('../../helpers/debugger')('containers_get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
@@ -8,7 +7,6 @@ const validateRequest = require('../../middlewares/validation/validateRequest').
 const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
 const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
 
-const keys = require('../../config/keys');
 const baseUrl = require('../../config/config.js').serverBaseUrl;
 
 const Box = require('../../models/DB/boxDB');
@@ -21,6 +19,7 @@ const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const UserRole = require('../../models/enums/userEnum').UserRole;
+const generateImgToken = require('../../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 
@@ -59,18 +58,13 @@ router.get('/list', validateDefault, function (req, res, next) {
     var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
     var tmpArr = [];
-    var date = new Date();
-    var payload = {
-        'iat': Date.now(),
-        'exp': date.setMinutes(date.getMinutes() + 5)
-    };
-    keys.serverSecretKey((err, key) => {
-        var token = jwt.encode(payload, key);
+    generateImgToken((err, token) => {
+        if (err) return next(err);
         res.set('etag', wetag([containerDict, typeDict]));
         for (var aType in typeDict) {
             tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}`;
+                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}?ver=${typeDict[aType].version}`;
             }
             tmpArr.push({
                 typeCode: typeDict[aType].typeCode,
