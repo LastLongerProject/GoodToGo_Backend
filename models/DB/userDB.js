@@ -59,6 +59,10 @@ var userSchema = mongoose.Schema({
     point: {
         type: Number,
         default: 0
+    },
+    bannedTimes: {
+        type: Number,
+        default: 0
     }
 }, {
     usePushEach: true

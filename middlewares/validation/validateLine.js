@@ -10,7 +10,7 @@ module.exports = function (req, res, next) {
         });
 
     User.findOne({
-        "user.lineId": lineId
+        "user.line_liff_userID": lineId
     }, function (err, dbUser) {
         if (err)
             return next(err);
