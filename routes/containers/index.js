@@ -18,6 +18,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
+const NotificationEvent = require('../../helpers/notifications/enums/events');
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');
@@ -173,11 +174,13 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {
                                 if (err) return debug(err);
-                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                    clerk: aClerk
-                                }, {
-                                    boxID
-                                }));
+                                userList.forEach(aClerk =>
+                                    NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
+                                        clerk: aClerk
+                                    }, {
+                                        boxID
+                                    })
+                                );
                             });
                         });
                     }
@@ -387,7 +390,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                         aTradeDetail => aTradeDetail.newUser,
                         aTradeDetail => aTradeDetail.container.ID)
                     .forEach(aCustomerTradeDetail => {
-                        NotificationCenter.emit("container_rent", {
+                        NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
                             customer: aCustomerTradeDetail.customer
                         }, {
                             containerList: aCustomerTradeDetail.containerList
@@ -492,7 +495,7 @@ router.post(
                             aTradeDetail => aTradeDetail.oriUser,
                             aTradeDetail => aTradeDetail.container.ID)
                         .forEach(aCustomerTradeDetail => {
-                            NotificationCenter.emit("container_return", {
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
                                 customer: aCustomerTradeDetail.customer
                             }, {
                                 containerList: aCustomerTradeDetail.containerList
