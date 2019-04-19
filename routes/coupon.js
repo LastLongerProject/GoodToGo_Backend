@@ -29,7 +29,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
  *			    provider : String,
  *			    title : String,
  *			    expirationDate : Date,
- *			    extraNotice : String,
+ *			    notice : String,
  *			    imgSrc : Url,
  *              state : String ("used" or "available" or "expired" or "unknown")
  *		    }, ...
@@ -57,7 +57,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                 provider: CouponTypeDict[aCoupon.couponType].provider,
                 title: CouponTypeDict[aCoupon.couponType].title,
                 expirationDate: CouponTypeDict[aCoupon.couponType].expirationDate,
-                extraNotice: CouponTypeDict[aCoupon.couponType].extraNotice,
+                notice: CouponTypeDict[aCoupon.couponType].generateCoution(),
                 imgSrc: CouponTypeDict[aCoupon.couponType].img_info.img_src // need update
             };
             if (!aCoupon.used && !aCoupon.expired) {
@@ -271,7 +271,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
             expirationDate: theCouponType.expirationDate,
             price: theCouponType.price,
             amount: theCouponType.amount.current,
-            notice: theCouponType.extraNotice,
+            notice: theCouponType.generateCoution(),
             imgSrc: theCouponType.img_info.img_src // need update
         };
         if (theCouponType.amount.current <= 0) {
