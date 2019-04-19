@@ -233,6 +233,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             "user.phone": "bot00003"
         }, (err, dbBot) => {
             if (err) return next(err);
+            if (!dbBot) return next(new Error("server ERR"));
             dbBot.roles.clerk.storeID = theUserOrder.storeID;
             changeContainersState(containerID, dbBot, {
                 action: "Rent",

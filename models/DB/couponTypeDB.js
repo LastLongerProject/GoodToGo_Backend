@@ -50,9 +50,9 @@ const extraCoutionTemplate = Object.freeze({
 
 userSchema.methods.generateCoution = function () {
     let formattedExtraCoution = this.extraCoution !== null ? this.extraCoution + "\n" : "";
-    if (templateKeyValidater.test(formattedExtraCoution) && extraCoutionTemplate[formattedExtraCoution])
+    if (templateKeyValidater.test(formattedExtraCoution) && extraCoutionTemplate[formattedExtraCoution]) {
         formattedExtraCoution = extraCoutionTemplate[formattedExtraCoution];
-
+    }
     return (this.extraContent !== null ? this.extraContent + "\n" : "") +
         coutionTitle +
         formattedExtraCoution +
