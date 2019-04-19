@@ -120,7 +120,8 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
         "used": false
     }, (err, theCoupon) => {
         if (err) return next(err);
-        if (!theCoupon || theCoupon.user !== dbUser._id)
+
+        if (!theCoupon || !theCoupon.user.equals(dbUser._id))
             return res.status(401).json({
                 code: '???',
                 type: 'couponMessage',
