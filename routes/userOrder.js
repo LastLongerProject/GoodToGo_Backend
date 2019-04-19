@@ -13,7 +13,6 @@ const NotificationCenter = require('../helpers/notifications/center');
 
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
-const PurchaseStatus = require('../models/enums/userEnum').PurchaseStatus;
 const userUsingAmount = require('../models/variables/containerStatistic').user_using;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
@@ -142,7 +141,9 @@ router.post('/add', validateLine, function (req, res, next) {
                 `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`
         });
 
-    userUsingAmount(dbUser, (err, usingAmount) => {
+    userUsingAmount(dbUser, {
+        "inLineSystem": true
+    }, (err, usingAmount) => {
         if (err) return next(err);
         if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1) ||
             (dbUser.hasPurchase && containerAmount + usingAmount > 20))
@@ -252,7 +253,8 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             }, {
                 rentToUser: dbUser.user.phone,
                 orderTime: theUserOrder.orderTime,
-                activity: "沒活動"
+                activity: "沒活動",
+                inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);

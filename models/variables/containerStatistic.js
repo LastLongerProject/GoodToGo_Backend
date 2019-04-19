@@ -10,10 +10,11 @@ module.exports = {
             cb(null, count + 14642);
         });
     },
-    user_using: function (dbUser, cb) {
-        Container.count({
+    user_using: function (dbUser, extraCondition, cb) {
+        const condition = Object.assign({
             "conbineTo": dbUser.user.phone,
             "statusCode": 2
-        }, cb);
+        }, extraCondition);
+        Container.count(condition, cb);
     }
 };

@@ -112,6 +112,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
+    const inLineSystem = options.inLineSystem; // Rent NEED
     const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
@@ -279,6 +280,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
+                                theContainer.inLineSystem = inLineSystem;
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = null;
 
@@ -301,7 +303,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         id: theContainer.ID,
                                         typeCode: theContainer.typeCode,
                                         cycleCtr: theContainer.cycleCtr,
-                                        box: boxID
+                                        box: boxID,
+                                        inLineSystem: theContainer.inLineSystem
                                     },
                                     activity,
                                     exception: exceptionLabel
