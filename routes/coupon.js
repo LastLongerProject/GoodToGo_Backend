@@ -63,7 +63,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                     provider: theCouponType.provider,
                     title: theCouponType.title,
                     expirationDate: theCouponType.expirationDate,
-                    notice: theCouponType.generateCoution(),
+                    notice: theCouponType.generateNotice(),
                     imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`
                 };
                 if (!aCoupon.used && !aCoupon.expired) {
@@ -285,7 +285,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
                 expirationDate: theCouponType.purchaseDeadline,
                 price: theCouponType.price,
                 amount: theCouponType.amount.current,
-                notice: theCouponType.generateCoution(),
+                notice: theCouponType.generateNotice(),
                 imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`
             };
             if (theCouponType.amount.current <= 0) {

@@ -100,7 +100,7 @@ module.exports = {
                                 provider: theCouponType.provider,
                                 title: theCouponType.title,
                                 expirationDate: theCouponType.expirationDate,
-                                notice: theCouponType.generateCoution(),
+                                notice: theCouponType.generateNotice(),
                                 imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`,
                                 state: CouponState.AVAILABLE
                             });
