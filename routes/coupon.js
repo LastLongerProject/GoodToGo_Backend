@@ -112,7 +112,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
         return res.status(401).json({
             code: '???',
             type: 'couponMessage',
-            message: `Content not in Correct Format. \nCouponID: ${CouponID}`
+            message: `Content not in Correct Format.\nCouponID: ${CouponID}`
         });
 
     Coupon.findOne({
@@ -124,7 +124,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
             return res.status(401).json({
                 code: '???',
                 type: 'couponMessage',
-                message: `Can't find that Coupon`
+                message: `Can't find that Coupon.\nCouponID: ${CouponID}`
             });
         if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now()) {
             theCoupon.expired = true
