@@ -55,8 +55,8 @@ userSchema.methods.generateNotice = function () {
     if (templateKeyValidater.test(oriExtraNotice)) {
         formattedExtraNotice = oriExtraNotice
             .split("&")
+            .map(oneNotice => oneNotice.replace(/\b/g, ""))
             .filter(oneNotice => extraNoticeTemplate[oneNotice])
-            .map(oneNotice => oneNotice.replace(" ", ""))
             .join("\n");
     } else {
         formattedExtraNotice = oriExtraNotice;

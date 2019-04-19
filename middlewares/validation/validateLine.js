@@ -41,7 +41,7 @@ module.exports = {
             });
 
         User.findOne({
-            "user.line_liff_userID": lineId
+            "user.line_channel_userID": lineId
         }, function (err, dbUser) {
             if (err)
                 return next(err);
