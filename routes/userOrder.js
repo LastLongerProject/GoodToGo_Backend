@@ -132,7 +132,7 @@ router.post('/add', validateLine, function (req, res, next) {
             code: '???',
             type: 'userOrderMessage',
             message: `Content not in Correct Format. \n` +
-                `StoreID: ${storeID}, ContainerAmount: ${req.body.containerAmount}`
+                `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`
         });
     if ((!dbUser.hasPurchase && containerAmount > 1) ||
         (dbUser.hasPurchase && containerAmount > 20))
