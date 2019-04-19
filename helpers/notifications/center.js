@@ -36,6 +36,18 @@ module.exports = {
                     pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
                 }
                 break;
+            case NotificationEvent.CONTAINER_RETURN_VIP:
+                pushBy.webhook(WebhookEvent.USER_VIP_RETURN_CONTAINER, target);
+                break;
+            case NotificationEvent.USER_ALMOST_OVERDUE:
+                pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target);
+                break;
+            case NotificationEvent.USER_BANNED:
+                pushBy.webhook(WebhookEvent.USER_BANNED, target);
+                break;
+            case NotificationEvent.USER_UNBANNED:
+                pushBy.webhook(WebhookEvent.USER_UNBANNED, target);
+                break;
         }
     }
 };

@@ -71,15 +71,19 @@ module.exports = {
             return null;
         }
     },
-    webhook: function (event, data) {
+    webhook: function (event, target) {
         let para;
         try {
             switch (event) {
                 case WebhookEvent.USER_USAGE_UPDATE_RENT:
-                    para = data.user.phone;
-                    break;
                 case WebhookEvent.USER_USAGE_UPDATE_RETURN:
-                    para = data.user.phone;
+                    para = target.user.phone;
+                    break;
+                case WebhookEvent.USER_VIP_RETURN_CONTAINER:
+                case WebhookEvent.USER_ALMOST_OVERDUE:
+                case WebhookEvent.USER_BANNED:
+                case WebhookEvent.USER_UNBANNED:
+                    para = target.user.line_channel_userID;
                     break;
             }
             return {

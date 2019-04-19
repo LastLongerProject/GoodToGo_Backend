@@ -3,7 +3,6 @@ const UserKeys = require('../models/DB/userKeysDB');
 const Coupon = require('../models/DB/couponDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
-const PurchaseStatus = require('../models/enums/userEnum').PurchaseStatus;
 
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
@@ -128,9 +127,7 @@ function checkUsersShouldBeBanned() {
             const now = Date.now();
             containerList.forEach(aContainer => {
                 const userPhone = aContainer.conbineTo;
-                const purchaseStatus = userDict[userPhone].dbUser.hasPurchase ?
-                    PurchaseStatus.PURCHASED_USER :
-                    PurchaseStatus.FREE_USER;
+                const purchaseStatus = userDict[userPhone].dbUser.getPurchaseStatus();
                 const daysToDue = computeDaysOfUsing(aContainer.lastUsedAt, now) - DueDays[purchaseStatus];
                 if (daysToDue <= 0) {
                     userDict[userPhone].overdue.push(aContainer);

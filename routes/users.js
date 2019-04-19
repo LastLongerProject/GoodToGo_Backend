@@ -233,7 +233,7 @@ router.post(
  * @apiGroup Users
  * @apiPermission none
  *
- * @api {post} /users/signup/lineUser Sign up for new line user
+ * @api {post} /users/signup/lineUser Sign up for new line user (step 2)
  * @apiUse DefaultSecurityMethod
  * 
  * @apiParam {String} line_liff_userID line_liff_userID of the User.
