@@ -1,5 +1,6 @@
 const Trade = require('../DB/tradeDB');
 const Container = require('../DB/containerDB');
+const UserOrder = require('../DB/userOrderDB');
 
 module.exports = {
     global_used: function (cb) {
@@ -16,5 +17,11 @@ module.exports = {
             "statusCode": 2
         }, extraCondition);
         Container.count(condition, cb);
+    },
+    store_booked: function (storeID, cb) {
+        UserOrder.count({
+            "containerID": null,
+            "storeID": storeID
+        }, cb);
     }
 };

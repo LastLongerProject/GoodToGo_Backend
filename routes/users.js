@@ -863,4 +863,37 @@ router.get('/pointLog', validateLine, function (req, res, next) {
     });
 });
 
+router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
+    const usersToAdd = req.body.userList;
+    const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
+        User.updateOne({
+            "user.phone": aUser.phone
+        }, {
+            "hasPurchase": true,
+            '$setOnInsert': {
+                'user.password': null,
+                "user.name": aUser.name,
+                "registerMethod": RegisterMethod.PURCHASE,
+                'roles.typeList': [UserRole.CUSTOMER]
+            }
+        }, {
+            upsert: true,
+            setDefaultsOnInsert: true,
+            new: true
+        }, (err, raw) => {
+            if (err) return reject(err);
+            resolve(raw);
+        });
+    }));
+    Promise
+        .all(tasks)
+        .then(result => {
+            debug.log("Add Purchase User: ", result);
+            res.json({
+                success: true
+            });
+        })
+        .catch(next);
+});
+
 module.exports = router;
