@@ -7293,7 +7293,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     code: '???',\n     type: 'userOrderMessage',\n     message: 'Add UserOrder Success'\n }",
+          "content": "HTTP/1.1 200 \n{\n     storeName: String,\n     containerAmount: Number,\n     time: Date\n }",
           "type": "json"
         }
       ]
