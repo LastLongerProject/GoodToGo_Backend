@@ -20,7 +20,7 @@ const storeCodeValidater = /\d{4}/;
 
 function isValidStoreCode(storeCode) {
     if (typeof storeCode !== "string") return false;
-    if (storeCodeValidater.test(storeCode)) return false;
+    if (!storeCodeValidater.test(storeCode)) return false;
     if (getCheckCode(parseInt(storeCode.substring(0, 3))) !== parseInt(storeCode.substring(3, 4))) return false;
     return true;
 }
@@ -133,7 +133,7 @@ router.post('/add', validateLine, function (req, res, next) {
             type: 'userOrderMessage',
             message: `User is Banned.`
         });
-    if (isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
+    if (!isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
             code: '???',
             type: 'userOrderMessage',
