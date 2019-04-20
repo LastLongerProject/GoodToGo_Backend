@@ -77,7 +77,7 @@ router.get('/coupon/:id/:a.:b.:c', function (req, res, next) {
                 s.pipe(res);
             });
             s.on('error', function (err) {
-                const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/9999.png');
+                const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/9999.jpg');
                 s2.on('open', function () {
                     res.set('Content-Type', 'image/png');
                     s2.pipe(res);
