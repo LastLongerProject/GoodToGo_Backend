@@ -50,16 +50,17 @@ const extraNoticeTemplate = Object.freeze({
 });
 
 userSchema.methods.generateNotice = function () {
-    let oriExtraNotice = this.extraNotice !== null ? this.extraNotice + "\n" : "";
+    let oriExtraNotice = this.extraNotice !== null ? this.extraNotice : "";
     let formattedExtraNotice = "";
     if (templateKeyValidater.test(oriExtraNotice)) {
         formattedExtraNotice = oriExtraNotice
             .split("&")
             .map(oneNotice => oneNotice.replace(/\b/g, ""))
             .filter(oneNotice => extraNoticeTemplate[oneNotice])
-            .join("\n");
+            .map(oneNotice => extraNoticeTemplate[oneNotice] + "\n")
+            .join("");
     } else {
-        formattedExtraNotice = oriExtraNotice;
+        formattedExtraNotice = oriExtraNotice + "\n";
     }
     return (this.extraContent !== null ? this.extraContent + "\n" : "") +
         noticeTitle +
