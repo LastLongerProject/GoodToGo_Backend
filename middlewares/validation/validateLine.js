@@ -3,12 +3,13 @@ const User = require('../../models/DB/userDB'); // load up the user model
 module.exports = {
     forPurchasedUser: function (req, res, next) {
         if (!req._user.hasPurchase)
-            return res.status(403).json(null, {
+            return res.status(403).json({
                 code: 'L008',
                 type: 'couponTradeMessage',
                 message: `Please Purchase First`,
                 txt: "該功能限鐵粉會員使用"
             });
+        next();
     },
     liff: function (req, res, next) {
         const lineId = req.headers['line-id'];

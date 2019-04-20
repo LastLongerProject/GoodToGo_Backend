@@ -104,7 +104,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/use/:couponID', forPurchasedUser, validateLine, function (req, res, next) {
+router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res, next) {
     const dbUser = req._user;
     const CouponID = req.params.couponID;
     const CouponTypeDict = DataCacheFactory.get('couponType');
@@ -340,7 +340,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/purchase/:couponTypeID', forPurchasedUser, validateLine, function (req, res, next) {
+router.post('/purchase/:couponTypeID', validateLine, forPurchasedUser, function (req, res, next) {
     const dbUser = req._user;
     const CouponTypeID = req.params.couponTypeID;
 
