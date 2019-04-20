@@ -9,16 +9,16 @@ function containerFormatter(data) {
     let containerType = DataCacheFactory.get('containerType');
     let formattedContainer = {};
     let amount = 0;
-    for (let container of data.containerList) {
+    data.containerList.forEach(container => {
         if (!containerType[container.typeCode]) {
             debug.error(`container.typeCode ERR: ${container.typeCode}`);
-            continue;
+            return;
         }
         let key = containerType[container.typeCode].name;
         if (!formattedContainer[key]) formattedContainer[key] = [];
         formattedContainer[key].push("#" + container.ID);
         amount++;
-    }
+    });
     let IDlist = Object.keys(formattedContainer).map(key => {
         return `${key}（${formattedContainer[key].join("、")}）`;
     });
