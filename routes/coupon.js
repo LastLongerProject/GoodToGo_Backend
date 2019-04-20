@@ -186,7 +186,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
 router.get('/allCoupons', validateLine, function (req, res, next) {
     const dbUser = req._user;
 
-    CouponType.find({
+    const condition = {
         "announceDate": {
             "$lt": Date.now()
         },
@@ -194,7 +194,11 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
             "$gt": Date.now()
         },
         "welcomeGift": false
-    }, (err, couponTypeList) => {
+    };
+    if (!dbUser.hasPurchase)
+        condition.onlyPurchasedUser = false;
+
+    CouponType.find(condition, (err, couponTypeList) => {
         if (err) return next(err);
 
         couponTypeList.sort((a, b) => {

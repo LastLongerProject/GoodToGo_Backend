@@ -51,6 +51,12 @@ module.exports = {
                         type: 'couponTradeMessage',
                         message: `Can't Afford that Coupon`
                     });
+                if (theCouponType.onlyPurchasedUser && !dbUser.hasPurchase)
+                    return done(null, {
+                        code: '???',
+                        type: 'couponTradeMessage',
+                        message: `Can't Afford that Coupon`
+                    });
                 dbUser.point -= theCouponType.price;
                 let newPointLog = new PointLog({
                     user: dbUser._id,
@@ -113,7 +119,7 @@ module.exports = {
     welcomeCoupon: function (dbUser, oriDone) {
         queue.push(taskDone => {
             const done = bindFunction(taskDone, oriDone);
-            CouponType.find({
+            const condition = {
                 "welcomeGift": true,
                 "announceDate": {
                     "$lt": Date.now()
@@ -121,7 +127,10 @@ module.exports = {
                 "amount.current": {
                     $gt: 0
                 }
-            }, (err, couponTypeList) => {
+            };
+            if (!dbUser.hasPurchase)
+                condition.onlyPurchasedUser = false;
+            CouponType.find(condition, (err, couponTypeList) => {
                 if (err) return done(err);
 
                 Promise

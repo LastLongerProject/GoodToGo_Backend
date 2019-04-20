@@ -31,6 +31,10 @@ var userSchema = mongoose.Schema({
     welcomeGift: {
         type: Boolean,
         default: false
+    },
+    onlyPurchasedUser: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
