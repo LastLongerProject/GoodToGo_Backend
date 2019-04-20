@@ -512,6 +512,7 @@ router.post(
                             })
                         .forEach(aTradeDetail => {
                             const dbCustomer = aTradeDetail.customer;
+                            if (!dbCustomer.hasPurchase) return null;
                             const containerList = aTradeDetail.containerList;
                             const quantity = containerList.length;
                             const storeDict = DataCacheFactory.get("store");
