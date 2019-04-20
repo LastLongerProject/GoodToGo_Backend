@@ -145,8 +145,7 @@ router.post('/add', validateLine, function (req, res, next) {
         "inLineSystem": true
     }, (err, usingAmount) => {
         if (err) return next(err);
-        if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1) ||
-            (dbUser.hasPurchase && containerAmount + usingAmount > 20))
+        if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1))
             return res.status(403).json({
                 code: '???',
                 type: 'userOrderMessage',
