@@ -32,28 +32,28 @@ module.exports = {
                         code: 'L016',
                         type: 'couponTradeMessage',
                         message: `Can't find that CouponType`,
-                        txt: "服務維修中... 請稍後再試"
+                        txt: "系統維修中>< 請稍後再試！"
                     });
                 if (theCouponType.purchaseDeadline < Date.now())
                     return done(null, {
                         code: 'L017',
                         type: 'couponTradeMessage',
                         message: `Coupon Expired`,
-                        txt: "優惠券過期"
+                        txt: "優惠券逾期，無法領取！"
                     });
                 if (theCouponType.amount.current <= 0)
                     return done(null, {
                         code: 'L018',
                         type: 'couponTradeMessage',
                         message: `Coupon Sold Out`,
-                        txt: "優惠券售罄"
+                        txt: "此優惠券已被領光囉！"
                     });
                 if (theCouponType.price > dbUser.point)
                     return done(null, {
                         code: 'L019',
                         type: 'couponTradeMessage',
                         message: `Can't Afford that Coupon`,
-                        txt: "點數不足"
+                        txt: "點數不足，無法領取！"
                     });
                 dbUser.point -= theCouponType.price;
                 let newPointLog = new PointLog({

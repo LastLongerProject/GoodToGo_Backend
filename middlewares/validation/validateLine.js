@@ -7,7 +7,7 @@ module.exports = {
                 code: 'L008',
                 type: 'couponTradeMessage',
                 message: `Please Purchase First`,
-                txt: "該功能限鐵粉會員使用"
+                txt: "需成為鐵粉會員才可使用"
             });
         next();
     },
