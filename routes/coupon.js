@@ -7,6 +7,7 @@ const baseUrl = require('../config/config.js').serverBaseUrl;
 const couponTrade = require('../controllers/couponTrade');
 const generateImgToken = require('../controllers/imageToken').generateToken;
 const validateLine = require('../middlewares/validation/validateLine').liff;
+const forPurchasedUser = require('../middlewares/validation/validateLine').forPurchasedUser;
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
@@ -103,7 +104,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/use/:couponID', validateLine, function (req, res, next) {
+router.post('/use/:couponID', forPurchasedUser, validateLine, function (req, res, next) {
     const dbUser = req._user;
     const CouponID = req.params.couponID;
     const CouponTypeDict = DataCacheFactory.get('couponType');
@@ -186,7 +187,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
 router.get('/allCoupons', validateLine, function (req, res, next) {
     const dbUser = req._user;
 
-    const condition = {
+    CouponType.find({
         "announceDate": {
             "$lt": Date.now()
         },
@@ -194,11 +195,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
             "$gt": Date.now()
         },
         "welcomeGift": false
-    };
-    if (!dbUser.hasPurchase)
-        condition.onlyPurchasedUser = false;
-
-    CouponType.find(condition, (err, couponTypeList) => {
+    }, (err, couponTypeList) => {
         if (err) return next(err);
 
         couponTypeList.sort((a, b) => {
@@ -337,7 +334,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
+router.post('/purchase/:couponTypeID', forPurchasedUser, validateLine, function (req, res, next) {
     const dbUser = req._user;
     const CouponTypeID = req.params.couponTypeID;
 

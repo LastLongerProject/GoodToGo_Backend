@@ -1,6 +1,14 @@
 const User = require('../../models/DB/userDB'); // load up the user model
 
 module.exports = {
+    forPurchasedUser: function (req, res, next) {
+        if (!req._user.hasPurchase)
+            return res.status(403).json(null, {
+                code: '???',
+                type: 'couponTradeMessage',
+                message: `Please Purchase First`
+            });
+    },
     liff: function (req, res, next) {
         const lineId = req.headers['line-id'];
         if (!lineId)
