@@ -885,6 +885,24 @@ router.get('/purchaseStatus', validateLine.channel, function (req, res, next) {
     });
 });
 
+router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const userToUnbind = req.params.phone;
+    User.updateOne({
+        "user.phone": userToUnbind
+    }, {
+        "agreeTerms": false,
+        "$unset": {
+            "user.line_liff_userID": 1,
+            "user.line_channel_userID": 1
+        }
+    }, (err, raw) => {
+        res.json({
+            err,
+            raw
+        });
+    });
+});
+
 router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
