@@ -10,6 +10,10 @@ function containerFormatter(data) {
     let formattedContainer = {};
     let amount = 0;
     for (let container of data.containerList) {
+        if (!containerType[container.typeCode]) {
+            debug.error(`container.typeCode ERR: ${container.typeCode}`);
+            continue;
+        }
         let key = containerType[container.typeCode].name;
         if (!formattedContainer[key]) formattedContainer[key] = [];
         formattedContainer[key].push("#" + container.ID);
