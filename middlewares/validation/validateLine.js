@@ -4,9 +4,10 @@ module.exports = {
     forPurchasedUser: function (req, res, next) {
         if (!req._user.hasPurchase)
             return res.status(403).json(null, {
-                code: '???',
+                code: 'L008',
                 type: 'couponTradeMessage',
-                message: `Please Purchase First`
+                message: `Please Purchase First`,
+                txt: "該功能限鐵粉會員使用"
             });
     },
     liff: function (req, res, next) {

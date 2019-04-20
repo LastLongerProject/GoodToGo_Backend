@@ -19,10 +19,10 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 const storeCodeValidater = /\d{4}/;
 
 function isValidStoreCode(storeCode) {
-    if (typeof storeCode !== "string") return false;
-    if (!storeCodeValidater.test(storeCode)) return false;
-    if (getCheckCode(parseInt(storeCode.substring(0, 3))) !== parseInt(storeCode.substring(3, 4))) return false;
-    return true;
+    const StoreDict = DataCacheFactory.get('store');
+    const storeID = storeCode.substring(0, 3);
+    return (getCheckCode(parseInt(storeCode.substring(0, 3))) === parseInt(storeCode.substring(3, 4)) &&
+        StoreDict[storeID]);
 }
 
 function getCheckCode(storeID) {
@@ -129,16 +129,25 @@ router.post('/add', validateLine, function (req, res, next) {
 
     if (dbUser.hasBanned)
         return res.status(403).json({
-            code: '???',
+            code: 'L001',
             type: 'userOrderMessage',
-            message: `User is Banned.`
+            message: `User is Banned.`,
+            txt: "你還有容器未歸還喔"
         });
-    if (!isValidStoreCode(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
+    if (typeof storeCode !== "string" || !storeCodeValidater.test(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
-            code: '???',
+            code: 'L002',
             type: 'userOrderMessage',
-            message: `Content not in Correct Format. \n` +
-                `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`
+            message: `Content not in Correct Format.\n` +
+                `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`,
+            txt: "服務維修中... 請稍後再試"
+        });
+    if (!isValidStoreCode(storeCode))
+        return res.status(403).json({
+            code: 'L003',
+            type: 'userOrderMessage',
+            message: `StoreCode not Correct`,
+            txt: "店鋪代碼輸入錯誤"
         });
 
     userUsingAmount(dbUser, {
@@ -147,19 +156,14 @@ router.post('/add', validateLine, function (req, res, next) {
         if (err) return next(err);
         if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1))
             return res.status(403).json({
-                code: '???',
+                code: 'L004',
                 type: 'userOrderMessage',
                 message: `ContainerAmount is Over Quantity Limitation. \n` +
-                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`
+                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
+                txt: "超過借用數量限制"
             });
 
         const storeID = parseInt(storeCode.substring(0, 3));
-        if (!StoreDict[storeID])
-            return res.status(403).json({
-                code: '???',
-                type: 'userOrderMessage',
-                message: `No Such StoreID. \nStoreID: ${storeID}`
-            });
 
         const funcList = [];
         for (let i = 0; i < containerAmount; i++) {
@@ -214,16 +218,18 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
 
     if (typeof orderID !== "string" || isNaN(containerID))
         return res.status(403).json({
-            code: '???',
+            code: 'L005',
             type: 'userOrderMessage',
             message: `Content not in Correct Format. \n` +
-                `OrderID: ${orderID}, ContainerID: ${req.body.containerID}`
+                `OrderID: ${orderID}, ContainerID: ${req.body.containerID}`,
+            txt: "服務維修中... 請稍後再試"
         });
     if (!ContainerDict[containerID])
         return res.status(403).json({
-            code: '???',
+            code: 'L006',
             type: 'userOrderMessage',
-            message: `Can't find the Container. ContainerID: ${containerID}`
+            message: `Can't find the Container. ContainerID: ${containerID}`,
+            txt: "沒有這個容器"
         });
 
     UserOrder.findOne({
@@ -234,9 +240,10 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
         if (err) return next(err);
         if (!theUserOrder)
             return res.status(403).json({
-                code: '???',
+                code: 'L007',
                 type: 'userOrderMessage',
-                message: `Can't find the UserOrder. orderID: ${orderID}`
+                message: `Can't find the UserOrder. orderID: ${orderID}`,
+                txt: "服務維修中... 請稍後再試"
             });
 
         theUserOrder.containerID = containerID;
@@ -256,7 +263,9 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                 inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
+                if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                    txt: "登記失敗"
+                }));
                 theUserOrder.save(err => {
                     if (err) return next(err);
                     res.json({

@@ -111,15 +111,17 @@ router.post('/use/:couponID', forPurchasedUser, validateLine, function (req, res
 
     if (dbUser.hasBanned)
         return res.status(403).json({
-            code: '???',
+            code: 'L009',
             type: 'userOrderMessage',
-            message: `User is Banned.`
+            message: `User is Banned.`,
+            txt: "你還有容器未歸還喔"
         });
     if (typeof CouponID !== "string")
         return res.status(403).json({
-            code: '???',
+            code: 'L010',
             type: 'couponMessage',
-            message: `Content not in Correct Format.\nCouponID: ${CouponID}`
+            message: `Content not in Correct Format.\nCouponID: ${CouponID}`,
+            txt: "服務維修中... 請稍後再試"
         });
 
     Coupon.findOne({
@@ -130,18 +132,20 @@ router.post('/use/:couponID', forPurchasedUser, validateLine, function (req, res
 
         if (!theCoupon || !theCoupon.user.equals(dbUser._id))
             return res.status(403).json({
-                code: '???',
+                code: 'L011',
                 type: 'couponMessage',
-                message: `Can't find that Coupon.\nCouponID: ${CouponID}`
+                message: `Can't find that Coupon.\nCouponID: ${CouponID}`,
+                txt: "服務維修中... 請稍後再試"
             });
         if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now()) {
             theCoupon.expired = true
             theCoupon.save((err) => {
                 if (err) return next(err);
                 res.status(403).json({
-                    code: '???',
+                    code: 'L012',
                     type: 'couponMessage',
-                    message: `Coupon Expired`
+                    message: `Coupon Expired`,
+                    txt: "優惠券過期"
                 });
             });
         } else {
@@ -261,9 +265,10 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
 
     if (typeof CouponTypeID !== "string")
         return res.status(403).json({
-            code: '???',
+            code: 'L013',
             type: 'couponMessage',
-            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
+            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`,
+            txt: "服務維修中... 請稍後再試"
         });
 
     CouponType.findOne({
@@ -279,9 +284,10 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
 
         if (!theCouponType)
             return res.status(403).json({
-                code: '???',
+                code: 'L014',
                 type: 'couponMessage',
-                message: `Can't find that CouponType. \nCouponTypeID: ${CouponTypeID}`
+                message: `Can't find that CouponType. \nCouponTypeID: ${CouponTypeID}`,
+                txt: "服務維修中... 請稍後再試"
             });
 
         generateImgToken((err, token) => {
@@ -342,7 +348,8 @@ router.post('/purchase/:couponTypeID', forPurchasedUser, validateLine, function 
         return res.status(403).json({
             code: '???',
             type: 'couponMessage',
-            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`
+            message: `Content not in Correct Format. \nCouponTypeID: ${CouponTypeID}`,
+            txt: "服務維修中... 請稍後再試"
         });
 
     couponTrade.purchaseCoupon(CouponTypeID, dbUser, (err, tradeInvalid, newCoupon) => {

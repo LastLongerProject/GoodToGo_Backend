@@ -29,27 +29,31 @@ module.exports = {
                 if (err) return done(err);
                 if (!theCouponType)
                     return done(null, {
-                        code: '???',
+                        code: 'L016',
                         type: 'couponTradeMessage',
-                        message: `Can't find that CouponType`
+                        message: `Can't find that CouponType`,
+                        txt: "服務維修中... 請稍後再試"
                     });
                 if (theCouponType.purchaseDeadline < Date.now())
                     return done(null, {
-                        code: '???',
+                        code: 'L017',
                         type: 'couponTradeMessage',
-                        message: `Coupon Expired`
+                        message: `Coupon Expired`,
+                        txt: "優惠券過期"
                     });
                 if (theCouponType.amount.current <= 0)
                     return done(null, {
-                        code: '???',
+                        code: 'L018',
                         type: 'couponTradeMessage',
-                        message: `Coupon Sold Out`
+                        message: `Coupon Sold Out`,
+                        txt: "優惠券售罄"
                     });
                 if (theCouponType.price > dbUser.point)
                     return done(null, {
-                        code: '???',
+                        code: 'L019',
                         type: 'couponTradeMessage',
-                        message: `Can't Afford that Coupon`
+                        message: `Can't Afford that Coupon`,
+                        txt: "點數不足"
                     });
                 dbUser.point -= theCouponType.price;
                 let newPointLog = new PointLog({
