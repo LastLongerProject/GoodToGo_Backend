@@ -20,8 +20,8 @@ const storeCodeValidater = /\d{4}/;
 
 function isValidStoreCode(storeCode) {
     const StoreDict = DataCacheFactory.get('store');
-    const storeID = storeCode.substring(0, 3);
-    return (getCheckCode(parseInt(storeCode.substring(0, 3))) === parseInt(storeCode.substring(3, 4)) &&
+    const storeID = parseInt(storeCode.substring(0, 3));
+    return (getCheckCode(storeID) === parseInt(storeCode.substring(3, 4)) &&
         StoreDict[storeID]);
 }
 
