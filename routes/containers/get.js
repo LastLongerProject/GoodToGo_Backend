@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
 const debug = require('../../helpers/debugger')('containers_get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
@@ -8,7 +7,6 @@ const validateRequest = require('../../middlewares/validation/validateRequest').
 const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
 const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
 
-const keys = require('../../config/keys');
 const baseUrl = require('../../config/config.js').serverBaseUrl;
 
 const Box = require('../../models/DB/boxDB');
@@ -19,6 +17,9 @@ const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
+
+const UserRole = require('../../models/enums/userEnum').UserRole;
+const generateImgToken = require('../../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 
@@ -52,23 +53,18 @@ const historyDays = 14;
         }
  *
  */
-router.get('/list', validateDefault, function(req, res, next) {
+router.get('/list', validateDefault, function (req, res, next) {
     var typeDict = DataCacheFactory.get('containerType');
     var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
     var tmpArr = [];
-    var date = new Date();
-    var payload = {
-        'iat': Date.now(),
-        'exp': date.setMinutes(date.getMinutes() + 5)
-    };
-    keys.serverSecretKey((err, key) => {
-        var token = jwt.encode(payload, key);
+    generateImgToken((err, token) => {
+        if (err) return next(err);
         res.set('etag', wetag([containerDict, typeDict]));
         for (var aType in typeDict) {
             tmpIcon = {};
             for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}`;
+                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}?ver=${typeDict[aType].version}`;
             }
             tmpArr.push({
                 typeCode: typeDict[aType].typeCode,
@@ -127,11 +123,11 @@ router.get('/list', validateDefault, function(req, res, next) {
         }
  *
  */
-router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var containerDict = DataCacheFactory.get('containerWithDeactive');
-    process.nextTick(function() {
-        Box.find(function(err, boxList) {
+    process.nextTick(function () {
+        Box.find(function (err, boxList) {
             if (err) return next(err);
             if (boxList.length === 0) return res.json({
                 toDelivery: []
@@ -162,6 +158,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) 
                     destinationStore: boxList[i].storeID
                 });
             }
+
             for (var i = 0; i < boxArr.length; i++) {
                 boxArr[i].containerOverview = [];
                 for (var j = 0; j < boxArr[i].typeList.length; j++) {
@@ -223,7 +220,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function(req, res, next) 
         }
  *
  */
-router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, next) {
+router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var typeDict = DataCacheFactory.get('containerType');
     Trade.find({
@@ -231,7 +228,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, n
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
-    }, function(err, list) {
+    }, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             pastDelivery: []
@@ -332,7 +329,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function(req, res, n
         }
  *
  */
-router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(req, res, next) {
+router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
     var typeDict = DataCacheFactory.get('containerType');
@@ -340,7 +337,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === 'clerk')
+    if (dbKey.roleType === UserRole.CLERK)
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
@@ -361,7 +358,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
                 '$gte': dateCheckpoint(1 - queryDays)
             }
         };
-    Trade.find(queryCond, function(err, list) {
+    Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
         if (list.length === 0) return res.json({
             reloadHistory: []
@@ -389,10 +386,10 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function(r
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === 'clerk') ? undefined : {
+                        phone: (dbKey.roleType === UserRole.CLERK) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === 'clerk') ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

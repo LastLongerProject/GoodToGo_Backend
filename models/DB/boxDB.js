@@ -6,15 +6,11 @@ var userSchema = mongoose.Schema({
     boxID: Number,
     boxName: String,
     boxOrderContent: [{
-        containerType: Number,
-        amount: Number
-    }],
-    boxDeliverContent: [{
-        containerType: Number,
+        containerType: String,
         amount: Number
     }],
     dueDate: Date,
-    storeID:Number,
+    storeID: Number,
     action: [{
         phone: String,
         boxStatus: String,
@@ -23,7 +19,7 @@ var userSchema = mongoose.Schema({
     user: {
         box: String
     },
-    containerList: Array,
+    containerList: [Number],
     delivering: {
         type: Boolean,
         default: false

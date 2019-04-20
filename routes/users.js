@@ -3,17 +3,15 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
+const couponTrade = require('../controllers/couponTrade');
 
+const validateLine = require('../middlewares/validation/validateLine');
 const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest')
-    .JWT;
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
@@ -24,9 +22,25 @@ const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
+const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
-const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
+const UserRole = require('../models/enums/userEnum').UserRole;
+const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
+
+router.post(['/signup', '/signup/*'], function (req, res, next) {
+    req._options = {};
+    req._setSignupVerification = function (options) {
+        if (typeof options === "undefined" ||
+            typeof options.passVerify === "undefined" ||
+            typeof options.passVerify === "undefined")
+            return next(new Error("Server Internal Error: Signup"));
+        req._options.passVerify = options.passVerify;
+        req._options.needVerified = options.needVerified;
+    };
+    next();
+});
 
 /**
  * @apiName SignUp
@@ -58,7 +72,7 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} verification code from sms
+ * @apiParam {String} verification_code verification code from sms
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -68,15 +82,15 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
  * @apiUse SignupError
  */
 
-router.post('/signup', validateDefault, function(req, res, next) {
+router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
-    req.body.active = true; // !!! Need to send by client when need purchasing !!!
-    userQuery.signup(req, function(err, user, info) {
+    req._options.registerMethod = RegisterMethod.CUSTOMER_APP;
+    userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -109,26 +123,30 @@ router.post(
     regAsStoreManager,
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: 'clerk',
+                typeCode: UserRole.CLERK,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === 'admin') {
+            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
+        } else if (dbKey.roleType === UserRole.ADMIN) {
             req.body.role = {
-                typeCode: 'admin',
+                typeCode: UserRole.ADMIN,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req.body.active = true;
-        req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -165,24 +183,92 @@ router.post(
     '/signup/storeManager',
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for CLERK
-        var dbUser = req._user;
-        var dbKey = req._key;
         req.body.role = {
-            typeCode: 'clerk',
+            typeCode: UserRole.CLERK,
             manager: true,
             storeID: req.body.storeID
         };
-        req.body.active = true;
-        req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
                 return res.status(401).json(info);
             } else {
                 res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-LineUser
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
+ * @apiParam {String} phone phone of the User.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse SignupError
+ */
+
+/**
+ * @apiName SignUp-LineUser (add verification code)
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user (step 2)
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} verification_code verification code from sms.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded',
+ *          userPurchaseStatus: String ("free_user" or "purchased_user")
+ *     }
+ * @apiUse SignupError
+ */
+
+router.post(
+    '/signup/lineUser',
+    validateDefault,
+    function (req, res, next) {
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.LINE;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
+            } else {
+                res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug.error(err);
+                });
             }
         });
     }
@@ -198,7 +284,6 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} [active] Add the param if the category of the store is 1, and set the value to false 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -212,18 +297,22 @@ router.post(
     regAsStore,
     regAsAdminManager,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         // for ADMIN and CLERK
-        req.body.active = req.body.active ? req.body.active : true;
-        var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
             req.body.role = {
-                typeCode: 'customer'
+                typeCode: UserRole.CUSTOMER
             };
+            req._options.registerMethod = RegisterMethod.CLECK_APP;
+        } else {
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req._passCode = true;
-        userQuery.signup(req, function(err, user, info) {
+        req._setSignupVerification({
+            needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
+            passVerify: true
+        });
+        userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
             } else if (!user) {
@@ -234,7 +323,6 @@ router.post(
         });
     }
 );
-
 
 /**
  * @apiName Login
@@ -266,8 +354,8 @@ router.post(
  * @apiUse LoginError
  */
 
-router.post('/login', validateDefault, function(req, res, next) {
-    userQuery.login(req, function(err, user, info) {
+router.post('/login', validateDefault, function (req, res, next) {
+    userQuery.login(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -298,8 +386,8 @@ router.post('/login', validateDefault, function(req, res, next) {
  * @apiUse ChangePwdError
  */
 
-router.post('/modifypassword', validateRequest, function(req, res, next) {
-    userQuery.chanpass(req, function(err, user, info) {
+router.post('/modifypassword', validateRequest, function (req, res, next) {
+    userQuery.chanpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -347,13 +435,13 @@ router.post('/modifypassword', validateRequest, function(req, res, next) {
  * @apiUse ForgetPwdError
  */
 
-router.post('/forgotpassword', validateDefault, function(req, res, next) {
-    userQuery.forgotpass(req, function(err, user, info) {
+router.post('/forgotpassword', validateDefault, function (req, res, next) {
+    userQuery.forgotpass(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -377,8 +465,8 @@ router.post('/forgotpassword', validateDefault, function(req, res, next) {
  * @apiError {String} Others Remember ‘jti’ and contact me
  */
 
-router.post('/logout', validateRequest, function(req, res, next) {
-    userQuery.logout(req, function(err, user, info) {
+router.post('/logout', validateRequest, function (req, res, next) {
+    userQuery.logout(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -409,12 +497,12 @@ router.post('/logout', validateRequest, function(req, res, next) {
  *     }
  * @apiUse AddbotError
  */
-router.post('/addbot', regAsAdminManager, validateRequest, function(
+router.post('/addbot', regAsAdminManager, validateRequest, function (
     req,
     res,
     next
 ) {
-    userQuery.addBot(req, function(err, user, info) {
+    userQuery.addBot(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -443,12 +531,12 @@ router.post('/addbot', regAsAdminManager, validateRequest, function(
  *          } 
  *     }
  */
-router.post('/createBotKey', regAsAdminManager, validateRequest, function(
+router.post('/createBotKey', regAsAdminManager, validateRequest, function (
     req,
     res,
     next
 ) {
-    userQuery.createBotKey(req, function(err, user, info) {
+    userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else {
@@ -475,7 +563,7 @@ router.post('/createBotKey', regAsAdminManager, validateRequest, function(
  *     }
  * @apiUse SubscribeSNSError
  */
-router.post('/subscribeSNS', validateRequest, function(req, res, next) {
+router.post('/subscribeSNS', validateRequest, function (req, res, next) {
     var deviceToken = req.body.deviceToken
         .replace(/\s/g, '')
         .replace('<', '')
@@ -505,7 +593,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
     });
     if (deviceToken !== 'HEYBITCH') {
         var dbUser = req._user;
-        subscribeSNS(system, type, deviceToken, function(err, arn) {
+        subscribeSNS(system, type, deviceToken, function (err, arn) {
             if (err) return debug.error(err);
             var newObject = {};
             if (dbUser.pushNotificationArn)
@@ -524,7 +612,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
  * @apiName DataByToken
  * @apiGroup Users
  * 
- * @api {get} /users/data/:token Get user data by token
+ * @api {get} /users/byToken Get user data by token
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -545,7 +633,7 @@ router.post('/subscribeSNS', validateRequest, function(req, res, next) {
  *      }
  */
 
-router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
+router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
     req,
     res,
     next
@@ -581,7 +669,7 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
                             },
                         ],
                     },
-                    function(err, tradeList) {
+                    function (err, tradeList) {
                         if (err) return next(err);
 
                         tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
@@ -659,7 +747,7 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function(
  *      }
  */
 
-router.get('/data', validateRequest, function(req, res, next) {
+router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var store = DataCacheFactory.get('store');
     var containerType = DataCacheFactory.get('containerType');
@@ -678,7 +766,7 @@ router.get('/data', validateRequest, function(req, res, next) {
                 },
             ],
         },
-        function(err, tradeList) {
+        function (err, tradeList) {
             if (err) return next(err);
 
             tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
@@ -729,6 +817,105 @@ router.get('/data', validateRequest, function(req, res, next) {
             });
         }
     );
+});
+
+/**
+ * @apiName PointLog
+ * @apiGroup Users
+ * 
+ * @api {get} /users/pointLog Get user pointLog
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        pointLogs : [
+ *		    {
+ *			    logTime : Date,
+ *			    title : String,
+ *			    body : String,
+ *			    quantityChange : Number
+ *		    }, ...
+ *	        ]
+ *      }
+ */
+
+router.get('/pointLog', validateLine.liff, function (req, res, next) {
+    var dbUser = req._user;
+
+    PointLog.find({
+        "user": dbUser._id
+    }, {}, {
+        sort: {
+            logTime: -1
+        }
+    }, function (err, pointLogList) {
+        if (err) return next(err);
+
+        res.json({
+            pointLogs: pointLogList.map(aPointLog => ({
+                logTime: aPointLog.logTime,
+                title: aPointLog.title,
+                body: aPointLog.body,
+                quantityChange: aPointLog.quantityChange
+            }))
+        });
+    });
+});
+
+/**
+ * @apiName PurchaseStatus
+ * @apiGroup Users
+ * 
+ * @api {get} /users/purchaseStatus Get user purchaseStatus
+ * @apiUse LINE_Channel
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        purchaseStatus : String
+ *      }
+ */
+
+router.get('/purchaseStatus', validateLine.channel, function (req, res, next) {
+    var dbUser = req._user;
+
+    res.json({
+        purchaseStatus: dbUser.getPurchaseStatus()
+    });
+});
+
+router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
+    const usersToAdd = req.body.userList;
+    const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
+        User.updateOne({
+            "user.phone": aUser.phone
+        }, {
+            "hasPurchase": true,
+            '$setOnInsert': {
+                'user.password': null,
+                "user.name": aUser.name,
+                "registerMethod": RegisterMethod.PURCHASE,
+                'roles.typeList': [UserRole.CUSTOMER]
+            }
+        }, {
+            upsert: true,
+            setDefaultsOnInsert: true,
+            new: true
+        }, (err, raw) => {
+            if (err) return reject(err);
+            resolve(raw);
+        });
+    }));
+    Promise
+        .all(tasks)
+        .then(result => {
+            debug.log(`Add ${result.length} Purchase User.`);
+            res.json({
+                success: true
+            });
+        })
+        .catch(next);
 });
 
 module.exports = router;

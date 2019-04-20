@@ -3,10 +3,10 @@ const app = require('../../../app');
 const jwt = require('jwt-simple');
 const secret = require('../../../config/secret_key.json');
 const userDB = require('../../../models/DB/userDB');
+const UserKey = require('../../../models/DB/userKeysDB');
 const redis = require('../../../models/redis');
 const makeHexString = require('../tool.js').makeHexString;
 
-var typeList = [];
 var roles = {
     customer: {
         secretkey: '',
@@ -49,11 +49,11 @@ describe('api-users', function () {
                         console.log(res.body);
                         return done(err);
                     }
+
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     typeList = decode.roles.typeList;
                     delete decode.roles.typeList;
                     roles = decode.roles;
-
                     done();
                 });
         });
@@ -67,7 +67,7 @@ describe('api-users', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0988888888',
+                    phone: '0977777777',
                     password: '',
                 })
                 .expect(205)
@@ -89,7 +89,7 @@ describe('api-users', function () {
                     .set('reqID', makeHexString())
                     .set('reqTime', Date.now())
                     .send({
-                        phone: '0988888888',
+                        phone: '0977777777',
                         password: '',
                         verification_code: reply,
                     })
@@ -100,8 +100,8 @@ describe('api-users', function () {
                             return done(err);
                         }
                         userDB.deleteOne({
-                            'user.phone': '0988888888',
-                        },
+                                'user.phone': '0988888888',
+                            },
                             (err, res) => {
                                 if (err) return done(err);
                             }
@@ -120,11 +120,11 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
                 .post('/users/signup/clerk')
                 .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
+                .set('ApiKey', roles.clerk.apiKey)
                 .send({
                     phone: '0999999999',
                     password: '',
@@ -137,8 +137,8 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                        'user.phone': '0999999999',
-                    },
+                            'user.phone': '0999999999',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -185,11 +185,11 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.encode(payload, roles['clerk_沒活動'].secretKey);
             request(app)
                 .post('/users/signup/root')
                 .set('Authorization', auth)
-                .set('ApiKey', roles.admin.apiKey)
+                .set('ApiKey', roles['clerk_沒活動'].apiKey)
                 .send({
                     phone: '0977777777',
                     password: '',
@@ -202,8 +202,8 @@ describe('api-users', function () {
                     }
 
                     userDB.deleteOne({
-                        'user.phone': '0977777777',
-                    },
+                            'user.phone': '0977777777',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -251,7 +251,7 @@ describe('api-users', function () {
 
                 let auth = jwt.encode(payload, roles.clerk.secretKey);
                 request(app)
-                    .get('/stores/getUser/0900000000')
+                    .get('/stores/getUser/0911789727')
                     .set('Authorization', auth)
                     .set('ApiKey', roles.clerk.apiKey)
                     .expect(200)
@@ -312,7 +312,7 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    botName: 'test_bot',
+                    botName: 'bot00004',
                     scopeID: 999,
                 })
                 .expect(200)
@@ -344,7 +344,7 @@ describe('api-users', function () {
                 .set('Authorization', auth)
                 .set('ApiKey', roles.admin.apiKey)
                 .send({
-                    bot: 'test_bot'
+                    bot: 'bot00004'
                 })
                 .expect(200)
                 .expect(function (res) {
@@ -358,8 +358,8 @@ describe('api-users', function () {
                         return done(err);
                     }
                     userDB.deleteOne({
-                        'user.name': 'test_bot',
-                    },
+                            'user.name': 'test_bot',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }

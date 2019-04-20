@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
 const crypto = require('crypto');
 const debug = require('../helpers/debugger')('stores');
 const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const keys = require('../config/keys');
 const baseUrl = require('../config/config.js').serverBaseUrl;
 const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
@@ -29,8 +27,12 @@ const Store = require('../models/DB/storeDB');
 const Trade = require('../models/DB/tradeDB');
 const Place = require('../models/DB/placeIdDB');
 const Container = require('../models/DB/containerDB');
-const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const Activity = require('../models/DB/activityDB')
+const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
+const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
+const UserRole = require('../models/enums/userEnum').UserRole;
+const generateImgToken = require('../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -98,18 +100,12 @@ router.get('/list', validateDefault, function (req, res, next) {
         }, function (err, storeList) {
             if (err) return next(err);
             jsonData.globalAmount = 0;
-            keys.serverSecretKey((err, key) => {
+            generateImgToken((err, token) => {
                 if (err) return next(err);
-                var date = new Date();
-                var payload = {
-                    'iat': Date.now(),
-                    'exp': date.setMinutes(date.getMinutes() + 5)
-                };
-                var token = jwt.encode(payload, key);
                 res.set('etag', wetag(storeList));
                 for (var i = 0; i < storeList.length; i++) {
                     var tmpOpening = [];
-                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}`;
+                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}?ver=${storeList[i].img_info.img_version}`;
                     for (var j = 0; j < storeList[i].opening_hours.length; j++)
                         tmpOpening.push({
                             close: storeList[i].opening_hours[j].close,
@@ -156,7 +152,7 @@ router.get('/list', validateDefault, function (req, res, next) {
             '2': 'Borrowable and returnable'
             },
             globalAmount: 0,
-            shop_data: {
+            shop_data: [{
                 id: 0,
                 name: '正興咖啡館',
                 img_info: [Object],
@@ -167,80 +163,182 @@ router.get('/list', validateDefault, function (req, res, next) {
                 type: [Array],
                 category: Number, // (0, 1, 9) = ("店舖", "活動", "庫存")
                 testing: false
-            }
+            }]
         }
  * 
  */
 
 router.get('/list/:id', validateDefault, function (req, res, next) {
     let storeId = req.params.id;
-    var jsonData = {
-        title: "Store info",
-        contract_code_explanation: {
-            0: "Only borrowable and returnable",
-            1: "Only returnable",
-            2: "Borrowable and returnable"
+
+    Store.findOne({
+        "project": {
+            "$ne": "測試用"
+        },
+        "id": storeId
+    }, function (err, store) {
+        if (err) return next(err);
+        if (!store) {
+            return res.status(403).json({
+                code: "E004",
+                type: "StoresMessage",
+                message: "No store found, please check id"
+            });
         }
-    };
-    var tmpArr = [];
-    process.nextTick(function () {
-        Store.find({
-            "project": {
-                "$ne": "測試用"
-            },
-            "id": storeId
-        }, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, store) {
+
+        generateImgToken((err, token) => {
             if (err) return next(err);
-            if (!store) {
-                return res.status(403).json({
-                    code: "E004",
-                    type: "StoresMessage",
-                    message: "No store found, please check id"
+            res.set('etag', wetag([store]));
+            var tmpOpening = [];
+            store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}?ver=${store.img_info.img_version}`;;
+            for (var i = 0; i < store.opening_hours.length; i++)
+                tmpOpening.push({
+                    close: store.opening_hours[i].close,
+                    open: store.opening_hours[i].open
                 });
-            }
-            jsonData.globalAmount = 0;
-            keys.serverSecretKey((err, key) => {
-                if (err) return next(err);
-                var date = new Date();
-                var payload = {
-                    'iat': Date.now(),
-                    'exp': date.setMinutes(date.getMinutes() + 5)
-                };
-                var token = jwt.encode(payload, key);
-                res.set('etag', wetag(store));
-                var tmpOpening = [];
-                store[0].img_info.img_src = `${baseUrl}/images/store/${store[0].id}/${token}`;
-                for (var i = 0; i < store[0].opening_hours.length; i++)
-                    tmpOpening.push({
-                        close: store[0].opening_hours[i].close,
-                        open: store[0].opening_hours[i].open
-                    });
-                tmpOpening.sort((a, b) => {
-                    return a.close.day - b.close.day;
-                });
-                tmpArr.push({
-                    id: store[0].id,
-                    name: store[0].name,
-                    img_info: store[0].img_info,
-                    opening_hours: tmpOpening,
-                    contract: store[0].contract,
-                    location: store[0].location,
-                    address: store[0].address,
-                    type: store[0].type,
-                    category: store[0].category,
-                    testing: (store[0].project === '正興杯杯') ? false : true
-                });
+            tmpOpening.sort((a, b) => {
+                return a.close.day - b.close.day;
+            });
 
-
-                jsonData.shop_data = tmpArr;
-                res.json(jsonData);
+            res.json({
+                id: store.id,
+                name: store.name,
+                img_info: store.img_info,
+                opening_hours: tmpOpening,
+                contract: store.contract,
+                location: store.location,
+                address: store.address,
+                type: store.type,
+                category: store.category,
+                testing: (store.project === '正興杯杯') ? false : true,
+                activity: store.activity
             });
         });
     });
+});
+
+/**
+ * @apiName Store specific activity
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/activity/:activityID Get specific activity
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            ID: '0',
+            name: '沒活動',
+            startAt: '2018-03-02T16:00:00.000Z',
+            endAt: '2018-03-02T16:00:00.000Z' 
+        }
+ * @apiUse GetActivityError
+ */
+router.get('/activity/:activityID', validateDefault, function (req, res, next) {
+    const ID = String(req.params.activityID);
+    Activity
+        .findOne({
+            'ID': ID
+        })
+        .exec()
+        .then(activity => {
+            if (activity)
+                return res.status(200).json({
+                    name: activity.name,
+                    startAt: activity.startAt,
+                    endAt: activity.endAt
+                });
+            return res.status(404).json({
+                code: "E005",
+                type: "ActivityMessage",
+                message: "activity not found, plz check id"
+            });
+        })
+        .catch(err => {
+            debug.error(err);
+            return next(err);
+        });
+});
+
+/**
+ * @apiName Store activities list
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/activityList Get activities list
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+       HTTP/1.1 200 
+       {
+            [
+                { 
+                    ID: '0',
+                    name: '沒活動',
+                    startAt: '2018-03-02T16:00:00.000Z',
+                    endAt: '2018-03-02T16:00:00.000Z' 
+                },... 
+            ]
+        }
+ * 
+ */
+router.get('/activityList', validateDefault, function (req, res, next) {
+    Activity
+        .find({})
+        .exec()
+        .then(activities => {
+            if (activities) {
+                let result = [];
+                for (let {
+                        ID: id,
+                        name: name,
+                        startAt: start,
+                        endAt: end
+                    } of activities) {
+                    result.push({
+                        ID: id,
+                        name,
+                        startAt: start,
+                        endAt: end
+                    });
+                }
+                return res.status(200).json(result);
+            }
+
+            return res.status(200).json({});
+        })
+        .catch(err => {
+            debug.error(err);
+            return next(err);
+        });
+});
+
+/**
+ * @apiName Store activities list of specific store
+ * @apiGroup Stores
+ * @apiDescription
+ * still need to test
+ * @api {get} /stores/activityList/:storeID Get activities list of specific store
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiSuccessExample {json} Success-Response:
+       HTTP/1.1 200 
+       {
+            ["沒活動",...]
+        }
+ * 
+ */
+router.get('/activityList/:storeID', validateDefault, function (req, res, next) {
+    let storeID = req.params.storeID;
+    Store
+        .findOne({
+            'id': storeID
+        })
+        .exec()
+        .then(activities => res.status(200).json(activities))
+        .catch(err => {
+            debug.error(err);
+            next(err);
+        });
 });
 
 
@@ -344,12 +442,12 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
     const TYPE_CODE = dbKey.roleType;
     let condition;
     switch (TYPE_CODE) {
-        case 'admin':
+        case UserRole.ADMIN:
             condition = {
                 'roles.admin.stationID': dbUser.roles.admin.stationID
             };
             break;
-        case 'clerk':
+        case UserRole.CLERK:
             condition = {
                 'roles.clerk.storeID': dbUser.roles.clerk.storeID
             };
@@ -412,7 +510,7 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, re
                     message: "Don't lay off yourself"
                 });
             clerk.roles.clerk = null;
-            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf("clerk"), 1);
+            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf(UserRole.CLERK), 1);
             clerk.save(function (err) {
                 if (err) return next(err);
                 res.json({
@@ -553,7 +651,6 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                         }
                     }
                 }
-
                 cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
 
@@ -873,7 +970,7 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
 router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var containerDict = DataCacheFactory.get('container');
+        var containerDict = DataCacheFactory.get('containerWithDeactive');
         var type = DataCacheFactory.get('containerType');
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
@@ -1282,10 +1379,12 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
                 });
                 i--;
             } else {
-                tmpTypeCode = theTrade.container.typeCode;
-                // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
-                resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
-                resultArr[resultArr.length - 1].amount++;
+                if (theTrade.container) {
+                    tmpTypeCode = theTrade.container.typeCode;
+                    // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
+                    resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
+                    resultArr[resultArr.length - 1].amount++;
+                }
             }
         }
     }
@@ -1457,6 +1556,18 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
                 }
             });
         }
+    });
+});
+
+router.get("/bookedContainer", (req, res, next) => {
+    getBookedAmount((err, result) => {
+        if (err) return next(err);
+        const storeDict = DataCacheFactory.get("store");
+        let txt = "";
+        result.forEach(aResult => {
+            txt += `${storeDict[aResult._id].name}：${aResult.amount}、`
+        })
+        res.send(txt).end();
     });
 });
 

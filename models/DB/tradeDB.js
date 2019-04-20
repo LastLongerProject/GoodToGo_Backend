@@ -24,11 +24,20 @@ var userSchema = mongoose.Schema({
         id: Number,
         typeCode: Number,
         cycleCtr: Number,
-        box: Number
+        box: Number,
+        inLineSystem: Boolean
     },
     logTime: {
         type: Date,
         default: Date.now
+    },
+    activity: {
+        type: String,
+        default: "沒活動"
+    },
+    exception: {
+        type: Boolean,
+        default: false
     }
 });
 

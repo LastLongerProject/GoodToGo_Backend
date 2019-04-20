@@ -2,7 +2,9 @@ const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const Store = require('../models/DB/storeDB');
 const PlaceID = require('../models/DB/placeIdDB');
+const Activity = require('../models/DB/activityDB');
 const Container = require('../models/DB/containerDB');
+const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
 const sheet = require('./gcp/sheet');
@@ -23,6 +25,13 @@ module.exports = {
             debug.log('containerList init');
         });
     },
+    coupon: function (cb) {
+        couponListGenerator(err => {
+            if (cb) return cb(err);
+            if (err) return debug.error(err);
+            debug.log('couponTypeList init');
+        });
+    },
     refreshStore: function (cb) {
         sheet.getStore(data => {
             storeListGenerator(err => {
@@ -41,13 +50,36 @@ module.exports = {
             });
         });
     },
+    refreshActivity: function (cb) {
+        sheet.getActivity(data => {
+            activityListGenerator(err => {
+                if (err) return cb(err);
+                debug.log('activityList refresh');
+                cb();
+            });
+        });
+    },
+    refreshCoupon: function (cb) {
+        sheet.getCoupon(data => {
+            couponListGenerator(err => {
+                if (err) return cb(err);
+                debug.log('couponTypeList refresh');
+                cb();
+            });
+        });
+    },
     refreshStoreImg: function (forceRenew, cb) {
         drive.getStore(forceRenew, (succeed, storeIdList) => {
             if (succeed) {
                 Promise
-                    .all(storeIdList.map(aStoreID => new Promise((resolve, reject) => {
+                    .all(storeIdList.map(aStoreImgFileName => new Promise((resolve, reject) => {
+                        const aStoreID = parseInt(aStoreImgFileName.match(/(\d*)\.jpg/)[1]);
+                        if (isNaN(aStoreID)) {
+                            debug.error(`aStoreImgFileName Parse To aStoreID ERR. aStoreImgFileName: ${aStoreImgFileName}, aStoreID: ${aStoreID}`);
+                            resolve();
+                        }
                         Store.findOne({
-                            'id': aStoreID.slice(0, 2)
+                            'id': aStoreID
                         }, (err, aStore) => {
                             if (err) return debug.error(err);
                             if (!aStore) return resolve();
@@ -127,7 +159,23 @@ module.exports = {
             }
         });
     }
-};
+}
+
+function activityListGenerator(cb) {
+    Activity.find({}, {}, {
+        sort: {
+            ID: 1
+        }
+    }, (err, activities) => {
+        if (err) return cb(err);
+        var activityDict = {};
+        activities.forEach((aActivity) => {
+            activityDict[aActivity.ID] = aActivity;
+        });
+        DataCacheFactory.set('activity', activityDict);
+        cb();
+    });
+}
 
 function storeListGenerator(cb) {
     PlaceID.find({}, {}, {
@@ -173,5 +221,17 @@ function containerListGenerator(cb) {
             DataCacheFactory.set('containerType', containerTypeDict);
             cb();
         });
+    });
+}
+
+function couponListGenerator(cb) {
+    CouponType.find((err, couponTypeList) => {
+        if (err) return cb(err);
+        let couponTypeDict = {};
+        couponTypeList.forEach((aCouponType) => {
+            couponTypeDict[aCouponType._id] = aCouponType;
+        });
+        DataCacheFactory.set('couponType', couponTypeDict);
+        cb();
     });
 }

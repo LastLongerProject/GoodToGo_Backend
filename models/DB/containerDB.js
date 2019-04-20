@@ -13,9 +13,17 @@ var userSchema = mongoose.Schema({
         type: Number,
         default: null
     },
+    boxID: {
+        type: Number,
+        default: null
+    },
     cycleCtr: {
         type: Number,
         default: 0
+    },
+    inLineSystem: {
+        type: Boolean,
+        default: false
     },
     active: {
         type: Boolean,

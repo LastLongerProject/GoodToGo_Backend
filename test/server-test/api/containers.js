@@ -178,7 +178,6 @@ describe('api-containers', function () {
                     if (!res.body.containerType[0].name) throw new Error('Missing name in containerType');
                     if (!res.body.containerType[0].version) throw new Error('Missing version in containerType');
                     if (!res.body.containerType[0].icon) throw new Error('Missing icon in containerType');
-
                 })
                 .end(function (err, res) {
                     if (err) {
@@ -214,7 +213,6 @@ describe('api-containers', function () {
                         console.log(res.body.toDelivery[0]);
                         return done(err);
                     }
-                    console.log(res.body)
                     done();
                 });
         });

@@ -22,6 +22,12 @@ module.exports = function (mongoose, done) {
                         if (err) return reject(err);
                         resolve();
                     });
+                }),
+                new Promise((resolve, reject) => {
+                    appInit.coupon(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
                 })
             ])
             .then(() => {

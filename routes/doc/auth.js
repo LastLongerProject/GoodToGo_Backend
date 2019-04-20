@@ -47,3 +47,22 @@
  * @apiError {String} B007 status : 401, msg : JWT Expired - iat or exp is not acceptable
  * @apiError {String} B008 status : 401, msg : Not Authorized for this URI - As msg says
  */
+
+/**
+ * @apiDefine LINE lineID to header
+ * 
+ * @apiHeader {String} line-id line_liff_userID
+ * 
+ * @apiError {String} B001 status : 401, msg : lineId undefined - As msg says
+ * @apiError {String} B002 status : 401, msg : User not Found - Can't find user by line-id
+ * @apiError {String} B004 status : 401, msg : User hasn\'t verify - As msg says
+ */
+/**
+ * @apiDefine LINE_Channel lineID to header
+ * 
+ * @apiHeader {String} line-id line_channel_userID
+ * 
+ * @apiError {String} B001 status : 401, msg : lineId undefined - As msg says
+ * @apiError {String} B002 status : 401, msg : User not Found - Can't find user by line-id
+ * @apiError {String} B004 status : 401, msg : User hasn\'t verify - As msg says
+ */

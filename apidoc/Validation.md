@@ -20,7 +20,19 @@
 - B001 ~ B008
 
 ## | Token Control
-### Headers
+### Url
 - The url you get from "/stores/list"
 ### Error Code
 - C001 ~ C003
+
+## | LINE
+### Headers
+- line-id (line_liff_userID)
+### Error Code
+- B001 ~ B004
+
+## | -Channel
+### Headers
+- line-id (line_channel_userID)
+### Error Code
+- B001 ~ B004

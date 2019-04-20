@@ -6,29 +6,27 @@ const redis = require("../../models/redis");
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
-
+const PointLog = require('../../models/DB/pointLogDB');
 const Container = require('../../models/DB/containerDB');
-const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
+const UserOrder = require('../../models/DB/userOrderDB');
+
+const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
+const DataCacheFactory = require('../../models/dataCacheFactory');
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const validateStateChanging = require('@lastlongerproject/toolkit')
-    .validateStateChanging;
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
+const NotificationEvent = require('../../helpers/notifications/enums/events');
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const changeContainersState = require('../../controllers/containerTrade');
-const validateRequest = require('../../middlewares/validation/validateRequest')
-    .JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest')
-    .regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest')
-    .regAsAdmin;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
+const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
+const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
+const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
 
 const status = [
     'delivering',
@@ -82,7 +80,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
     res,
     next
 ) {
-    var dbAdmin = req._user;
     var boxID = req.params.id;
     Box.findOne({
             boxID: boxID,
@@ -114,7 +111,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
  * @api {post} /containers/delivery/:id/:store Delivery box id to store
  * @apiPermission admin
  * @apiUse JWT
- * 
+ * @apiParam {string} activity only pass if deliver to specific activity 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -132,6 +129,8 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
     var dbAdmin = req._user;
     var boxID = req.params.id;
     var storeID = req.params.store;
+    let activity = req.params.activity || null;
+
     process.nextTick(() => {
         Box.findOne({
                 boxID: boxID,
@@ -158,6 +157,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                     }, {
                         boxID,
                         storeID,
+                        activity
                     },
                     (err, tradeSuccess, reply) => {
                         if (err) return next(err);
@@ -173,14 +173,15 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {
-                                if (err) return debug(err);
-                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                    clerk: aClerk
-                                }, {
-                                    boxID
-                                }));
+                                if (err) return debug.error(err);
+                                userList.forEach(aClerk =>
+                                    NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
+                                        clerk: aClerk
+                                    }, {
+                                        boxID
+                                    })
+                                );
                             });
-
                         });
                     }
                 );
@@ -278,8 +279,9 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
     next
 ) {
     var dbUser = req._user;
-    var boxID = req.params.id;
     var reqByAdmin = req._key.roleType === 'admin';
+    var boxID = req.params.id;
+
     Box.findOne({
             boxID: boxID,
         },
@@ -304,19 +306,17 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
                     newState: 1
                 }, {
                     boxID,
-                    storeID: reqByAdmin ? aDelivery.storeID : undefined
+                    storeID: reqByAdmin ? aDelivery.storeID : undefined,
                 },
                 (err, tradeSuccess, reply) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
                     Box.remove({
-                            boxID: boxID,
-                        },
-                        function (err) {
-                            if (err) return next(err);
-                            return res.json(reply);
-                        }
-                    );
+                        boxID: boxID,
+                    }, (err) => {
+                        if (err) return next(err);
+                        return res.json(reply);
+                    });
                 }
             );
         }
@@ -350,14 +350,10 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
  * @apiUse RentError
  * @apiUse ChangeStateError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var key = req.headers.userapikey;
-    if (typeof key === 'undefined' || typeof key === null || key.length === 0)
+    if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
             code: 'F009',
             type: 'borrowContainerMessage',
@@ -384,22 +380,46 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
             newState: 2
         }, {
             rentToUser: userPhone,
-            orderTime: res._payload.orderTime
+            orderTime: res._payload.orderTime,
+            activity: "沒活動",
+            inLineSystem: true
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
-            res.json(reply);
             if (tradeDetail) {
-                integrateTradeDetail(tradeDetail,
-                    aTradeDetail => aTradeDetail.newUser,
-                    aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
-                    NotificationCenter.emit("container_rent", {
-                        customer: aCustomerTradeDetail.customer
-                    }, {
-                        containerList: aCustomerTradeDetail.containerList
+                integrateTradeDetailForNotification(tradeDetail,
+                        aTradeDetail => aTradeDetail.newUser,
+                        aTradeDetail => aTradeDetail.container.ID)
+                    .forEach(aCustomerTradeDetail => {
+                        NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
+                            customer: aCustomerTradeDetail.customer
+                        }, {
+                            containerList: aCustomerTradeDetail.containerList
+                        });
                     });
-                });
             }
+            return res.json(reply);
+            // Container.find({
+            //     ID: parseInt(container) *** BUG HERE ***
+            // }).exec().then(container => {
+            //     if (!container) return res.status(403).json({
+            //         code: 'Fxxx',
+            //         type: 'borrowContainerMessage',
+            //         message: 'can not find container id'
+            //     });
+            //     let boxID = container[0].boxID;
+            //     Box.deleteOne({
+            //         boxID
+            //     }).exec().then(result => {
+            //         return res.json(reply);
+            //     }).catch(err => {
+            //         debug.error(err);
+            //         return next(err);
+            //     });
+            // }).catch(err => {
+            //     debug.error(err);
+            //     return next(err);
+            // });
         });
     });
 });
@@ -414,7 +434,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
  * @apiPermission admin
  * 
  * @apiUse JWT_orderTime
- * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -448,30 +467,68 @@ router.post(
                 message: 'Missing Order Time'
             });
         var container = req.params.id;
+        const storeID = req.body.storeId
         if (container === 'list') container = req.body.containers;
+        else container = [container];
         changeContainersState(
             container,
             dbStore, {
                 action: 'Return',
                 newState: 3
             }, {
-                storeID: req.body.storeId,
+                storeID,
                 orderTime: res._payload.orderTime,
+                activity: "沒活動"
             },
             (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
-                if (tradeDetail) {
-                    integrateTradeDetail(tradeDetail,
-                        aTradeDetail => aTradeDetail.oriUser,
-                        aTradeDetail => aTradeDetail.containerID).forEach(aCustomerTradeDetail => {
-                        NotificationCenter.emit("container_return", {
-                            customer: aCustomerTradeDetail.customer
-                        }, {
-                            containerList: aCustomerTradeDetail.containerList
-                        });
+                container.forEach((aContainerID) => {
+                    UserOrder.remove({
+                        "containerID": aContainerID
+                    }, (err) => {
+                        if (err) return debug.error(err);
                     });
+                });
+                if (tradeDetail && tradeDetail.length > 0) {
+                    integrateTradeDetailForNotification(tradeDetail,
+                            aTradeDetail => aTradeDetail.oriUser,
+                            aTradeDetail => aTradeDetail.container.ID)
+                        .forEach(aCustomerTradeDetail => {
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
+                                customer: aCustomerTradeDetail.customer
+                            }, {
+                                containerList: aCustomerTradeDetail.containerList
+                            });
+                        });
+                    const toStore = typeof storeID === "undefined" ?
+                        tradeDetail[0].newUser.roles.clerk.storeID :
+                        storeID;
+                    integrateTradeDetailForPoint(tradeDetail,
+                            aTradeDetail => `${aTradeDetail.oriUser.user.phone}-${toStore}`, {
+                                container: aTradeDetail => aTradeDetail.container.ID,
+                                customer: aTradeDetail => aTradeDetail.oriUser
+                            })
+                        .forEach(aTradeDetail => {
+                            const dbCustomer = aTradeDetail.customer;
+                            const containerList = aTradeDetail.containerList;
+                            const quantity = containerList.length;
+                            const storeDict = DataCacheFactory.get("store");
+                            let newPointLog = new PointLog({
+                                user: dbCustomer._id,
+                                title: `歸還了${quantity}個容器`,
+                                body: `${storeDict[toStore].name}`,
+                                quantityChange: quantity
+                            });
+                            newPointLog.save((err) => {
+                                if (err) debug.error(err);
+                            });
+                            dbCustomer.point += quantity;
+                            dbCustomer.save((err) => {
+                                if (err) debug.error(err);
+                            });
+                        });
                 }
             }
         );
@@ -739,7 +796,7 @@ router.post(
  */
 var actionCanUndo = {
     Return: 3,
-    ReadyToClean: 4,
+    ReadyToClean: 4
 };
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
     req,
@@ -786,7 +843,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
                             ) >= 0 ?
                             theTrade.oriUser.storeID :
                             undefined;
-                        newTrade = new Trade();
+                        let newTrade = new Trade();
                         newTrade.tradeTime = Date.now();
                         newTrade.tradeType = {
                             action: 'Undo' + action,
@@ -990,7 +1047,7 @@ router.post('/add/:id/:type', function (req, res, next) {
 
 module.exports = router;
 
-function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
+function integrateTradeDetailForNotification(oriTradeDetail, keyGenerator, dataExtractor) {
     let seen = {};
     oriTradeDetail.forEach(ele => {
         let thisKey = keyGenerator(ele);
@@ -999,6 +1056,20 @@ function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
         else seen[thisKey] = {
             customer: thisKey,
             containerList: [thisData]
+        };
+    });
+    return Object.values(seen);
+}
+
+function integrateTradeDetailForPoint(oriTradeDetail, keyGenerator, dataExtractor) {
+    let seen = {};
+    oriTradeDetail.forEach(ele => {
+        let thisKey = keyGenerator(ele);
+        let thisContainerID = dataExtractor.container(ele);
+        if (seen.hasOwnProperty(thisKey)) seen[thisKey].containerList.push(thisContainerID);
+        else seen[thisKey] = {
+            customer: dataExtractor.customer(ele),
+            containerList: [thisContainerID]
         };
     });
     return Object.values(seen);

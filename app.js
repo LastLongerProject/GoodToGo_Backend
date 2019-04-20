@@ -23,6 +23,9 @@ const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
+const coupon = require('./routes/coupon');
+const userOrder = require('./routes/userOrder');
+const notificationTest = require('./routes/notificationTest');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
@@ -60,11 +63,14 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
-app.use('/stores', stores);
 app.use('/users', users);
-app.use('/containers', containers);
+app.use('/stores', stores);
 app.use('/images', images);
+app.use('/coupon', coupon);
+app.use('/userOrder', userOrder);
+app.use('/containers', containers);
 app.use('/deliveryList', deliveryList);
+app.use('/notificationTest', notificationTest);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -106,20 +112,17 @@ require("./models/redis");
 require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.')
+    debug.log('SIGINT signal received.');
     let server = app.get('server');
     server.close(function (err) {
         if (err) {
-            debug.error(err)
-            process.exit(1)
+            debug.error(err);
         }
-
         mongoose.connection.close(function () {
-            debug.log('Mongoose connection disconnected')
-            process.exit(0)
-        })
-    })
-})
+            debug.log('Mongoose connection disconnected');
+        });
+    });
+});
 
 function startServer() {
     /**
@@ -225,6 +228,7 @@ function cors() {
     return function cors(req, res, next) {
         if (!res.headersSent) {
             res.header("Access-Control-Allow-Origin", "*");
+            res.header("Access-Control-Expose-Headers", "Authorization");
             res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime");
         }
         return next();

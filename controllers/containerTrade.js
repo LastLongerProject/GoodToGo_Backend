@@ -12,9 +12,11 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
+const Exception = require('../models/DB/exceptionDB.js');
 
 let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
+const REAL_ID_RANGE = 99900;
 
 function changeContainersState(containers, reqUser, stateChanging, options, done) {
     if (!Array.isArray(containers))
@@ -22,8 +24,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
     if (containers.length < 1)
         return done(null, false, {
             code: 'F002',
-            message: 'No container found',
-            data: aContainerId
+            message: 'No container found'
         });
     if (!stateChanging || typeof stateChanging.newState !== "number" || typeof stateChanging.action !== "string")
         throw new Error("Arguments Not Complete");
@@ -59,6 +60,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                 });
                 if (aResult.tradeDetail) tradeDetail.push(aResult.tradeDetail);
             });
+
             let allSucceed = taskResults.every(aResult => aResult.succeed);
             if (allSucceed) {
                 Promise
@@ -66,6 +68,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                         const cleanStateCache = () => {
                             delete containerStateCache[aDataSaver.containerID];
                         };
+
                         const resolve = bindFunction(cleanStateCache, oriResolve);
                         const reject = bindFunction(cleanStateCache, oriReject);
                         aDataSaver.saver(resolve, reject);
@@ -109,6 +112,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
+    const inLineSystem = options.inLineSystem; // Rent NEED
+    const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -145,25 +150,29 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             message: 'No container found',
                             data: aContainerId
                         });
-                    if (!theContainer.active)
+                    if (!theContainer.active && theContainer.ID < REAL_ID_RANGE)
                         return reject({
                             code: 'F003',
                             message: 'Container not available',
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ? containerStateCache[aContainerId] : theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
-                        return reject({
-                            code: 'F010',
-                            message: "Container not belone to user's store"
-                        });
+                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ?
+                        containerStateCache[aContainerId] :
+                        theContainer.statusCode;
+
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
                             txt: "Already Return"
                         });
                     validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
+                        let exceptionLabel = false;
+                        const condition = {
+                            rentOrReturnBeforeSign: oriState === 2 || 3 && newState === 1,
+                            rentOrReturn: newState === 2 || newState === 3,
+                        }
+
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -175,8 +184,41 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorList,
                                 errorDict
                             };
-                            if (oriState === 0 || oriState === 1) {
-                                Box.findOne({
+
+                            if (condition.rentOrReturn) {
+                                // not to reject rent or return action in any situation
+                                let exception = new Exception({
+                                    containerID: theContainer.ID,
+                                    storeID: theContainer.storeID,
+                                    operator: (action === 'Rent') ? rentToUser : theContainer.conbineTo,
+                                    oriState,
+                                    newState,
+                                    description: errorMsg
+                                });
+                                exceptionLabel = true;
+
+                                exception
+                                    .save()
+                                    .catch(err => {
+                                        debug.error(err);
+                                    });
+                            } else if (condition.rentOrReturnBeforeSign) { // need to validate
+                                return Box.findOne({
+                                    'containerList': {
+                                        '$all': [aContainerId]
+                                    }
+                                }, function (err, aBox) {
+                                    if (err) return reject(err);
+                                    if (!aBox) return resolveWithErr(errorMsg);
+                                    return resolve({
+                                        ID: aContainerId,
+                                        oriUser: "",
+                                        dataSaver: (doneSave, getErr) => {},
+                                        tradeDetail: null
+                                    });
+                                });
+                            } else if (oriState === 0 || oriState === 1) {
+                                return Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
@@ -190,7 +232,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             } else {
                                 return resolveWithErr(errorMsg);
                             }
-                        } else {
+                        }
+
+                        if (succeed || (newState === 2 || newState === 3)) {
                             User.findOne({
                                 'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
                             }, function (err, oriUser) {
@@ -228,13 +272,15 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 } else if (action === 'Delivery') {
                                     storeID_newUser = storeID;
                                     theContainer.cycleCtr++;
-                                } else if (action === 'CancelDelivery') {
+                                } else if (action === 'CancelDelivery' || action === 'UnSign') {
                                     theContainer.cycleCtr--;
+                                } else if (action === 'Boxing') {
+                                    theContainer.boxID = boxID;
                                 }
-
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
+                                theContainer.inLineSystem = inLineSystem;
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = null;
 
@@ -257,8 +303,11 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         id: theContainer.ID,
                                         typeCode: theContainer.typeCode,
                                         cycleCtr: theContainer.cycleCtr,
-                                        box: boxID
-                                    }
+                                        box: boxID,
+                                        inLineSystem: theContainer.inLineSystem
+                                    },
+                                    activity,
+                                    exception: exceptionLabel
                                 });
 
                                 containerStateCache[aContainerId] = newState;
@@ -281,7 +330,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     tradeDetail: action === "Rent" || action === "Return" ? {
                                         oriUser,
                                         newUser,
-                                        containerID: theContainer.ID
+                                        container: theContainer
                                     } : null
                                 });
                             });

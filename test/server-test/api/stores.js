@@ -34,7 +34,7 @@ describe('api-stores', function () {
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .send({
-                    phone: '0905519292',
+                    phone: '0958381551',
                     password: '',
                 })
                 .expect(200)
@@ -200,8 +200,8 @@ describe('api-stores', function () {
                         return done(err);
                     }
                     userDB.deleteOne({
-                        'user.phone': '0966666666',
-                    },
+                            'user.phone': '0966666666',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -231,7 +231,9 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
-                    console.log(res.body.lostList)
+                    console.log(res.body.containers[0].IdList)
+                    console.log(res.body.containers[1].IdList)
+
                     done();
                 });
         });
@@ -308,6 +310,8 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
+
                     done();
                 });
         });
@@ -336,7 +340,7 @@ describe('api-stores', function () {
                             time: '09:00',
                             day: 1,
                         },
-                    },],
+                    }, ],
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -369,6 +373,13 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    for (let i = 0; i < 7; i++) {
+                        console.log(res.body.toSign[i].boxID);
+                        console.log(res.body.toSign[i].typeList);
+                        console.log(res.body.toSign[i].containerList);
+                    }
+
+
                     done();
                 });
         });
@@ -419,6 +430,8 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
+
                     done();
                 });
         });
@@ -444,6 +457,11 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+
+                    for (let data of res.body.personalLostHistory) {
+                        console.log(data);
+                    }
+
                     done();
                 });
         });
@@ -472,6 +490,7 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
 
                     done();
                 });
@@ -522,6 +541,7 @@ describe('api-stores', function () {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });

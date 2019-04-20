@@ -2,7 +2,7 @@ let ErrorResponse = Object.freeze({
     F012: {
         code: 'F012',
         type: 'BoxingMessage',
-        message: 'Box is already exist',
+        message: 'Box is already exist'
     },
     H001_1: {
         code: 'H001_1',
@@ -44,13 +44,53 @@ let ErrorResponse = Object.freeze({
         type: "CreateMessage",
         message: "Data format invalid (ContainerType and amount and should be Number)"
     },
+    H005_3: {
+        code: 'H005_3',
+        type: "CreateMessage",
+        message: "Data format invalid (Update Stocked to Boxing need provide destinationStoreId)"
+    },
+    H005_4: {
+        code: 'H005_4',
+        type: "ModifyMessage",
+        message: "Data format invalid (Please see the data type in apidoc)"
+    },
     H006: {
         code: "H006",
         type: "CreateMessage",
         message: "Database save error(Please check key type is correct)"
+    },
+    H007: {
+        code: "H007",
+        type: "ChangeStateMessage",
+        message: ""
+    },
+    H008: {
+        code: "H008",
+        type: "ChangeStateMessage",
+        message: "Please use 'sign' api to sign the box"
+    },
+    H009: {
+        code: "H009",
+        type: "ModifyMessage",
+        message: "Modify key is invalid, only 'storeID', 'dueDate', 'boxOrderContent', 'boxDeliverContent', 'containerList', 'comment', 'boxName' can be modified"
+    },
+    H010: {
+        code: "H010",
+        type: "ModifyMessage",
+        message: ""
+    },
+    H011: {
+        code: "H011",
+        type: "ModifyMessage",
+        message: "Box update failed, plz contact developer"
+    },
+    H012: {
+        code: "H011",
+        type: "ModifyMessage",
+        message: "ContainerList and boxDeliverContent need to be modified at the same time, and should correspond to each other"
     }
 });
 
 module.exports = {
     ErrorResponse
-}
+};

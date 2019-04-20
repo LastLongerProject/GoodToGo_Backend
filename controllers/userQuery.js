@@ -11,19 +11,44 @@ const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const UserRole = require('../models/enums/userEnum').UserRole;
+
+function sendVerificationCode(phone, done) {
+    var newCode = keys.getVerificationCode();
+    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
+        if (err) return done(err);
+        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
+            if (err) return done(err);
+            if (reply !== 'OK') return done(reply);
+            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
+                if (err) return done(err);
+                if (reply !== 1) return done(reply);
+                done(null, true, {
+                    needVerificationCode: true,
+                    body: {
+                        type: 'signupMessage',
+                        message: 'Send Again With Verification Code'
+                    }
+                });
+            });
+        });
+    });
+}
 
 module.exports = {
-    signup: function(req, done) {
-        var role = req.body.role || {
-            typeCode: 'customer'
+    signup: function (req, done) {
+        let role = req.body.role || {
+            typeCode: UserRole.CUSTOMER
         };
-        var roles = req.body.roles;
-        var phone = req.body.phone.replace(/tel:|-/g, "");
-        var password = req.body.password;
-        var code = req.body.verification_code;
+        let roles = req.body.roles;
+        const phone = req.body.phone.replace(/tel:|-/g, "");
+        const password = req.body.password;
+        const verificationCode = req.body.verification_code;
+        let options = req._options || {};
+
         if (typeof phone === 'undefined' ||
             (typeof password === 'undefined' &&
-                !(typeof req._user !== 'undefined' && role.typeCode === 'clerk'))) {
+                !(typeof req._user !== 'undefined' && role.typeCode === UserRole.CLERK))) {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
@@ -37,9 +62,9 @@ module.exports = {
             });
         } else if (
             typeof roles === 'undefined' &&
-            ((role.typeCode === 'clerk' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === 'admin' && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === 'customer' && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            ((role.typeCode === UserRole.CLERK && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === UserRole.ADMIN && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === UserRole.CUSTOMER && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -48,28 +73,39 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (err)
                 return done(err);
-            if (dbUser) {
-                if ((role.typeCode === 'clerk' || role.typeCode === 'admin') && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+            if (dbUser && dbUser.hasVerified) {
+                if (dbUser.user.password === null) {
+                    dbUser.user.password = dbUser.generateHash(password);
+                    dbUser.save(function (err) {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            body: {
+                                type: 'signupMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
+                } else if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
-                        case "clerk":
-                            dbUser.roles.typeList.push("clerk");
+                        case UserRole.CLERK:
+                            dbUser.roles.typeList.push(UserRole.CLERK);
                             dbUser.roles.clerk = {
                                 storeID: role.storeID,
                                 manager: role.manager,
                             };
                             break;
-                        case "admin":
-                            dbUser.roles.typeList.push("admin");
+                        case UserRole.ADMIN:
+                            dbUser.roles.typeList.push(UserRole.ADMIN);
                             dbUser.roles.admin = {
                                 stationID: role.stationID,
                                 manager: role.manager
                             };
                             break;
                     }
-                    dbUser.save(function(err) {
+                    dbUser.save(function (err) {
                         if (err) return done(err);
                         return done(null, dbUser, {
                             body: {
@@ -86,69 +122,67 @@ module.exports = {
                     });
                 }
             } else {
-                if (req._passCode !== true && typeof code === 'undefined') {
-                    var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
-                        if (err) return done(err);
-                        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
-                            if (err) return done(err);
-                            if (reply !== 'OK') return done(reply);
-                            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
-                                if (err) return done(err);
-                                if (reply !== 1) return done(reply);
-                                done(null, true, {
-                                    needCode: true,
-                                    body: {
-                                        type: 'signupMessage',
-                                        message: 'Send Again With Verification Code'
-                                    }
-                                });
-                            });
-                        });
-                    });
+                if (options.passVerify !== true && typeof verificationCode === 'undefined') {
+                    sendVerificationCode(phone, done);
                 } else {
                     redis.get('user_verifying:' + phone, (err, reply) => {
                         if (err) return done(err);
-                        if (reply === null && req._passCode !== true) return done(null, false, {
-                            code: 'D010',
-                            type: 'signupMessage',
-                            message: 'Verification Code expired'
-                        });
-                        else if (reply !== code && req._passCode !== true) return done(null, false, {
-                            code: 'D011',
-                            type: 'signupMessage',
-                            message: "Verification Code isn't correct"
-                        });
-                        var newUser = new User();
-                        newUser.user.phone = phone;
-                        newUser.user.password = newUser.generateHash(password);
-                        newUser.active = req.body.active;
-                        if (typeof roles !== 'undefined') { // v2 api
-                            newUser.roles = roles;
-                        } else {
-                            switch (role.typeCode) { // v1 api
-                                case "clerk":
-                                    newUser.roles.typeList.push("clerk");
-                                    newUser.roles.clerk = {
-                                        storeID: role.storeID,
-                                        manager: role.manager || false,
-                                    };
-                                    break;
-                                case "admin":
-                                    newUser.roles.typeList.push("admin");
-                                    newUser.roles.admin = {
-                                        stationID: role.stationID,
-                                        manager: role.manager || false
-                                    };
-                                    break;
-                            }
-                            newUser.roles.typeList.push("customer");
+                        let hasVerified = false;
+                        if (options.passVerify !== true) {
+                            if (reply === null) return done(null, false, {
+                                code: 'D010',
+                                type: 'signupMessage',
+                                message: 'Verification Code expired'
+                            });
+                            else if (reply !== verificationCode) return done(null, false, {
+                                code: 'D011',
+                                type: 'signupMessage',
+                                message: "Verification Code isn't correct"
+                            });
+                            hasVerified = true;
+                        } else if (options.needVerified === false) {
+                            hasVerified = true;
                         }
-                        newUser.save(function(err) {
+
+                        let userToSave;
+                        if (dbUser) { // has NOT verified
+                            userToSave = dbUser;
+                        } else {
+                            let newUser = new User();
+                            newUser.user.phone = phone;
+                            newUser.user.password = newUser.generateHash(password);
+                            newUser.registerMethod = options.registerMethod;
+
+                            if (typeof roles !== 'undefined') { // v2 api
+                                newUser.roles = roles;
+                            } else {
+                                switch (role.typeCode) { // v1 api
+                                    case UserRole.CLERK:
+                                        newUser.roles.typeList.push(UserRole.CLERK);
+                                        newUser.roles.clerk = {
+                                            storeID: role.storeID,
+                                            manager: role.manager || false,
+                                        };
+                                        break;
+                                    case UserRole.ADMIN:
+                                        newUser.roles.typeList.push(UserRole.ADMIN);
+                                        newUser.roles.admin = {
+                                            stationID: role.stationID,
+                                            manager: role.manager || false
+                                        };
+                                        break;
+                                }
+                                newUser.roles.typeList.push(UserRole.CUSTOMER);
+                            }
+                            userToSave = newUser;
+                        }
+
+                        userToSave.hasVerified = hasVerified;
+                        userToSave.save(function (err) {
                             if (err) return done(err);
                             redis.del('user_verifying:' + phone, (err, delReply) => {
-                                if (err && req._passCode !== true) return done(err);
-                                if (delReply !== 1 && req._passCode !== true) return done("delReply: " + delReply);
+                                if (err && options.passVerify !== true) return done(err);
+                                if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
                                 return done(null, true, {
                                     body: {
                                         type: 'signupMessage',
@@ -162,7 +196,90 @@ module.exports = {
             }
         });
     },
-    login: function(req, done) {
+    signupLineUser: function (req, done) {
+        const phone = req.body.phone.replace(/tel:|-/g, "");
+        const verificationCode = req.body.verification_code;
+        const line_liff_userID = req.body.line_liff_userID;
+        const line_channel_userID = req.body.line_channel_userID;
+        let options = req._options || {};
+
+        if (typeof phone === 'undefined' || typeof line_liff_userID === 'undefined' || typeof line_channel_userID === 'undefined') {
+            return done(null, false, {
+                code: 'D001',
+                type: 'signupMessage',
+                message: 'Content not Complete'
+            });
+        } else if (!(typeof phone === 'string' && isMobilePhone(phone) && typeof line_liff_userID === 'string' && typeof line_channel_userID === 'string')) {
+            return done(null, false, {
+                code: 'D009',
+                type: 'signupMessage',
+                message: 'Phone or LineID is not valid'
+            });
+        }
+        User.findOne({
+            'user.phone': phone
+        }, function (err, dbUser) {
+            if (err)
+                return done(err);
+            if (dbUser && dbUser.agreeTerms) {
+                return done(null, false, {
+                    code: 'D002',
+                    type: 'signupMessage',
+                    message: 'That phone is already taken'
+                });
+            } else {
+                if (typeof verificationCode === 'undefined') {
+                    sendVerificationCode(phone, done);
+                } else {
+                    redis.get('user_verifying:' + phone, (err, reply) => {
+                        if (err) return done(err);
+                        if (reply === null) return done(null, false, {
+                            code: 'D010',
+                            type: 'signupMessage',
+                            message: 'Verification Code expired'
+                        });
+                        else if (reply !== verificationCode) return done(null, false, {
+                            code: 'D011',
+                            type: 'signupMessage',
+                            message: "Verification Code isn't correct"
+                        });
+
+                        let userToSave;
+                        if (dbUser) { // has NOT verified
+                            userToSave = dbUser;
+                        } else {
+                            let newUser = new User();
+                            newUser.user.phone = phone;
+                            newUser.user.password = null;
+                            newUser.registerMethod = options.registerMethod;
+                            newUser.roles.typeList.push(UserRole.CUSTOMER);
+                            userToSave = newUser;
+                        }
+
+                        userToSave.user.line_liff_userID = line_liff_userID;
+                        userToSave.user.line_channel_userID = line_channel_userID;
+                        userToSave.hasVerified = true;
+                        userToSave.agreeTerms = true;
+                        userToSave.save(function (err) {
+                            if (err) return done(err);
+                            redis.del('user_verifying:' + phone, (err, delReply) => {
+                                if (err) return done(err);
+                                if (delReply !== 1) return done("delReply: " + delReply);
+                                return done(null, userToSave, {
+                                    body: {
+                                        type: 'signupMessage',
+                                        message: 'Authentication succeeded',
+                                        userPurchaseStatus: userToSave.getPurchaseStatus()
+                                    }
+                                });
+                            });
+                        });
+                    });
+                }
+            }
+        });
+    },
+    login: function (req, done) {
         var phone = req.body.phone;
         var password = req.body.password;
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
@@ -172,10 +289,10 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function() {
+        process.nextTick(function () {
             User.findOne({
                 'user.phone': phone
-            }, function(err, dbUser) {
+            }, function (err, dbUser) {
                 if (err)
                     return done(err);
                 if (!dbUser)
@@ -184,6 +301,13 @@ module.exports = {
                         type: 'loginMessage',
                         message: 'No user found'
                     });
+                if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
+                    return done(null, false, {
+                        code: 'D005',
+                        type: 'loginMessage',
+                        message: 'No user found'
+                    });
+                }
                 if (!dbUser.validPassword(password))
                     return done(null, false, {
                         code: 'D006',
@@ -195,7 +319,7 @@ module.exports = {
                 for (var i = 0; i < typeList.length; i++) {
                     funcList.push(new Promise((resolve, reject) => {
                         var thisCtr = i;
-                        keys.keyPair(function(err, returnKeys) {
+                        keys.keyPair(function (err, returnKeys) {
                             if (err) return reject(err);
                             UserKeys.findOneAndUpdate({
                                 'phone': phone,
@@ -241,7 +365,7 @@ module.exports = {
             });
         });
     },
-    chanpass: function(req, done) {
+    chanpass: function (req, done) {
         var oriPassword = req.body.oriPassword;
         var newPassword = req.body.newPassword;
         if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
@@ -259,7 +383,7 @@ module.exports = {
                 message: 'Wrong password'
             });
         dbUser.user.password = dbUser.generateHash(newPassword);
-        dbUser.save(function(err) {
+        dbUser.save(function (err) {
             if (err) return done(err);
             UserKeys.deleteMany({
                 'phone': dbUser.user.phone
@@ -274,7 +398,7 @@ module.exports = {
             });
         });
     },
-    forgotpass: function(req, done) {
+    forgotpass: function (req, done) {
         var phone = req.body.phone;
         var code = req.body.verification_code;
         var newPassword = req.body.new_password;
@@ -287,7 +411,7 @@ module.exports = {
         }
         User.findOne({
             'user.phone': phone
-        }, function(err, dbUser) {
+        }, function (err, dbUser) {
             if (err) return done(err);
             if (!dbUser) return done(null, false, {
                 code: 'D013',
@@ -297,7 +421,7 @@ module.exports = {
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
                 if (typeof phone === 'string' && isMobilePhone(phone)) {
                     var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function(err, snsMsg) {
+                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                         if (err) return done(err);
                         redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
                             if (err) return done(err);
@@ -306,7 +430,7 @@ module.exports = {
                                 if (err) return done(err);
                                 if (reply !== 1) return done(reply);
                                 done(null, true, {
-                                    needCode: true,
+                                    needVerificationCode: true,
                                     body: {
                                         type: 'forgotPassMessage',
                                         message: 'Send Again With Verification Code'
@@ -339,7 +463,7 @@ module.exports = {
                     }, (err) => {
                         if (err) return done(err);
                         dbUser.user.password = dbUser.generateHash(newPassword);
-                        dbUser.save(function(err) {
+                        dbUser.save(function (err) {
                             if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {
                                 if (err) return done(err);
@@ -357,7 +481,7 @@ module.exports = {
             }
         });
     },
-    logout: function(req, done) {
+    logout: function (req, done) {
         var dbKey = req._key;
         var dbUser = req._user;
         UserKeys.deleteMany({
@@ -371,7 +495,7 @@ module.exports = {
             });
         });
     },
-    addBot: function(req, done) {
+    addBot: function (req, done) {
         if (typeof req.body.scopeID === "undefined" || typeof req.body.botName === "undefined") {
             return done(null, false, {
                 code: 'D001',
@@ -392,11 +516,11 @@ module.exports = {
         var botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': "bot"
-            }, function(err, botAmount) {
+                'role.typeCode': UserRole.BOT
+            }, function (err, botAmount) {
                 if (err) return done(err);
                 var botID = `bot${intReLength(botAmount + 1, 5)}`;
-                keys.apiKey(function(err, returnKeys) {
+                keys.apiKey(function (err, returnKeys) {
                     if (err) return done(err);
                     var newUser = new User({
                         user: {
@@ -405,7 +529,7 @@ module.exports = {
                         },
                         role: role,
                         roles: {
-                            typeList: ["bot"],
+                            typeList: [UserRole.BOT],
                             bot: role
                         },
                         active: true
@@ -416,12 +540,12 @@ module.exports = {
                         secretKey: returnKeys.secretKey,
                         clientId: req.signedCookies.uid,
                         userAgent: req.headers['user-agent'],
-                        roleType: "bot",
+                        roleType: UserRole.BOT,
                         user: newUser._id
                     });
-                    newUser.save(function(err) {
+                    newUser.save(function (err) {
                         if (err) return done(err);
-                        newUserKey.save(function(err) {
+                        newUserKey.save(function (err) {
                             if (err) return done(err);
                             done(null, true, {
                                 body: {
@@ -440,11 +564,11 @@ module.exports = {
             });
         });
     },
-    createBotKey: function(req, done) {
+    createBotKey: function (req, done) {
         User.findOne({
             'user.name': req.body.bot,
-            'role.typeCode': "bot"
-        }, function(err, theBot) {
+            'role.typeCode': UserRole.BOT
+        }, function (err, theBot) {
             if (err) return done(err);
             if (!theBot)
                 return done(null, false, {
@@ -452,11 +576,11 @@ module.exports = {
                     type: 'botMessage',
                     message: 'No Bot Find'
                 });
-            keys.apiKey(function(err, returnKeys) {
+            keys.apiKey(function (err, returnKeys) {
                 if (err) return done(err);
                 UserKeys.findOneAndUpdate({
                     'phone': theBot.user.phone,
-                    'roleType': "bot",
+                    'roleType': UserRole.BOT,
                     'user': theBot._id
                 }, {
                     'secretKey': returnKeys.secretKey,
@@ -528,20 +652,20 @@ function tokenBuilder(serverSecretKey, userKey, dbUser) {
 }
 
 function payloadBuilder(payload, dbUser, userKey) {
-    if (userKey.roleType === "customer") {
+    if (userKey.roleType === UserRole.CUSTOMER) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (userKey.roleType === "clerk") {
-        payload.roles.clerk = {
+    } else if (String(userKey.roleType).startsWith(`${UserRole.CLERK}`)) {
+        payload.roles[userKey.roleType] = {
             storeID: dbUser.roles.clerk.storeID,
             manager: dbUser.roles.clerk.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
             storeName: getStoreName(dbUser),
         };
-    } else if (userKey.roleType === "admin") {
+    } else if (userKey.roleType === UserRole.ADMIN) {
         payload.roles.admin = {
             stationID: dbUser.roles.admin.stationID,
             manager: dbUser.roles.admin.manager,
