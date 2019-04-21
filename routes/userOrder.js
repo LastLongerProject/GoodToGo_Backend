@@ -154,41 +154,47 @@ router.post('/add', validateLine, function (req, res, next) {
         "inLineSystem": true
     }, (err, usingAmount) => {
         if (err) return next(err);
-        if ((!dbUser.hasPurchase && containerAmount + usingAmount > 1))
-            return res.status(403).json({
-                code: 'L004',
-                type: 'userOrderMessage',
-                message: `ContainerAmount is Over Quantity Limitation. \n` +
-                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
-                txt: "您最多只能借一個容器"
-            });
 
-        const storeID = parseInt(storeCode.substring(0, 3));
+        UserOrder.count({
+            "user": dbUser._id
+        }, (err, orderAmount) => {
+            if (err) return next(err);
+            if ((!dbUser.hasPurchase && (containerAmount + usingAmount + orderAmount) > 1))
+                return res.status(403).json({
+                    code: 'L004',
+                    type: 'userOrderMessage',
+                    message: `ContainerAmount is Over Quantity Limitation. \n` +
+                        `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}, OrderAmount: ${orderAmount}`,
+                    txt: "您最多只能借一個容器"
+                });
 
-        const funcList = [];
-        for (let i = 0; i < containerAmount; i++) {
-            funcList.push(new Promise((resolve, reject) => {
-                let newOrder = new UserOrder({
-                    orderID: generateUUID(),
-                    user: dbUser._id,
-                    storeID
-                });
-                newOrder.save((err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            }));
-        }
-        Promise
-            .all(funcList)
-            .then(() => {
-                res.json({
-                    storeName: StoreDict[storeID].name,
-                    containerAmount,
-                    time: Date.now()
-                });
-            })
-            .catch(next);
+            const storeID = parseInt(storeCode.substring(0, 3));
+
+            const funcList = [];
+            for (let i = 0; i < containerAmount; i++) {
+                funcList.push(new Promise((resolve, reject) => {
+                    let newOrder = new UserOrder({
+                        orderID: generateUUID(),
+                        user: dbUser._id,
+                        storeID
+                    });
+                    newOrder.save((err) => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
+                }));
+            }
+            Promise
+                .all(funcList)
+                .then(() => {
+                    res.json({
+                        storeName: StoreDict[storeID].name,
+                        containerAmount,
+                        time: Date.now()
+                    });
+                })
+                .catch(next);
+        });
     });
 });
 
