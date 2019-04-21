@@ -13,7 +13,7 @@ const NotificationCenter = require('../helpers/notifications/center');
 
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
-const userUsingAmount = require('../models/variables/containerStatistic').user_using;
+const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 const storeCodeValidater = /\d{4}/;
@@ -65,7 +65,8 @@ router.get('/list', validateLine, function (req, res, next) {
     const StoreDict = DataCacheFactory.get('store');
     const ContainerDict = DataCacheFactory.get('containerWithDeactive');
     UserOrder.find({
-        "user": dbUser._id
+        "user": dbUser._id,
+        "archived": false
     }, (err, userOrderList) => {
         if (err) return next(err);
         let orderListWithoutID = {};
@@ -150,51 +151,44 @@ router.post('/add', validateLine, function (req, res, next) {
             txt: "代碼錯誤，請輸入正確代碼！"
         });
 
-    userUsingAmount(dbUser, {
-        "inLineSystem": true
-    }, (err, usingAmount) => {
+    userUsingAmount(dbUser, (err, usingAmount) => {
         if (err) return next(err);
 
-        UserOrder.count({
-            "user": dbUser._id
-        }, (err, orderAmount) => {
-            if (err) return next(err);
-            if ((!dbUser.hasPurchase && (containerAmount + usingAmount + orderAmount) > 1))
-                return res.status(403).json({
-                    code: 'L004',
-                    type: 'userOrderMessage',
-                    message: `ContainerAmount is Over Quantity Limitation. \n` +
-                        `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}, OrderAmount: ${orderAmount}`,
-                    txt: "您最多只能借一個容器"
+        if ((!dbUser.hasPurchase && (containerAmount + usingAmount) > 1))
+            return res.status(403).json({
+                code: 'L004',
+                type: 'userOrderMessage',
+                message: `ContainerAmount is Over Quantity Limitation. \n` +
+                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
+                txt: "您最多只能借一個容器"
+            });
+
+        const storeID = parseInt(storeCode.substring(0, 3));
+
+        const funcList = [];
+        for (let i = 0; i < containerAmount; i++) {
+            funcList.push(new Promise((resolve, reject) => {
+                let newOrder = new UserOrder({
+                    orderID: generateUUID(),
+                    user: dbUser._id,
+                    storeID
                 });
-
-            const storeID = parseInt(storeCode.substring(0, 3));
-
-            const funcList = [];
-            for (let i = 0; i < containerAmount; i++) {
-                funcList.push(new Promise((resolve, reject) => {
-                    let newOrder = new UserOrder({
-                        orderID: generateUUID(),
-                        user: dbUser._id,
-                        storeID
-                    });
-                    newOrder.save((err) => {
-                        if (err) return reject(err);
-                        resolve();
-                    });
-                }));
-            }
-            Promise
-                .all(funcList)
-                .then(() => {
-                    res.json({
-                        storeName: StoreDict[storeID].name,
-                        containerAmount,
-                        time: Date.now()
-                    });
-                })
-                .catch(next);
-        });
+                newOrder.save((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            }));
+        }
+        Promise
+            .all(funcList)
+            .then(() => {
+                res.json({
+                    storeName: StoreDict[storeID].name,
+                    containerAmount,
+                    time: Date.now()
+                });
+            })
+            .catch(next);
     });
 });
 

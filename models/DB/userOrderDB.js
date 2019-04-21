@@ -12,7 +12,11 @@ var userSchema = mongoose.Schema({
         type: Number,
         default: null
     },
-    storeID: Number
+    storeID: Number,
+    archived: {
+        type: Boolean,
+        default: false
+    }
 });
 
 userSchema.index({

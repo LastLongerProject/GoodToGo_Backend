@@ -8,7 +8,7 @@ module.exports = function (mongoose, done) {
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug.log('mongoDB connect succeed');
-        // require('../tmp/modifyContainerSchema.js')
+        // require('../tmp/addKeyToOrder.js')
         Promise
             .all([
                 new Promise((resolve, reject) => {

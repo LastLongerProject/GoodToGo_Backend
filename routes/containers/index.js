@@ -485,8 +485,10 @@ router.post(
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
                 container.forEach((aContainerID) => {
-                    UserOrder.remove({
+                    UserOrder.updateOne({
                         "containerID": aContainerID
+                    }, {
+                        "archived": true
                     }, (err) => {
                         if (err) return debug.error(err);
                     });
