@@ -44,7 +44,7 @@ const generalNotice = "　•　本優惠券限使用一次，不得重複使用
     "　•　好盒器保有相關細節最終解釋權，如有未盡事宜，好盒器得修訂之。";
 const templateKeyValidater = /[a-z_&]+/;
 const extraNoticeTemplate = Object.freeze({
-    takeout_drink: "　•　本優惠券限使用於外帶飲品，並須以好盒器循環容器盛裝。" +
+    takeout_drink: "　•　本優惠券限使用於外帶飲品，並須以好盒器循環容器盛裝。\n" +
         "　•　一杯飲品限使用一張優惠券，不得與其他折價券或優惠活動同時使用。",
     fans_welcome: "　•　請至可不可熟成紅茶 (東安店) 領取提袋與飲料。"
 });
