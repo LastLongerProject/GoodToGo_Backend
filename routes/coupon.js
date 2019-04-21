@@ -218,6 +218,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                     expirationDate: aCouponType.purchaseDeadline,
                     price: aCouponType.price,
                     amount: aCouponType.amount.current,
+                    notice: aCouponType.generateNotice(),
                     imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}/${token}?ver=${aCouponType.img_info.img_version}`
                 };
                 if (aCouponType.amount.current <= 0) {
