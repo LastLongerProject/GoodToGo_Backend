@@ -382,7 +382,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
             rentToUser: userPhone,
             orderTime: res._payload.orderTime,
             activity: "沒活動",
-            inLineSystem: true
+            inLineSystem: false
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);

@@ -186,6 +186,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             };
 
                             if (condition.rentOrReturn) {
+                                // if (condition.rentOrReturn && !inLineSystem) {
                                 // not to reject rent or return action in any situation
                                 let exception = new Exception({
                                     containerID: theContainer.ID,
