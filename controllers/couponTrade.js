@@ -130,51 +130,63 @@ module.exports = {
             }, (err, couponTypeList) => {
                 if (err) return done(err);
 
-                Promise
-                    .all(couponTypeList.map(aCouponType => {
-                        let newPointLog = new PointLog({
-                            user: dbUser._id,
-                            title: "得到優惠券",
-                            body: `${aCouponType.provider} ${aCouponType.title}`,
-                            quantityChange: 0
-                        });
-                        let newCoupon = new Coupon({
-                            couponID: generateUUID(),
-                            user: dbUser._id,
-                            couponType: aCouponType._id
-                        });
-                        aCouponType.amount.current--;
+                Coupon.find({
+                    "user": dbUser._id
+                }, (err, couponList) => {
+                    if (err) return done(err);
 
-                        return new Promise((allResolve, allReject) => {
-                            Promise
-                                .all([
-                                    new Promise((resolve, reject) => {
-                                        newPointLog.save((err) => {
-                                            if (err) return reject(err);
-                                            resolve();
-                                        });
-                                    }),
-                                    new Promise((resolve, reject) => {
-                                        newCoupon.save((err) => {
-                                            if (err) return reject(err);
-                                            resolve();
-                                        });
-                                    }),
-                                    new Promise((resolve, reject) => {
-                                        aCouponType.save((err) => {
-                                            if (err) return reject(err);
-                                            resolve();
-                                        });
-                                    })
-                                ])
-                                .then(allResolve)
-                                .catch(allReject);
-                        });
-                    }))
-                    .then(() => {
-                        done(null);
-                    })
-                    .catch(done);
+                    Promise
+                        .all(couponTypeList
+                            .filter(aCouponType => {
+                                return couponList.findIndex(aCoupon => {
+                                    return aCoupon.couponType.equals(aCouponType._id);
+                                }) === -1;
+                            })
+                            .map(aCouponType => {
+                                let newPointLog = new PointLog({
+                                    user: dbUser._id,
+                                    title: "得到優惠券",
+                                    body: `${aCouponType.provider} ${aCouponType.title}`,
+                                    quantityChange: 0
+                                });
+                                let newCoupon = new Coupon({
+                                    couponID: generateUUID(),
+                                    user: dbUser._id,
+                                    couponType: aCouponType._id
+                                });
+                                aCouponType.amount.current--;
+
+                                return new Promise((allResolve, allReject) => {
+                                    Promise
+                                        .all([
+                                            new Promise((resolve, reject) => {
+                                                newPointLog.save((err) => {
+                                                    if (err) return reject(err);
+                                                    resolve();
+                                                });
+                                            }),
+                                            new Promise((resolve, reject) => {
+                                                newCoupon.save((err) => {
+                                                    if (err) return reject(err);
+                                                    resolve();
+                                                });
+                                            }),
+                                            new Promise((resolve, reject) => {
+                                                aCouponType.save((err) => {
+                                                    if (err) return reject(err);
+                                                    resolve();
+                                                });
+                                            })
+                                        ])
+                                        .then(allResolve)
+                                        .catch(allReject);
+                                });
+                            }))
+                        .then(() => {
+                            done(null);
+                        })
+                        .catch(done);
+                })
             });
         });
     }
