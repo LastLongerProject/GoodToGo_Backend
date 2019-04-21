@@ -41,7 +41,7 @@ module.exports = {
             next();
         });
     },
-    channel: function (req, res, next) {
+    all: function (req, res, next) {
         const lineId = req.headers['line-id'];
         if (!lineId)
             return res.status(401).json({
@@ -51,7 +51,11 @@ module.exports = {
             });
 
         User.findOne({
-            "user.line_channel_userID": lineId
+            $or: [{
+                'user.line_channel_userID': lineId
+            }, {
+                'user.line_liff_userID': lineId
+            }]
         }, function (err, dbUser) {
             if (err)
                 return next(err);

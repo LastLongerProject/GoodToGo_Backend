@@ -877,7 +877,7 @@ router.get('/pointLog', validateLine.liff, function (req, res, next) {
  *      }
  */
 
-router.get('/purchaseStatus', validateLine.channel, function (req, res, next) {
+router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     var dbUser = req._user;
 
     res.json({
