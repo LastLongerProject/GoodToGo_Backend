@@ -345,6 +345,13 @@ router.post('/purchase/:couponTypeID', validateLine, forPurchasedUser, function 
     const dbUser = req._user;
     const CouponTypeID = req.params.couponTypeID;
 
+    if (dbUser.hasBanned)
+        return res.status(403).json({
+            code: 'L020',
+            type: 'userOrderMessage',
+            message: `User is Banned.`,
+            txt: "您已被停權，無法領取！"
+        });
     if (typeof CouponTypeID !== "string")
         return res.status(403).json({
             code: 'L015',
