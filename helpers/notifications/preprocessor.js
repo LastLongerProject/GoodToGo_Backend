@@ -10,14 +10,15 @@ function containerFormatter(data) {
     let formattedContainer = {};
     let amount = 0;
     data.containerList.forEach(container => {
-        if (!containerType[container.typeCode]) {
-            debug.error(`container.typeCode ERR: ${container.typeCode}`);
+        try {
+            let key = containerType[container.typeCode].name;
+            if (!formattedContainer[key]) formattedContainer[key] = [];
+            formattedContainer[key].push("#" + container.ID);
+            amount++;
+        } catch (error) {
+            debug.error(`ERR: ${error}`);
             return;
         }
-        let key = containerType[container.typeCode].name;
-        if (!formattedContainer[key]) formattedContainer[key] = [];
-        formattedContainer[key].push("#" + container.ID);
-        amount++;
     });
     let IDlist = Object.keys(formattedContainer).map(key => {
         return `${key}（${formattedContainer[key].join("、")}）`;

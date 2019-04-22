@@ -484,19 +484,20 @@ router.post(
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
-                container.forEach((aContainerID) => {
-                    UserOrder.updateOne({
-                        "containerID": aContainerID
-                    }, {
-                        "archived": true
-                    }, (err) => {
-                        if (err) return debug.error(err);
-                    });
-                });
                 if (tradeDetail && tradeDetail.length > 0) {
+                    tradeDetail.forEach((aTradeDetail) => {
+                        UserOrder.updateOne({
+                            "containerID": aTradeDetail.container.ID,
+                            "archived": false
+                        }, {
+                            "archived": true
+                        }, (err) => {
+                            if (err) return debug.error(err);
+                        });
+                    });
                     integrateTradeDetailForNotification(tradeDetail,
                             aTradeDetail => aTradeDetail.oriUser,
-                            aTradeDetail => aTradeDetail.container.ID)
+                            aTradeDetail => aTradeDetail.container)
                         .forEach(aCustomerTradeDetail => {
                             NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
                                 customer: aCustomerTradeDetail.customer
