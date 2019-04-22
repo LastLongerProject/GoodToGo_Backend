@@ -234,57 +234,74 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
 
     UserOrder.findOne({
         "user": dbUser._id,
-        "orderID": orderID,
-        "containerID": null
-    }, (err, theUserOrder) => {
+        "containerID": containerID,
+        "archived": false
+    }, (err, alreadyOrder) => {
         if (err) return next(err);
-        if (!theUserOrder)
+        if (alreadyOrder)
             return res.status(403).json({
-                code: 'L007',
+                code: 'L006',
                 type: 'userOrderMessage',
-                message: `Can't find the UserOrder. orderID: ${orderID}`,
-                txt: "系統維修中>< 請稍後再試！"
+                message: `Can't find the Container. ContainerID: ${containerID}`,
+                txt: "容器ID錯誤，請輸入正確容器 ID！"
             });
 
-        theUserOrder.containerID = containerID;
-        User.findOne({
-            "user.phone": "bot00003"
-        }, (err, dbBot) => {
+        UserOrder.findOne({
+            "user": dbUser._id,
+            "orderID": orderID,
+            "containerID": null
+        }, (err, theUserOrder) => {
             if (err) return next(err);
-            if (!dbBot) return next(new Error("server ERR"));
-            dbBot.roles.clerk.storeID = theUserOrder.storeID;
-            changeContainersState(containerID, dbBot, {
-                action: "Rent",
-                newState: 2
-            }, {
-                rentToUser: dbUser.user.phone,
-                orderTime: theUserOrder.orderTime,
-                activity: "沒活動",
-                inLineSystem: true
-            }, (err, tradeSuccess, reply, tradeDetail) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
-                    txt: "容器ID錯誤，請輸入正確容器 ID！"
-                }));
-                theUserOrder.save(err => {
-                    if (err) return next(err);
-                    res.json({
-                        code: '???',
-                        type: 'userOrderMessage',
-                        message: 'Register ContainerID of UserOrder Success'
-                    });
+            if (!theUserOrder)
+                return res.status(403).json({
+                    code: 'L007',
+                    type: 'userOrderMessage',
+                    message: `Can't find the UserOrder. orderID: ${orderID}`,
+                    txt: "系統維修中>< 請稍後再試！"
                 });
-                if (tradeDetail) {
-                    NotificationCenter.emit("container_rent", {
-                        customer: tradeDetail[0].newUser
-                    }, {
-                        containerList: reply.containerList
-                    });
-                }
-            });
 
+            theUserOrder.containerID = containerID;
+            User.findOne({
+                "user.phone": "bot00003"
+            }, (err, dbBot) => {
+                if (err) return next(err);
+                if (!dbBot) return next(new Error("server ERR"));
+                dbBot.roles.clerk.storeID = theUserOrder.storeID;
+                changeContainersState(containerID, dbBot, {
+                    action: "Rent",
+                    newState: 2
+                }, {
+                    rentToUser: dbUser.user.phone,
+                    orderTime: theUserOrder.orderTime,
+                    activity: "沒活動",
+                    inLineSystem: true
+                }, (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                        txt: "容器ID錯誤，請輸入正確容器 ID！"
+                    }));
+                    theUserOrder.save(err => {
+                        if (err) return next(err);
+                        res.json({
+                            code: '???',
+                            type: 'userOrderMessage',
+                            message: 'Register ContainerID of UserOrder Success'
+                        });
+                    });
+                    if (tradeDetail) {
+                        NotificationCenter.emit("container_rent", {
+                            customer: tradeDetail[0].newUser
+                        }, {
+                            containerList: reply.containerList
+                        });
+                    }
+                });
+
+            });
         });
+
     });
+
 });
 
 module.exports = router;
