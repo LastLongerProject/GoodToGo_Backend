@@ -840,7 +840,7 @@ router.get('/data', validateRequest, function (req, res, next) {
  *      }
  */
 
-router.get('/pointLog', validateLine.liff, function (req, res, next) {
+router.get('/pointLog', validateLine.all, function (req, res, next) {
     var dbUser = req._user;
 
     PointLog.find({
