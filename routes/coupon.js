@@ -65,7 +65,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                     title: theCouponType.title,
                     expirationDate: theCouponType.expirationDate,
                     notice: theCouponType.generateNotice(),
-                    imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`
+                    imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
                 };
                 if (!aCoupon.used && !aCoupon.expired) {
                     aFormattedCoupon.state = CouponState.AVAILABLE;
@@ -219,7 +219,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                     price: aCouponType.price,
                     amount: aCouponType.amount.current,
                     notice: aCouponType.generateNotice(),
-                    imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}/${token}?ver=${aCouponType.img_info.img_version}`
+                    imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
                 };
                 if (aCouponType.amount.current <= 0) {
                     aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
@@ -301,7 +301,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
                 price: theCouponType.price,
                 amount: theCouponType.amount.current,
                 notice: theCouponType.generateNotice(),
-                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`
+                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
             };
             if (theCouponType.amount.current <= 0) {
                 aFormattedCouponType.state = CouponTypeState.SOLD_OUT;

@@ -57,6 +57,10 @@ app.use((req, res, next) => {
 });
 
 app.use('/manage', manage);
+app.use('/images', (req, res, next) => {
+    res.setHeader('Cache-Control', `max-age=${60 * 60 * 24 * 3}`);
+    next();
+}, images);
 
 app.use(timeout('10s'));
 app.use((req, res, next) => {
@@ -65,7 +69,6 @@ app.use((req, res, next) => {
 });
 app.use('/users', users);
 app.use('/stores', stores);
-app.use('/images', images);
 app.use('/coupon', coupon);
 app.use('/userOrder', userOrder);
 app.use('/containers', containers);

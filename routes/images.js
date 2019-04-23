@@ -61,35 +61,32 @@ router.get('/icon/:id/:a.:b.:c', function (req, res, next) {
     });
 });
 
-router.get('/coupon/:id/:a.:b.:c', function (req, res, next) {
-    const token = req.params.a + "." + req.params.b + "." + req.params.c;
-    validateToken(req, res, token, function () {
-        const id = parseInt(req.params.id);
-        if (isNaN(id)) return next();
-        CouponType.findOne({
-            "couponTypeID": id
-        }, (err, theCouponType) => {
-            if (err) return next(err);
-            if (!theCouponType) return next();
-            const s = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/' + theCouponType.img_info.img_src);
-            s.on('open', function () {
+router.get('/coupon/:id', function (req, res, next) {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return next();
+    CouponType.findOne({
+        "couponTypeID": id
+    }, (err, theCouponType) => {
+        if (err) return next(err);
+        if (!theCouponType) return next();
+        const s = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/' + theCouponType.img_info.img_src);
+        s.on('open', function () {
+            res.set('Content-Type', 'image/png');
+            s.pipe(res);
+        });
+        s.on('error', function (err) {
+            const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/9999.jpg');
+            s2.on('open', function () {
                 res.set('Content-Type', 'image/png');
-                s.pipe(res);
+                s2.pipe(res);
             });
-            s.on('error', function (err) {
-                const s2 = fs.createReadStream(ROOT_DIR + '/assets/images/coupon/9999.jpg');
-                s2.on('open', function () {
-                    res.set('Content-Type', 'image/png');
-                    s2.pipe(res);
-                });
-                s2.on('error', function (err) {
-                    next({
-                        status: 500,
-                        code: 'G001',
-                        type: 'readImgERR',
-                        message: 'No Image found',
-                        data: err
-                    });
+            s2.on('error', function (err) {
+                next({
+                    status: 500,
+                    code: 'G001',
+                    type: 'readImgERR',
+                    message: 'No Image found',
+                    data: err
                 });
             });
         });
