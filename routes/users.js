@@ -941,10 +941,9 @@ router.get("/bannedUser", (req, res, next) => { // none json reply
         "hasBanned": true
     }, (err, result) => {
         if (err) return next(err);
-        const storeDict = DataCacheFactory.get("store");
         let txt = "";
         result.forEach(aResult => {
-            txt += `${storeDict[aResult._id].phone}：${aResult.name}、`
+            txt += `${aResult.user.phone}：${aResult.user.name}、`
         })
         res.send(txt).end();
     });
