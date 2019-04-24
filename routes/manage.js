@@ -13,6 +13,7 @@ const refreshStore = require('../helpers/appInit').refreshStore;
 const refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
 const refreshContainer = require('../helpers/appInit').refreshContainer;
 const refreshActivity = require('../helpers/appInit').refreshActivity;
+const refreshCouponImage = require('../helpers/appInit').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
 const cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
@@ -2039,7 +2040,7 @@ router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest
  * @apiName Manage refresh specific container icon
  * @apiGroup Manage
  *
- * @api {patch} /manage/refresh/containerIcon/:id Refresh specific container icon
+ * @api {patch} /manage/refresh/containerIcon/:forceRenew Refresh specific container icon
  * @apiPermission admin_manager
  * @apiUse JWT
  * 
@@ -2056,12 +2057,39 @@ router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/containerIcon/:id', regAsAdminManager, validateRequest, function (req, res, next) {
-    var forceRenew = (req.params.id === '1');
+router.patch('/refresh/containerIcon/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
+    var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
     refreshContainerIcon(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
 
+/**
+ * @apiName Manage refresh specific container icon
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/containerIcon/:forceRenew Refresh specific container icon
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: 'refreshCouponImage',
+            message: 'refresh succeed',
+            data:
+            [ 
+                '08@3x.png',
+                ...
+            ] 
+        }
+ * @apiError 403 Response data
+ */
+router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
+    var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
+    refreshCouponImage(forceRenew, function (succeed, resData) {
+        res.status((succeed) ? 200 : 403).json(resData);
+    });
+});
 
 module.exports = router;

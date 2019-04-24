@@ -17,7 +17,7 @@ module.exports = {
         }
     },
     webhook: function (event, user, data) {
-        fs.readFile(`${config.rootDir}/config/webhook_submission.json`, (err, webhookSubmission) => {
+        fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
             if (err) return debug.error(err);
             let sender = NotificationSender.webhook(NotificationPreprocess.webhook(event, user, data));
             webhookSubmission = JSON.parse(webhookSubmission);
