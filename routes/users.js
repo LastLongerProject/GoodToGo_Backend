@@ -943,7 +943,7 @@ router.get("/bannedUser", (req, res, next) => { // none json reply
         if (err) return next(err);
         let txt = "";
         result.forEach(aResult => {
-            txt += `${aResult.user.phone}：${aResult.user.name}、`
+            txt += `[${aResult.user.phone}(${aResult.user.name})]、`
         })
         res.send(txt).end();
     });
