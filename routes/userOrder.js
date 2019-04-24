@@ -9,7 +9,7 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const generateUUID = require('../helpers/tools').generateUUID;
 
-const NotificationCenter = require('../helpers/notifications/center');
+const tradeCallback = require('../controllers/tradeCallback');
 
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
@@ -133,7 +133,7 @@ router.post('/add', validateLine, function (req, res, next) {
             code: 'L001',
             type: 'userOrderMessage',
             message: `User is Banned.`,
-            txt: "您已被停權，無法借用！"
+            txt: dbUser.getBannedTxt("借用")
         });
     if (typeof storeCode !== "string" || !storeCodeValidater.test(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
@@ -288,13 +288,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                             message: 'Register ContainerID of UserOrder Success'
                         });
                     });
-                    if (tradeDetail) {
-                        NotificationCenter.emit("container_rent", {
-                            customer: tradeDetail[0].newUser
-                        }, {
-                            containerList: reply.containerList
-                        });
-                    }
+                    tradeCallback.rent(tradeDetail);
                 });
 
             });

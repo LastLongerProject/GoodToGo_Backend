@@ -90,6 +90,11 @@ userSchema.methods.getPurchaseStatus = function () {
         PurchaseStatus.PURCHASED_USER :
         PurchaseStatus.FREE_USER;
 };
+userSchema.methods.getBannedTxt = function (action) {
+    return `${this.bannedTimes <= 1?
+        `您有容器逾期未歸還，請儘速歸還！` :
+        `您已被停權，無法${action}！\n欲解除停權，請私訊好盒器粉專。`}`;
+};
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('User', userSchema);

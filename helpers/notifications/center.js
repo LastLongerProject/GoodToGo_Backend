@@ -6,8 +6,6 @@ const SnsAppType = require("./enums/sns/appType");
 const WebhookEvent = require("./enums/webhook/events");
 const SocketEvent = require("./enums/socket/events");
 
-const User = require('../../models/DB/userDB');
-
 const pushBy = require("./push");
 
 module.exports = {
@@ -36,8 +34,12 @@ module.exports = {
                     pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
                 }
                 break;
-            case NotificationEvent.CONTAINER_RETURN_VIP:
-                pushBy.webhook(WebhookEvent.USER_VIP_RETURN_CONTAINER, target);
+            case NotificationEvent.CONTAINER_RETURN_LINE:
+                if (target.hasPurchase) {
+                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_PURCHASED_USER, target.customer, data);
+                } else {
+                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_FREE_USER, target.customer, data);
+                }
                 break;
             case NotificationEvent.USER_ALMOST_OVERDUE:
                 pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target);

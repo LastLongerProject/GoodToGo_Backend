@@ -9,6 +9,19 @@ const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 
 module.exports = {
+    rent: function (tradeDetail) {
+        if (tradeDetailIsEmpty(tradeDetail)) return;
+        integrateTradeDetailForNotification(tradeDetail,
+                aTradeDetail => aTradeDetail.newUser,
+                aTradeDetail => aTradeDetail.container)
+            .forEach(aCustomerTradeDetail => {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
+                    customer: aCustomerTradeDetail.customer
+                }, {
+                    containerList: aCustomerTradeDetail.containerList
+                });
+            });
+    },
     return: function (tradeDetail, options) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
         if (!options) options = {};
@@ -43,9 +56,16 @@ module.exports = {
                 })
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
-                if (!dbCustomer.hasPurchase) return null;
+                if (!dbCustomer.agreeTerms) return null;
                 const containerList = aTradeDetail.containerList;
                 const quantity = containerList.length;
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
+                    customer: dbCustomer
+                }, {
+                    amount: quantity,
+                    point: quantity
+                });
+                if (!dbCustomer.hasPurchase) return null;
                 const storeDict = DataCacheFactory.get("store");
                 let newPointLog = new PointLog({
                     user: dbCustomer._id,

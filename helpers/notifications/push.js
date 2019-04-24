@@ -16,10 +16,10 @@ module.exports = {
             }
         }
     },
-    webhook: function (event, user) {
+    webhook: function (event, user, data) {
         fs.readFile(`${config.rootDir}/config/webhook_submission.json`, (err, webhookSubmission) => {
             if (err) return debug.error(err);
-            let sender = NotificationSender.webhook(NotificationPreprocess.webhook(event, user));
+            let sender = NotificationSender.webhook(NotificationPreprocess.webhook(event, user, data));
             webhookSubmission = JSON.parse(webhookSubmission);
             webhookSubmission.client.forEach(aClient => {
                 if ((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||

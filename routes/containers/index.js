@@ -384,18 +384,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
-            if (tradeDetail) {
-                integrateTradeDetailForNotification(tradeDetail,
-                        aTradeDetail => aTradeDetail.newUser,
-                        aTradeDetail => aTradeDetail.container.ID)
-                    .forEach(aCustomerTradeDetail => {
-                        NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
-                            customer: aCustomerTradeDetail.customer
-                        }, {
-                            containerList: aCustomerTradeDetail.containerList
-                        });
-                    });
-            }
+            tradeCallback.rent(tradeDetail);
             return res.json(reply);
             // Container.find({
             //     ID: parseInt(container) *** BUG HERE ***
