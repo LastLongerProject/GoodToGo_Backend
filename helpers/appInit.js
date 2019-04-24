@@ -65,7 +65,7 @@ module.exports = {
             debug.log('Expired Coupon is Check');
         });
     },
-    checkUsersShouldBeBanned: function (cb) {
+    checkUsersShouldBeBanned: function (startupCheck, cb) {
         User.find({
             "agreeTerms": true
         }, (err, userList) => {
@@ -104,7 +104,7 @@ module.exports = {
                     const dbUser = userDict[userID].dbUser;
                     if (userDict[userID].overdue.length > 0)
                         banUser(dbUser);
-                    else if (userDict[userID].almostOverdue.length > 0)
+                    else if (userDict[userID].almostOverdue.length > 0 && !startupCheck)
                         noticeUserWhoIsGoingToBeBanned(dbUser);
                     else if (userDict[userID].overdue.length === 0)
                         unbanUser(dbUser);
