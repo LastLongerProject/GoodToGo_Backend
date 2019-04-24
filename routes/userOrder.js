@@ -9,7 +9,7 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const generateUUID = require('../helpers/tools').generateUUID;
 
-const NotificationCenter = require('../helpers/notifications/center');
+const tradeCallback = require('../controllers/tradeCallback');
 
 const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
@@ -288,13 +288,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                             message: 'Register ContainerID of UserOrder Success'
                         });
                     });
-                    if (tradeDetail) {
-                        NotificationCenter.emit("container_rent", {
-                            customer: tradeDetail[0].newUser
-                        }, {
-                            containerList: reply.containerList
-                        });
-                    }
+                    tradeCallback.rent(tradeDetail);
                 });
 
             });
