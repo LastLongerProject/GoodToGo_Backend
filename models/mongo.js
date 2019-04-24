@@ -33,10 +33,10 @@ module.exports = function (mongoose, done) {
             .then(() => {
                 debug.log("Done App Initializing");
                 done();
-                if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
+                if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
                     scheduler();
-                } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-                    debug.log("Local Testing no scheduler");
+                } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "development") {
+                    debug.log("Development Server no scheduler");
                 } else {
                     debug.log("Deploy Server no scheduler");
                 }
