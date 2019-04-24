@@ -1777,6 +1777,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
 const isPhone = /09[0-9]{8}/;
 
 function phoneEncoder(phone, expose = false) {
+    expose = true;
     if (isPhone.test(phone))
         return phone.slice(0, 4) + (expose ? ("-" + phone.slice(4, 7) + "-") : "-***-") + phone.slice(7, 10);
     else
