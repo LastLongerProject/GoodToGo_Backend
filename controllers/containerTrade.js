@@ -188,7 +188,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             };
 
                             if (oriState === 0 || oriState === 1) {
-                                return Box.findOne({
+                                Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
@@ -199,6 +199,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     errorDict.boxID = aBox.boxID;
                                     return resolveWithErr(errorMsg);
                                 });
+                            } else {
+                                return resolveWithErr(errorMsg);
                             }
                         } else {
                             User.findOne({
