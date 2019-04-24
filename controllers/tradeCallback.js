@@ -43,7 +43,7 @@ module.exports = {
                 })
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
-                if (!dbCustomer.hasPurchase) return null;
+                if (!dbCustomer.hasPurchase || !dbCustomer.agreeTerms) return null;
                 const containerList = aTradeDetail.containerList;
                 const quantity = containerList.length;
                 const storeDict = DataCacheFactory.get("store");
@@ -52,6 +52,12 @@ module.exports = {
                     title: `歸還了${quantity}個容器`,
                     body: `${storeDict[toStore].name}`,
                     quantityChange: quantity
+                });
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
+                    customer: dbCustomer.customer
+                }, {
+                    amount: quantity,
+                    point: quantity
                 });
                 newPointLog.save((err) => {
                     if (err) debug.error(err);
