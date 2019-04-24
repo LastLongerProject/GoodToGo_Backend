@@ -35,10 +35,12 @@ module.exports = {
                 }
                 break;
             case NotificationEvent.CONTAINER_RETURN_LINE:
-                if (target.hasPurchase) {
-                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_PURCHASED_USER, target.customer, data);
-                } else {
-                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_FREE_USER, target.customer, data);
+                if (target.customer) {
+                    if (target.customer.hasPurchase) {
+                        pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_PURCHASED_USER, target.customer, data);
+                    } else {
+                        pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_FREE_USER, target.customer, data);
+                    }
                 }
                 break;
             case NotificationEvent.USER_ALMOST_OVERDUE:
