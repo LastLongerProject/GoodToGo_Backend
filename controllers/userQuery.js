@@ -172,8 +172,9 @@ module.exports = {
                                         };
                                         break;
                                 }
-                                newUser.roles.typeList.push(UserRole.CUSTOMER);
                             }
+                            if (newUser.roles.typeList.indexOf(UserRole.CUSTOMER) === -1)
+                                newUser.roles.typeList.push(UserRole.CUSTOMER);
                             userToSave = newUser;
                         }
 
