@@ -32,6 +32,7 @@ module.exports = function (mongoose, done) {
             ])
             .then(() => {
                 debug.log("Done App Initializing");
+                done();
                 if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop") {
                     scheduler();
                 } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
@@ -39,7 +40,26 @@ module.exports = function (mongoose, done) {
                 } else {
                     debug.log("Deploy Server no scheduler");
                 }
-                done();
+
+                Promise
+                    .all([
+                        new Promise((resolve, reject) => {
+                            appInit.checkCouponIsExpired(err => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                        }),
+                        new Promise((resolve, reject) => {
+                            appInit.checkUsersShouldBeBanned(err => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                        })
+                    ])
+                    .then(() => {
+                        debug.log("Done App Startup Check List");
+                    })
+                    .catch(err => debug.error(err));
             })
             .catch(err => debug.error(err));
     });

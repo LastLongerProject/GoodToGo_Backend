@@ -30,7 +30,7 @@
     "author": "BenjaminChenTW",
     "license": "ISC",
     "dependencies": {
-        "@lastlongerproject/toolkit": "^1.0.4",
+        "@lastlongerproject/toolkit": "^1.0.5",
         "apidoc": "^0.17.7",
         "aws-sdk": "^2.296.0",
         "axios": "^0.18.0",

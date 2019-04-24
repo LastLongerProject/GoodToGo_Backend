@@ -1,14 +1,28 @@
 const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
+
+const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
+const Coupon = require('../models/DB/couponDB');
 const PlaceID = require('../models/DB/placeIdDB');
 const Activity = require('../models/DB/activityDB');
 const Container = require('../models/DB/containerDB');
+const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
+const NotificationCenter = require('../helpers/notifications/center');
+const NotificationEvent = require('../helpers/notifications/enums/events');
+
+const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
+
+const DueDays = {
+    free_user: 2,
+    purchased_user: 8
+};
 
 module.exports = {
     store: function (cb) {
@@ -30,6 +44,74 @@ module.exports = {
             if (cb) return cb(err);
             if (err) return debug.error(err);
             debug.log('couponTypeList init');
+        });
+    },
+    checkCouponIsExpired: function (cb) {
+        const CouponTypeDict = DataCacheFactory.get("couponType");
+        Coupon.find({
+            "expired": false
+        }, (err, couponList) => {
+            if (err) return debug.error(err);
+            const now = Date.now();
+            couponList.forEach(aCoupon => {
+                if (CouponTypeDict[aCoupon.couponType].expirationDate < now) {
+                    aCoupon.expired = true;
+                    aCoupon.save(err => {
+                        if (err) return debug.error(err);
+                    });
+                }
+            });
+            if (cb) return cb();
+            debug.log('Expired Coupon is Check');
+        });
+    },
+    checkUsersShouldBeBanned: function (cb) {
+        User.find({
+            "agreeTerms": true
+        }, (err, userList) => {
+            if (err) return debug.error(err);
+            const userDict = {};
+            const userObjectIDList = userList.map(aUser => {
+                const userID = aUser._id;
+                userDict[userID] = {
+                    dbUser: aUser,
+                    almostOverdue: [],
+                    overdue: []
+                };
+                return userID;
+            });
+            UserOrder.find({
+                "user": {
+                    "$in": userObjectIDList
+                },
+                "archived": false
+            }, (err, userOrderList) => {
+                if (err) return debug.error(err);
+
+                const now = Date.now();
+                userOrderList.forEach(aUserorder => {
+                    const userID = aUserorder.user;
+                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
+                    const daysOverDue = computeDaysOfUsing(aUserorder.orderTime, now) - DueDays[purchaseStatus];
+                    if (daysOverDue > 0) {
+                        userDict[userID].overdue.push(aUserorder);
+                    } else if (daysOverDue === 0) {
+                        userDict[userID].almostOverdue.push(aUserorder);
+                    }
+                });
+
+                for (let userID in userDict) {
+                    const dbUser = userDict[userID].dbUser;
+                    if (userDict[userID].overdue.length > 0)
+                        banUser(dbUser);
+                    else if (userDict[userID].almostOverdue.length > 0)
+                        noticeUserWhoIsGoingToBeBanned(dbUser);
+                    else if (userDict[userID].overdue.length === 0)
+                        unbanUser(dbUser);
+                }
+                if (cb) return cb();
+                debug.log('Banned User is Check');
+            });
         });
     },
     refreshStore: function (cb) {
@@ -234,4 +316,34 @@ function couponListGenerator(cb) {
         DataCacheFactory.set('couponType', couponTypeDict);
         cb();
     });
+}
+
+function banUser(dbUser) {
+    if (!dbUser.hasBanned) {
+        dbUser.hasBanned = true;
+        dbUser.save(err => {
+            if (err) return debug.error(err);
+        });
+        NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, null);
+    }
+}
+
+function noticeUserWhoIsGoingToBeBanned(dbUser) {
+    if (!dbUser.hasBanned) {
+        NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, null);
+    }
+}
+
+function unbanUser(dbUser) {
+    if (dbUser.hasBanned && dbUser.bannedTimes === 1) {
+        dbUser.hasBanned = false;
+        dbUser.save(err => {
+            if (err) return debug.error(err);
+        });
+        NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, null);
+    }
+}
+
+function computeDaysOfUsing(dateToCompute, now) {
+    return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 }
