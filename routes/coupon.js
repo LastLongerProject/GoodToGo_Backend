@@ -5,7 +5,6 @@ const debug = require('../helpers/debugger')('coupon');
 const baseUrl = require('../config/config.js').serverBaseUrl;
 
 const couponTrade = require('../controllers/couponTrade');
-const generateImgToken = require('../controllers/imageToken').generateToken;
 const validateLine = require('../middlewares/validation/validateLine').all;
 const forPurchasedUser = require('../middlewares/validation/validateLine').forPurchasedUser;
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
@@ -34,6 +33,14 @@ const DataCacheFactory = require('../models/dataCacheFactory');
  *			    title : String,
  *			    expirationDate : Date,
  *			    notice : String,
+ *              notice_struc : [
+ *                  {
+ *                      title : String,
+ *                      list : [
+ *                          String, ...
+ *                      ]
+ *                  }, ...
+ *              ],
  *			    imgSrc : Url,
  *              state : String ("used" or "available" or "expired" or "unknown")
  *		    }, ...
@@ -53,37 +60,35 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
     }, (err, couponList) => {
         if (err) return next(err);
 
-        generateImgToken((err, token) => {
-            if (err) return next(err);
-            let availableCouponList = [];
-            let unavailableCouponList = [];
-            couponList.forEach(aCoupon => {
-                let theCouponType = CouponTypeDict[aCoupon.couponType];
-                let aFormattedCoupon = {
-                    couponID: aCoupon.couponID,
-                    provider: theCouponType.provider,
-                    title: theCouponType.title,
-                    expirationDate: theCouponType.expirationDate,
-                    notice: theCouponType.generateNotice(),
-                    imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
-                };
-                if (!aCoupon.used && !aCoupon.expired) {
-                    aFormattedCoupon.state = CouponState.AVAILABLE;
-                    availableCouponList.push(aFormattedCoupon);
+        let availableCouponList = [];
+        let unavailableCouponList = [];
+        couponList.forEach(aCoupon => {
+            let theCouponType = CouponTypeDict[aCoupon.couponType];
+            let aFormattedCoupon = {
+                couponID: aCoupon.couponID,
+                provider: theCouponType.provider,
+                title: theCouponType.title,
+                expirationDate: theCouponType.expirationDate,
+                notice: theCouponType.generateNotice(),
+                notice_struc: theCouponType.generateStrucNotice(),
+                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
+            };
+            if (!aCoupon.used && !aCoupon.expired) {
+                aFormattedCoupon.state = CouponState.AVAILABLE;
+                availableCouponList.push(aFormattedCoupon);
+            } else {
+                if (aCoupon.used) {
+                    aFormattedCoupon.state = CouponState.USED;
+                } else if (aCoupon.expired) {
+                    aFormattedCoupon.state = CouponState.EXPIRED;
                 } else {
-                    if (aCoupon.used) {
-                        aFormattedCoupon.state = CouponState.USED;
-                    } else if (aCoupon.expired) {
-                        aFormattedCoupon.state = CouponState.EXPIRED;
-                    } else {
-                        aFormattedCoupon.state = CouponState.UNKNOWN;
-                    }
-                    unavailableCouponList.push(aFormattedCoupon);
+                    aFormattedCoupon.state = CouponState.UNKNOWN;
                 }
-            });
-            res.json({
-                myCouponList: availableCouponList.concat(unavailableCouponList)
-            });
+                unavailableCouponList.push(aFormattedCoupon);
+            }
+        });
+        res.json({
+            myCouponList: availableCouponList.concat(unavailableCouponList)
         });
     });
 });
@@ -181,6 +186,15 @@ router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res
  *			    expirationDate : Date,
  *			    price : Number,
  *			    amount : Number,
+ *              notice : String,
+ *              notice_struc : [
+ *                  {
+ *                      title : String,
+ *                      list : [
+ *                          String, ...
+ *                      ]
+ *                  }, ...
+ *              ],
  *			    imgSrc : Url,
  *              state : String ("sold_out" or "purchasable" or "cannot_afford")
  *		    }, ...
@@ -207,33 +221,31 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
             else return b.updatedAt - a.updatedAt;
         });
 
-        generateImgToken((err, token) => {
-            if (err) return next(err);
-            let formattedCouponType = [];
-            couponTypeList.forEach(aCouponType => {
-                let aFormattedCouponType = {
-                    couponTypeID: aCouponType.couponTypeID,
-                    provider: aCouponType.provider,
-                    title: aCouponType.title,
-                    expirationDate: aCouponType.purchaseDeadline,
-                    price: aCouponType.price,
-                    amount: aCouponType.amount.current,
-                    notice: aCouponType.generateNotice(),
-                    imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
-                };
-                if (aCouponType.amount.current <= 0) {
-                    aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
-                } else if (aCouponType.price > dbUser.point) {
-                    aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
-                } else {
-                    aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
-                }
-                formattedCouponType.push(aFormattedCouponType);
-            });
-            res.json({
-                userPoint: dbUser.point,
-                allCouponList: formattedCouponType
-            });
+        let formattedCouponType = [];
+        couponTypeList.forEach(aCouponType => {
+            let aFormattedCouponType = {
+                couponTypeID: aCouponType.couponTypeID,
+                provider: aCouponType.provider,
+                title: aCouponType.title,
+                expirationDate: aCouponType.purchaseDeadline,
+                price: aCouponType.price,
+                amount: aCouponType.amount.current,
+                notice: aCouponType.generateNotice(),
+                notice_struc: aCouponType.generateStrucNotice(),
+                imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
+            };
+            if (aCouponType.amount.current <= 0) {
+                aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
+            } else if (aCouponType.price > dbUser.point) {
+                aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
+            } else {
+                aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
+            }
+            formattedCouponType.push(aFormattedCouponType);
+        });
+        res.json({
+            userPoint: dbUser.point,
+            allCouponList: formattedCouponType
         });
     });
 });
@@ -255,6 +267,14 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *          price : Number,
  *          amount : Number,
  *          notice : String,
+ *          notice_struc : [
+ *              {
+ *                  title : String,
+ *                  list : [
+ *                      String, ...
+ *                  ]
+ *              }, ...
+ *          ],
  *          imgSrc : Url,
  *          state : String ("sold_out" or "purchasable" or "cannot_afford")
  *      }
@@ -291,28 +311,26 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
                 txt: "系統維修中>< 請稍後再試！"
             });
 
-        generateImgToken((err, token) => {
-            if (err) return next(err);
-            let aFormattedCouponType = {
-                couponTypeID: theCouponType.couponTypeID,
-                provider: theCouponType.provider,
-                title: theCouponType.title,
-                expirationDate: theCouponType.purchaseDeadline,
-                price: theCouponType.price,
-                amount: theCouponType.amount.current,
-                notice: theCouponType.generateNotice(),
-                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
-            };
-            if (theCouponType.amount.current <= 0) {
-                aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
-            } else if (theCouponType.price > dbUser.point) {
-                aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
-            } else {
-                aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
-            }
+        let aFormattedCouponType = {
+            couponTypeID: theCouponType.couponTypeID,
+            provider: theCouponType.provider,
+            title: theCouponType.title,
+            expirationDate: theCouponType.purchaseDeadline,
+            price: theCouponType.price,
+            amount: theCouponType.amount.current,
+            notice: theCouponType.generateNotice(),
+            notice_struc: theCouponType.generateStrucNotice(),
+            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
+        };
+        if (theCouponType.amount.current <= 0) {
+            aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
+        } else if (theCouponType.price > dbUser.point) {
+            aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
+        } else {
+            aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
+        }
 
-            res.json(aFormattedCouponType);
-        });
+        res.json(aFormattedCouponType);
     });
 });
 
@@ -335,6 +353,14 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *			    title : String,
  *			    expirationDate : Date,
  *			    notice : String,
+ *              notice_struc : [
+ *                  {
+ *                      title : String,
+ *                      list : [
+ *                          String, ...
+ *                      ]
+ *                  }, ...
+ *              ],
  *			    imgSrc : Url,
  *              state : String ("used" or "available" or "expired" or "unknown")
  *		    }

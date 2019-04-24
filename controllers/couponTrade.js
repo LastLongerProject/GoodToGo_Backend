@@ -13,7 +13,6 @@ const generateUUID = require('../helpers/tools').generateUUID;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
 
 const baseUrl = require('../config/config.js').serverBaseUrl;
-const generateImgToken = require('../controllers/imageToken').generateToken;
 
 module.exports = {
     purchaseCoupon: function (couponTypeID, dbUser, oriDone) {
@@ -97,17 +96,15 @@ module.exports = {
                         })
                     ])
                     .then(() => {
-                        generateImgToken((err, token) => {
-                            if (err) return done(err);
-                            done(null, false, {
-                                couponID: newCoupon.couponID,
-                                provider: theCouponType.provider,
-                                title: theCouponType.title,
-                                expirationDate: theCouponType.expirationDate,
-                                notice: theCouponType.generateNotice(),
-                                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}/${token}?ver=${theCouponType.img_info.img_version}`,
-                                state: CouponState.AVAILABLE
-                            });
+                        done(null, false, {
+                            couponID: newCoupon.couponID,
+                            provider: theCouponType.provider,
+                            title: theCouponType.title,
+                            expirationDate: theCouponType.expirationDate,
+                            notice: theCouponType.generateNotice(),
+                            notice_struc: theCouponType.generateStrucNotice(),
+                            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
+                            state: CouponState.AVAILABLE
                         });
                     })
                     .catch(done);
