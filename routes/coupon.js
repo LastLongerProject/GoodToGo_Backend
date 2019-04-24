@@ -69,7 +69,6 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                 provider: theCouponType.provider,
                 title: theCouponType.title,
                 expirationDate: theCouponType.expirationDate,
-                notice: theCouponType.generateNotice(),
                 notice_struc: theCouponType.generateStrucNotice(),
                 imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
             };
@@ -230,7 +229,6 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                 expirationDate: aCouponType.purchaseDeadline,
                 price: aCouponType.price,
                 amount: aCouponType.amount.current,
-                notice: aCouponType.generateNotice(),
                 notice_struc: aCouponType.generateStrucNotice(),
                 imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
             };
@@ -318,7 +316,6 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
             expirationDate: theCouponType.purchaseDeadline,
             price: theCouponType.price,
             amount: theCouponType.amount.current,
-            notice: theCouponType.generateNotice(),
             notice_struc: theCouponType.generateStrucNotice(),
             imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
         };

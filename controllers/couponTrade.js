@@ -101,7 +101,6 @@ module.exports = {
                             provider: theCouponType.provider,
                             title: theCouponType.title,
                             expirationDate: theCouponType.expirationDate,
-                            notice: theCouponType.generateNotice(),
                             notice_struc: theCouponType.generateStrucNotice(),
                             imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
                             state: CouponState.AVAILABLE
