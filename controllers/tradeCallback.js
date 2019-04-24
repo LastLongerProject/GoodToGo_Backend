@@ -56,6 +56,7 @@ module.exports = {
                 })
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
+                if (!dbCustomer.agreeTerms) return null;
                 const containerList = aTradeDetail.containerList;
                 const quantity = containerList.length;
                 NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
@@ -64,7 +65,7 @@ module.exports = {
                     amount: quantity,
                     point: quantity
                 });
-                if (!dbCustomer.hasPurchase || !dbCustomer.agreeTerms) return null;
+                if (!dbCustomer.hasPurchase) return null;
                 const storeDict = DataCacheFactory.get("store");
                 let newPointLog = new PointLog({
                     user: dbCustomer._id,
