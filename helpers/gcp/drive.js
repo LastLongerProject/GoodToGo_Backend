@@ -8,7 +8,7 @@ const debug = require('../debugger')('google_drive');
 
 const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
-const ROOT_DIR = require("../../config/config").rootDir;
+const ROOT_DIR = require("../../config/config").staticFileDir;
 const GOOGLE_CONTENT_PATH = `${ROOT_DIR}/assets/json/googleContent.json`;
 
 let connectionCtr = 0;
@@ -18,6 +18,7 @@ if (!fs.existsSync(`${ROOT_DIR}/assets/json`)) fs.mkdirSync(`${ROOT_DIR}/assets/
 if (!fs.existsSync(`${ROOT_DIR}/assets/images`)) fs.mkdirSync(`${ROOT_DIR}/assets/images`);
 if (!fs.existsSync(`${ROOT_DIR}/assets/images/icon`)) fs.mkdirSync(`${ROOT_DIR}/assets/images/icon`);
 if (!fs.existsSync(`${ROOT_DIR}/assets/images/shop`)) fs.mkdirSync(`${ROOT_DIR}/assets/images/shop`);
+if (!fs.existsSync(`${ROOT_DIR}/assets/images/coupon`)) fs.mkdirSync(`${ROOT_DIR}/assets/images/coupon`);
 
 module.exports = {
     getContainer: function (forceRenew, cb) {
@@ -41,6 +42,17 @@ module.exports = {
                 resFromGoogle(err, response, forceRenew, 'shop', cb);
             });
         });
+    },
+    getCoupon: function (forceRenew, cb) {
+        googleAuth(function (auth) {
+            drive.files.list({
+                auth: auth,
+                q: "'" + configs.coupon_img_folderID + "' in parents",
+                fields: "files(id, name, modifiedTime)"
+            }, (err, response) => {
+                resFromGoogle(err, response, forceRenew, 'coupon', cb);
+            });
+        });
     }
 };
 
@@ -56,6 +68,7 @@ if (!fs.existsSync(GOOGLE_CONTENT_PATH)) {
     };
     module.exports.getContainer(true, tmpCb("Container Icon"));
     module.exports.getStore(true, tmpCb("Store Picture"));
+    module.exports.getCoupon(true, tmpCb("Coupon Image"));
 }
 
 function resFromGoogle(err, response, forceRenew, type, cb) {

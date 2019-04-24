@@ -62,9 +62,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             });
 
             let allSucceed = taskResults.every(aResult => aResult.succeed);
-
             if (allSucceed) {
-
                 Promise
                     .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
                         const cleanStateCache = () => {
@@ -82,9 +80,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
                             oriUser: oriUser,
                             containerList
                         }, tradeDetail);
-                    }).catch(err => {
-                        done
-                    });
+                    }).catch(done);
             } else {
                 return done(null, false, {
                     code: 'F001',
@@ -116,6 +112,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser; // Rent NEED
+    const inLineSystem = options.inLineSystem; // Rent NEED
     const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
@@ -160,7 +157,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = theContainer.statusCode;
+                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ?
+                        containerStateCache[aContainerId] :
+                        theContainer.statusCode;
 
                     if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
@@ -187,8 +186,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             };
 
                             if (condition.rentOrReturn) {
+                                // if (condition.rentOrReturn && !inLineSystem) {
                                 // not to reject rent or return action in any situation
-
                                 let exception = new Exception({
                                     containerID: theContainer.ID,
                                     storeID: theContainer.storeID,
@@ -203,12 +202,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     .save()
                                     .catch(err => {
                                         debug.error(err);
-                                        return reject(err);
                                     });
-                            }
-                            // need to validate
-                            else if (condition.rentOrReturnBeforeSign) {
-                                Box.findOne({
+                            } else if (condition.rentOrReturnBeforeSign) { // need to validate
+                                return Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
@@ -218,13 +214,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     return resolve({
                                         ID: aContainerId,
                                         oriUser: "",
-                                        dataSaver: (doneSave, getErr) => { },
+                                        dataSaver: (doneSave, getErr) => {},
                                         tradeDetail: null
                                     });
                                 });
-                            }
-                            else if (oriState === 0 || oriState === 1) {
-                                Box.findOne({
+                            } else if (oriState === 0 || oriState === 1) {
+                                return Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
                                     }
@@ -286,6 +281,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
+                                theContainer.inLineSystem = inLineSystem;
                                 if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = null;
 
@@ -308,7 +304,8 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         id: theContainer.ID,
                                         typeCode: theContainer.typeCode,
                                         cycleCtr: theContainer.cycleCtr,
-                                        box: boxID
+                                        box: boxID,
+                                        inLineSystem: theContainer.inLineSystem
                                     },
                                     activity,
                                     exception: exceptionLabel
@@ -334,7 +331,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     tradeDetail: action === "Rent" || action === "Return" ? {
                                         oriUser,
                                         newUser,
-                                        containerID: theContainer.ID
+                                        container: theContainer
                                     } : null
                                 });
                             });

@@ -23,10 +23,10 @@ var roles = {
 
 describe('api-stores', function () {
     before(function (done) {
-        setTimeout(done, 15000);
+        setTimeout(done, 11000);
     });
 
-    describe.only('POST /login', function () {
+    describe('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -75,14 +75,15 @@ describe('api-stores', function () {
         });
     });
 
-    describe('GET /stores/list/12', function () {
+    describe('GET /stores/list/17', function () {
         it('should return 200', function (done) {
             request(app)
-                .get('/stores/list/12')
+                .get('/stores/list/17')
                 .set('Content-Type', 'application/json')
                 .set('reqID', makeHexString())
                 .set('reqTime', Date.now())
                 .expect(200)
+                .expect(checkStoreListKeys)
                 .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
@@ -199,8 +200,8 @@ describe('api-stores', function () {
                         return done(err);
                     }
                     userDB.deleteOne({
-                        'user.phone': '0966666666',
-                    },
+                            'user.phone': '0966666666',
+                        },
                         (err, res) => {
                             if (err) return done(err);
                         }
@@ -339,7 +340,7 @@ describe('api-stores', function () {
                             time: '09:00',
                             day: 1,
                         },
-                    },],
+                    }, ],
                 })
                 .expect(200)
                 .end(function (err, res) {
@@ -436,7 +437,7 @@ describe('api-stores', function () {
         });
     });
 
-    describe.only('GET /stores/history/byContainerType', function () {
+    describe('GET /stores/history/byContainerType', function () {
         it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
@@ -536,43 +537,6 @@ describe('api-stores', function () {
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
                 .expect(checkFavoriteKeys)
-                .end(function (err, res) {
-                    if (err) {
-                        console.log(res.body);
-                        return done(err);
-                    }
-                    done();
-                });
-        });
-    });
-
-    describe('GET /stores/activity/0', function () {
-        it('status code should be 200', function (done) {
-            request(app)
-                .get('/stores/activity/0')
-                .set('Content-Type', 'application/json')
-                .set('reqID', makeHexString())
-                .set('reqTime', Date.now())
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) {
-                        console.log(res.body);
-                        return done(err);
-                    }
-                    console.log(res.body);
-                    done();
-                });
-        });
-    });
-
-    describe('GET /stores/activityList', function () {
-        it('status code should be 200', function (done) {
-            request(app)
-                .get('/stores/activityList')
-                .set('Content-Type', 'application/json')
-                .set('reqID', makeHexString())
-                .set('reqTime', Date.now())
-                .expect(200)
                 .end(function (err, res) {
                     if (err) {
                         console.log(res.body);

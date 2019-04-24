@@ -1,5 +1,6 @@
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
+
 const appInit = require('./appInit');
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
@@ -22,15 +23,35 @@ module.exports = function () {
         'user.phone': '0900000000'
     }, (err, bot) => {
         if (err) return debug.error(err);
-        if (!bot) return debug.error('missing bot acount');
-        var dateNow = new Date();
-        var shouldWait = dateCheckpoint(1) - dateNow;
-        setTimeout(function () {
+        if (!bot) {
+            bot = new User({
+                user: {
+                    phone: "0900000000",
+                    password: null,
+                    name: "SchedulerBot"
+                },
+                roles: {
+                    typeList: ["bot"]
+                }
+            });
+            bot.save(err => {
+                if (err) debug.error(err);
+            });
+        }
+        const shouldWait = dateCheckpoint(1) - Date.now();
+        setTimeout(function timeSensitiveTask() {
             setInterval(function tasks() {
-                debug.log('scheduler start');
+                debug.log('[Scheduler | Time-Sensitive] start');
+                appInit.checkCouponIsExpired(cb);
+                appInit.checkUsersShouldBeBanned(false, null, cb);
+            }(), 1000 * 60 * 60 * 24);
+        }, shouldWait);
+        setTimeout(function noneTimeSensitiveTask() {
+            setInterval(function tasks() {
+                debug.log('[Scheduler | None-Time-Sensitive] start');
                 setTimeout(appInit.refreshContainer, 0, bot, cb);
                 setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
-                setTimeout(appInit.refreshActivity, 1000*60*5, cb);
+                setTimeout(appInit.refreshActivity, 1000 * 60 * 7, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
                 setTimeout(function () {

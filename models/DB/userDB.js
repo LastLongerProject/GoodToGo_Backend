@@ -10,7 +10,9 @@ var userSchema = mongoose.Schema({
             type: String,
             default: null
         },
-        lineId: String
+        lineId: String,
+        line_liff_userID: String,
+        line_channel_userID: String
     },
     role: {
         typeCode: String,
@@ -30,17 +32,38 @@ var userSchema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    registerMethod: {
+        type: String,
+        default: "default"
+    },
     active: {
+        type: Boolean,
+        default: true
+    },
+    agreeTerms: {
         type: Boolean,
         default: false
     },
-    purchase: [{
-        purchaseTime: {
-            type: Date,
-            default: Date.now
-        },
-        expiryTime: Date
-    }]
+    hasVerified: {
+        type: Boolean,
+        default: false
+    },
+    hasBanned: {
+        type: Boolean,
+        default: false
+    },
+    hasPurchase: {
+        type: Boolean,
+        default: false
+    },
+    point: {
+        type: Number,
+        default: 0
+    },
+    bannedTimes: {
+        type: Number,
+        default: 0
+    }
 }, {
     usePushEach: true
 });
@@ -52,14 +75,20 @@ userSchema.index({
     "user.apiKey": 1
 });
 
-// generating a hash
 userSchema.methods.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
-// checking if password is valid
 userSchema.methods.validPassword = function (password) {
     return bcrypt.compareSync(password, this.user.password);
+};
+
+const PurchaseStatus = require('../enums/userEnum').PurchaseStatus;
+
+userSchema.methods.getPurchaseStatus = function () {
+    return this.hasPurchase ?
+        PurchaseStatus.PURCHASED_USER :
+        PurchaseStatus.FREE_USER;
 };
 
 // create the model for users and expose it to our app

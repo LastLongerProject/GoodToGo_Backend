@@ -21,6 +21,10 @@ var userSchema = mongoose.Schema({
         type: Number,
         default: 0
     },
+    inLineSystem: {
+        type: Boolean,
+        default: false
+    },
     active: {
         type: Boolean,
         default: true

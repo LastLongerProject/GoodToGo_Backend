@@ -26,7 +26,7 @@ describe('api-containers', function () {
         setTimeout(done, 13000);
     });
 
-    describe('POST /login', function () {
+    describe.only('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -163,7 +163,7 @@ describe('api-containers', function () {
         });
     });
 
-    describe('GET /containers/get/list', function () {
+    describe.only('GET /containers/get/list', function () {
         it('should return 200', function (done) {
             request(app)
                 .get('/containers/get/list')
@@ -184,7 +184,8 @@ describe('api-containers', function () {
                         console.log(res.body.containerType[0].typeCode);
                         return done(err);
                     }
-                    console.log(res.body.containerDict["3378"])
+                    console.log(res.body.containerDict["3378"]);
+
                     done();
                 });
         });

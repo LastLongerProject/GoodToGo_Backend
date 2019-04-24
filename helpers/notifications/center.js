@@ -6,14 +6,21 @@ const SnsAppType = require("./enums/sns/appType");
 const WebhookEvent = require("./enums/webhook/events");
 const SocketEvent = require("./enums/socket/events");
 
+const User = require('../../models/DB/userDB');
+
 const pushBy = require("./push");
 
 module.exports = {
-    emit: function(event, target, data) {
+    emit: function (event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-                if (typeof target.clerk.roles.clerk.storeID !== "undefined") {
+                if (target.clerk &&
+                    target.clerk.roles &&
+                    target.clerk.roles.clerk &&
+                    typeof target.clerk.roles.clerk.storeID !== "undefined") {
                     pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
+                } else {
+                    debug.error(`Clerk Struc Invalid. Clerk: ${JSON.stringify(target.clerk)}`);
                 }
                 break;
             case NotificationEvent.CONTAINER_RENT:
@@ -28,6 +35,18 @@ module.exports = {
                     pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data);
                     pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
                 }
+                break;
+            case NotificationEvent.CONTAINER_RETURN_VIP:
+                pushBy.webhook(WebhookEvent.USER_VIP_RETURN_CONTAINER, target);
+                break;
+            case NotificationEvent.USER_ALMOST_OVERDUE:
+                pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target);
+                break;
+            case NotificationEvent.USER_BANNED:
+                pushBy.webhook(WebhookEvent.USER_BANNED, target);
+                break;
+            case NotificationEvent.USER_UNBANNED:
+                pushBy.webhook(WebhookEvent.USER_UNBANNED, target);
                 break;
         }
     }

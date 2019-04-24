@@ -5,29 +5,26 @@ const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
-
+const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
-const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
+
+const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const validateStateChanging = require('@lastlongerproject/toolkit')
-    .validateStateChanging;
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
+const NotificationEvent = require('../../helpers/notifications/enums/events');
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
+const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
-const validateRequest = require('../../middlewares/validation/validateRequest')
-    .JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest')
-    .regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest')
-    .regAsAdmin;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
+const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
+const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
+const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
 
 const status = [
     'delivering',
@@ -170,15 +167,18 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                         aBox.save(function (err) {
                             if (err) return next(err);
                             res.json(reply);
+                            //test
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {
-                                if (err) return debug(err);
-                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                    clerk: aClerk
-                                }, {
-                                    boxID
-                                }));
+                                if (err) return debug.error(err);
+                                userList.forEach(aClerk =>
+                                    NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
+                                        clerk: aClerk
+                                    }, {
+                                        boxID
+                                    })
+                                );
                             });
                         });
                     }
@@ -310,13 +310,11 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
                     Box.remove({
-                            boxID: boxID,
-                        },
-                        function (err) {
-                            if (err) return next(err);
-                            return res.json(reply);
-                        }
-                    );
+                        boxID: boxID,
+                    }, (err) => {
+                        if (err) return next(err);
+                        return res.json(reply);
+                    });
                 }
             );
         }
@@ -350,14 +348,10 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
  * @apiUse RentError
  * @apiUse ChangeStateError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var key = req.headers.userapikey;
-    if (typeof key === 'undefined' || typeof key === null || key.length === 0)
+    if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
             code: 'F009',
             type: 'borrowContainerMessage',
@@ -385,38 +379,45 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
         }, {
             rentToUser: userPhone,
             orderTime: res._payload.orderTime,
-            activity: "沒活動"
+            activity: "沒活動",
+            inLineSystem: false
         }, (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
             if (tradeDetail) {
-                NotificationCenter.emit("container_rent", {
-                    customer: tradeDetail[0].newUser
-                }, {
-                    containerList: reply.containerList
-                });
+                integrateTradeDetailForNotification(tradeDetail,
+                        aTradeDetail => aTradeDetail.newUser,
+                        aTradeDetail => aTradeDetail.container.ID)
+                    .forEach(aCustomerTradeDetail => {
+                        NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
+                            customer: aCustomerTradeDetail.customer
+                        }, {
+                            containerList: aCustomerTradeDetail.containerList
+                        });
+                    });
             }
-            Container.find({
-                ID: parseInt(container)
-            }).exec().then(container => {
-                if (!container) return res.status(403).json({
-                    code: 'Fxxx',
-                    type: 'borrowContainerMessage',
-                    message: 'can not find container id'
-                });
-                let boxID = container[0].boxID;
-                Box.deleteOne({
-                    boxID
-                }).exec().then(result => {
-                    return res.json(reply);
-                }).catch(err => {
-                    debug.error(err);
-                    return next(err);
-                });
-            }).catch(err => {
-                debug.error(err);
-                return next(err);
-            });
+            return res.json(reply);
+            // Container.find({
+            //     ID: parseInt(container) *** BUG HERE ***
+            // }).exec().then(container => {
+            //     if (!container) return res.status(403).json({
+            //         code: 'Fxxx',
+            //         type: 'borrowContainerMessage',
+            //         message: 'can not find container id'
+            //     });
+            //     let boxID = container[0].boxID;
+            //     Box.deleteOne({
+            //         boxID
+            //     }).exec().then(result => {
+            //         return res.json(reply);
+            //     }).catch(err => {
+            //         debug.error(err);
+            //         return next(err);
+            //     });
+            // }).catch(err => {
+            //     debug.error(err);
+            //     return next(err);
+            // });
         });
     });
 });
@@ -464,14 +465,16 @@ router.post(
                 message: 'Missing Order Time'
             });
         var container = req.params.id;
+        const storeID = req.body.storeId
         if (container === 'list') container = req.body.containers;
+        else container = [container];
         changeContainersState(
             container,
             dbStore, {
                 action: 'Return',
                 newState: 3
             }, {
-                storeID: req.body.storeId,
+                storeID,
                 orderTime: res._payload.orderTime,
                 activity: "沒活動"
             },
@@ -479,13 +482,9 @@ router.post(
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
-                if (tradeDetail) {
-                    NotificationCenter.emit("container_return", {
-                        customer: tradeDetail[0].oriUser
-                    }, {
-                        containerList: reply.containerList
-                    });
-                }
+                tradeCallback.return(tradeDetail, {
+                    storeID
+                });
             }
         );
     }
@@ -799,7 +798,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
                             ) >= 0 ?
                             theTrade.oriUser.storeID :
                             undefined;
-                        newTrade = new Trade();
+                        let newTrade = new Trade();
                         newTrade.tradeTime = Date.now();
                         newTrade.tradeType = {
                             action: 'Undo' + action,
@@ -1002,17 +1001,3 @@ router.post('/add/:id/:type', function (req, res, next) {
 });
 
 module.exports = router;
-
-function uniqArr(array, keyGenerator, dataExtractor) {
-    let seen = {};
-    array.forEach(ele => {
-        let thisKey = keyGenerator(ele);
-        let thisData = dataExtractor(ele);
-        if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
-        else seen[thisKey] = {
-            key: thisKey,
-            data: [thisData]
-        };
-    });
-    return Object.values(seen);
-}

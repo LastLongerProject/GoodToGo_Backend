@@ -6,20 +6,20 @@ const SNS = require('../aws/SNS');
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
 module.exports = {
-    sns: function(formatted) {
+    sns: function (formatted) {
         if (formatted) {
-            return function(arn) {
+            return function (arn) {
                 SNS.sns_publish(arn, formatted.content.title, formatted.content.body, formatted.content.options, (err, stack) => {
                     if (err) debug.error(`${formatted.errMsgPrefix} Err：${JSON.stringify(err)} Stack：${JSON.stringify(stack)}`);
                 });
             };
         } else {
-            return function(arn) {};
+            return function (arn) {};
         }
     },
-    webhook: function(formatted) {
+    webhook: function (formatted) {
         if (formatted) {
-            return function(url) {
+            return function (url) {
                 request
                     .post(url, formatted)
                     .catch(error => {
@@ -36,17 +36,17 @@ module.exports = {
                     });
             };
         } else {
-            return function(url) {};
+            return function (url) {};
         }
     },
-    socket: function(formatted) {
+    socket: function (formatted) {
         const SocketEmitter = DataCacheFactory.get("SocketEmitter");
         if (formatted && SocketEmitter) {
-            return function(event) {
+            return function (event) {
                 SocketEmitter.emit(event, formatted);
             };
         } else {
-            return function(url) {};
+            return function (url) {};
         }
     }
 };

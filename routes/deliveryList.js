@@ -24,11 +24,11 @@ const changeStateProcess = require('../controllers/boxTrade.js').changeStateProc
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
 const DeliveryList = require('../models/DB/deliveryListDB.js');
-const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
-const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
+const ErrorResponse = require('../models/enums/error').ErrorResponse;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 
 const changeContainersState = require('../controllers/containerTrade');
-const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
+const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 
 /**
  * @apiName DeliveryList create delivery list
@@ -136,8 +136,8 @@ router.post(
             const comment = element.comment;
 
             Box.findOne({
-                boxID: boxID,
-            },
+                    boxID: boxID,
+                },
                 function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -161,17 +161,17 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                containerList: containerList,
-                                comment: comment,
-                                $push: {
-                                    action: {
-                                        phone: phone,
-                                        boxStatus: BoxStatus.Boxing,
-                                        timestamps: Date.now(),
-                                    }
-                                },
-                                status: BoxStatus.Boxing,
-                            }, {
+                                    containerList: containerList,
+                                    comment: comment,
+                                    $push: {
+                                        action: {
+                                            phone: phone,
+                                            boxStatus: BoxStatus.Boxing,
+                                            timestamps: Date.now(),
+                                        }
+                                    },
+                                    status: BoxStatus.Boxing,
+                                }, {
                                     upsert: true,
                                 }).exec()
                                 .then(result => {
@@ -309,8 +309,8 @@ router.post(
             var boxID = element.id;
 
             Box.findOne({
-                boxID: boxID,
-            },
+                    boxID: boxID,
+                },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -386,8 +386,8 @@ router.post(
             var boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
-                boxID: boxID,
-            },
+                    boxID: boxID,
+                },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -689,8 +689,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                         );
                     }
                 );
-            }
-            else {
+            } else {
                 await box.update(req.body).exec();
                 return res.status(200).json({
                     type: "ModifyMessage",
@@ -726,14 +725,14 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
     let dbAdmin = req._user;
 
     Box.remove({
-        boxID
-    })
+            boxID
+        })
         .exec()
         .then(_ => res.status(200).json({
             type: "DeleteMessage",
             message: "Delete successfully"
         })).catch(err => {
-            debug(err);
+            debug.error(err);
             return next(err);
         });
 });

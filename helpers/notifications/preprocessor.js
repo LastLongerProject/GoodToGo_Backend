@@ -5,12 +5,33 @@ const WebhookEvent = require("./enums/webhook/events");
 const SocketEvent = require("./enums/socket/events");
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
+function containerFormatter(data) {
+    let containerType = DataCacheFactory.get('containerType');
+    let formattedContainer = {};
+    let amount = 0;
+    data.containerList.forEach(container => {
+        try {
+            let key = containerType[container.typeCode].name;
+            if (!formattedContainer[key]) formattedContainer[key] = [];
+            formattedContainer[key].push("#" + container.ID);
+            amount++;
+        } catch (error) {
+            debug.error(`ERR: ${error}`);
+            return;
+        }
+    });
+    let IDlist = Object.keys(formattedContainer).map(key => {
+        return `${key}（${formattedContainer[key].join("、")}）`;
+    });
+    return {
+        amount,
+        IDlist
+    };
+}
+
 module.exports = {
-    sns: function(event, user, data) {
-        let containerType = DataCacheFactory.get('containerType');
-        let containers = {};
-        let amount = 0;
-        let reply = [];
+    sns: function (event, user, data) {
+        let formattedData;
         try {
             switch (event) {
                 case SnsEvent.CONTAINER_DELIVERY:
@@ -25,49 +46,29 @@ module.exports = {
                         errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
                     }
                 case SnsEvent.CONTAINER_RENT:
-                    containers = {};
-                    amount = 0;
-                    for (let container of data.containerList) {
-                        let key = containerType[container.typeCode].name;
-                        if (!containers[key]) containers[key] = [];
-                        containers[key].push("#" + container.id);
-                        amount++;
-                    }
-                    reply = Object.keys(containers).map(key => {
-                        return `${key}(${containers[key].join("、")})`;
-                    });
+                    formattedData = containerFormatter(data);
                     return {
                         content: {
-                            title: `借用了${amount}個容器！`,
-                            body: reply.join('、'),
+                            title: `借用了${formattedData.amount}個容器！`,
+                            body: formattedData.IDlist.join('、'),
                             options: {
                                 action: "RELOAD_USAGE"
                             }
                         },
-                        errMsgPrefix: `[借出]通知推播失敗：[${user}]`
+                        errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
                     };
 
                 case SnsEvent.CONTAINER_RETURN:
-                    containers = {};
-                    amount = 0;
-                    for (let container of data.containerList) {
-                        let key = containerType[container.typeCode].name;
-                        if (!containers[key]) containers[key] = [];
-                        containers[key].push("#" + container.id);
-                        amount++;
-                    }
-                    reply = Object.keys(containers).map(key => {
-                        return `${key}(${containers[key].join("、")})`;
-                    });
+                    formattedData = containerFormatter(data);
                     return {
                         content: {
-                            title: `歸還了${amount}個容器！`,
-                            body: reply.join("、"),
+                            title: `歸還了${formattedData.amount}個容器！`,
+                            body: formattedData.IDlist.join("、"),
                             options: {
                                 action: "RELOAD_USAGE"
                             }
                         },
-                        errMsgPrefix: `[歸還]通知推播失敗：[${user}]`
+                        errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
                     };
             }
         } catch (error) {
@@ -75,15 +76,19 @@ module.exports = {
             return null;
         }
     },
-    webhook: function(event, data) {
+    webhook: function (event, target) {
         let para;
         try {
             switch (event) {
                 case WebhookEvent.USER_USAGE_UPDATE_RENT:
-                    para = data.user.phone;
-                    break;
                 case WebhookEvent.USER_USAGE_UPDATE_RETURN:
-                    para = data.user.phone;
+                    para = target.user.phone;
+                    break;
+                case WebhookEvent.USER_VIP_RETURN_CONTAINER:
+                case WebhookEvent.USER_ALMOST_OVERDUE:
+                case WebhookEvent.USER_BANNED:
+                case WebhookEvent.USER_UNBANNED:
+                    para = target.user.line_channel_userID;
                     break;
             }
             return {
@@ -95,7 +100,7 @@ module.exports = {
             return null;
         }
     },
-    socket: function(event, data) {
+    socket: function (event, data) {
         try {
             switch (event) {
                 case SocketEvent.GLOBAL_USAGE_UPDATE:
@@ -107,4 +112,3 @@ module.exports = {
         }
     }
 };
-

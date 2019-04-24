@@ -8,12 +8,13 @@
         "socketDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:*,socket.io:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon app.js",
         "redisDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=testing & set NODE_DEBUG=redis & nodemon app.js",
         "nodemonDebug": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon app.js --verbose",
+        "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:*' && PORT='3030' && NODE_ENV=\"testing\" && nodemon --trace-warnings app.js",
+        "start": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=\"testing\" & nodemon app.js",
         "ngrok": "ngrok http -region ap 3030",
-        "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:* && PORT=3030' NODE_ENV=\"testing\" nodemon --trace-warnings app.js",
-        "start": "nodemon app.js --ignore tmp/",
         "unitTest": "mocha --grep api",
         "migrate": "mocha --grep migrate",
-        "apidoc": "apidoc -i routes/ -o ./apidoc"
+        "apidoc": "apidoc -i routes/ -o ./apidoc",
+        "deployApidoc": ""
     },
     "nodemonConfig": {
         "ignore": [
@@ -29,7 +30,7 @@
     "author": "BenjaminChenTW",
     "license": "ISC",
     "dependencies": {
-        "@lastlongerproject/toolkit": "^1.0.4",
+        "@lastlongerproject/toolkit": "^1.0.5",
         "apidoc": "^0.17.7",
         "aws-sdk": "^2.296.0",
         "axios": "^0.18.0",
@@ -42,10 +43,8 @@
         "debug": "^3.1.0",
         "ejs": "~2.5.7",
         "express": "^4.16.4",
-        "express-graphql": "^0.7.1",
         "express-status-monitor": "^1.0.1",
         "googleapis": "^32.0.0",
-        "graphql": "^14.1.1",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.1",
         "mongoose": "^4.13.17",
@@ -55,7 +54,7 @@
         "queue": "^4.5.0",
         "redis": "^2.8.0",
         "serve-favicon": "~2.4.3",
-        "sharp": "^0.18.4",
+        "sharp": "^0.22.0",
         "socket.io": "^2.1.0",
         "universal-analytics": "^0.4.20",
         "uuid": "^3.3.2"
@@ -66,6 +65,7 @@
     "homepage": "https://github.com/BenjaminChenTW/GoodToGo_Backend#readme",
     "devDependencies": {
         "chai": "^4.2.0",
+        "eslint": "^5.16.0",
         "grunt-apidoc": "^0.11.0",
         "mocha": "^5.2.0",
         "nodemon": "^1.18.10",

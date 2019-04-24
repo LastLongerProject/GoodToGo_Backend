@@ -1,6 +1,6 @@
-const BoxStatus = require('../models/variables/boxEnum').BoxStatus;
-const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
-const BoxSaveType = require('../models/variables/programEnum.js').BoxSaveType;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const BoxSaveType = require('../models/enums/programEnum').BoxSaveType;
 const changeContainersState = require('./containerTrade');
 
 const validChange = [
@@ -144,11 +144,11 @@ let changeStateProcess = async function (element, box, phone) {
             $pull: {
                 action: {
                     $or: [{
-                        boxStatus: BoxStatus.Delivering
-                    },
-                    {
-                        boxStatus: BoxStatus.Signed
-                    }
+                            boxStatus: BoxStatus.Delivering
+                        },
+                        {
+                            boxStatus: BoxStatus.Signed
+                        }
                     ]
                 }
             }

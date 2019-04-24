@@ -93,4 +93,4 @@ let ErrorResponse = Object.freeze({
 
 module.exports = {
     ErrorResponse
-}
+};

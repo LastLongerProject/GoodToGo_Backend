@@ -1,13 +1,13 @@
 var jwt = require('jwt-simple');
 var keys = require('../../config/keys');
 
-module.exports = function(req, res, jwtToken, next) {
+module.exports = function (req, res, jwtToken, next) {
     var decoded;
-    keys.serverSecretKey(function(err, serverSecretKey) {
+    keys.serverSecretKey(function (err, serverSecretKey) {
         if (err) return next(err);
         try {
             decoded = jwt.decode(jwtToken, serverSecretKey);
-        } catch (err) {}
+        } catch (err) { }
         if (!decoded) {
             return res.status(401).json({ code: 'C001', type: 'validatingToken', message: 'Token Invalid' });
         } else if (!decoded.iat || !decoded.exp) {
