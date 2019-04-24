@@ -3,6 +3,8 @@ const debug = require('../helpers/debugger')('tradeCallback');
 const PointLog = require('../models/DB/pointLogDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
+
+const checkUserShouldUnban = require('../helpers/appInit').checkUsersShouldBeBanned;
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 
@@ -24,6 +26,7 @@ module.exports = {
                 aTradeDetail => aTradeDetail.oriUser,
                 aTradeDetail => aTradeDetail.container)
             .forEach(aCustomerTradeDetail => {
+                checkUserShouldUnban(false, aCustomerTradeDetail.customer);
                 NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
                     customer: aCustomerTradeDetail.customer
                 }, {

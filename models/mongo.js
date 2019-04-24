@@ -50,7 +50,7 @@ module.exports = function (mongoose, done) {
                             });
                         }),
                         new Promise((resolve, reject) => {
-                            appInit.checkUsersShouldBeBanned(true, err => {
+                            appInit.checkUsersShouldBeBanned(true, null, err => {
                                 if (err) return reject(err);
                                 resolve();
                             });

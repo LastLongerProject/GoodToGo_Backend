@@ -65,10 +65,15 @@ module.exports = {
             debug.log('Expired Coupon is Check');
         });
     },
-    checkUsersShouldBeBanned: function (startupCheck, cb) {
-        User.find({
+    checkUsersShouldBeBanned: function (startupCheck, specificUser, cb) {
+        const userCondition = {
             "agreeTerms": true
-        }, (err, userList) => {
+        };
+        if (specificUser)
+            Object.assign(userCondition, {
+                "user.phone": specificUser.user.phone
+            });
+        User.find(userCondition, (err, userList) => {
             if (err) return debug.error(err);
             const userDict = {};
             const userObjectIDList = userList.map(aUser => {
