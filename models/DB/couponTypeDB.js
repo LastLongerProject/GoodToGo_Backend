@@ -36,7 +36,7 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-const noticeTitle = "注意事項：\n";
+const noticeTitleOri = "注意事項：\n";
 const generalNotice = "　•　本優惠券限使用一次，不得重複使用。\n" +
     "　•　本優惠券須以行動裝置出示，並由店舖夥伴點選「確定使用」後即可兌換，截圖、翻拍、影印或其他任何形式出示皆不得兌換。\n" +
     "　•　確定使用優惠券後，須點選「我要使用」向店家出示容器借用畫面。\n" +
@@ -67,11 +67,12 @@ userSchema.methods.generateNotice = function () {
         formattedExtraNotice = oriExtraNotice + "\n";
     }
     return (this.extraContent !== null ? extraContentTemplate[this.extraContent] + "\n" : "") +
-        noticeTitle +
+        noticeTitleOri +
         formattedExtraNotice +
         generalNotice;
 };
 
+const noticeTitle = "注意事項：";
 const generalNoticeArr = [
     "本優惠券限使用一次，不得重複使用。",
     "本優惠券須以行動裝置出示，並由店舖夥伴點選「確定使用」後即可兌換，截圖、翻拍、影印或其他任何形式出示皆不得兌換。",
@@ -79,7 +80,6 @@ const generalNoticeArr = [
     "若遇不可抗拒之事由導致本優惠券無法使用，好盒器保留更換其他等值優惠券之權利。",
     "好盒器保有相關細節最終解釋權，如有未盡事宜，好盒器得修訂之。"
 ];
-
 const contentStrucTemplate = Object.freeze({
     test: {
         title: "測試：",
