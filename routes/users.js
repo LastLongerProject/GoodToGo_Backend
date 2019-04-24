@@ -936,4 +936,18 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
         .catch(next);
 });
 
+router.get("/bannedUser", (req, res, next) => { // none json reply
+    User.find({
+        "hasBanned": true
+    }, (err, result) => {
+        if (err) return next(err);
+        const storeDict = DataCacheFactory.get("store");
+        let txt = "";
+        result.forEach(aResult => {
+            txt += `${storeDict[aResult._id].phone}：${aResult.name}、`
+        })
+        res.send(txt).end();
+    });
+});
+
 module.exports = router;

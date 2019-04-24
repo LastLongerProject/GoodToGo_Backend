@@ -1559,7 +1559,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
     });
 });
 
-router.get("/bookedContainer", (req, res, next) => {
+router.get("/bookedContainer", (req, res, next) => { // none json reply
     getBookedAmount((err, result) => {
         if (err) return next(err);
         const storeDict = DataCacheFactory.get("store");
