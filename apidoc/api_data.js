@@ -2035,7 +2035,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n    couponTypeID : String,\n    provider : String,\n    title : String,\n    expirationDate : Date,\n    price : Number,\n    amount : Number,\n    notice : String,\n    imgSrc : Url,\n    state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n}",
+          "content": "HTTP/1.1 200 \n{\n    couponTypeID : String,\n    provider : String,\n    title : String,\n    expirationDate : Date,\n    price : Number,\n    amount : Number,\n    notice : String,\n    notice_struc : [\n        {\n            title : String,\n            list : [\n                String, ...\n            ]\n        }, ...\n    ],\n    imgSrc : Url,\n    state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n}",
           "type": "json"
         }
       ]
@@ -2094,7 +2094,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "    HTTP/1.1 200 \n    {\n         userPoint : Number,\n\t        allCouponList : [\n\t\t    {\n\t\t\t    couponTypeID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    price : Number,\n\t\t\t    amount : Number,\n\t\t\t    imgSrc : Url,\n             state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n\t\t    }, ...\n\t        ]\n     }",
+          "content": "    HTTP/1.1 200 \n    {\n         userPoint : Number,\n\t        allCouponList : [\n\t\t    {\n\t\t\t    couponTypeID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    price : Number,\n\t\t\t    amount : Number,\n             notice : String,\n             notice_struc : [\n                 {\n                     title : String,\n                     list : [\n                         String, ...\n                     ]\n                 }, ...\n             ],\n\t\t\t    imgSrc : Url,\n             state : String (\"sold_out\" or \"purchasable\" or \"cannot_afford\")\n\t\t    }, ...\n\t        ]\n     }",
           "type": "json"
         }
       ]
@@ -2153,7 +2153,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "    HTTP/1.1 200 \n    {\n\t        myCouponList : [\n\t\t    {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    notice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }, ...\n\t        ]\n     }",
+          "content": "    HTTP/1.1 200 \n    {\n\t        myCouponList : [\n\t\t    {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    notice : String,\n             notice_struc : [\n                 {\n                     title : String,\n                     list : [\n                         String, ...\n                     ]\n                 }, ...\n             ],\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }, ...\n\t        ]\n     }",
           "type": "json"
         }
       ]
@@ -2212,7 +2212,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "    HTTP/1.1 200 \n    {\n         code: '???',\n         type: 'couponMessage',\n         message: 'Purchase Coupon Success',\n         newCoupon: {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    notice : String,\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }\n     }",
+          "content": "    HTTP/1.1 200 \n    {\n         code: '???',\n         type: 'couponMessage',\n         message: 'Purchase Coupon Success',\n         newCoupon: {\n\t\t\t    couponID : String,\n\t\t\t    provider : String,\n\t\t\t    title : String,\n\t\t\t    expirationDate : Date,\n\t\t\t    notice : String,\n             notice_struc : [\n                 {\n                     title : String,\n                     list : [\n                         String, ...\n                     ]\n                 }, ...\n             ],\n\t\t\t    imgSrc : Url,\n             state : String (\"used\" or \"available\" or \"expired\" or \"unknown\")\n\t\t    }\n     }",
           "type": "json"
         }
       ]
@@ -4308,7 +4308,7 @@ define({ "api": [
     "name": "Manage_refresh_specific_container_icon",
     "group": "Manage",
     "type": "patch",
-    "url": "/manage/refresh/containerIcon/:id",
+    "url": "/manage/refresh/containerIcon/:forceRenew",
     "title": "Refresh specific container icon",
     "permission": [
       {
@@ -4322,6 +4322,120 @@ define({ "api": [
         {
           "title": "Success-Response:",
           "content": "HTTP/1.1 200 \n{ \n    type: 'refreshContainerIcon',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
+          "type": "json"
+        }
+      ]
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "optional": false,
+            "field": "403",
+            "description": "<p>Response data</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    },
+    "version": "0.0.0",
+    "filename": "routes/manage.js",
+    "groupTitle": "Manage",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Manage_refresh_specific_container_icon",
+    "group": "Manage",
+    "type": "patch",
+    "url": "/manage/refresh/containerIcon/:forceRenew",
+    "title": "Refresh specific container icon",
+    "permission": [
+      {
+        "name": "admin_manager",
+        "title": "Admin manager access rights needed.",
+        "description": "<p>Please use admin manager identity to request this uri.</p>"
+      }
+    ],
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{ \n    type: 'refreshCouponImage',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
           "type": "json"
         }
       ]
