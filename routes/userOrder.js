@@ -133,7 +133,7 @@ router.post('/add', validateLine, function (req, res, next) {
             code: 'L001',
             type: 'userOrderMessage',
             message: `User is Banned.`,
-            txt: "您已被停權，無法借用！\n欲解除停權，請私訊好盒器粉專。"
+            txt: dbUser.getBannedTxt("借用")
         });
     if (typeof storeCode !== "string" || !storeCodeValidater.test(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({

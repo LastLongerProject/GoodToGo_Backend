@@ -119,7 +119,7 @@ router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res
             code: 'L009',
             type: 'userOrderMessage',
             message: `User is Banned.`,
-            txt: "您已被停權，無法使用！\n欲解除停權，請私訊好盒器粉專。"
+            txt: dbUser.getBannedTxt("使用")
         });
     if (typeof CouponID !== "string")
         return res.status(403).json({
@@ -376,7 +376,7 @@ router.post('/purchase/:couponTypeID', validateLine, forPurchasedUser, function 
             code: 'L020',
             type: 'userOrderMessage',
             message: `User is Banned.`,
-            txt: "您已被停權，無法領取！\n欲解除停權，請私訊好盒器粉專。"
+            txt: dbUser.getBannedTxt("領取")
         });
     if (typeof CouponTypeID !== "string")
         return res.status(403).json({
