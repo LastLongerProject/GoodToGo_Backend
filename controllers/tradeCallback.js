@@ -54,7 +54,7 @@ module.exports = {
                     quantityChange: quantity
                 });
                 NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
-                    customer: dbCustomer.customer
+                    customer: dbCustomer
                 }, {
                     amount: quantity,
                     point: quantity
