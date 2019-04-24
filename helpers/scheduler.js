@@ -44,7 +44,7 @@ module.exports = function () {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 appInit.checkCouponIsExpired(cb);
                 appInit.checkUsersShouldBeBanned(false, null, cb);
-            }(), 1000 * 60 * 60 * 24);
+            }, 1000 * 60 * 60 * 24);
         }, shouldWait);
         setTimeout(function noneTimeSensitiveTask() {
             setInterval(function tasks() {
@@ -79,8 +79,7 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
-                return tasks;
-            }(), 1000 * 60 * 60 * 24);
+            }, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
     });
 };
