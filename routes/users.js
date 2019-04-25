@@ -274,6 +274,31 @@ router.post(
     }
 );
 
+router.post(
+    '/signup/lineUserRoot',
+    regAsAdminManager,
+    validateRequest,
+    function (req, res, next) {
+        req._options.passVerify = true;
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
+            } else {
+                res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug.error(err);
+                });
+            }
+        });
+    }
+);
+
 /**
  * @apiName SignUp-Root
  * @apiGroup Users

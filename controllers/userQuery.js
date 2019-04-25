@@ -229,21 +229,23 @@ module.exports = {
                     message: 'That phone is already taken'
                 });
             } else {
-                if (typeof verificationCode === 'undefined') {
+                if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     sendVerificationCode(phone, done);
                 } else {
                     redis.get('user_verifying:' + phone, (err, reply) => {
                         if (err) return done(err);
-                        if (reply === null) return done(null, false, {
-                            code: 'D010',
-                            type: 'signupMessage',
-                            message: 'Verification Code expired'
-                        });
-                        else if (reply !== verificationCode) return done(null, false, {
-                            code: 'D011',
-                            type: 'signupMessage',
-                            message: "Verification Code isn't correct"
-                        });
+                        if (options.passVerify !== true) {
+                            if (reply === null) return done(null, false, {
+                                code: 'D010',
+                                type: 'signupMessage',
+                                message: 'Verification Code expired'
+                            });
+                            else if (reply !== verificationCode) return done(null, false, {
+                                code: 'D011',
+                                type: 'signupMessage',
+                                message: "Verification Code isn't correct"
+                            });
+                        }
 
                         let userToSave;
                         if (dbUser) { // has NOT verified
@@ -264,8 +266,8 @@ module.exports = {
                         userToSave.save(function (err) {
                             if (err) return done(err);
                             redis.del('user_verifying:' + phone, (err, delReply) => {
-                                if (err) return done(err);
-                                if (delReply !== 1) return done("delReply: " + delReply);
+                                if (err && options.passVerify !== true) return done(err);
+                                if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
                                 return done(null, userToSave, {
                                     body: {
                                         type: 'signupMessage',
