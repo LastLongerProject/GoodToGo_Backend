@@ -26,16 +26,6 @@ module.exports = {
     return: function (tradeDetail, options) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
         if (!options) options = {};
-        tradeDetail.forEach((aTradeDetail) => {
-            UserOrder.updateMany({
-                "containerID": aTradeDetail.container.ID,
-                "archived": false
-            }, {
-                "archived": true
-            }, (err) => {
-                if (err) return debug.error(err);
-            });
-        });
         const toStore = typeof options.storeID === "undefined" ?
             tradeDetail[0].newUser.roles.clerk.storeID :
             options.storeID;
@@ -60,40 +50,55 @@ module.exports = {
                 });
 
                 if (!dbCustomer.agreeTerms) return null;
-                const storeDict = DataCacheFactory.get("store");
-                const quantity = containerList.length;
-                const isOverdueReturn = dbCustomer.hasBanned;
-                const isPurchasedUser = dbCustomer.hasPurchase;
-                pointTrade.getAndSendPoint(dbCustomer, quantity, (err, point, bonusPointActivity) => {
-                    if (err) debug.error(err);
-                    checkUserShouldUnban(false, dbCustomer, (err, userDict) => {
-                        if (err) debug.error(err);
-                        const overdueAmount = userDict[dbCustomer._id].overdue.length;
-                        const isBannedAfterReturn = dbCustomer.hasBanned;
-                        NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
-                            customer: dbCustomer
-                        }, {
-                            conditions: {
-                                isPurchasedUser,
-                                isOverdueReturn,
-                                isBannedAfterReturn,
-                                isStillHaveOverdueContainer: overdueAmount > 0,
-                                isFirstTimeBanned: dbCustomer.bannedTimes <= 1
-                            },
-                            data: {
-                                amount: quantity,
-                                point,
-                                bonusPointActivity,
-                                overdueAmount,
-                                bannedTimes: dbCustomer.bannedTimes
-                            }
+                UserOrder.find({
+                    "user": dbCustomer._id,
+                    "containerID": {
+                        "$in": containerList.map(aContainer => aContainer.ID)
+                    },
+                    "archived": false
+                }, (err, userOrders) => {
+                    if (err) return debug.error(err);
+                    userOrders.forEach(aUserOrder => {
+                        aUserOrder.archived = true;
+                        aUserOrder.save(err => {
+                            if (err) debug.error(err);
                         });
                     });
-                    if (isPurchasedUser)
-                        pointTrade.sendPoint(point, dbCustomer, {
-                            title: `歸還了${quantity}個容器`,
-                            body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity}`}`
+                    const storeDict = DataCacheFactory.get("store");
+                    const quantity = containerList.length;
+                    const isOverdueReturn = dbCustomer.hasBanned;
+                    const isPurchasedUser = dbCustomer.hasPurchase;
+                    pointTrade.getAndSendPoint(dbCustomer, userOrders, (err, point, bonusPointActivity) => {
+                        if (err) debug.error(err);
+                        checkUserShouldUnban(false, dbCustomer, (err, userDict) => {
+                            if (err) debug.error(err);
+                            const overdueAmount = userDict[dbCustomer._id].overdue.length;
+                            const isBannedAfterReturn = dbCustomer.hasBanned;
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
+                                customer: dbCustomer
+                            }, {
+                                conditions: {
+                                    isPurchasedUser,
+                                    isOverdueReturn,
+                                    isBannedAfterReturn,
+                                    isStillHaveOverdueContainer: overdueAmount > 0,
+                                    isFirstTimeBanned: dbCustomer.bannedTimes <= 1
+                                },
+                                data: {
+                                    amount: quantity,
+                                    point,
+                                    bonusPointActivity,
+                                    overdueAmount,
+                                    bannedTimes: dbCustomer.bannedTimes
+                                }
+                            });
                         });
+                        if (isPurchasedUser)
+                            pointTrade.sendPoint(point, dbCustomer, {
+                                title: `歸還了${quantity}個容器`,
+                                body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity}`}`
+                            });
+                    });
                 });
             });
     }
