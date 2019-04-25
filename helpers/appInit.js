@@ -92,7 +92,7 @@ module.exports = {
                 for (let userID in userDict) {
                     const dbUser = userDict[userID].dbUser;
                     if (userDict[userID].overdue.length > 0) {
-                        banUser(dbUser);
+                        banUser(dbUser, userDict[userID].overdue.length, sendNotice);
                     } else {
                         const almostOverdueAmount = userDict[userID].almostOverdue.length;
                         if (almostOverdueAmount > 0 && sendNotice) {
@@ -387,16 +387,18 @@ function findUsersToCheckShouldBanned(specificUser, cb) {
     }
 }
 
-function banUser(dbUser) {
+function banUser(dbUser, overdueAmount, sendNotice) {
     if (!dbUser.hasBanned) {
         dbUser.hasBanned = true;
         dbUser.bannedTimes++;
         dbUser.save(err => {
             if (err) return debug.error(err);
         });
-        NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
-            bannedTimes: dbUser.bannedTimes
-        });
+        if (sendNotice)
+            NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
+                bannedTimes: dbUser.bannedTimes,
+                overdueAmount
+            });
     }
 }
 
