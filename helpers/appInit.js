@@ -369,13 +369,17 @@ function banUser(dbUser) {
         dbUser.save(err => {
             if (err) return debug.error(err);
         });
-        NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, null);
+        NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
+            bannedTimes: dbUser.bannedTimes
+        });
     }
 }
 
 function noticeUserWhoIsGoingToBeBanned(dbUser) {
     if (!dbUser.hasBanned) {
-        NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, null);
+        NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
+            bannedTimes: dbUser.bannedTimes
+        });
     }
 }
 
@@ -385,7 +389,9 @@ function unbanUser(dbUser) {
         dbUser.save(err => {
             if (err) return debug.error(err);
         });
-        NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, null);
+        NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, {
+            bannedTimes: dbUser.bannedTimes
+        });
     }
 }
 

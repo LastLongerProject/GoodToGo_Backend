@@ -44,13 +44,13 @@ module.exports = {
                 }
                 break;
             case NotificationEvent.USER_ALMOST_OVERDUE:
-                pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target);
+                pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target, data);
                 break;
             case NotificationEvent.USER_BANNED:
-                pushBy.webhook(WebhookEvent.USER_BANNED, target);
+                pushBy.webhook(WebhookEvent.USER_BANNED, target, data);
                 break;
             case NotificationEvent.USER_UNBANNED:
-                pushBy.webhook(WebhookEvent.USER_UNBANNED, target);
+                pushBy.webhook(WebhookEvent.USER_UNBANNED, target, data);
                 break;
         }
     }

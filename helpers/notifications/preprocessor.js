@@ -95,7 +95,10 @@ module.exports = {
                 case WebhookEvent.USER_ALMOST_OVERDUE:
                 case WebhookEvent.USER_BANNED:
                 case WebhookEvent.USER_UNBANNED:
-                    para = target.user.line_channel_userID;
+                    para = {
+                        lineID: target.user.line_channel_userID,
+                        bannedTimes: data.bannedTimes
+                    };
                     break;
             }
             return {
