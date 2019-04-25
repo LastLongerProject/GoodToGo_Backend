@@ -7,8 +7,8 @@ const PointLog = require('../models/DB/pointLogDB');
 
 module.exports = {
     getAndSendPoint: function (dbUser, quantity, cb) {
-        if (!dbUser.hasPurchase) return cb(null, null);
-        scanBonusPointActivity(quantity, point => cb(null, point));
+        if (!dbUser.hasPurchase) return cb(null, null, null);
+        scanBonusPointActivity(quantity, cb);
     },
     sendPoint: function (point, toUser, logContext) {
         let newPointLog = new PointLog({
