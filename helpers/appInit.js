@@ -65,26 +65,10 @@ module.exports = {
             debug.log('Expired Coupon is Check');
         });
     },
-    checkUsersShouldBeBanned: function (startupCheck, specificUser, cb) {
-        const userCondition = {
-            "agreeTerms": true
-        };
-        if (specificUser)
-            Object.assign(userCondition, {
-                "user.phone": specificUser.user.phone
-            });
-        User.find(userCondition, (err, userList) => {
-            if (err) return debug.error(err);
-            const userDict = {};
-            const userObjectIDList = userList.map(aUser => {
-                const userID = aUser._id;
-                userDict[userID] = {
-                    dbUser: aUser,
-                    almostOverdue: [],
-                    overdue: []
-                };
-                return userID;
-            });
+    checkUsersShouldBeBanned: function (sendNotice, specificUser = null, cb) {
+        findUsersToCheckShouldBanned(specificUser, reply => {
+            const userDict = reply.userDict;
+            const userObjectIDList = reply.userObjectIDList;
             UserOrder.find({
                 "user": {
                     "$in": userObjectIDList
@@ -107,14 +91,17 @@ module.exports = {
 
                 for (let userID in userDict) {
                     const dbUser = userDict[userID].dbUser;
-                    if (userDict[userID].overdue.length > 0)
+                    if (userDict[userID].overdue.length > 0) {
                         banUser(dbUser);
-                    else if (userDict[userID].almostOverdue.length > 0 && !startupCheck)
-                        noticeUserWhoIsGoingToBeBanned(dbUser);
-                    else if (userDict[userID].overdue.length === 0)
+                    } else {
+                        const almostOverdueAmount = userDict[userID].almostOverdue.length;
+                        if (almostOverdueAmount > 0 && sendNotice) {
+                            noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
+                        }
                         unbanUser(dbUser);
+                    }
                 }
-                if (cb) return cb();
+                if (cb) return cb(null, userDict);
                 debug.log('Banned User is Check');
             });
         });
@@ -362,6 +349,44 @@ function couponListGenerator(cb) {
     });
 }
 
+function findUsersToCheckShouldBanned(specificUser, cb) {
+    if (specificUser) {
+        const userID = specificUser._id;
+        const userDict = {
+            [userID]: {
+                dbUser: specificUser,
+                almostOverdue: [],
+                overdue: []
+            }
+        };
+        const userObjectIDList = [userID];
+        return cb({
+            userDict,
+            userObjectIDList
+        });
+    } else {
+        User.find({
+            "agreeTerms": true
+        }, (err, userList) => {
+            if (err) return debug.error(err);
+            const userDict = {};
+            const userObjectIDList = userList.map(aUser => {
+                const userID = aUser._id;
+                userDict[userID] = {
+                    dbUser: aUser,
+                    almostOverdue: [],
+                    overdue: []
+                };
+                return userID;
+            });
+            return cb({
+                userDict,
+                userObjectIDList
+            });
+        })
+    }
+}
+
 function banUser(dbUser) {
     if (!dbUser.hasBanned) {
         dbUser.hasBanned = true;
@@ -375,10 +400,11 @@ function banUser(dbUser) {
     }
 }
 
-function noticeUserWhoIsGoingToBeBanned(dbUser) {
+function noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount) {
     if (!dbUser.hasBanned) {
         NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
-            bannedTimes: dbUser.bannedTimes
+            bannedTimes: dbUser.bannedTimes,
+            almostOverdueAmount
         });
     }
 }

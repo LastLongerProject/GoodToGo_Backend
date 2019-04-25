@@ -77,28 +77,20 @@ module.exports = {
         }
     },
     webhook: function (event, target, data) {
-        let para;
+        let para = data;
         try {
             switch (event) {
                 case WebhookEvent.USER_USAGE_UPDATE_RENT:
                 case WebhookEvent.USER_USAGE_UPDATE_RETURN:
                     para = target.user.phone;
                     break;
-                case WebhookEvent.USER_RETURN_CONTAINER_FREE_USER:
-                case WebhookEvent.USER_RETURN_CONTAINER_PURCHASED_USER:
-                    para = {
-                        lineID: target.user.line_channel_userID,
-                        amount: data.amount,
-                        point: data.point
-                    };
-                    break;
+                case WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM:
                 case WebhookEvent.USER_ALMOST_OVERDUE:
                 case WebhookEvent.USER_BANNED:
                 case WebhookEvent.USER_UNBANNED:
-                    para = {
-                        lineID: target.user.line_channel_userID,
-                        bannedTimes: data.bannedTimes
-                    };
+                    Object.assign(para, {
+                        lineID: target.user.line_channel_userID
+                    });
                     break;
             }
             return {

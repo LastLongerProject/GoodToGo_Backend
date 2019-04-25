@@ -43,7 +43,7 @@ module.exports = function () {
             setInterval(function tasks() {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 appInit.checkCouponIsExpired(cb);
-                appInit.checkUsersShouldBeBanned(false, null, cb);
+                appInit.checkUsersShouldBeBanned(true, null, cb);
             }, 1000 * 60 * 60 * 24);
         }, shouldWait);
         setTimeout(function noneTimeSensitiveTask() {
