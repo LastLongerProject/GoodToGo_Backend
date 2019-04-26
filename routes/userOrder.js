@@ -148,7 +148,7 @@ router.post('/add', validateLine, function (req, res, next) {
             code: 'L003',
             type: 'userOrderMessage',
             message: `StoreCode not Correct`,
-            txt: "代碼錯誤，請輸入正確代碼！"
+            txt: "店舖代碼錯誤，請輸入正確店舖代碼！"
         });
 
     userUsingAmount(dbUser, (err, usingAmount) => {
@@ -271,25 +271,25 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                     action: "Rent",
                     newState: 2
                 }, {
-                    rentToUser: dbUser.user.phone,
-                    orderTime: theUserOrder.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
-                        txt: "容器ID錯誤，請輸入正確容器 ID！"
-                    }));
-                    theUserOrder.save(err => {
+                        rentToUser: dbUser.user.phone,
+                        orderTime: theUserOrder.orderTime,
+                        activity: "沒活動",
+                        inLineSystem: true
+                    }, (err, tradeSuccess, reply, tradeDetail) => {
                         if (err) return next(err);
-                        res.json({
-                            code: '???',
-                            type: 'userOrderMessage',
-                            message: 'Register ContainerID of UserOrder Success'
+                        if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                            txt: "容器ID錯誤，請輸入正確容器 ID！"
+                        }));
+                        theUserOrder.save(err => {
+                            if (err) return next(err);
+                            res.json({
+                                code: '???',
+                                type: 'userOrderMessage',
+                                message: 'Register ContainerID of UserOrder Success'
+                            });
                         });
+                        tradeCallback.rent(tradeDetail);
                     });
-                    tradeCallback.rent(tradeDetail);
-                });
 
             });
         });
