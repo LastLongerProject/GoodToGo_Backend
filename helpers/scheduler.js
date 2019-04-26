@@ -40,14 +40,16 @@ module.exports = function () {
         }
         const shouldWait = dateCheckpoint(1) - Date.now();
         setTimeout(function timeSensitiveTask() {
-            setInterval(function tasks() {
+            let tasks = function tasks() {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 appInit.checkCouponIsExpired(cb);
-                appInit.checkUsersShouldBeBanned(false, null, cb);
-            }(), 1000 * 60 * 60 * 24);
+                appInit.checkUsersShouldBeBanned(true, null, cb);
+            };
+            tasks();
+            setInterval(tasks, 1000 * 60 * 60 * 24);
         }, shouldWait);
         setTimeout(function noneTimeSensitiveTask() {
-            setInterval(function tasks() {
+            let tasks = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
                 setTimeout(appInit.refreshContainer, 0, bot, cb);
                 setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
@@ -79,8 +81,9 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
-                return tasks;
-            }(), 1000 * 60 * 60 * 24);
+            };
+            tasks();
+            setInterval(tasks, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
     });
 };

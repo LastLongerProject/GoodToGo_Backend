@@ -115,7 +115,7 @@ require("./models/redis");
 require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.');
+    debug.log('SIGINT signal received');
     let server = app.get('server');
     server.close(function (err) {
         if (err) {

@@ -1,8 +1,9 @@
 const debug = require('../helpers/debugger')('tradeCallback');
 
-const PointLog = require('../models/DB/pointLogDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
+
+const pointTrade = require('../controllers/pointTrade');
 
 const checkUserShouldUnban = require('../helpers/appInit').checkUsersShouldBeBanned;
 const NotificationCenter = require('../helpers/notifications/center');
@@ -25,60 +26,79 @@ module.exports = {
     return: function (tradeDetail, options) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
         if (!options) options = {};
-        tradeDetail.forEach((aTradeDetail) => {
-            UserOrder.updateOne({
-                "containerID": aTradeDetail.container.ID,
-                "archived": false
-            }, {
-                "archived": true
-            }, (err) => {
-                if (err) return debug.error(err);
-            });
-        });
-        integrateTradeDetailForNotification(tradeDetail,
-                aTradeDetail => aTradeDetail.oriUser,
-                aTradeDetail => aTradeDetail.container)
-            .forEach(aCustomerTradeDetail => {
-                checkUserShouldUnban(false, aCustomerTradeDetail.customer);
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
-                    customer: aCustomerTradeDetail.customer
-                }, {
-                    containerList: aCustomerTradeDetail.containerList
-                });
-            });
         const toStore = typeof options.storeID === "undefined" ?
             tradeDetail[0].newUser.roles.clerk.storeID :
             options.storeID;
-        integrateTradeDetailForPoint(tradeDetail,
-                aTradeDetail => `${aTradeDetail.oriUser.user.phone}-${toStore}`, {
-                    container: aTradeDetail => aTradeDetail.container.ID,
-                    customer: aTradeDetail => aTradeDetail.oriUser
+        integrateTradeDetail(tradeDetail,
+                aTradeDetail => aTradeDetail.oriUser.user.phone, {
+                    customer: {
+                        type: "unique",
+                        extractor: aTradeDetail => aTradeDetail.oriUser
+                    },
+                    containerList: {
+                        type: "array",
+                        extractor: aTradeDetail => aTradeDetail.container
+                    }
                 })
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
-                if (!dbCustomer.agreeTerms) return null;
                 const containerList = aTradeDetail.containerList;
-                const quantity = containerList.length;
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
                     customer: dbCustomer
                 }, {
-                    amount: quantity,
-                    point: quantity
+                    containerList: containerList
                 });
-                if (!dbCustomer.hasPurchase) return null;
-                const storeDict = DataCacheFactory.get("store");
-                let newPointLog = new PointLog({
-                    user: dbCustomer._id,
-                    title: `歸還了${quantity}個容器`,
-                    body: `${storeDict[toStore].name}`,
-                    quantityChange: quantity
-                });
-                newPointLog.save((err) => {
-                    if (err) debug.error(err);
-                });
-                dbCustomer.point += quantity;
-                dbCustomer.save((err) => {
-                    if (err) debug.error(err);
+
+                if (!dbCustomer.agreeTerms) return null;
+                UserOrder.find({
+                    "user": dbCustomer._id,
+                    "containerID": {
+                        "$in": containerList.map(aContainer => aContainer.ID)
+                    },
+                    "archived": false
+                }, (err, userOrders) => {
+                    if (err) return debug.error(err);
+                    userOrders.forEach(aUserOrder => {
+                        aUserOrder.archived = true;
+                        aUserOrder.save(err => {
+                            if (err) debug.error(err);
+                        });
+                    });
+                    const storeDict = DataCacheFactory.get("store");
+                    const quantity = containerList.length;
+                    const isOverdueReturn = dbCustomer.hasBanned;
+                    const isPurchasedUser = dbCustomer.hasPurchase;
+                    pointTrade.getAndSendPoint(dbCustomer, userOrders, (err, point, bonusPointActivity) => {
+                        if (err) debug.error(err);
+                        checkUserShouldUnban(false, dbCustomer, (err, userDict) => {
+                            if (err) debug.error(err);
+                            const overdueAmount = userDict[dbCustomer._id].overdue.length;
+                            const isBannedAfterReturn = dbCustomer.hasBanned;
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
+                                customer: dbCustomer
+                            }, {
+                                conditions: {
+                                    isPurchasedUser,
+                                    isOverdueReturn,
+                                    isBannedAfterReturn,
+                                    isStillHaveOverdueContainer: overdueAmount > 0,
+                                    isFirstTimeBanned: dbCustomer.bannedTimes <= 1
+                                },
+                                data: {
+                                    amount: quantity,
+                                    point,
+                                    bonusPointActivity,
+                                    overdueAmount,
+                                    bannedTimes: dbCustomer.bannedTimes
+                                }
+                            });
+                        });
+                        if (isPurchasedUser)
+                            pointTrade.sendPoint(point, dbCustomer, {
+                                title: `歸還了${quantity}個容器`,
+                                body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity}`}`
+                            });
+                    });
                 });
             });
     }
@@ -86,6 +106,29 @@ module.exports = {
 
 function tradeDetailIsEmpty(tradeDetail) {
     return !(tradeDetail && tradeDetail.length > 0);
+}
+
+function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {
+    let seen = {};
+    oriTradeDetail.forEach(ele => {
+        let thisKey = keyGenerator(ele);
+        if (!seen.hasOwnProperty(thisKey)) {
+            seen[thisKey] = {};
+            for (let dataKey in dataExtractor) {
+                if (dataExtractor[dataKey].type === "array")
+                    seen[thisKey][dataKey] = [];
+            }
+        }
+        for (let dataKey in dataExtractor) {
+            if (dataExtractor[dataKey].type === "unique") {
+                seen[thisKey][dataKey] = dataExtractor[dataKey].extractor(ele);
+            } else if (dataExtractor[dataKey].type === "array") {
+                let thisData = dataExtractor[dataKey].extractor(ele);
+                seen[thisKey][dataKey].push(thisData);
+            }
+        }
+    });
+    return Object.values(seen);
 }
 
 function integrateTradeDetailForNotification(oriTradeDetail, keyGenerator, dataExtractor) {
@@ -97,20 +140,6 @@ function integrateTradeDetailForNotification(oriTradeDetail, keyGenerator, dataE
         else seen[thisKey] = {
             customer: thisKey,
             containerList: [thisData]
-        };
-    });
-    return Object.values(seen);
-}
-
-function integrateTradeDetailForPoint(oriTradeDetail, keyGenerator, dataExtractor) {
-    let seen = {};
-    oriTradeDetail.forEach(ele => {
-        let thisKey = keyGenerator(ele);
-        let thisContainerID = dataExtractor.container(ele);
-        if (seen.hasOwnProperty(thisKey)) seen[thisKey].containerList.push(thisContainerID);
-        else seen[thisKey] = {
-            customer: dataExtractor.customer(ele),
-            containerList: [thisContainerID]
         };
     });
     return Object.values(seen);

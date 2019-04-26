@@ -1554,6 +1554,7 @@ const actionTxtDict = {
 router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
+    var storeDict = DataCacheFactory.get('store');
     var containerDict = DataCacheFactory.get('containerWithDeactive');
     Container.findOne({
         "ID": CONTAINER_ID
@@ -1567,7 +1568,7 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
             },
             reuseTime: theContainer.cycleCtr,
             status: statusTxtDict[theContainer.statusCode],
-            bindedUser: phoneEncoder(theContainer.conbineTo),
+            bindedUser: typeof theContainer.storeID !== "undefined" ? storeDict[theContainer.storeID] : phoneEncoder(theContainer.conbineTo),
             joinedDate: theContainer.createdAt,
             history: []
         };

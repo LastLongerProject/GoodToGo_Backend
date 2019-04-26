@@ -257,25 +257,26 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                 action: "Rent",
                 newState: 2
             }, {
-                    rentToUser: dbUser.user.phone,
-                    orderTime: theUserOrder.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
-                        txt: "容器ID錯誤，請輸入正確容器 ID！"
-                    }));
-                    theUserOrder.save(err => {
+                        rentToUser: dbUser.user.phone,
+                        orderTime: theUserOrder.orderTime,
+                        activity: "沒活動",
+                        inLineSystem: true
+                    }, (err, tradeSuccess, reply, tradeDetail) => {
                         if (err) return next(err);
-                        res.json({
-                            code: '???',
-                            type: 'userOrderMessage',
-                            message: 'Register ContainerID of UserOrder Success'
+                        if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                            txt: "容器ID錯誤，請輸入正確容器 ID！"
+                        }));
+                        theUserOrder.save(err => {
+                            if (err) return next(err);
+                            res.json({
+                                code: '???',
+                                type: 'userOrderMessage',
+                                message: 'Register ContainerID of UserOrder Success'
+                            });
                         });
+                        tradeCallback.rent(tradeDetail);
                     });
-                    tradeCallback.rent(tradeDetail);
-                });
+            });
         });
     });
 });
