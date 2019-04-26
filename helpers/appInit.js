@@ -245,6 +245,45 @@ module.exports = {
                 });
             }
         });
+    },
+    refreshCouponImage: function (forceRenew, cb) {
+        drive.getCoupon(forceRenew, (succeed, data) => {
+            if (succeed) {
+                Promise
+                    .all(data.map(aCouponImgFileName => new Promise((resolve, reject) => {
+                        CouponType.updateMany({
+                            'img_info.img_src': aCouponImgFileName
+                        }, {
+                            "$inc": {
+                                "img_info.img_version": 1
+                            }
+                        }, (err, reply) => {
+                            if (err) return debug.error(err);
+                            resolve();
+                        });
+                    })))
+                    .then(() => {
+                        cb(succeed, {
+                            type: 'refreshCouponImage',
+                            message: 'refresh succeed',
+                            data: data
+                        });
+                    })
+                    .catch((err) => {
+                        if (err) {
+                            debug.error(data);
+                            return cb(false, err);
+                        }
+                    });
+            } else {
+                debug.error(data);
+                cb(succeed, {
+                    type: 'refreshCouponImage',
+                    message: 'refresh fail',
+                    data: data
+                });
+            }
+        });
     }
 }
 
