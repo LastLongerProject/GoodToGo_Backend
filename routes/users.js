@@ -931,7 +931,7 @@ router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, functi
 router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
-        User.updateOne({
+        User.findOneAndUpdate({
             "user.phone": aUser.phone
         }, {
             "hasPurchase": true,
@@ -945,9 +945,12 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
             upsert: true,
             setDefaultsOnInsert: true,
             new: true
-        }, (err, raw) => {
+        }, (err, theUser) => {
             if (err) return reject(err);
-            resolve(raw);
+            resolve(theUser);
+            couponTrade.welcomeCoupon(theUser, (err) => {
+                if (err) debug.error(err);
+            });
         });
     }));
     Promise
