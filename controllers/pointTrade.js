@@ -46,7 +46,10 @@ function scanBonusPointActivity(userOrders, cb) {
                 return 1;
             return bonusPointActivityLogic[activityType](1);
         }).reduce((a, b) => a + b, 0);
-        return cb(null, totalPoint, totalPoint === returnAmount ? null : `${activityDetail.name}`);
+        return cb(null, totalPoint, totalPoint === returnAmount ? null : {
+            name: activityDetail.name,
+            txt: activityDetail.txtForPointLog
+        });
     });
 }
 

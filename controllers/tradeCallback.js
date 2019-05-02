@@ -87,7 +87,7 @@ module.exports = {
                                 data: {
                                     amount: quantity,
                                     point,
-                                    bonusPointActivity,
+                                    bonusPointActivity: bonusPointActivity.name,
                                     overdueAmount,
                                     bannedTimes: dbCustomer.bannedTimes
                                 }
@@ -96,7 +96,7 @@ module.exports = {
                         if (isPurchasedUser)
                             pointTrade.sendPoint(point, dbCustomer, {
                                 title: `歸還了${quantity}個容器`,
-                                body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity}`}`
+                                body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
                             });
                     });
                 });
