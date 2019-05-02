@@ -419,7 +419,8 @@ function unbanUser(dbUser) {
             if (err) return debug.error(err);
         });
         NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, {
-            bannedTimes: dbUser.bannedTimes
+            bannedTimes: dbUser.bannedTimes,
+            purchaseStatus: dbUser.getPurchaseStatus()
         });
     }
 }
