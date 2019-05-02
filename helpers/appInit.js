@@ -98,7 +98,9 @@ module.exports = {
                         if (almostOverdueAmount > 0 && sendNotice) {
                             userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
                         }
-                        userTrade.unbanUser(dbUser);
+                        if (dbUser.bannedTimes <= 1) {
+                            userTrade.unbanUser(dbUser);
+                        }
                     }
                 }
                 if (cb) return cb(null, userDict);

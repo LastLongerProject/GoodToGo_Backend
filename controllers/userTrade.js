@@ -27,7 +27,7 @@ module.exports = {
         }
     },
     unbanUser: function (dbUser) {
-        if (dbUser.hasBanned && dbUser.bannedTimes <= 1) {
+        if (dbUser.hasBanned) {
             dbUser.hasBanned = false;
             dbUser.save(err => {
                 if (err) return debug.error(err);
