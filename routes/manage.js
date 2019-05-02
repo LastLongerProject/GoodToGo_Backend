@@ -1568,7 +1568,7 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
             },
             reuseTime: theContainer.cycleCtr,
             status: statusTxtDict[theContainer.statusCode],
-            bindedUser: typeof theContainer.storeID !== "undefined" || theContainer.storeID !== null ?
+            bindedUser: typeof theContainer.storeID !== "undefined" && theContainer.storeID !== null ?
                 storeDict[theContainer.storeID].name : phoneEncoder(theContainer.conbineTo),
             joinedDate: theContainer.createdAt,
             history: []
