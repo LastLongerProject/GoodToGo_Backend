@@ -56,6 +56,7 @@ module.exports = function () {
                 setTimeout(appInit.refreshActivity, 1000 * 60 * 7, cb);
                 setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
+                setTimeout(appInit.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
                 setTimeout(function () {
                     UserKeys.remove({
                         'updatedAt': {

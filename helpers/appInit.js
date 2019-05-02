@@ -65,7 +65,8 @@ module.exports = {
             debug.log('Expired Coupon is Check');
         });
     },
-    checkUsersShouldBeBanned: function (sendNotice, specificUser = null, cb) {
+    checkUsersShouldBeBanned: function (sendNotice, specificUser, cb) {
+        if (!(specificUser instanceof User)) specificUser = null;
         findUsersToCheckShouldBanned(specificUser, reply => {
             const userDict = reply.userDict;
             const userObjectIDList = reply.userObjectIDList;
