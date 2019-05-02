@@ -1,4 +1,4 @@
-const debug = require('./debugger')('userTrade');
+const debug = require('../helpers/debugger')('userTrade');
 
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
