@@ -96,7 +96,8 @@ module.exports = {
                         if (isPurchasedUser)
                             pointTrade.sendPoint(point, dbCustomer, {
                                 title: `歸還了${quantity}個容器`,
-                                body: `${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
+                                body: `${containerList.map(aContainerModel=>`#${aContainerModel.ID}`).join(", ")}` +
+                                    ` @ ${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
                             });
                     });
                 });
