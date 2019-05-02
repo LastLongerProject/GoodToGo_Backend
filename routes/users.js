@@ -3,6 +3,7 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
+const userTrade = require('../controllers/userTrade');
 const couponTrade = require('../controllers/couponTrade');
 
 const validateLine = require('../middlewares/validation/validateLine');
@@ -962,6 +963,32 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
             });
         })
         .catch(next);
+});
+
+router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        userTrade.banUser(dbUser, -1, true);
+        res.json({
+            success: true
+        });
+    });
+});
+
+router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        userTrade.unbanUser(dbUser);
+        res.json({
+            success: true
+        });
+    });
 });
 
 router.get("/bannedUser", (req, res, next) => { // none json reply

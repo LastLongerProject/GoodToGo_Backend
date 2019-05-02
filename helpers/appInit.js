@@ -11,10 +11,9 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
-const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
-
 const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+
+const userTrade = require('../controllers/userTrade');
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
@@ -93,13 +92,13 @@ module.exports = {
                 for (let userID in userDict) {
                     const dbUser = userDict[userID].dbUser;
                     if (userDict[userID].overdue.length > 0) {
-                        banUser(dbUser, userDict[userID].overdue.length, sendNotice);
+                        userTrade.banUser(dbUser, userDict[userID].overdue.length, sendNotice);
                     } else {
                         const almostOverdueAmount = userDict[userID].almostOverdue.length;
                         if (almostOverdueAmount > 0 && sendNotice) {
-                            noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
+                            userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
                         }
-                        unbanUser(dbUser);
+                        userTrade.unbanUser(dbUser);
                     }
                 }
                 if (cb) return cb(null, userDict);
@@ -385,43 +384,6 @@ function findUsersToCheckShouldBanned(specificUser, cb) {
                 userObjectIDList
             });
         })
-    }
-}
-
-function banUser(dbUser, overdueAmount, sendNotice) {
-    if (!dbUser.hasBanned) {
-        dbUser.hasBanned = true;
-        dbUser.bannedTimes++;
-        dbUser.save(err => {
-            if (err) return debug.error(err);
-        });
-        if (sendNotice)
-            NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
-                bannedTimes: dbUser.bannedTimes,
-                overdueAmount
-            });
-    }
-}
-
-function noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount) {
-    if (!dbUser.hasBanned) {
-        NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
-            bannedTimes: dbUser.bannedTimes,
-            almostOverdueAmount
-        });
-    }
-}
-
-function unbanUser(dbUser) {
-    if (dbUser.hasBanned && dbUser.bannedTimes <= 1) {
-        dbUser.hasBanned = false;
-        dbUser.save(err => {
-            if (err) return debug.error(err);
-        });
-        NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, {
-            bannedTimes: dbUser.bannedTimes,
-            purchaseStatus: dbUser.getPurchaseStatus()
-        });
     }
 }
 
