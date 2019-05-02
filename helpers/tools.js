@@ -1,3 +1,5 @@
+const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 
 exports.getDeliverContent = function (containerList) {
@@ -25,4 +27,8 @@ exports.transContainerType = function (typeCode) {
 
 exports.generateUUID = function () {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+exports.computeDaysOfUsing = function (dateToCompute, now) {
+    return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 }

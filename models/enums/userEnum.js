@@ -16,5 +16,9 @@ module.exports = {
     PurchaseStatus: Object.freeze({
         FREE_USER: "free_user",
         PURCHASED_USER: "purchased_user"
+    }),
+    DueDays: Object.freeze({
+        free_user: 2,
+        purchased_user: 8
     })
 };

@@ -1,5 +1,6 @@
 const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const DueDays = require('../models/enums/userEnum').DueDays;
 
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -11,17 +12,12 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
 const userTrade = require('../controllers/userTrade');
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
-
-const DueDays = {
-    free_user: 2,
-    purchased_user: 8
-};
 
 module.exports = {
     store: function (cb) {
@@ -78,14 +74,14 @@ module.exports = {
                 if (err) return debug.error(err);
 
                 const now = Date.now();
-                userOrderList.forEach(aUserorder => {
-                    const userID = aUserorder.user;
+                userOrderList.forEach(aUserOrder => {
+                    const userID = aUserOrder.user;
                     const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserorder.orderTime, now) - DueDays[purchaseStatus];
+                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
                     if (daysOverDue > 0) {
-                        userDict[userID].overdue.push(aUserorder);
+                        userDict[userID].overdue.push(aUserOrder);
                     } else if (daysOverDue === 0) {
-                        userDict[userID].almostOverdue.push(aUserorder);
+                        userDict[userID].almostOverdue.push(aUserOrder);
                     }
                 });
 
@@ -387,8 +383,4 @@ function findUsersToCheckShouldBanned(specificUser, cb) {
             });
         })
     }
-}
-
-function computeDaysOfUsing(dateToCompute, now) {
-    return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 }

@@ -4,17 +4,20 @@ const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine').all;
 
+const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+
 const generateUUID = require('../helpers/tools').generateUUID;
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
-const tradeCallback = require('../controllers/tradeCallback');
-
-const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
-const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
+const UserOrder = require('../models/DB/userOrderDB');
+const DueDays = require('../models/enums/userEnum').DueDays;
 const DataCacheFactory = require('../models/dataCacheFactory');
+const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
 
 const storeCodeValidater = /\d{4}/;
 
@@ -73,6 +76,7 @@ router.get('/list', validateLine, function (req, res, next) {
         let orderListWithID = [];
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
+            const daysToDue = DueDays[dbUser.getPurchaseStatus()] - computeDaysOfUsing(aUserOrder.orderTime, Date.now());
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -81,7 +85,8 @@ router.get('/list', validateLine, function (req, res, next) {
                         orderID: aUserOrder.orderID,
                         containerAmount: 1,
                         orderTime: aUserOrder.orderTime,
-                        storeName: StoreDict[aUserOrder.storeID].name
+                        storeName: StoreDict[aUserOrder.storeID].name,
+                        daysToDue
                     };
                     orderListWithoutID[aUserOrder.orderID] = aFormattedUserOrder;
                 }
@@ -90,7 +95,8 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerID: `#${intReLength(aUserOrder.containerID, 4)}`,
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
-                    storeName: StoreDict[aUserOrder.storeID].name
+                    storeName: StoreDict[aUserOrder.storeID].name,
+                    daysToDue
                 };
                 orderListWithID.push(aFormattedUserOrder);
             }
@@ -166,12 +172,14 @@ router.post('/add', validateLine, function (req, res, next) {
         const storeID = parseInt(storeCode.substring(0, 3));
 
         const funcList = [];
+        const now = Date.now();
         for (let i = 0; i < containerAmount; i++) {
             funcList.push(new Promise((resolve, reject) => {
                 let newOrder = new UserOrder({
                     orderID: generateUUID(),
                     user: dbUser._id,
-                    storeID
+                    storeID,
+                    orderTime: now
                 });
                 newOrder.save((err) => {
                     if (err) return reject(err);
@@ -185,7 +193,7 @@ router.post('/add', validateLine, function (req, res, next) {
                 res.json({
                     storeName: StoreDict[storeID].name,
                     containerAmount,
-                    time: Date.now()
+                    time: now
                 });
             })
             .catch(next);
@@ -257,25 +265,25 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                 action: "Rent",
                 newState: 2
             }, {
-                    rentToUser: dbUser.user.phone,
-                    orderTime: theUserOrder.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
+                rentToUser: dbUser.user.phone,
+                orderTime: theUserOrder.orderTime,
+                activity: "沒活動",
+                inLineSystem: true
+            }, (err, tradeSuccess, reply, tradeDetail) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                    txt: "容器ID錯誤，請輸入正確容器 ID！"
+                }));
+                theUserOrder.save(err => {
                     if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
-                        txt: "容器ID錯誤，請輸入正確容器 ID！"
-                    }));
-                    theUserOrder.save(err => {
-                        if (err) return next(err);
-                        res.json({
-                            code: '???',
-                            type: 'userOrderMessage',
-                            message: 'Register ContainerID of UserOrder Success'
-                        });
+                    res.json({
+                        code: '???',
+                        type: 'userOrderMessage',
+                        message: 'Register ContainerID of UserOrder Success'
                     });
-                    tradeCallback.rent(tradeDetail);
                 });
+                tradeCallback.rent(tradeDetail);
+            });
         });
     });
 });
