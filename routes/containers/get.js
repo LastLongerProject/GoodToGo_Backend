@@ -19,7 +19,6 @@ const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const UserRole = require('../../models/enums/userEnum').UserRole;
-const generateImgToken = require('../../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 
@@ -58,27 +57,24 @@ router.get('/list', validateDefault, function (req, res, next) {
     var containerDict = DataCacheFactory.get('container');
     var tmpIcon;
     var tmpArr = [];
-    generateImgToken((err, token) => {
-        if (err) return next(err);
-        res.set('etag', wetag([containerDict, typeDict]));
-        for (var aType in typeDict) {
-            tmpIcon = {};
-            for (var j = 1; j <= 3; j++) {
-                tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x/${token}?ver=${typeDict[aType].version}`;
-            }
-            tmpArr.push({
-                typeCode: typeDict[aType].typeCode,
-                name: typeDict[aType].name,
-                version: typeDict[aType].version,
-                icon: tmpIcon
-            });
+    res.set('etag', wetag([containerDict, typeDict]));
+    for (var aType in typeDict) {
+        tmpIcon = {};
+        for (var j = 1; j <= 3; j++) {
+            tmpIcon[j + 'x'] = `${baseUrl}/images/icon/${intReLength(typeDict[aType].typeCode, 2)}_${j}x?ver=${typeDict[aType].version}`;
         }
-        var resJSON = {
-            containerType: tmpArr,
-            containerDict: containerDict
-        };
-        res.json(resJSON);
-    });
+        tmpArr.push({
+            typeCode: typeDict[aType].typeCode,
+            name: typeDict[aType].name,
+            version: typeDict[aType].version,
+            icon: tmpIcon
+        });
+    }
+    var resJSON = {
+        containerType: tmpArr,
+        containerDict: containerDict
+    };
+    res.json(resJSON);
 });
 
 /**
