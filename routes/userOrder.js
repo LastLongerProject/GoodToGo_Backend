@@ -49,7 +49,8 @@ function getCheckCode(storeID) {
  *			    orderID : String,
  *			    containerAmount : Number,
  *			    orderTime : Date,
- *			    storeName : String // 正興咖啡館
+ *			    storeName : String, // 正興咖啡館
+ *              daysToDue : Number
  *		    }, ...
  *	        ],
  *	        orderListWithID : [
@@ -57,7 +58,8 @@ function getCheckCode(storeID) {
  *			    containerID : String, // #001
  *			    containerType : String, // 12oz 玻璃杯
  *			    orderTime : Date,
- *			    storeName : String // 正興咖啡館
+ *			    storeName : String, // 正興咖啡館
+ *              daysToDue : Number
  *		    }, ...
  *	        ]
  *      }
