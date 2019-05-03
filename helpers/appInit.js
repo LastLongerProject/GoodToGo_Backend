@@ -42,7 +42,7 @@ module.exports = {
         });
     },
     checkCouponIsExpired: function (cb) {
-        const CouponTypeDict = DataCacheFactory.get("couponType");
+        const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
         Coupon.find({
             "expired": false
         }, (err, couponList) => {
@@ -283,7 +283,7 @@ function activityListGenerator(cb) {
         activities.forEach((aActivity) => {
             activityDict[aActivity.ID] = aActivity;
         });
-        DataCacheFactory.set('activity', activityDict);
+        DataCacheFactory.set(DataCacheFactory.keys.ACTIVITY, activityDict);
         cb();
     });
 }
@@ -299,7 +299,7 @@ function storeListGenerator(cb) {
         stores.forEach((aStore) => {
             storeDict[aStore.ID] = aStore;
         });
-        DataCacheFactory.set('store', storeDict);
+        DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
         cb();
     });
 }
@@ -327,9 +327,9 @@ function containerListGenerator(cb) {
                 containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
                 if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
             }
-            DataCacheFactory.set('containerWithDeactive', containerDict);
-            DataCacheFactory.set('container', containerDictOnlyActive);
-            DataCacheFactory.set('containerType', containerTypeDict);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE, containerDict);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE, containerDictOnlyActive);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_TYPE, containerTypeDict);
             cb();
         });
     });
@@ -342,7 +342,7 @@ function couponListGenerator(cb) {
         couponTypeList.forEach((aCouponType) => {
             couponTypeDict[aCouponType._id] = aCouponType;
         });
-        DataCacheFactory.set('couponType', couponTypeDict);
+        DataCacheFactory.set(DataCacheFactory.keys.COUPON_TYPE, couponTypeDict);
         cb();
     });
 }

@@ -936,8 +936,8 @@ router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
 
 router.get('/usedHistory', validateLine.all, function (req, res, next) {
     const dbUser = req._user;
-    const ContainerTypeDict = DataCacheFactory.get("containerType");
-    const StoreDict = DataCacheFactory.get("store");
+    const ContainerTypeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
 
     Trade.find({
         "$or": [{

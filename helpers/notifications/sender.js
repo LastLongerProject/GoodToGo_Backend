@@ -42,7 +42,7 @@ module.exports = {
         }
     },
     socket: function (formatted) {
-        const SocketEmitter = DataCacheFactory.get("SocketEmitter");
+        const SocketEmitter = DataCacheFactory.get(DataCacheFactory.keys.SOCKET_EMITTER);
         if (formatted && SocketEmitter) {
             return function (event) {
                 SocketEmitter.emit(event, formatted);

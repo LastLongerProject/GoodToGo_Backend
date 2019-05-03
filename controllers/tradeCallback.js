@@ -64,7 +64,7 @@ module.exports = {
                             if (err) debug.error(err);
                         });
                     });
-                    const storeDict = DataCacheFactory.get("store");
+                    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
                     const quantity = containerList.length;
                     const isOverdueReturn = dbCustomer.hasBanned;
                     const isPurchasedUser = dbCustomer.hasPurchase;

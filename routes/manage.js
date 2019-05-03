@@ -1627,7 +1627,7 @@ router.get('/console', regAsAdminManager, validateRequest, function (req, res, n
  * 
  */
 router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
-    const storeDict = DataCacheFactory.get("store");
+    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     let storesSummary = {};
     let storesTmpData = {};
     for (let aStoreKey in storeDict) {

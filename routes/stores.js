@@ -1558,7 +1558,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
 router.get("/bookedContainer", (req, res, next) => { // none json reply
     getBookedAmount((err, result) => {
         if (err) return next(err);
-        const storeDict = DataCacheFactory.get("store");
+        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         let txt = "";
         result.forEach(aResult => {
             txt += `${storeDict[aResult._id].name}：${aResult.amount}、`

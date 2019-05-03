@@ -154,7 +154,7 @@ function startServer() {
         .use(mSocket.auth)
         .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
-    DataCacheFactory.set('SocketEmitter', SocketEmitter);
+    DataCacheFactory.set(DataCacheFactory.keys.SOCKET_EMITTER, SocketEmitter);
     process.send('ready');
 }
 
