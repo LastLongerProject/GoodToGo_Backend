@@ -911,6 +911,78 @@ router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     });
 });
 
+/**
+ * @apiName UsedHistory
+ * @apiGroup Users
+ * 
+ * @api {get} /users/usedHistory Get user's container using history 
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *  HTTP/1.1 200 
+ *  {
+ *      history : [
+ *          {
+ *              containerID : String, // "#123"
+ *              containerType : String, // "大器杯"
+ *              rentTime : Date,
+ *              rentStore : String, // "好盒器基地"
+ *              returnTime : Date,
+ *              returnStore : String // "好盒器基地"
+ *          }, ...
+ *      ]
+ *  }
+ */
+
+router.get('/usedHistory', validateLine.all, function (req, res, next) {
+    const dbUser = req._user;
+    const ContainerTypeDict = DataCacheFactory.get("containerType");
+    const StoreDict = DataCacheFactory.get("store");
+
+    Trade.find({
+        "$or": [{
+                "newUser.phone": dbUser.user.phone,
+                "tradeType.action": "Rent",
+                "container.inLineSystem": true
+            },
+            {
+                "oriUser.phone": dbUser.user.phone,
+                "tradeType.action": "Return"
+            }
+        ]
+    }, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        const intergratedTrade = {};
+        tradeList.forEach(aTrade => {
+            const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
+            if (aTrade.tradeType.action === "Rent") {
+                intergratedTrade[tradeKey] = {
+                    containerID: `#${aTrade.container.id}`,
+                    containerType: ContainerTypeDict[aTrade.container.typeCode].name,
+                    rentTime: aTrade.tradeTime,
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name,
+
+                };
+            } else if (aTrade.tradeType.action === "Return") {
+                if (!intergratedTrade[tradeKey]) return;
+                Object.assign(intergratedTrade[tradeKey], {
+                    returnTime: aTrade.tradeTime,
+                    returnStore: StoreDict[aTrade.newUser.storeID].name
+                });
+            }
+        });
+
+        res.json({
+            history: Object.values(intergratedTrade).reverse()
+        });
+    });
+});
+
 router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
     User.updateOne({
