@@ -292,80 +292,73 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function () {
-            User.findOne({
-                'user.phone': phone
-            }, function (err, dbUser) {
-                if (err)
-                    return done(err);
-                if (!dbUser)
-                    return done(null, false, {
-                        code: 'D005',
-                        type: 'loginMessage',
-                        message: 'No user found'
-                    });
-                if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
-                    return done(null, false, {
-                        code: 'D005',
-                        type: 'loginMessage',
-                        message: 'No user found'
-                    });
-                }
-                if (!dbUser.validPassword(password))
-                    return done(null, false, {
-                        code: 'D006',
-                        type: 'loginMessage',
-                        message: 'Wrong password'
-                    });
-                var funcList = [];
-                var typeList = dbUser.roles.typeList;
-                for (var i = 0; i < typeList.length; i++) {
-                    funcList.push(new Promise((resolve, reject) => {
-                        var thisCtr = i;
-                        keys.keyPair(function (err, returnKeys) {
+        User.findOne({
+            'user.phone': phone
+        }, function (err, dbUser) {
+            if (err)
+                return done(err);
+            if (!dbUser)
+                return done(null, false, {
+                    code: 'D005',
+                    type: 'loginMessage',
+                    message: 'No user found'
+                });
+            if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
+                return done(null, false, {
+                    code: 'D005',
+                    type: 'loginMessage',
+                    message: 'No user found'
+                });
+            }
+            if (!dbUser.validPassword(password))
+                return done(null, false, {
+                    code: 'D006',
+                    type: 'loginMessage',
+                    message: 'Wrong password'
+                });
+            const typeList = dbUser.roles.typeList;
+            Promise
+                .all(typeList.map(aRoleType => new Promise((resolve, reject) => {
+                    keys.keyPair(function (err, returnKeys) {
+                        if (err) return reject(err);
+                        UserKeys.findOneAndUpdate({
+                            'phone': phone,
+                            'clientId': req.signedCookies.uid || req._uid,
+                            'roleType': aRoleType
+                        }, {
+                            'secretKey': returnKeys.secretKey,
+                            'userAgent': req.headers['user-agent'],
+                            '$setOnInsert': {
+                                'apiKey': returnKeys.apiKey,
+                                'user': dbUser._id,
+                            }
+                        }, {
+                            new: true,
+                            upsert: true,
+                            setDefaultsOnInsert: true
+                        }, (err, keyPair) => {
                             if (err) return reject(err);
-                            UserKeys.findOneAndUpdate({
-                                'phone': phone,
-                                'clientId': req.signedCookies.uid || req._uid,
-                                'roleType': typeList[thisCtr]
-                            }, {
-                                'secretKey': returnKeys.secretKey,
-                                'userAgent': req.headers['user-agent'],
-                                '$setOnInsert': {
-                                    'apiKey': returnKeys.apiKey,
-                                    'user': dbUser._id,
-                                }
-                            }, {
-                                new: true,
-                                upsert: true,
-                                setDefaultsOnInsert: true
-                            }, (err, keyPair) => {
-                                if (err) return reject(err);
-                                resolve(keyPair);
-                            });
+                            resolve(keyPair);
                         });
-                    }));
-                }
-                Promise
-                    .all(funcList)
-                    .then((keyPairList) => {
-                        keys.serverSecretKey((err, serverSecretKey) => {
-                            if (err) return done(err);
-                            return done(null, dbUser, {
-                                headers: {
-                                    Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
-                                },
-                                body: {
-                                    type: 'loginMessage',
-                                    message: 'Authentication succeeded'
-                                }
-                            });
-                        });
-                    })
-                    .catch((err) => {
-                        if (err) return done(err);
                     });
-            });
+                })))
+                .then((keyPairList) => {
+                    keys.serverSecretKey((err, serverSecretKey) => {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            headers: {
+                                Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
+                            },
+                            body: {
+                                type: 'loginMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
+                })
+                .catch((err) => {
+                    if (err) return done(err);
+                });
         });
     },
     chanpass: function (req, done) {
