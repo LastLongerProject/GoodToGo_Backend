@@ -87,7 +87,7 @@ module.exports = {
                                 data: {
                                     amount: quantity,
                                     point,
-                                    bonusPointActivity: bonusPointActivity.name,
+                                    bonusPointActivity: bonusPointActivity === null ? null : bonusPointActivity.name,
                                     overdueAmount,
                                     bannedTimes: dbCustomer.bannedTimes
                                 }
