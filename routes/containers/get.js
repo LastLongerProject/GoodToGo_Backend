@@ -53,8 +53,8 @@ const historyDays = 14;
  *
  */
 router.get('/list', validateDefault, function (req, res, next) {
-    var typeDict = DataCacheFactory.get('containerType');
-    var containerDict = DataCacheFactory.get('container');
+    var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
     var tmpIcon;
     var tmpArr = [];
     res.set('etag', wetag([containerDict, typeDict]));
@@ -121,7 +121,7 @@ router.get('/list', validateDefault, function (req, res, next) {
  */
 router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var containerDict = DataCacheFactory.get('containerWithDeactive');
+    var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     process.nextTick(function () {
         Box.find(function (err, boxList) {
             if (err) return next(err);
@@ -218,7 +218,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
  */
 router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
-    var typeDict = DataCacheFactory.get('containerType');
+    var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
         'tradeType.action': 'Sign',
         'tradeTime': {
@@ -328,7 +328,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
-    var typeDict = DataCacheFactory.get('containerType');
+    var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;

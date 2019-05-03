@@ -6,7 +6,7 @@ const SocketEvent = require("./enums/socket/events");
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
 function containerFormatter(data) {
-    let containerType = DataCacheFactory.get('containerType');
+    let containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     let formattedContainer = {};
     let amount = 0;
     data.containerList.forEach(container => {

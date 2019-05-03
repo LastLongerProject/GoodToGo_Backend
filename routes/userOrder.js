@@ -22,7 +22,7 @@ const userUsingAmount = require('../models/variables/containerStatistic').line_u
 const storeCodeValidater = /\d{4}/;
 
 function isValidStoreCode(storeCode) {
-    const StoreDict = DataCacheFactory.get('store');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const storeID = parseInt(storeCode.substring(0, 3));
     return (getCheckCode(storeID) === parseInt(storeCode.substring(3, 4)) &&
         StoreDict[storeID]);
@@ -67,8 +67,8 @@ function getCheckCode(storeID) {
 
 router.get('/list', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const StoreDict = DataCacheFactory.get('store');
-    const ContainerDict = DataCacheFactory.get('containerWithDeactive');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     UserOrder.find({
         "user": dbUser._id,
         "archived": false
@@ -133,7 +133,7 @@ router.get('/list', validateLine, function (req, res, next) {
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const storeCode = req.body.storeCode;
-    const StoreDict = DataCacheFactory.get('store');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const containerAmount = parseInt(req.body.containerAmount);
 
     if (dbUser.hasBanned)
@@ -224,7 +224,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const orderID = req.body.orderID;
     const containerID = parseInt(req.body.containerID);
-    const ContainerDict = DataCacheFactory.get('container');
+    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
 
     if (typeof orderID !== "string" || isNaN(containerID))
         return res.status(403).json({

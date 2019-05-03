@@ -678,8 +678,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
             },
             (err, dbUser) => {
                 if (err) return next(err);
-                var store = DataCacheFactory.get('store');
-                var containerType = DataCacheFactory.get('containerType');
+                var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+                var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
                 Trade.find({
                         $or: [{
                                 'tradeType.action': 'Rent',
@@ -775,8 +775,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
 
 router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var store = DataCacheFactory.get('store');
-    var containerType = DataCacheFactory.get('containerType');
+    var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
             $or: [{
                     'tradeType.action': 'Rent',

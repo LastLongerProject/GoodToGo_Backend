@@ -480,7 +480,7 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let result = [];
-        let storeList = DataCacheFactory.get('store');
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         for (let i = 0; i < Object.keys(storeList).length; i++) {
             result.push({
                 storeID: Number(Object.keys(storeList)[i]),
@@ -573,7 +573,7 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let result = [];
-        let storeList = DataCacheFactory.get('store');
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         let boxStatus = req.params.status;
         for (let i = 0; i < Object.keys(storeList).length; i++) {
             result.push({

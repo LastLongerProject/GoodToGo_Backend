@@ -3,7 +3,7 @@ const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoin
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 
 exports.getDeliverContent = function (containerList) {
-    let container = DataCacheFactory.get('containerWithDeactive');
+    let container = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     let deliverContent = {};
     containerList.forEach(element => {
         if (!deliverContent[container[element]]) deliverContent[container[element]] = {
@@ -18,11 +18,6 @@ exports.getDeliverContent = function (containerList) {
             amount: deliverContent[containerType]['amount']
         }
     });
-}
-
-exports.transContainerType = function (typeCode) {
-    let storeList = DataCacheFactory.get('store');
-    return storeList[String(typeCode)].name;
 }
 
 exports.generateUUID = function () {

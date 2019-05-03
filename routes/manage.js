@@ -318,7 +318,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
                 else resolve([aField, []]);
             })))
         .then((data) => {
-            var containerDict = DataCacheFactory.get('containerType');
+            var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             var result = {
                 user: {
                     show: true,
@@ -989,7 +989,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                         }
                     });
 
-                    var containerType = DataCacheFactory.get('containerType');
+                    var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
                     for (var index in result.history) {
                         var theHistory = result.history[index];
                         if (typeof theHistory.content === "object") {
@@ -1281,8 +1281,8 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
-    var containerDict = DataCacheFactory.get('containerWithDeactive');
-    var storeDict = DataCacheFactory.get('store');
+    var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+    var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     User.findOne({
         'user.phone': USER_ID
     }, (err, theUser) => {
@@ -1439,7 +1439,7 @@ router.get('/container', regAsAdminManager, validateRequest, function (req, res,
                 stockedContainerList = stockedContainerList.concat(aBox.containerList);
             });
             var typeDict = {};
-            var containerType = DataCacheFactory.get('containerType');
+            var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             for (var aType in containerType) {
                 typeDict[containerType[aType].typeCode] = {
                     id: containerType[aType].typeCode,
@@ -1554,8 +1554,8 @@ const actionTxtDict = {
 router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
-    var storeDict = DataCacheFactory.get('store');
-    var containerDict = DataCacheFactory.get('containerWithDeactive');
+    var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     Container.findOne({
         "ID": CONTAINER_ID
     }, (err, theContainer) => {
@@ -1836,7 +1836,7 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let result = [];
-        let storeList = DataCacheFactory.get('store');
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         for (let i = 0; i < Object.keys(storeList).length; i++) {
             result.push({
                 storeID: Number(Object.keys(storeList)[i]),
@@ -1879,7 +1879,7 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let result = [];
-        let storeList = DataCacheFactory.get('store');
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         let boxStatus = req.params.status;
         for (let i = 0; i < Object.keys(storeList).length; i++) {
             result.push({

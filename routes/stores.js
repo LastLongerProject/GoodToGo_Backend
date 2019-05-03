@@ -552,7 +552,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     let lastUsed = [];
-    var type = Object.values(DataCacheFactory.get('containerType'));
+    var type = Object.values(DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE));
     var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
@@ -966,8 +966,8 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
 router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var containerDict = DataCacheFactory.get('containerWithDeactive');
-        var type = DataCacheFactory.get('containerType');
+        var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
         }, {}, {
@@ -1094,7 +1094,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
 router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var type = DataCacheFactory.get('containerType');
+        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
         Promise
             .all([new Promise((resolve, reject) => {
                     Trade.find({
@@ -1155,7 +1155,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
  */
 router.get('/history', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = DataCacheFactory.get('containerType');
+    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     process.nextTick(function () {
         Trade.find({
             'tradeTime': {
@@ -1219,7 +1219,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
  */
 router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = DataCacheFactory.get('containerType');
+    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{

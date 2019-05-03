@@ -624,7 +624,7 @@ function isStudentID(phone) {
 }
 
 function getStoreName(dbUser) {
-    var storeDict = DataCacheFactory.get('store');
+    var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
     var theStore = storeDict[dbUser.roles.clerk.storeID];
     if (theStore) return theStore.name;
