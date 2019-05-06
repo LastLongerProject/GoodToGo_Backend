@@ -192,23 +192,23 @@ module.exports = {
                         });
                     })))
                     .then(placeList => {
-                        Store.find((err, oldStoreList) => {
+                        Store.find((err, oriStoreList) => {
                             if (err) return debug.error(err);
                             Promise
                                 .all(placeList.map(aPlace => new Promise((resolve, reject) => {
-                                    var bufferArray = [];
+                                    const bufferArray = [];
                                     request
                                         .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
                                             '&language=zh-TW&region=tw&key=' + placeApiKey +
                                             '&fields=formatted_address,opening_hours,geometry,types')
                                         .on('response', function (response) {
                                             if (response.statusCode !== 200) {
-                                                debug.error('[Place API ERR (1)] StatusCode : ' + response.statusCode);
+                                                debug.error('[Place API ERR (1)] StatusCode: ' + response.statusCode);
                                                 return reject(aPlace.ID);
                                             }
                                         })
                                         .on('error', function (err) {
-                                            debug.error('[Place API ERR (2)] Message : ' + err);
+                                            debug.error('[Place API ERR (2)] Message: ' + err);
                                             return reject(aPlace.ID);
                                         })
                                         .on('data', function (data) {
@@ -217,23 +217,25 @@ module.exports = {
                                         .on('end', function () {
                                             const dataBuffer = Buffer.concat(bufferArray);
                                             const dataObject = JSON.parse(dataBuffer.toString());
+                                            const dataFromApi = dataObject.result;
                                             try {
-                                                var type = [];
+                                                let formattedType = [];
                                                 if (aPlace && aPlace.type !== "") {
-                                                    type = aPlace.type.replace(" ", "").split(",");
+                                                    formattedType = aPlace.type.replace(" ", "").split(",");
                                                 } else {
-                                                    dataObject.result.types.forEach(aType => {
-                                                        var translated = dictionary[aType];
-                                                        if (translated) type.push(translated);
+                                                    dataFromApi.types.forEach(aType => {
+                                                        const translated = dictionary[aType];
+                                                        if (translated) formattedType.push(translated);
+                                                        else debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                     });
                                                 }
-                                                var opening_hours;
-                                                var aOldStore = oldStoreList.find(ele => ele.id == aPlace.ID);
-                                                if (aOldStore && aOldStore.opening_default) {
-                                                    opening_hours = aOldStore.opening_hours;
-                                                } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
-                                                    opening_hours = dataObject.result.opening_hours.periods;
-                                                    for (var j = 0; j < opening_hours.length; j++) {
+                                                let opening_hours;
+                                                let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
+                                                if (theOriStore && theOriStore.opening_default) {
+                                                    opening_hours = theOriStore.opening_hours;
+                                                } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
+                                                    opening_hours = dataFromApi.opening_hours.periods;
+                                                    for (let j = 0; j < opening_hours.length; j++) {
                                                         if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
                                                             opening_hours = defaultPeriods;
                                                             break;
@@ -254,12 +256,12 @@ module.exports = {
                                                         borrowable: aPlace.contract.returnable,
                                                         status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
                                                     },
-                                                    'type': type,
+                                                    'type': formattedType,
                                                     'project': aPlace.project,
-                                                    'address': dataObject.result.formatted_address
+                                                    'address': dataFromApi.formatted_address
                                                         .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
                                                     'opening_hours': opening_hours,
-                                                    'location': dataObject.result.geometry.location,
+                                                    'location': dataFromApi.geometry.location,
                                                     'active': aPlace.active,
                                                     'category': aPlace.category,
                                                     'activity': aPlace.activity,
@@ -325,23 +327,18 @@ module.exports = {
                 spreadsheetId: configs.activity_sheet_ID,
                 range: 'active!A2:D',
             }, function (err, response) {
-                if (err) {
-                    debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
-                    return;
-                }
-                var rows = response.data.values;
-                var funcList = [];
-                var checkpoint = Date.now();
-                for (var i = 0; i < rows.length; i++) {
-                    if (rows[1] === "" || rows[2] === "" || rows[3 === ""]) break;
-                    var row = rows[i];
-                    funcList.push(new Promise((resolve, reject) => {
+                if (err) return debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
+                const rows = response.data.values;
+                const checkpoint = Date.now();
+                const validRows = rows.filter(aRow => (aRow[1] !== "" && aRow[2] !== "" && aRow[3] !== ""));
+                Promise
+                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         Activity.findOneAndUpdate({
-                            'ID': row[0]
+                            'ID': aRow[0]
                         }, {
-                            'name': row[1],
-                            'startAt': row[2],
-                            'endAt': row[3]
+                            'name': aRow[1],
+                            'startAt': aRow[2],
+                            'endAt': aRow[3]
                         }, {
                             upsert: true,
                             new: true
@@ -349,12 +346,8 @@ module.exports = {
                             if (err) return reject(err);
                             resolve(afterUpdate);
                         });
-                    }));
-
-                }
-                Promise
-                    .all(funcList)
-                    .then((activityList) => {
+                    })))
+                    .then(activityList => {
                         Activity.updateMany({
                             'checkedAt': {
                                 '$lt': checkpoint
