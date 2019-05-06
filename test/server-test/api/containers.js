@@ -26,7 +26,7 @@ describe('api-containers', function () {
         setTimeout(done, 13000);
     });
 
-    describe.only('POST /login', function () {
+    describe('POST /login', function () {
         it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
@@ -163,7 +163,7 @@ describe('api-containers', function () {
         });
     });
 
-    describe.only('GET /containers/get/list', function () {
+    describe('GET /containers/get/list', function () {
         it('should return 200', function (done) {
             request(app)
                 .get('/containers/get/list')
