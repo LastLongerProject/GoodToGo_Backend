@@ -258,10 +258,35 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
 
         theUserOrder.containerID = containerID;
         User.findOne({
-            "user.phone": "bot00003"
+            "user.phone": "0900000000"
         }, (err, dbBot) => {
             if (err) return next(err);
-            if (!dbBot) return next(new Error("server ERR"));
+            if (!dbBot) {
+                dbBot = new User({
+                    user: {
+                        phone: "0900000000",
+                        password: null,
+                        name: "GoodToGoBot"
+                    },
+                    roles: {
+                        typeList: ["bot", "clerk"],
+                        clerk: {
+                            storeID: 17,
+                            manager: false
+                        }
+                    }
+                });
+                dbBot.save(err => {
+                    if (err) debug.error(err);
+                });
+            }
+            if (!dbBot.roles.clerk) {
+                dbBot.roles.typeList.push("clerk");
+                dbBot.roles.clerk = {
+                    storeID: 17,
+                    manager: false
+                };
+            }
             dbBot.roles.clerk.storeID = theUserOrder.storeID;
             changeContainersState(containerID, dbBot, {
                 action: "Rent",
