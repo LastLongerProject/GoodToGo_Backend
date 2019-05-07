@@ -6,6 +6,12 @@ const redis = require('redis');
 const redisClient = redis.createClient(6379, config.redisUrl, {
     password: config.redisPass
 });
+
+redisClient.select(config.redisDB, (err, res) => {
+    if (err) return debug.error(err);
+    debug.log(res);
+});
+
 redisClient.on('ready', function () {
     debug.log('redisDB ready');
 });
@@ -14,7 +20,7 @@ redisClient.on('connect', function () {
     debug.log('redisDB connect');
 });
 
-redisClient.on('reconnecting', function (delay, attempt) {
+redisClient.on('reconnecting', function () {
     debug.log('redisDB reconnecting');
 });
 
