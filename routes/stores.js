@@ -32,7 +32,6 @@ const getGlobalUsedAmount = require('../models/variables/containerStatistic').gl
 const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const UserRole = require('../models/enums/userEnum').UserRole;
-const generateImgToken = require('../controllers/imageToken').generateToken;
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -100,37 +99,34 @@ router.get('/list', validateDefault, function (req, res, next) {
         }, function (err, storeList) {
             if (err) return next(err);
             jsonData.globalAmount = 0;
-            generateImgToken((err, token) => {
-                if (err) return next(err);
-                res.set('etag', wetag(storeList));
-                for (var i = 0; i < storeList.length; i++) {
-                    var tmpOpening = [];
-                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}/${token}?ver=${storeList[i].img_info.img_version}`;
-                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                        tmpOpening.push({
-                            close: storeList[i].opening_hours[j].close,
-                            open: storeList[i].opening_hours[j].open
-                        });
-                    tmpOpening.sort((a, b) => {
-                        return a.close.day - b.close.day;
+            res.set('etag', wetag(storeList));
+            for (var i = 0; i < storeList.length; i++) {
+                var tmpOpening = [];
+                storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
+                for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                    tmpOpening.push({
+                        close: storeList[i].opening_hours[j].close,
+                        open: storeList[i].opening_hours[j].open
                     });
-                    tmpArr.push({
-                        id: storeList[i].id,
-                        name: storeList[i].name,
-                        img_info: storeList[i].img_info,
-                        opening_hours: tmpOpening,
-                        contract: storeList[i].contract,
-                        location: storeList[i].location,
-                        address: storeList[i].address,
-                        type: storeList[i].type,
-                        category: storeList[i].category,
-                        testing: (storeList[i].project === '正興杯杯') ? false : true
-                    });
-                }
+                tmpOpening.sort((a, b) => {
+                    return a.close.day - b.close.day;
+                });
+                tmpArr.push({
+                    id: storeList[i].id,
+                    name: storeList[i].name,
+                    img_info: storeList[i].img_info,
+                    opening_hours: tmpOpening,
+                    contract: storeList[i].contract,
+                    location: storeList[i].location,
+                    address: storeList[i].address,
+                    type: storeList[i].type,
+                    category: storeList[i].category,
+                    testing: (storeList[i].project === '正興杯杯') ? false : true
+                });
+            }
 
-                jsonData.shop_data = tmpArr;
-                res.json(jsonData);
-            });
+            jsonData.shop_data = tmpArr;
+            res.json(jsonData);
         });
     });
 });
@@ -556,7 +552,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     let lastUsed = [];
-    var type = Object.values(DataCacheFactory.get('containerType'));
+    var type = Object.values(DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE));
     var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
     for (var i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
@@ -970,8 +966,8 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
 router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var containerDict = DataCacheFactory.get('containerWithDeactive');
-        var type = DataCacheFactory.get('containerType');
+        var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
         Box.find({
             'storeID': dbStore.roles.clerk.storeID
         }, {}, {
@@ -1098,7 +1094,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
 router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
-        var type = DataCacheFactory.get('containerType');
+        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
         Promise
             .all([new Promise((resolve, reject) => {
                     Trade.find({
@@ -1159,7 +1155,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
  */
 router.get('/history', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = DataCacheFactory.get('containerType');
+    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     process.nextTick(function () {
         Trade.find({
             'tradeTime': {
@@ -1223,7 +1219,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
  */
 router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var type = DataCacheFactory.get('containerType');
+    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{
@@ -1562,7 +1558,7 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
 router.get("/bookedContainer", (req, res, next) => { // none json reply
     getBookedAmount((err, result) => {
         if (err) return next(err);
-        const storeDict = DataCacheFactory.get("store");
+        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
         let txt = "";
         result.forEach(aResult => {
             txt += `${storeDict[aResult._id].name}：${aResult.amount}、`

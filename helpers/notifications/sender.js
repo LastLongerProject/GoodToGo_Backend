@@ -10,7 +10,7 @@ module.exports = {
         if (formatted) {
             return function (arn) {
                 SNS.sns_publish(arn, formatted.content.title, formatted.content.body, formatted.content.options, (err, stack) => {
-                    if (err) debug.error(`${formatted.errMsgPrefix} Err：${JSON.stringify(err)} Stack：${JSON.stringify(stack)}`);
+                    if (err) debug.error(`${formatted.errMsgPrefix} Err：${err.message}`);
                 });
             };
         } else {
@@ -42,7 +42,7 @@ module.exports = {
         }
     },
     socket: function (formatted) {
-        const SocketEmitter = DataCacheFactory.get("SocketEmitter");
+        const SocketEmitter = DataCacheFactory.get(DataCacheFactory.keys.SOCKET_EMITTER);
         if (formatted && SocketEmitter) {
             return function (event) {
                 SocketEmitter.emit(event, formatted);

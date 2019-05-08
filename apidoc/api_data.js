@@ -4866,7 +4866,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail/byCustomer?id={shopid}",
+    "url": "/manage/shopDetail?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4879,7 +4879,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -4974,7 +4974,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail?id={shopid}",
+    "url": "/manage/shopDetail/byCustomer?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4987,7 +4987,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -6530,13 +6530,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list",
-    "title": "Get store list",
+    "url": "/stores/list/:id",
+    "title": "Get store specific store info",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
           "type": "json"
         }
       ]
@@ -6589,13 +6589,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list/:id",
-    "title": "Get store specific store info",
+    "url": "/stores/list",
+    "title": "Get store list",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
           "type": "json"
         }
       ]
@@ -7466,7 +7466,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "    HTTP/1.1 200 \n    {\n         containerAmount: Number,\n         purchaseStatus: String, // \"free_user\" or \"purchased_user\"\n\t        orderListWithoutID : [\n\t\t    {\n\t\t\t    orderID : String,\n\t\t\t    containerAmount : Number,\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ],\n\t        orderListWithID : [\n\t\t    {\n\t\t\t    containerID : String, // #001\n\t\t\t    containerType : String, // 12oz 玻璃杯\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String // 正興咖啡館\n\t\t    }, ...\n\t        ]\n     }",
+          "content": "    HTTP/1.1 200 \n    {\n         containerAmount: Number,\n         purchaseStatus: String, // \"free_user\" or \"purchased_user\"\n\t        orderListWithoutID : [\n\t\t    {\n\t\t\t    orderID : String,\n\t\t\t    containerAmount : Number,\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String, // 正興咖啡館\n             daysToDue : Number\n\t\t    }, ...\n\t        ],\n\t        orderListWithID : [\n\t\t    {\n\t\t\t    containerID : String, // #001\n\t\t\t    containerType : String, // 12oz 玻璃杯\n\t\t\t    orderTime : Date,\n\t\t\t    storeName : String, // 正興咖啡館\n             daysToDue : Number\n\t\t    }, ...\n\t        ]\n     }",
           "type": "json"
         }
       ]
@@ -9945,6 +9945,65 @@ define({ "api": [
             "optional": false,
             "field": "D010",
             "description": "<p>status : 401, type : subscribeMessage, msg : Content invalid - appType or sysyem is wrong</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "UsedHistory",
+    "group": "Users",
+    "type": "get",
+    "url": "/users/usedHistory",
+    "title": "Get user's container using history",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{\n    history : [\n        {\n            containerID : String, // \"#123\"\n            containerType : String, // \"大器杯\"\n            rentTime : Date,\n            rentStore : String, // \"好盒器基地\"\n            returnTime : Date,\n            returnStore : String // \"好盒器基地\"\n        }, ...\n    ]\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/users.js",
+    "groupTitle": "Users",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "line-id",
+            "description": "<p>line_liff_userID</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : lineId undefined - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - Can't find user by line-id</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User hasn't verify - As msg says</p>"
           }
         ]
       }

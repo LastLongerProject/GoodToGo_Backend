@@ -4,22 +4,25 @@ const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine').all;
 
+const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+
 const generateUUID = require('../helpers/tools').generateUUID;
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
-const tradeCallback = require('../controllers/tradeCallback');
-
-const UserOrder = require('../models/DB/userOrderDB');
 const User = require('../models/DB/userDB');
-const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
+const UserOrder = require('../models/DB/userOrderDB');
+const DueDays = require('../models/enums/userEnum').DueDays;
 const DataCacheFactory = require('../models/dataCacheFactory');
+const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
 
 const storeCodeValidater = /\d{4}/;
 
 function isValidStoreCode(storeCode) {
-    const StoreDict = DataCacheFactory.get('store');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const storeID = parseInt(storeCode.substring(0, 3));
     return (getCheckCode(storeID) === parseInt(storeCode.substring(3, 4)) &&
         StoreDict[storeID]);
@@ -46,7 +49,8 @@ function getCheckCode(storeID) {
  *			    orderID : String,
  *			    containerAmount : Number,
  *			    orderTime : Date,
- *			    storeName : String // 正興咖啡館
+ *			    storeName : String, // 正興咖啡館
+ *              daysToDue : Number
  *		    }, ...
  *	        ],
  *	        orderListWithID : [
@@ -54,7 +58,8 @@ function getCheckCode(storeID) {
  *			    containerID : String, // #001
  *			    containerType : String, // 12oz 玻璃杯
  *			    orderTime : Date,
- *			    storeName : String // 正興咖啡館
+ *			    storeName : String, // 正興咖啡館
+ *              daysToDue : Number
  *		    }, ...
  *	        ]
  *      }
@@ -62,8 +67,8 @@ function getCheckCode(storeID) {
 
 router.get('/list', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const StoreDict = DataCacheFactory.get('store');
-    const ContainerDict = DataCacheFactory.get('containerWithDeactive');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     UserOrder.find({
         "user": dbUser._id,
         "archived": false
@@ -73,6 +78,7 @@ router.get('/list', validateLine, function (req, res, next) {
         let orderListWithID = [];
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
+            const daysToDue = DueDays[dbUser.getPurchaseStatus()] - computeDaysOfUsing(aUserOrder.orderTime, Date.now());
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -81,7 +87,8 @@ router.get('/list', validateLine, function (req, res, next) {
                         orderID: aUserOrder.orderID,
                         containerAmount: 1,
                         orderTime: aUserOrder.orderTime,
-                        storeName: StoreDict[aUserOrder.storeID].name
+                        storeName: StoreDict[aUserOrder.storeID].name,
+                        daysToDue
                     };
                     orderListWithoutID[aUserOrder.orderID] = aFormattedUserOrder;
                 }
@@ -90,7 +97,8 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerID: `#${intReLength(aUserOrder.containerID, 4)}`,
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
-                    storeName: StoreDict[aUserOrder.storeID].name
+                    storeName: StoreDict[aUserOrder.storeID].name,
+                    daysToDue
                 };
                 orderListWithID.push(aFormattedUserOrder);
             }
@@ -125,7 +133,7 @@ router.get('/list', validateLine, function (req, res, next) {
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const storeCode = req.body.storeCode;
-    const StoreDict = DataCacheFactory.get('store');
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const containerAmount = parseInt(req.body.containerAmount);
 
     if (dbUser.hasBanned)
@@ -148,7 +156,7 @@ router.post('/add', validateLine, function (req, res, next) {
             code: 'L003',
             type: 'userOrderMessage',
             message: `StoreCode not Correct`,
-            txt: "代碼錯誤，請輸入正確代碼！"
+            txt: "店舖代碼錯誤，請輸入正確店舖代碼！"
         });
 
     userUsingAmount(dbUser, (err, usingAmount) => {
@@ -166,12 +174,14 @@ router.post('/add', validateLine, function (req, res, next) {
         const storeID = parseInt(storeCode.substring(0, 3));
 
         const funcList = [];
+        const now = Date.now();
         for (let i = 0; i < containerAmount; i++) {
             funcList.push(new Promise((resolve, reject) => {
                 let newOrder = new UserOrder({
                     orderID: generateUUID(),
                     user: dbUser._id,
-                    storeID
+                    storeID,
+                    orderTime: now
                 });
                 newOrder.save((err) => {
                     if (err) return reject(err);
@@ -185,7 +195,7 @@ router.post('/add', validateLine, function (req, res, next) {
                 res.json({
                     storeName: StoreDict[storeID].name,
                     containerAmount,
-                    time: Date.now()
+                    time: now
                 });
             })
             .catch(next);
@@ -214,7 +224,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const orderID = req.body.orderID;
     const containerID = parseInt(req.body.containerID);
-    const ContainerDict = DataCacheFactory.get('container');
+    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
 
     if (typeof orderID !== "string" || isNaN(containerID))
         return res.status(403).json({
