@@ -99,7 +99,7 @@ router.get('/list', validateDefault, function (req, res, next) {
         }, function (err, storeList) {
             if (err) return next(err);
             jsonData.globalAmount = 0;
-            res.set('etag', wetag(storeList));
+
             for (var i = 0; i < storeList.length; i++) {
                 var tmpOpening = [];
                 storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
@@ -182,33 +182,29 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
             });
         }
 
-        generateImgToken((err, token) => {
-            if (err) return next(err);
-            res.set('etag', wetag([store]));
-            var tmpOpening = [];
-            store.img_info.img_src = `${baseUrl}/images/store/${store.id}/${token}?ver=${store.img_info.img_version}`;;
-            for (var i = 0; i < store.opening_hours.length; i++)
-                tmpOpening.push({
-                    close: store.opening_hours[i].close,
-                    open: store.opening_hours[i].open
-                });
-            tmpOpening.sort((a, b) => {
-                return a.close.day - b.close.day;
+        var tmpOpening = [];
+        store.img_info.img_src = `${baseUrl}/images/store/${store.id}?ver=${store.img_info.img_version}`;
+        for (var i = 0; i < store.opening_hours.length; i++)
+            tmpOpening.push({
+                close: store.opening_hours[i].close,
+                open: store.opening_hours[i].open
             });
+        tmpOpening.sort((a, b) => {
+            return a.close.day - b.close.day;
+        });
 
-            res.json({
-                id: store.id,
-                name: store.name,
-                img_info: store.img_info,
-                opening_hours: tmpOpening,
-                contract: store.contract,
-                location: store.location,
-                address: store.address,
-                type: store.type,
-                category: store.category,
-                testing: (store.project === '正興杯杯') ? false : true,
-                activity: store.activity
-            });
+        res.json({
+            id: store.id,
+            name: store.name,
+            img_info: store.img_info,
+            opening_hours: tmpOpening,
+            contract: store.contract,
+            location: store.location,
+            address: store.address,
+            type: store.type,
+            category: store.category,
+            testing: (store.project === '正興杯杯') ? false : true,
+            activity: store.activity
         });
     });
 });
