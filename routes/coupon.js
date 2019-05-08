@@ -50,7 +50,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 
 router.get('/myCoupons', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const CouponTypeDict = DataCacheFactory.get('couponType');
+    const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
     Coupon.find({
         "user": dbUser._id
     }, {}, {
@@ -111,7 +111,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
 router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res, next) {
     const dbUser = req._user;
     const CouponID = req.params.couponID;
-    const CouponTypeDict = DataCacheFactory.get('couponType');
+    const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
 
     if (dbUser.hasBanned)
         return res.status(403).json({

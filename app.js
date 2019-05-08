@@ -115,7 +115,7 @@ require("./models/redis");
 require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.');
+    debug.log('SIGINT signal received');
     let server = app.get('server');
     server.close(function (err) {
         if (err) {
@@ -154,7 +154,7 @@ function startServer() {
         .use(mSocket.auth)
         .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
-    DataCacheFactory.set('SocketEmitter', SocketEmitter);
+    DataCacheFactory.set(DataCacheFactory.keys.SOCKET_EMITTER, SocketEmitter);
     process.send('ready');
 }
 

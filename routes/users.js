@@ -3,6 +3,7 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
+const userTrade = require('../controllers/userTrade');
 const couponTrade = require('../controllers/couponTrade');
 
 const validateLine = require('../middlewares/validation/validateLine');
@@ -257,6 +258,31 @@ router.post(
     function (req, res, next) {
         req._options.agreeTerms = true;
         req._options.registerMethod = RegisterMethod.LINE;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
+            } else {
+                res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug.error(err);
+                });
+            }
+        });
+    }
+);
+
+router.post(
+    '/signup/lineUserRoot',
+    regAsAdminManager,
+    validateRequest,
+    function (req, res, next) {
+        req._options.passVerify = true;
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
         userQuery.signupLineUser(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -652,8 +678,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
             },
             (err, dbUser) => {
                 if (err) return next(err);
-                var store = DataCacheFactory.get('store');
-                var containerType = DataCacheFactory.get('containerType');
+                var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+                var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
                 Trade.find({
                         $or: [{
                                 'tradeType.action': 'Rent',
@@ -749,8 +775,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
 
 router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var store = DataCacheFactory.get('store');
-    var containerType = DataCacheFactory.get('containerType');
+    var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
             $or: [{
                     'tradeType.action': 'Rent',
@@ -885,6 +911,78 @@ router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     });
 });
 
+/**
+ * @apiName UsedHistory
+ * @apiGroup Users
+ * 
+ * @api {get} /users/usedHistory Get user's container using history 
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *  HTTP/1.1 200 
+ *  {
+ *      history : [
+ *          {
+ *              containerID : String, // "#123"
+ *              containerType : String, // "大器杯"
+ *              rentTime : Date,
+ *              rentStore : String, // "好盒器基地"
+ *              returnTime : Date,
+ *              returnStore : String // "好盒器基地"
+ *          }, ...
+ *      ]
+ *  }
+ */
+
+router.get('/usedHistory', validateLine.all, function (req, res, next) {
+    const dbUser = req._user;
+    const ContainerTypeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+
+    Trade.find({
+        "$or": [{
+                "newUser.phone": dbUser.user.phone,
+                "tradeType.action": "Rent",
+                "container.inLineSystem": true
+            },
+            {
+                "oriUser.phone": dbUser.user.phone,
+                "tradeType.action": "Return"
+            }
+        ]
+    }, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        const intergratedTrade = {};
+        tradeList.forEach(aTrade => {
+            const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
+            if (aTrade.tradeType.action === "Rent") {
+                intergratedTrade[tradeKey] = {
+                    containerID: `#${aTrade.container.id}`,
+                    containerType: ContainerTypeDict[aTrade.container.typeCode].name,
+                    rentTime: aTrade.tradeTime,
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name,
+
+                };
+            } else if (aTrade.tradeType.action === "Return") {
+                if (!intergratedTrade[tradeKey]) return;
+                Object.assign(intergratedTrade[tradeKey], {
+                    returnTime: aTrade.tradeTime,
+                    returnStore: StoreDict[aTrade.newUser.storeID].name
+                });
+            }
+        });
+
+        res.json({
+            history: Object.values(intergratedTrade).reverse()
+        });
+    });
+});
+
 router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
     User.updateOne({
@@ -906,7 +1004,7 @@ router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, functi
 router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
-        User.updateOne({
+        User.findOneAndUpdate({
             "user.phone": aUser.phone
         }, {
             "hasPurchase": true,
@@ -920,9 +1018,12 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
             upsert: true,
             setDefaultsOnInsert: true,
             new: true
-        }, (err, raw) => {
+        }, (err, theUser) => {
             if (err) return reject(err);
-            resolve(raw);
+            resolve(theUser);
+            couponTrade.welcomeCoupon(theUser, (err) => {
+                if (err) debug.error(err);
+            });
         });
     }));
     Promise
@@ -934,6 +1035,32 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
             });
         })
         .catch(next);
+});
+
+router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        userTrade.banUser(dbUser, -1, true);
+        res.json({
+            success: true
+        });
+    });
+});
+
+router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        userTrade.unbanUser(dbUser);
+        res.json({
+            success: true
+        });
+    });
 });
 
 router.get("/bannedUser", (req, res, next) => { // none json reply

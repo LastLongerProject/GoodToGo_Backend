@@ -92,7 +92,7 @@ userSchema.methods.getPurchaseStatus = function () {
 };
 userSchema.methods.getBannedTxt = function (action) {
     return `${this.bannedTimes <= 1?
-        `您有容器逾期未歸還，請儘速歸還！` :
+        `您有容器逾期未歸還，請儘速歸還，不然無法借用容器、領取或使用優惠券喲！` :
         `您已被停權，無法${action}！\n欲解除停權，請私訊好盒器粉專。`}`;
 };
 

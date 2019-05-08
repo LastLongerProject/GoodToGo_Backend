@@ -30,7 +30,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
         throw new Error("Arguments Not Complete");
     const messageType = stateChanging.action + 'Message';
     const consts = {
-        containerTypeDict: DataCacheFactory.get("containerType")
+        containerTypeDict: DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE)
     };
 
     let tradeTime;

@@ -1,5 +1,6 @@
 const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const DueDays = require('../models/enums/userEnum').DueDays;
 
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -11,18 +12,12 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
-const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const userTrade = require('../controllers/userTrade');
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
-
-const DueDays = {
-    free_user: 2,
-    purchased_user: 8
-};
 
 module.exports = {
     store: function (cb) {
@@ -47,7 +42,7 @@ module.exports = {
         });
     },
     checkCouponIsExpired: function (cb) {
-        const CouponTypeDict = DataCacheFactory.get("couponType");
+        const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
         Coupon.find({
             "expired": false
         }, (err, couponList) => {
@@ -65,26 +60,11 @@ module.exports = {
             debug.log('Expired Coupon is Check');
         });
     },
-    checkUsersShouldBeBanned: function (startupCheck, specificUser, cb) {
-        const userCondition = {
-            "agreeTerms": true
-        };
-        if (specificUser)
-            Object.assign(userCondition, {
-                "user.phone": specificUser.user.phone
-            });
-        User.find(userCondition, (err, userList) => {
-            if (err) return debug.error(err);
-            const userDict = {};
-            const userObjectIDList = userList.map(aUser => {
-                const userID = aUser._id;
-                userDict[userID] = {
-                    dbUser: aUser,
-                    almostOverdue: [],
-                    overdue: []
-                };
-                return userID;
-            });
+    checkUsersShouldBeBanned: function (sendNotice, specificUser, cb) {
+        if (!(specificUser instanceof User)) specificUser = null;
+        findUsersToCheckShouldBanned(specificUser, reply => {
+            const userDict = reply.userDict;
+            const userObjectIDList = reply.userObjectIDList;
             UserOrder.find({
                 "user": {
                     "$in": userObjectIDList
@@ -94,27 +74,32 @@ module.exports = {
                 if (err) return debug.error(err);
 
                 const now = Date.now();
-                userOrderList.forEach(aUserorder => {
-                    const userID = aUserorder.user;
+                userOrderList.forEach(aUserOrder => {
+                    const userID = aUserOrder.user;
                     const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserorder.orderTime, now) - DueDays[purchaseStatus];
+                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
                     if (daysOverDue > 0) {
-                        userDict[userID].overdue.push(aUserorder);
+                        userDict[userID].overdue.push(aUserOrder);
                     } else if (daysOverDue === 0) {
-                        userDict[userID].almostOverdue.push(aUserorder);
+                        userDict[userID].almostOverdue.push(aUserOrder);
                     }
                 });
 
                 for (let userID in userDict) {
                     const dbUser = userDict[userID].dbUser;
-                    if (userDict[userID].overdue.length > 0)
-                        banUser(dbUser);
-                    else if (userDict[userID].almostOverdue.length > 0 && !startupCheck)
-                        noticeUserWhoIsGoingToBeBanned(dbUser);
-                    else if (userDict[userID].overdue.length === 0)
-                        unbanUser(dbUser);
+                    if (userDict[userID].overdue.length > 0) {
+                        userTrade.banUser(dbUser, userDict[userID].overdue.length, sendNotice);
+                    } else {
+                        const almostOverdueAmount = userDict[userID].almostOverdue.length;
+                        if (almostOverdueAmount > 0 && sendNotice) {
+                            userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
+                        }
+                        if (dbUser.bannedTimes <= 1) {
+                            userTrade.unbanUser(dbUser);
+                        }
+                    }
                 }
-                if (cb) return cb();
+                if (cb) return cb(null, userDict);
                 debug.log('Banned User is Check');
             });
         });
@@ -298,7 +283,7 @@ function activityListGenerator(cb) {
         activities.forEach((aActivity) => {
             activityDict[aActivity.ID] = aActivity;
         });
-        DataCacheFactory.set('activity', activityDict);
+        DataCacheFactory.set(DataCacheFactory.keys.ACTIVITY, activityDict);
         cb();
     });
 }
@@ -314,7 +299,7 @@ function storeListGenerator(cb) {
         stores.forEach((aStore) => {
             storeDict[aStore.ID] = aStore;
         });
-        DataCacheFactory.set('store', storeDict);
+        DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
         cb();
     });
 }
@@ -342,9 +327,9 @@ function containerListGenerator(cb) {
                 containerDict[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
                 if (containerList[i].active) containerDictOnlyActive[containerList[i].ID] = containerTypeList[containerList[i].typeCode].name;
             }
-            DataCacheFactory.set('containerWithDeactive', containerDict);
-            DataCacheFactory.set('container', containerDictOnlyActive);
-            DataCacheFactory.set('containerType', containerTypeDict);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE, containerDict);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE, containerDictOnlyActive);
+            DataCacheFactory.set(DataCacheFactory.keys.CONTAINER_TYPE, containerTypeDict);
             cb();
         });
     });
@@ -357,38 +342,45 @@ function couponListGenerator(cb) {
         couponTypeList.forEach((aCouponType) => {
             couponTypeDict[aCouponType._id] = aCouponType;
         });
-        DataCacheFactory.set('couponType', couponTypeDict);
+        DataCacheFactory.set(DataCacheFactory.keys.COUPON_TYPE, couponTypeDict);
         cb();
     });
 }
 
-function banUser(dbUser) {
-    if (!dbUser.hasBanned) {
-        dbUser.hasBanned = true;
-        dbUser.bannedTimes++;
-        dbUser.save(err => {
-            if (err) return debug.error(err);
+function findUsersToCheckShouldBanned(specificUser, cb) {
+    if (specificUser) {
+        const userID = specificUser._id;
+        const userDict = {
+            [userID]: {
+                dbUser: specificUser,
+                almostOverdue: [],
+                overdue: []
+            }
+        };
+        const userObjectIDList = [userID];
+        return cb({
+            userDict,
+            userObjectIDList
         });
-        NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, null);
-    }
-}
-
-function noticeUserWhoIsGoingToBeBanned(dbUser) {
-    if (!dbUser.hasBanned) {
-        NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, null);
-    }
-}
-
-function unbanUser(dbUser) {
-    if (dbUser.hasBanned && dbUser.bannedTimes <= 1) {
-        dbUser.hasBanned = false;
-        dbUser.save(err => {
+    } else {
+        User.find({
+            "agreeTerms": true
+        }, (err, userList) => {
             if (err) return debug.error(err);
-        });
-        NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, null);
+            const userDict = {};
+            const userObjectIDList = userList.map(aUser => {
+                const userID = aUser._id;
+                userDict[userID] = {
+                    dbUser: aUser,
+                    almostOverdue: [],
+                    overdue: []
+                };
+                return userID;
+            });
+            return cb({
+                userDict,
+                userObjectIDList
+            });
+        })
     }
-}
-
-function computeDaysOfUsing(dateToCompute, now) {
-    return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 }

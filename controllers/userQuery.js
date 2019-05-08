@@ -229,21 +229,23 @@ module.exports = {
                     message: 'That phone is already taken'
                 });
             } else {
-                if (typeof verificationCode === 'undefined') {
+                if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     sendVerificationCode(phone, done);
                 } else {
                     redis.get('user_verifying:' + phone, (err, reply) => {
                         if (err) return done(err);
-                        if (reply === null) return done(null, false, {
-                            code: 'D010',
-                            type: 'signupMessage',
-                            message: 'Verification Code expired'
-                        });
-                        else if (reply !== verificationCode) return done(null, false, {
-                            code: 'D011',
-                            type: 'signupMessage',
-                            message: "Verification Code isn't correct"
-                        });
+                        if (options.passVerify !== true) {
+                            if (reply === null) return done(null, false, {
+                                code: 'D010',
+                                type: 'signupMessage',
+                                message: 'Verification Code expired'
+                            });
+                            else if (reply !== verificationCode) return done(null, false, {
+                                code: 'D011',
+                                type: 'signupMessage',
+                                message: "Verification Code isn't correct"
+                            });
+                        }
 
                         let userToSave;
                         if (dbUser) { // has NOT verified
@@ -264,8 +266,8 @@ module.exports = {
                         userToSave.save(function (err) {
                             if (err) return done(err);
                             redis.del('user_verifying:' + phone, (err, delReply) => {
-                                if (err) return done(err);
-                                if (delReply !== 1) return done("delReply: " + delReply);
+                                if (err && options.passVerify !== true) return done(err);
+                                if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
                                 return done(null, userToSave, {
                                     body: {
                                         type: 'signupMessage',
@@ -290,80 +292,73 @@ module.exports = {
                 message: 'Content not Complete'
             });
         }
-        process.nextTick(function () {
-            User.findOne({
-                'user.phone': phone
-            }, function (err, dbUser) {
-                if (err)
-                    return done(err);
-                if (!dbUser)
-                    return done(null, false, {
-                        code: 'D005',
-                        type: 'loginMessage',
-                        message: 'No user found'
-                    });
-                if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
-                    return done(null, false, {
-                        code: 'D005',
-                        type: 'loginMessage',
-                        message: 'No user found'
-                    });
-                }
-                if (!dbUser.validPassword(password))
-                    return done(null, false, {
-                        code: 'D006',
-                        type: 'loginMessage',
-                        message: 'Wrong password'
-                    });
-                var funcList = [];
-                var typeList = dbUser.roles.typeList;
-                for (var i = 0; i < typeList.length; i++) {
-                    funcList.push(new Promise((resolve, reject) => {
-                        var thisCtr = i;
-                        keys.keyPair(function (err, returnKeys) {
+        User.findOne({
+            'user.phone': phone
+        }, function (err, dbUser) {
+            if (err)
+                return done(err);
+            if (!dbUser)
+                return done(null, false, {
+                    code: 'D005',
+                    type: 'loginMessage',
+                    message: 'No user found'
+                });
+            if (!dbUser.active || !dbUser.hasVerified || dbUser.user.password === null) {
+                return done(null, false, {
+                    code: 'D005',
+                    type: 'loginMessage',
+                    message: 'No user found'
+                });
+            }
+            if (!dbUser.validPassword(password))
+                return done(null, false, {
+                    code: 'D006',
+                    type: 'loginMessage',
+                    message: 'Wrong password'
+                });
+            const typeList = dbUser.roles.typeList;
+            Promise
+                .all(typeList.map(aRoleType => new Promise((resolve, reject) => {
+                    keys.keyPair(function (err, returnKeys) {
+                        if (err) return reject(err);
+                        UserKeys.findOneAndUpdate({
+                            'phone': phone,
+                            'clientId': req.signedCookies.uid || req._uid,
+                            'roleType': aRoleType
+                        }, {
+                            'secretKey': returnKeys.secretKey,
+                            'userAgent': req.headers['user-agent'],
+                            '$setOnInsert': {
+                                'apiKey': returnKeys.apiKey,
+                                'user': dbUser._id,
+                            }
+                        }, {
+                            new: true,
+                            upsert: true,
+                            setDefaultsOnInsert: true
+                        }, (err, keyPair) => {
                             if (err) return reject(err);
-                            UserKeys.findOneAndUpdate({
-                                'phone': phone,
-                                'clientId': req.signedCookies.uid || req._uid,
-                                'roleType': typeList[thisCtr]
-                            }, {
-                                'secretKey': returnKeys.secretKey,
-                                'userAgent': req.headers['user-agent'],
-                                '$setOnInsert': {
-                                    'apiKey': returnKeys.apiKey,
-                                    'user': dbUser._id,
-                                }
-                            }, {
-                                new: true,
-                                upsert: true,
-                                setDefaultsOnInsert: true
-                            }, (err, keyPair) => {
-                                if (err) return reject(err);
-                                resolve(keyPair);
-                            });
+                            resolve(keyPair);
                         });
-                    }));
-                }
-                Promise
-                    .all(funcList)
-                    .then((keyPairList) => {
-                        keys.serverSecretKey((err, serverSecretKey) => {
-                            if (err) return done(err);
-                            return done(null, dbUser, {
-                                headers: {
-                                    Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
-                                },
-                                body: {
-                                    type: 'loginMessage',
-                                    message: 'Authentication succeeded'
-                                }
-                            });
-                        });
-                    })
-                    .catch((err) => {
-                        if (err) return done(err);
                     });
-            });
+                })))
+                .then((keyPairList) => {
+                    keys.serverSecretKey((err, serverSecretKey) => {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            headers: {
+                                Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
+                            },
+                            body: {
+                                type: 'loginMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
+                })
+                .catch((err) => {
+                    if (err) return done(err);
+                });
         });
     },
     chanpass: function (req, done) {
@@ -622,7 +617,7 @@ function isStudentID(phone) {
 }
 
 function getStoreName(dbUser) {
-    var storeDict = DataCacheFactory.get('store');
+    var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
     var theStore = storeDict[dbUser.roles.clerk.storeID];
     if (theStore) return theStore.name;
