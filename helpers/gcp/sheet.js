@@ -139,7 +139,7 @@ module.exports = {
                 }
                 Promise
                     .all(funcList)
-                    .then((dataList) => {
+                    .then(() => {
                         Container.updateMany({
                             'checkedAt': {
                                 '$lt': checkpoint
@@ -164,30 +164,25 @@ module.exports = {
                 spreadsheetId: configs.store_sheet_ID,
                 range: 'active!A2:L',
             }, function (err, response) {
-                if (err) {
-                    debug.error('[Sheet API ERR (getStore)] Error: ' + err);
-                    return;
-                }
-                var rows = response.data.values;
-                var PlaceIDFuncList = [];
-                for (var i = 0; i < rows.length; i++) {
-                    var row = rows[i];
-                    if (row[1] == "" || row[2] == "") break;
-                    PlaceIDFuncList.push(new Promise((resolve, reject) => {
+                if (err) return debug.error('[Sheet API ERR (getStore)] Error: ' + err);
+                const rowsFromSheet = response.data.values;
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== ""));
+                Promise
+                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({
-                            'ID': row[0]
+                            'ID': aRow[0]
                         }, {
-                            'name': row[1],
-                            'placeID': row[2],
+                            'name': aRow[1],
+                            'placeID': aRow[2],
                             'contract': {
-                                'returnable': (row[3] === 'V'),
-                                'borrowable': (row[4] === 'V')
+                                'returnable': (aRow[3] === 'V'),
+                                'borrowable': (aRow[4] === 'V')
                             },
-                            'type': row[6],
-                            'project': row[8],
-                            'active': row[9] === 'TRUE',
-                            'category': row[10],
-                            'activity': row[11]
+                            'type': aRow[6],
+                            'project': aRow[8],
+                            'active': aRow[9] === 'TRUE',
+                            'category': aRow[10],
+                            'activity': aRow[11]
                         }, {
                             upsert: true,
                             new: true
@@ -195,57 +190,52 @@ module.exports = {
                             if (err) return reject(err);
                             resolve(afterUpdate);
                         });
-                    }));
-                }
-                Promise
-                    .all(PlaceIDFuncList)
-                    .then((fulfillPlace) => {
-                        Store.find({}, (err, oldList) => {
+                    })))
+                    .then(placeList => {
+                        Store.find((err, oriStoreList) => {
                             if (err) return debug.error(err);
-                            var placeApiFuncList = [];
-                            for (var i = 0; i < fulfillPlace.length; i++) {
-                                if (!isNum.test(fulfillPlace[i].ID)) continue;
-                                placeApiFuncList.push(new Promise((resolve, reject) => {
-                                    var localCtr = i;
-                                    var aPlace = fulfillPlace[localCtr];
-                                    var dataArray = [];
+                            Promise
+                                .all(placeList.map(aPlace => new Promise((resolve, reject) => {
+                                    const bufferArray = [];
                                     request
                                         .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
                                             '&language=zh-TW&region=tw&key=' + placeApiKey +
                                             '&fields=formatted_address,opening_hours,geometry,types')
                                         .on('response', function (response) {
                                             if (response.statusCode !== 200) {
-                                                debug.error('[Place API ERR (1)] StatusCode : ' + response.statusCode);
-                                                return reject(localCtr);
+                                                debug.error('[Place API ERR (1)] StatusCode: ' + response.statusCode);
+                                                return reject(aPlace.ID);
                                             }
                                         })
                                         .on('error', function (err) {
-                                            debug.error('[Place API ERR (2)] Message : ' + err);
-                                            return reject(localCtr);
+                                            debug.error('[Place API ERR (2)] Message: ' + err);
+                                            return reject(aPlace.ID);
                                         })
                                         .on('data', function (data) {
-                                            dataArray.push(data);
+                                            bufferArray.push(data);
                                         })
                                         .on('end', function () {
-                                            var dataBuffer = Buffer.concat(dataArray);
-                                            var dataObject = JSON.parse(dataBuffer.toString());
+                                            const dataBuffer = Buffer.concat(bufferArray);
+                                            const dataObject = JSON.parse(dataBuffer.toString());
+                                            const dataFromApi = dataObject.result;
                                             try {
-                                                var type = [];
+                                                let formattedType = [];
                                                 if (aPlace && aPlace.type !== "") {
-                                                    type = aPlace.type.replace(" ", "").split(",");
+                                                    formattedType = aPlace.type.replace(" ", "").split(",");
                                                 } else {
-                                                    dataObject.result.types.forEach(aType => {
-                                                        var translated = dictionary[aType];
-                                                        if (translated) type.push(translated);
+                                                    dataFromApi.types.forEach(aType => {
+                                                        const translated = dictionary[aType];
+                                                        if (translated) formattedType.push(translated);
+                                                        else debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                     });
                                                 }
-                                                var opening_hours;
-                                                var aOldStore = oldList.find(ele => ele.id == aPlace.ID);
-                                                if (aOldStore && aOldStore.opening_default) {
-                                                    opening_hours = aOldStore.opening_hours;
-                                                } else if (dataObject.result.opening_hours && dataObject.result.opening_hours.periods) {
-                                                    opening_hours = dataObject.result.opening_hours.periods;
-                                                    for (var j = 0; j < opening_hours.length; j++) {
+                                                let opening_hours;
+                                                let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
+                                                if (theOriStore && theOriStore.opening_default) {
+                                                    opening_hours = theOriStore.opening_hours;
+                                                } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
+                                                    opening_hours = dataFromApi.opening_hours.periods;
+                                                    for (let j = 0; j < opening_hours.length; j++) {
                                                         if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
                                                             opening_hours = defaultPeriods;
                                                             break;
@@ -266,12 +256,12 @@ module.exports = {
                                                         borrowable: aPlace.contract.returnable,
                                                         status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
                                                     },
-                                                    'type': type,
+                                                    'type': formattedType,
                                                     'project': aPlace.project,
-                                                    'address': dataObject.result.formatted_address
+                                                    'address': dataFromApi.formatted_address
                                                         .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
                                                     'opening_hours': opening_hours,
-                                                    'location': dataObject.result.geometry.location,
+                                                    'location': dataFromApi.geometry.location,
                                                     'active': aPlace.active,
                                                     'category': aPlace.category,
                                                     'activity': aPlace.activity,
@@ -288,7 +278,8 @@ module.exports = {
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
                                                     if (aPlace.activity) {
-                                                        Promise.all(aPlace.activity.map(activity => User
+                                                        Promise
+                                                            .all(aPlace.activity.map(activity => User
                                                                 .updateMany({
                                                                     'roles.clerk.storeID': aPlace.ID,
                                                                     'roles.typeList': {
@@ -304,7 +295,8 @@ module.exports = {
                                                                     setDefaultsOnInsert: true
                                                                 })
                                                                 .exec()
-                                                            )).then(_ => resolve(_))
+                                                            ))
+                                                            .then(resolve)
                                                             .catch(err => {
                                                                 debug.error(err);
                                                                 reject(err);
@@ -317,21 +309,14 @@ module.exports = {
                                                 reject(error);
                                             }
                                         });
-                                }));
-                            }
-                            Promise
-                                .all(placeApiFuncList)
+                                })))
                                 .then((data) => {
                                     return cb(data);
                                 })
-                                .catch((err) => {
-                                    if (err) return debug.error(err);
-                                });
+                                .catch(debug.error);
                         });
                     })
-                    .catch((err) => {
-                        if (err) return debug.error(err);
-                    });
+                    .catch(debug.error);
             });
         });
     },
@@ -342,23 +327,18 @@ module.exports = {
                 spreadsheetId: configs.activity_sheet_ID,
                 range: 'active!A2:D',
             }, function (err, response) {
-                if (err) {
-                    debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
-                    return;
-                }
-                var rows = response.data.values;
-                var funcList = [];
-                var checkpoint = Date.now();
-                for (var i = 0; i < rows.length; i++) {
-                    if (rows[1] === "" || rows[2] === "" || rows[3 === ""]) break;
-                    var row = rows[i];
-                    funcList.push(new Promise((resolve, reject) => {
+                if (err) return debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
+                const rows = response.data.values;
+                const checkpoint = Date.now();
+                const validRows = rows.filter(aRow => (aRow[1] !== "" && aRow[2] !== "" && aRow[3] !== ""));
+                Promise
+                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         Activity.findOneAndUpdate({
-                            'ID': row[0]
+                            'ID': aRow[0]
                         }, {
-                            'name': row[1],
-                            'startAt': row[2],
-                            'endAt': row[3]
+                            'name': aRow[1],
+                            'startAt': aRow[2],
+                            'endAt': aRow[3]
                         }, {
                             upsert: true,
                             new: true
@@ -366,12 +346,8 @@ module.exports = {
                             if (err) return reject(err);
                             resolve(afterUpdate);
                         });
-                    }));
-
-                }
-                Promise
-                    .all(funcList)
-                    .then((activityList) => {
+                    })))
+                    .then(activityList => {
                         Activity.updateMany({
                             'checkedAt': {
                                 '$lt': checkpoint

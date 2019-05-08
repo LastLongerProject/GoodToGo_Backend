@@ -28,10 +28,14 @@ module.exports = function () {
                 user: {
                     phone: "0900000000",
                     password: null,
-                    name: "SchedulerBot"
+                    name: "GoodToGoBot"
                 },
                 roles: {
-                    typeList: ["bot"]
+                    typeList: ["bot", "clerk"],
+                    clerk: {
+                        storeID: 17,
+                        manager: false
+                    }
                 }
             });
             bot.save(err => {
