@@ -627,27 +627,6 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
             customersDetail: []
         };
 
-        if (STORE_ID === 17) {
-            containerQuery = {
-                "$or": [{
-                        'storeID': STORE_ID,
-                        'active': true
-                    },
-                    {
-                        "ID": {
-                            "$in": DEMO_CONTAINER_ID_LIST
-                        }
-                    }
-                ]
-            };
-        } else {
-            containerQuery = {
-                'storeID': STORE_ID,
-                'active': true
-            };
-        }
-
-
         var tradeQuery = {
             '$or': [{
                     'tradeType.action': 'Sign',
@@ -727,7 +706,6 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
             for (var containerID in lastUsed) {
                 var timeToNow = now - lastUsed[containerID].time;
                 if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
-                    console.log(lastUsed[containerID])
                     if (result.customersDetail.every(element => {
                             if (element.phone === lastUsed[containerID].newUser) element.lostAmount++;
                             return element.phone !== lastUsed[containerID].newUser
@@ -742,7 +720,6 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
                 }
             }
             res.json(result);
-
         });
     });
 });
