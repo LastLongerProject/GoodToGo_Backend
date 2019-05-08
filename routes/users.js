@@ -24,6 +24,7 @@ const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const PointLog = require('../models/DB/pointLogDB');
+const Coupon = require('../models/DB/couponDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
@@ -1073,6 +1074,34 @@ router.get("/bannedUser", (req, res, next) => { // none json reply
             txt += `[${aResult.user.phone}(${aResult.user.name})]、`
         })
         res.send(txt).end();
+    });
+});
+
+router.get("/couponUsingStatus", (req, res, next) => { // none json reply
+    User.find({
+        "hasPurchase": true,
+        "agreeTerms": true
+    }, (err, result) => {
+        if (err) return next(err);
+        Coupon.find({
+            "used": true
+        }, (err, couponList) => {
+            if (err) return next(err);
+            const couponDict = {};
+            couponList.forEach(aCoupon => {
+                if (!couponDict[aCoupon.user]) couponDict[aCoupon.user] = 0;
+                couponDict[aCoupon.user]++;
+            });
+            let txt = '<table border="1">' +
+                "<tr><th>電話（名字）</th><th>點數</th><th>使用過的優惠券數量</th></tr>";
+            result.forEach(aResult => {
+                txt += `<tr><td>${aResult.user.phone}（${aResult.user.name || "未命名"}）</td>` +
+                    `<td>${aResult.point}</td>` +
+                    `<td>${couponDict[aResult._id] || 0}</tr>`;
+            })
+            txt += "</table>"
+            res.send(txt).end();
+        });
     });
 });
 
