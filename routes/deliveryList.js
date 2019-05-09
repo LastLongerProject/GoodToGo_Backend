@@ -23,12 +23,19 @@ const validateModifyApiContent = require('../middlewares/validation/deliveryList
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
+const Trade = require('../../models/DB/tradeDB');
+
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const UserRole = require('../../models/enums/userEnum').UserRole;
+
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const historyDays = 14;
 
 /**
  * @apiName DeliveryList create delivery list
@@ -136,8 +143,8 @@ router.post(
             const comment = element.comment;
 
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -161,17 +168,17 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        }
-                                    },
-                                    status: BoxStatus.Boxing,
-                                }, {
+                                containerList: containerList,
+                                comment: comment,
+                                $push: {
+                                    action: {
+                                        phone: phone,
+                                        boxStatus: BoxStatus.Boxing,
+                                        timestamps: Date.now(),
+                                    }
+                                },
+                                status: BoxStatus.Boxing,
+                            }, {
                                     upsert: true,
                                 }).exec()
                                 .then(result => {
@@ -309,8 +316,8 @@ router.post(
             var boxID = element.id;
 
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -386,8 +393,8 @@ router.post(
             var boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
-                    boxID: boxID,
-                },
+                boxID: boxID,
+            },
                 async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
@@ -399,7 +406,7 @@ router.post(
                     try {
                         let result = await changeStateProcess(element, aBox, phone);
                         if (result.status === ProgramStatus.Success) {
-                            changeContainersState(
+                            return changeContainersState(
                                 aBox.containerList,
                                 dbUser, {
                                     action: 'Sign',
@@ -415,13 +422,10 @@ router.post(
                                         type: "SignMessage",
                                         message: "Sign successfully"
                                     });
-                                }
-                            );
-                        } else {
-                            ErrorResponse.H007.message = result.message;
-                            return res.status(403).json(ErrorResponse.H007);
+                                });
                         }
-
+                        ErrorResponse.H007.message = result.message;
+                        return res.status(403).json(ErrorResponse.H007);
                     } catch (err) {
                         debug.error(err);
                         next(err);
@@ -614,6 +618,91 @@ router.get(
 );
 
 /**
+ * @apiName DeliveryList Get specific store list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/specificList/:status/:startFrom Specific store and specific status box list
+ * @apiPermission clerk
+ * @apiUse JWT
+ * @apiDescription
+ * **Status**
+ * - Created: "Created",
+ * - Boxing: "Boxing",
+ * - Delivering: "Delivering",
+ * - Signed: "Signed",
+ * - Stocked: "Stocked"
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        
+            {
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        
+ */
+router.get(
+    '/box/list/:status/:startFrom',
+    regAsStore,
+    validateRequest,
+    async function (req, res, next) {
+
+        let boxStatus = req.params.status;
+        let storeID = req._user.roles.clerk.storeID;
+        let startFrom = new Date(req.params.startFrom);
+        let boxObjs = [];
+
+        Box.find({
+            'status': boxStatus,
+            'storeID': storeID
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                boxObjs.push({
+                    ID: box.boxID,
+                    boxName: box.boxName || "",
+                    dueDate: box.dueDate || "",
+                    status: box.status || "",
+                    action: box.action || [],
+                    deliverContent: getDeliverContent(box.containerList),
+                    orderContent: box.boxOrderContent || [],
+                    containerList: box.containerList,
+                    user: box.user,
+                    comment: box.comment || ""
+                });
+            }
+
+            return res.status(200).json({ boxObjs });
+        });
+    }
+);
+
+/**
  * @apiName DeliveryList modify box info
  * @apiGroup DeliveryList
  *
@@ -722,13 +811,12 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 
 router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
-    let dbAdmin = req._user;
 
     Box.remove({
-            boxID
-        })
+        boxID
+    })
         .exec()
-        .then(_ => res.status(200).json({
+        .then(() => res.status(200).json({
             type: "DeleteMessage",
             message: "Delete successfully"
         })).catch(err => {
@@ -736,5 +824,135 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
             return next(err);
         });
 });
+
+/**
+ * @apiName Containers reload history
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/get/reloadHistory Reload history
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * @apiPermission clerk
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            [
+                {
+                    "boxTime": "2017-11-05T15:05:37.456Z",
+                    "typeList": [
+                        "12oz 玻璃杯"
+                    ],
+                    "phone": {
+                        "reload": String // (清洗站)回收的人
+                    },
+                    "storeID": 1, // (清洗站)storeID
+                    "containerList": {
+                         "12oz 玻璃杯": [
+                            1,...
+                        ]
+                    },
+                    "containerOverview": [
+                        {
+                            "containerType": "12oz 玻璃杯",
+                            "amount": 1
+                        },...
+                    ],
+                    "cleanReload": Boolean // if TRUE, 為乾淨回收
+                },
+                 ...
+                
+            ]
+        }
+ *
+ */
+
+// router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
+//     var dbUser = req._user;
+//     var dbKey = req._key;
+//     var typeDict = DataCacheFactory.get('containerType');
+//     var queryCond;
+//     var queryDays;
+//     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
+//     else queryDays = historyDays;
+//     if (dbKey.roleType === UserRole.CLERK)
+//         queryCond = {
+//             '$or': [{
+//                 'tradeType.action': 'ReadyToClean',
+//                 'oriUser.storeID': dbUser.roles.clerk.storeID
+//             }, {
+//                 'tradeType.action': 'UndoReadyToClean'
+//             }],
+//             'tradeTime': {
+//                 '$gte': dateCheckpoint(1 - queryDays)
+//             }
+//         };
+//     else
+//         queryCond = {
+//             'tradeType.action': {
+//                 '$in': ['ReadyToClean', 'UndoReadyToClean']
+//             },
+//             'tradeTime': {
+//                 '$gte': dateCheckpoint(1 - queryDays)
+//             }
+//         };
+//     Trade.find(queryCond, function (err, list) {
+//         if (err) return next(err);
+//         if (list.length === 0) return res.json({
+//             reloadHistory: []
+//         });
+//         list.sort((a, b) => a.tradeTime - b.tradeTime);
+//         cleanUndoTrade('ReadyToClean', list);
+
+//         var tradeTimeDict = {};
+//         list.forEach(aTrade => {
+//             if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
+//             tradeTimeDict[aTrade.tradeTime].push(aTrade);
+//         });
+
+//         var boxDict = {};
+//         var boxDictKey;
+//         var thisTypeName;
+//         for (var aTradeTime in tradeTimeDict) {
+//             tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
+//             tradeTimeDict[aTradeTime].forEach(theTrade => {
+//                 thisTypeName = typeDict[theTrade.container.typeCode].name;
+//                 boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+//                 if (!boxDict[boxDictKey])
+//                     boxDict[boxDictKey] = {
+//                         boxTime: theTrade.tradeTime,
+//                         typeList: [],
+//                         containerList: {},
+//                         action: {
+//                             status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
+//                             phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
+//                         },
+//                         storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
+//                     };
+//                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
+//                     boxDict[boxDictKey].typeList.push(thisTypeName);
+//                     boxDict[boxDictKey].containerList[thisTypeName] = [];
+//                 }
+//                 boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
+//             });
+//         }
+
+//         var boxArr = Object.values(boxDict);
+//         boxArr.sort((a, b) => b.boxTime - a.boxTime);
+//         for (var i = 0; i < boxArr.length; i++) {
+//             boxArr[i].containerOverview = [];
+//             for (var j = 0; j < boxArr[i].typeList.length; j++) {
+//                 boxArr[i].containerOverview.push({
+//                     containerType: boxArr[i].typeList[j],
+//                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+//                 });
+//             }
+//         }
+//         var resJSON = {
+//             boxArr
+//         };
+//         res.json(resJSON);
+//     });
+// });
 
 module.exports = router;
