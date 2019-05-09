@@ -1,14 +1,5 @@
 define({ "api": [
   {
-    "version": "0.0.1",
-    "type": "",
-    "url": "",
-    "filename": "routes/doc/apidoc_version.js",
-    "group": "C__Users_Benjamin_Documents_Code_GoodToGo_Backend_routes_doc_apidoc_version_js",
-    "groupTitle": "C__Users_Benjamin_Documents_Code_GoodToGo_Backend_routes_doc_apidoc_version_js",
-    "name": ""
-  },
-  {
     "name": "Containers_Sign_box_id",
     "group": "Containers",
     "type": "post",
@@ -1615,6 +1606,119 @@ define({ "api": [
     }
   },
   {
+    "name": "Containers_reload_history",
+    "group": "Containers",
+    "type": "get",
+    "url": "/containers/get/reloadHistory",
+    "title": "Reload history",
+    "permission": [
+      {
+        "name": "admin",
+        "title": "Admin access rights needed.",
+        "description": "<p>Please use admin identity to request this uri.</p>"
+      },
+      {
+        "name": "clerk",
+        "title": "Clerk access rights needed.",
+        "description": "<p>Please use clerk identity to request this uri.</p>"
+      }
+    ],
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n{ \n    [\n        {\n            \"boxTime\": \"2017-11-05T15:05:37.456Z\",\n            \"typeList\": [\n                \"12oz 玻璃杯\"\n            ],\n            \"phone\": {\n                \"reload\": String // (清洗站)回收的人\n            },\n            \"storeID\": 1, // (清洗站)storeID\n            \"containerList\": {\n                 \"12oz 玻璃杯\": [\n                    1,...\n                ]\n            },\n            \"containerOverview\": [\n                {\n                    \"containerType\": \"12oz 玻璃杯\",\n                    \"amount\": 1\n                },...\n            ],\n            \"cleanReload\": Boolean // if TRUE, 為乾淨回收\n        },\n         ...\n        \n    ]\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/deliveryList.js",
+    "groupTitle": "Containers",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "Containers_rent_container",
     "group": "Containers",
     "type": "post",
@@ -2447,6 +2551,115 @@ define({ "api": [
         {
           "title": "Success-Response:",
           "content": "HTTP/1.1 200 \n[   \n    {\n        storeID: Number\n        boxObjs: [{\n            ID: Number //boxID,\n            boxName: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...\n]",
+          "type": "json"
+        }
+      ]
+    },
+    "version": "0.0.0",
+    "filename": "routes/deliveryList.js",
+    "groupTitle": "DeliveryList",
+    "header": {
+      "fields": {
+        "Header": [
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "Authorization",
+            "description": "<p>A JWT string, encode using Secret key : // secretKey you get by login. Shouldn’t contain 'Bearer ’ in string</p> <p>JWT payload should contain:</p> <ul> <li>jti : random text ( suggestion -&gt; encode with ‘hex’, length = 10 )</li> <li>iat : Time.now();</li> <li>epx : Time.now(); plus 3 days</li> </ul>"
+          },
+          {
+            "group": "Header",
+            "type": "String",
+            "optional": false,
+            "field": "ApiKey",
+            "description": "<p>You can get ApiKey by signup or login</p>"
+          }
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error 4xx": [
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B001",
+            "description": "<p>status : 401, msg : JWT or ApiKey undefined - Missing authorization or apikey in headers</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B002",
+            "description": "<p>status : 401, msg : User not Found - apikey is wrong</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B003",
+            "description": "<p>status : 401, msg : User has logout - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B004",
+            "description": "<p>status : 401, msg : User has Banned - As msg says</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B005",
+            "description": "<p>status : 401, msg : JWT Invalid - Wrong encoding of authorization or User has logined on other device</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B006",
+            "description": "<p>status : 401, msg : JWT Payload Invalid - Missing jti or iat or exp in authorization's payload</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B007",
+            "description": "<p>status : 401, msg : JWT Expired - iat or exp is not acceptable</p>"
+          },
+          {
+            "group": "Error 4xx",
+            "type": "String",
+            "optional": false,
+            "field": "B008",
+            "description": "<p>status : 401, msg : Not Authorized for this URI - As msg says</p>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "DeliveryList_Get_specific_store_list",
+    "group": "DeliveryList",
+    "type": "get",
+    "url": "/deliveryList/box/specificList/:status/:startFrom",
+    "title": "Specific store and specific status box list",
+    "permission": [
+      {
+        "name": "clerk",
+        "title": "Clerk access rights needed.",
+        "description": "<p>Please use clerk identity to request this uri.</p>"
+      }
+    ],
+    "description": "<p><strong>Status</strong></p> <ul> <li>Created: &quot;Created&quot;,</li> <li>Boxing: &quot;Boxing&quot;,</li> <li>Delivering: &quot;Delivering&quot;,</li> <li>Signed: &quot;Signed&quot;,</li> <li>Stocked: &quot;Stocked&quot;</li> </ul>",
+    "success": {
+      "examples": [
+        {
+          "title": "Success-Response:",
+          "content": "HTTP/1.1 200 \n\n    {\n        boxObjs: [{\n            ID: Number //boxID,\n            boxName: String,\n            dueDate: Date,\n            status: String,\n            action: [\n                {\n                    phone: String,\n                    boxStatus: String,\n                    timestamps: Date\n                },...\n            ],\n            deliverContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            orderContent: [\n                {\n                    amount: Number,\n                    containerType: String\n                },...\n            ],\n            containerList: Array //boxID,\n            comment: String // If comment === \"\" means no error\n        },...]\n    },...",
           "type": "json"
         }
       ]
@@ -4321,7 +4534,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    type: 'refreshContainerIcon',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
+          "content": "HTTP/1.1 200 \n{ \n    type: 'refreshCouponImage',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
           "type": "json"
         }
       ]
@@ -4435,7 +4648,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    type: 'refreshCouponImage',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
+          "content": "HTTP/1.1 200 \n{ \n    type: 'refreshContainerIcon',\n    message: 'refresh succeed',\n    data:\n    [ \n        '08@3x.png',\n        ...\n    ] \n}",
           "type": "json"
         }
       ]
@@ -4866,7 +5079,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail?id={shopid}",
+    "url": "/manage/shopDetail/byCustomer?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4879,7 +5092,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
           "type": "json"
         }
       ]
@@ -4974,7 +5187,7 @@ define({ "api": [
     "name": "Manage_shop_detail",
     "group": "Manage",
     "type": "get",
-    "url": "/manage/shopDetail/byCustomer?id={shopid}",
+    "url": "/manage/shopDetail?id={shopid}",
     "title": "Get shop detail",
     "permission": [
       {
@@ -4987,7 +5200,7 @@ define({ "api": [
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    customersDetail:[\n        {\n            phone: String,\n            usedAmount: Number,\n            lostAmount: Number\n        }\n    ]\n}",
+          "content": "HTTP/1.1 200 \n{ \n    storeName: String,\n    toUsedAmount: Number,\n    todayAmount: Number,\n    weekAmount: Number,\n    weekAmountPercentage: Float,\n    totalAmount: Number,\n    joinedDate: Date,\n    contactNickname: String,\n    contactPhone: '09XXXXXXXX',\n    weekAverage: Number,\n    shopLostAmount: Number,\n    customerLostAmount: Number,\n    history:\n    [ \n        { \n            time: Date,\n            action: '歸還',\n            content: '野餐方碗 x 2',\n            contentDetail: '野餐方碗\\n#xx01、#xx02',\n            owner: '好盒器基地',\n            by: '09xx-***-xxx' \n        },\n            ...\n    ],\n    chartData:\n    [ \n        [ '週', '數量' ],\n        [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],\n        ...\n    ]\n}",
           "type": "json"
         }
       ]
@@ -6530,13 +6743,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list/:id",
-    "title": "Get store specific store info",
+    "url": "/stores/list",
+    "title": "Get store list",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
           "type": "json"
         }
       ]
@@ -6589,13 +6802,13 @@ define({ "api": [
     "name": "Store_list",
     "group": "Stores",
     "type": "get",
-    "url": "/stores/list",
-    "title": "Get store list",
+    "url": "/stores/list/:id",
+    "title": "Get store specific store info",
     "success": {
       "examples": [
         {
           "title": "Success-Response:",
-          "content": "HTTP/1.1 200 \n{\n     title: 'Stores list',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     },\n     ...\n     ]\n }",
+          "content": "HTTP/1.1 200 \n{\n     title: 'Store info',\n     contract_code_explanation: {\n     '0': 'Only borrowable and returnable',\n     '1': 'Only returnable',\n     '2': 'Borrowable and returnable'\n     },\n     globalAmount: 0,\n     shop_data: [{\n         id: 0,\n         name: '正興咖啡館',\n         img_info: [Object],\n         opening_hours: [Array],\n         contract: [Object],\n         location: [Object],\n         address: '台南市中西區國華街三段43號',\n         type: [Array],\n         category: Number, // (0, 1, 9) = (\"店舖\", \"活動\", \"庫存\")\n         testing: false\n     }]\n }",
           "type": "json"
         }
       ]
@@ -10008,5 +10221,14 @@ define({ "api": [
         ]
       }
     }
+  },
+  {
+    "version": "0.0.1",
+    "type": "",
+    "url": "",
+    "filename": "routes/doc/apidoc_version.js",
+    "group": "_mnt_d_GoodToGo_Project_GoodToGo_Backend_routes_doc_apidoc_version_js",
+    "groupTitle": "_mnt_d_GoodToGo_Project_GoodToGo_Backend_routes_doc_apidoc_version_js",
+    "name": ""
   }
 ] });

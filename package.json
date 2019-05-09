@@ -15,7 +15,7 @@
         "unitTest": "mocha --grep api",
         "migrate": "mocha --grep migrate",
         "apidoc": "apidoc -i routes/ -o ./apidoc",
-        "deployApidoc": ""
+        "deployApidoc": "rsync -ravze 'ssh -i ~/.ssh/goodtogo.pem' --exclude '.git/' --exclude 'node_modules/' apidoc/* ubuntu@master.goodtogo.tw:/home/ubuntu/GoodToGo_apidoc"
     },
     "nodemonConfig": {
         "ignore": [
