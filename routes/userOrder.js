@@ -162,13 +162,13 @@ router.post('/add', validateLine, function (req, res, next) {
     userUsingAmount(dbUser, (err, usingAmount) => {
         if (err) return next(err);
 
-        if ((!dbUser.hasPurchase && (containerAmount + usingAmount) > 1))
+        if ((!dbUser.hasPurchase && (containerAmount + usingAmount) > 3))
             return res.status(403).json({
                 code: 'L004',
                 type: 'userOrderMessage',
                 message: `ContainerAmount is Over Quantity Limitation. \n` +
                     `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
-                txt: "您最多只能借一個容器"
+                txt: "您最多只能借三個容器"
             });
 
         const storeID = parseInt(storeCode.substring(0, 3));
@@ -292,25 +292,25 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                 action: "Rent",
                 newState: 2
             }, {
-                rentToUser: dbUser.user.phone,
-                orderTime: theUserOrder.orderTime,
-                activity: "沒活動",
-                inLineSystem: true
-            }, (err, tradeSuccess, reply, tradeDetail) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
-                    txt: "容器ID錯誤，請輸入正確容器 ID！"
-                }));
-                theUserOrder.save(err => {
+                    rentToUser: dbUser.user.phone,
+                    orderTime: theUserOrder.orderTime,
+                    activity: "沒活動",
+                    inLineSystem: true
+                }, (err, tradeSuccess, reply, tradeDetail) => {
                     if (err) return next(err);
-                    res.json({
-                        code: '???',
-                        type: 'userOrderMessage',
-                        message: 'Register ContainerID of UserOrder Success'
+                    if (!tradeSuccess) return res.status(403).json(Object.assign(reply, {
+                        txt: "容器ID錯誤，請輸入正確容器 ID！"
+                    }));
+                    theUserOrder.save(err => {
+                        if (err) return next(err);
+                        res.json({
+                            code: '???',
+                            type: 'userOrderMessage',
+                            message: 'Register ContainerID of UserOrder Success'
+                        });
                     });
+                    tradeCallback.rent(tradeDetail);
                 });
-                tradeCallback.rent(tradeDetail);
-            });
         });
     });
 });
