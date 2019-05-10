@@ -701,7 +701,7 @@ router.get(
                 });
             }
 
-            return res.status(200).json({ boxObjs });
+            return res.status(200).json(boxObjs);
         });
     }
 );
@@ -944,9 +944,9 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         var boxArr = Object.values(boxDict);
         boxArr.sort((a, b) => b.boxTime - a.boxTime);
         for (var i = 0; i < boxArr.length; i++) {
-            boxArr[i].containerOverview = [];
+            boxArr[i].orderContent = [];
             for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                boxArr[i].containerOverview.push({
+                boxArr[i].orderContent.push({
                     containerType: boxArr[i].typeList[j],
                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
