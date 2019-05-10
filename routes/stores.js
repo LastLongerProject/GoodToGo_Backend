@@ -93,41 +93,41 @@ router.get('/list', validateDefault, function (req, res, next) {
             },
             "active": true
         }, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            jsonData.globalAmount = 0;
-            res.set('etag', wetag(storeList));
-            for (var i = 0; i < storeList.length; i++) {
-                var tmpOpening = [];
-                storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
-                for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                    tmpOpening.push({
-                        close: storeList[i].opening_hours[j].close,
-                        open: storeList[i].opening_hours[j].open
+                sort: {
+                    id: 1
+                }
+            }, function (err, storeList) {
+                if (err) return next(err);
+                jsonData.globalAmount = 0;
+                res.set('etag', wetag(storeList));
+                for (var i = 0; i < storeList.length; i++) {
+                    var tmpOpening = [];
+                    storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
+                    for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                        tmpOpening.push({
+                            close: storeList[i].opening_hours[j].close,
+                            open: storeList[i].opening_hours[j].open
+                        });
+                    tmpOpening.sort((a, b) => {
+                        return a.close.day - b.close.day;
                     });
-                tmpOpening.sort((a, b) => {
-                    return a.close.day - b.close.day;
-                });
-                tmpArr.push({
-                    id: storeList[i].id,
-                    name: storeList[i].name,
-                    img_info: storeList[i].img_info,
-                    opening_hours: tmpOpening,
-                    contract: storeList[i].contract,
-                    location: storeList[i].location,
-                    address: storeList[i].address,
-                    type: storeList[i].type,
-                    category: storeList[i].category,
-                    testing: (storeList[i].project === '正興杯杯') ? false : true
-                });
-            }
+                    tmpArr.push({
+                        id: storeList[i].id,
+                        name: storeList[i].name,
+                        img_info: storeList[i].img_info,
+                        opening_hours: tmpOpening,
+                        contract: storeList[i].contract,
+                        location: storeList[i].location,
+                        address: storeList[i].address,
+                        type: storeList[i].type,
+                        category: storeList[i].category,
+                        testing: (storeList[i].project === '正興杯杯') ? false : true
+                    });
+                }
 
-            jsonData.shop_data = tmpArr;
-            res.json(jsonData);
-        });
+                jsonData.shop_data = tmpArr;
+                res.json(jsonData);
+            });
     });
 });
 
@@ -285,11 +285,11 @@ router.get('/activityList', validateDefault, function (req, res, next) {
             if (activities) {
                 let result = [];
                 for (let {
-                        ID: id,
-                        name: name,
-                        startAt: start,
-                        endAt: end
-                    } of activities) {
+                    ID: id,
+                    name: name,
+                    startAt: start,
+                    endAt: end
+                } of activities) {
                     result.push({
                         ID: id,
                         name,
@@ -393,23 +393,23 @@ router.get('/list.js', function (req, res, next) {
             },
             "active": true
         }, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            for (var i = 0; i < storeList.length; i++) {
-                tmpArr.push({
-                    placeid: storeList[i].placeID,
-                    name: storeList[i].name,
-                    borrow: storeList[i].contract.borrowable,
-                    return: storeList[i].contract.returnable,
-                    type: storeList[i].type
-                });
-            }
-            res.type('application/javascript');
-            res.end("var placeid_json = " + JSON.stringify(tmpArr));
-        });
+                sort: {
+                    id: 1
+                }
+            }, function (err, storeList) {
+                if (err) return next(err);
+                for (var i = 0; i < storeList.length; i++) {
+                    tmpArr.push({
+                        placeid: storeList[i].placeID,
+                        name: storeList[i].name,
+                        borrow: storeList[i].contract.borrowable,
+                        return: storeList[i].contract.returnable,
+                        type: storeList[i].type
+                    });
+                }
+                res.type('application/javascript');
+                res.end("var placeid_json = " + JSON.stringify(tmpArr));
+            });
     });
 });
 
@@ -583,14 +583,14 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
         if (dbStore.roles.clerk.storeID === 17) {
             containerQuery = {
                 "$or": [{
-                        'storeID': dbStore.roles.clerk.storeID,
-                        'active': true
-                    },
-                    {
-                        "ID": {
-                            "$in": DEMO_CONTAINER_ID_LIST
-                        }
+                    'storeID': dbStore.roles.clerk.storeID,
+                    'active': true
+                },
+                {
+                    "ID": {
+                        "$in": DEMO_CONTAINER_ID_LIST
                     }
+                }
                 ]
             };
         } else {
@@ -620,17 +620,17 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                     '$lt': dateCheckpoint(1)
                 },
                 '$or': [{
-                        'tradeType.action': 'Rent',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    },
-                    {
-                        'tradeType.action': 'Return',
-                        'newUser.storeID': dbStore.roles.clerk.storeID
-                    },
-                    {
-                        'tradeType.action': 'UndoReturn',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    }
+                    'tradeType.action': 'Rent',
+                    'oriUser.storeID': dbStore.roles.clerk.storeID
+                },
+                {
+                    'tradeType.action': 'Return',
+                    'newUser.storeID': dbStore.roles.clerk.storeID
+                },
+                {
+                    'tradeType.action': 'UndoReturn',
+                    'oriUser.storeID': dbStore.roles.clerk.storeID
+                }
                 ]
             }, function (err, trades) {
                 if (err) return next(err);
@@ -903,9 +903,9 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
     if (Array.isArray(days)) {
         for (var i = 0; i < days.length; i++) {
             if (!(typeof days[i].close !== 'undefined' && typeof days[i].close.day !== 'undefined' && typeof days[i].close.time === 'string' &&
-                    typeof days[i].open !== 'undefined' && typeof days[i].open.day !== 'undefined' && typeof days[i].open.time === 'string' &&
-                    timeFormat.test(days[i].close.time) && timeFormat.test(days[i].open.time) &&
-                    dayFormat.test(days[i].close.day) && dayFormat.test(days[i].open.day))) {
+                typeof days[i].open !== 'undefined' && typeof days[i].open.day !== 'undefined' && typeof days[i].open.time === 'string' &&
+                timeFormat.test(days[i].close.time) && timeFormat.test(days[i].open.time) &&
+                dayFormat.test(days[i].close.day) && dayFormat.test(days[i].open.day))) {
                 return res.status(403).json({
                     code: 'E003',
                     type: "changeOpeningTimeError",
@@ -969,105 +969,106 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         var containerDict = DataCacheFactory.get('containerWithDeactive');
         var type = DataCacheFactory.get('containerType');
         Box.find({
-            'storeID': dbStore.roles.clerk.storeID
+            'storeID': dbStore.roles.clerk.storeID,
+            'delivering': true
         }, {}, {
-            "sort": {
-                "updatedAt": -1
-            }
-        }, function (err, boxList) {
-            if (err) return next(err);
-            var boxArr = [];
-            if (boxList.length !== 0) {
-                var thisBox;
-                var thisType;
-                for (var i = 0; i < boxList.length; i++) {
-                    thisBox = boxList[i].boxID;
-                    var thisBoxTypeList = [];
-                    var thisBoxContainerList = {};
-                    for (var j = 0; j < boxList[i].containerList.length; j++) {
-                        thisType = containerDict[boxList[i].containerList[j]];
-                        if (thisBoxTypeList.indexOf(thisType) < 0) {
-                            thisBoxTypeList.push(thisType);
-                            thisBoxContainerList[thisType] = [];
-                        }
-                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
-                    }
-                    boxArr.push({
-                        boxID: thisBox,
-                        boxTime: boxList[i].updatedAt,
-                        typeList: thisBoxTypeList,
-                        containerList: thisBoxContainerList,
-                        isDelivering: false,
-                        destinationStore: boxList[i].storeID
-                    });
+                "sort": {
+                    "updatedAt": -1
                 }
-                for (var i = 0; i < boxArr.length; i++) {
-                    boxArr[i].containerOverview = [];
-                    for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                        boxArr[i].containerOverview.push({
-                            containerType: boxArr[i].typeList[j],
-                            amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+            }, function (err, boxList) {
+                if (err) return next(err);
+                var boxArr = [];
+                if (boxList.length !== 0) {
+                    var thisBox;
+                    var thisType;
+                    for (var i = 0; i < boxList.length; i++) {
+                        thisBox = boxList[i].boxID;
+                        var thisBoxTypeList = [];
+                        var thisBoxContainerList = {};
+                        for (var j = 0; j < boxList[i].containerList.length; j++) {
+                            thisType = containerDict[boxList[i].containerList[j]];
+                            if (thisBoxTypeList.indexOf(thisType) < 0) {
+                                thisBoxTypeList.push(thisType);
+                                thisBoxContainerList[thisType] = [];
+                            }
+                            thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+                        }
+                        boxArr.push({
+                            boxID: thisBox,
+                            boxTime: boxList[i].updatedAt,
+                            typeList: thisBoxTypeList,
+                            containerList: thisBoxContainerList,
+                            isDelivering: false,
+                            destinationStore: boxList[i].storeID
                         });
                     }
-                }
-            }
-            Trade.find({
-                'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.roles.clerk.storeID,
-                'tradeTime': {
-                    '$gte': dateCheckpoint(1 - historyDays)
-                }
-            }, function (err, list) {
-                if (err) return next(err);
-                if (list.length !== 0) {
-                    list.sort((a, b) => b.tradeTime - a.tradeTime);
-                    var boxHistoryArr = [];
-                    var boxIDArr = [];
-                    var thisBoxTypeList;
-                    var thisBoxContainerList;
-                    var lastIndex;
-                    var nowIndex;
-                    for (var i = 0; i < list.length; i++) {
-                        thisBox = list[i].container.box;
-                        thisType = type[list[i].container.typeCode].name;
-                        lastIndex = boxHistoryArr.length - 1;
-                        if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
-                            boxIDArr.push(thisBox);
-                            boxHistoryArr.push({
-                                boxID: thisBox,
-                                boxTime: list[i].tradeTime,
-                                typeList: [],
-                                containerList: {},
-                                isDelivering: true,
-                                destinationStore: list[i].newUser.storeID
-                            });
-                        }
-                        nowIndex = boxHistoryArr.length - 1;
-                        thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
-                        thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
-                        if (thisBoxTypeList.indexOf(thisType) < 0) {
-                            thisBoxTypeList.push(thisType);
-                            thisBoxContainerList[thisType] = [];
-                        }
-                        thisBoxContainerList[thisType].push(list[i].container.id);
-                    }
-                    for (var i = 0; i < boxHistoryArr.length; i++) {
-                        boxHistoryArr[i].containerOverview = [];
-                        for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
-                            boxHistoryArr[i].containerOverview.push({
-                                containerType: boxHistoryArr[i].typeList[j],
-                                amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
+                    for (var i = 0; i < boxArr.length; i++) {
+                        boxArr[i].containerOverview = [];
+                        for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                            boxArr[i].containerOverview.push({
+                                containerType: boxArr[i].typeList[j],
+                                amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                             });
                         }
                     }
-                    boxArr = boxArr.concat(boxHistoryArr);
                 }
-                var resJSON = {
-                    toSign: boxArr
-                };
-                res.json(resJSON);
+                Trade.find({
+                    'tradeType.action': 'Sign',
+                    'newUser.storeID': dbStore.roles.clerk.storeID,
+                    'tradeTime': {
+                        '$gte': dateCheckpoint(1 - historyDays)
+                    }
+                }, function (err, list) {
+                    if (err) return next(err);
+                    if (list.length !== 0) {
+                        list.sort((a, b) => b.tradeTime - a.tradeTime);
+                        var boxHistoryArr = [];
+                        var boxIDArr = [];
+                        var thisBoxTypeList;
+                        var thisBoxContainerList;
+                        var lastIndex;
+                        var nowIndex;
+                        for (var i = 0; i < list.length; i++) {
+                            thisBox = list[i].container.box;
+                            thisType = type[list[i].container.typeCode].name;
+                            lastIndex = boxHistoryArr.length - 1;
+                            if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
+                                boxIDArr.push(thisBox);
+                                boxHistoryArr.push({
+                                    boxID: thisBox,
+                                    boxTime: list[i].tradeTime,
+                                    typeList: [],
+                                    containerList: {},
+                                    isDelivering: true,
+                                    destinationStore: list[i].newUser.storeID
+                                });
+                            }
+                            nowIndex = boxHistoryArr.length - 1;
+                            thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
+                            thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
+                            if (thisBoxTypeList.indexOf(thisType) < 0) {
+                                thisBoxTypeList.push(thisType);
+                                thisBoxContainerList[thisType] = [];
+                            }
+                            thisBoxContainerList[thisType].push(list[i].container.id);
+                        }
+                        for (var i = 0; i < boxHistoryArr.length; i++) {
+                            boxHistoryArr[i].containerOverview = [];
+                            for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
+                                boxHistoryArr[i].containerOverview.push({
+                                    containerType: boxHistoryArr[i].typeList[j],
+                                    amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
+                                });
+                            }
+                        }
+                        boxArr = boxArr.concat(boxHistoryArr);
+                    }
+                    var resJSON = {
+                        toSign: boxArr
+                    };
+                    res.json(resJSON);
+                });
             });
-        });
     });
 });
 
@@ -1097,30 +1098,30 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
         var type = DataCacheFactory.get('containerType');
         Promise
             .all([new Promise((resolve, reject) => {
-                    Trade.find({
-                        'tradeType.action': 'Rent',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    }, (err, tradeList) => {
-                        if (err) return reject(err);
-                        var dataList = {};
-                        for (var aType in type) {
-                            dataList[type[aType].typeCode] = {
-                                typeCode: type[aType].typeCode,
-                                amount: 0
-                            };
-                        }
-                        for (var j = 0; j < tradeList.length; j++) {
-                            dataList[tradeList[j].container.typeCode].amount++;
-                        }
-                        resolve(dataList);
-                    });
-                }),
-                new Promise((resolve, reject) => {
-                    getGlobalUsedAmount((err, globalAmount) => {
-                        if (err) return reject(err);
-                        resolve(globalAmount);
-                    });
-                })
+                Trade.find({
+                    'tradeType.action': 'Rent',
+                    'oriUser.storeID': dbStore.roles.clerk.storeID
+                }, (err, tradeList) => {
+                    if (err) return reject(err);
+                    var dataList = {};
+                    for (var aType in type) {
+                        dataList[type[aType].typeCode] = {
+                            typeCode: type[aType].typeCode,
+                            amount: 0
+                        };
+                    }
+                    for (var j = 0; j < tradeList.length; j++) {
+                        dataList[tradeList[j].container.typeCode].amount++;
+                    }
+                    resolve(dataList);
+                });
+            }),
+            new Promise((resolve, reject) => {
+                getGlobalUsedAmount((err, globalAmount) => {
+                    if (err) return reject(err);
+                    resolve(globalAmount);
+                });
+            })
             ])
             .then((data) => {
                 res.json({
@@ -1223,31 +1224,31 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{
-                'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.roles.clerk.storeID
-            },
-            {
-                'tradeType.action': 'Rent',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
-            },
-            {
-                'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.roles.clerk.storeID
-            },
-            {
-                'tradeType.action': 'Return',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
-            },
-            {
-                'tradeType.action': 'UndoReturn',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
-            },
-            {
-                'tradeType.action': 'ReadyToClean',
-            },
-            {
-                'tradeType.action': 'UndoReadyToClean'
-            }
+            'tradeType.action': 'Sign',
+            'newUser.storeID': dbStore.roles.clerk.storeID
+        },
+        {
+            'tradeType.action': 'Rent',
+            'oriUser.storeID': dbStore.roles.clerk.storeID
+        },
+        {
+            'tradeType.action': 'Return',
+            'newUser.storeID': dbStore.roles.clerk.storeID
+        },
+        {
+            'tradeType.action': 'Return',
+            'oriUser.storeID': dbStore.roles.clerk.storeID
+        },
+        {
+            'tradeType.action': 'UndoReturn',
+            'oriUser.storeID': dbStore.roles.clerk.storeID
+        },
+        {
+            'tradeType.action': 'ReadyToClean',
+        },
+        {
+            'tradeType.action': 'UndoReadyToClean'
+        }
         ]
     };
     if (req.query.days)

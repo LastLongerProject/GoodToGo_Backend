@@ -181,12 +181,12 @@ router.post(
                             }, {
                                     upsert: true,
                                 }).exec()
-                                .then(result => {
+                                .then(() => {
                                     return res.status(200).json({
                                         type: 'BoxingMessage',
                                         message: 'Boxing Succeeded',
                                     });
-                                }).catch(err => {
+                                }).catch(() => {
                                     return res.status(500).json(ErrorResponse.H006);
                                 });
                         }
@@ -250,7 +250,7 @@ router.post(
                     }
                     if (!tradeSuccess) return res.status(403).json(reply);
                     Promise.all(req._boxArray.map(box => box.save()))
-                        .then(success => {
+                        .then(() => {
                             return res.status(200).json({
                                 type: 'StockMessage',
                                 message: 'Stock successfully',
@@ -335,7 +335,6 @@ router.post(
                     try {
                         let boxInfo = await changeStateProcess(element, aBox, phone);
                         if (boxInfo.status === ProgramStatus.Success) {
-                            console.log("hi")
                             return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
                         } else {
                             ErrorResponse.H007.message = result.message;
@@ -831,7 +830,7 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
 
 /**
  * @apiName Containers reload history
- * @apiGroup Containers
+ * @apiGroup DeliveryList
  *
  * @api {get} /deliveryList/reloadHistory Reload history
  * 
@@ -843,29 +842,23 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
         { 
             [
                 {
-                    "boxTime": "2017-11-05T15:05:37.456Z",
-                    "typeList": [
-                        "12oz 玻璃杯"
+                    "containerList": [
+                        36
                     ],
-                    "phone": {
-                        "reload": String // (清洗站)回收的人
-                    },
-                    "storeID": 1, // (清洗站)storeID
-                    "containerList": {
-                         "12oz 玻璃杯": [
-                            1,...
-                        ]
-                    },
+                    "status": "reload",
+                    "action": [
+                        {
+                            "boxStatus": "Archived",
+                            "timestamps": "2019-04-26T08:50:07.072Z"
+                        }
+                    ],
                     "orderContent": [
                         {
                             "containerType": "12oz 玻璃杯",
                             "amount": 1
-                        },...
-                    ],
-                    "cleanReload": Boolean // if TRUE, 為乾淨回收
-                },
-                 ...
-                
+                        }
+                    ]
+                }
             ]
         }
  *
@@ -927,11 +920,11 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                     boxDict[boxDictKey] = {
                         containerList: [],
                         status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
-                        action: {
+                        action: [{
                             boxStatus: BoxStatus.Archived,
                             phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
                             timestamps: theTrade.tradeTime
-                        },
+                        }],
                         storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
                     };
                 if (typeList.indexOf(thisTypeName) === -1) {
@@ -949,7 +942,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
             for (var j = 0; j < typeList.length; j++) {
                 boxArr[i].orderContent.push({
                     containerType: typeList[j],
-                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                    amount: boxArr[i].containerList.length
                 });
             }
         }
