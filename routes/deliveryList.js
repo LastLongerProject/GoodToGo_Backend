@@ -674,9 +674,9 @@ router.get(
 
         let boxStatus = req.params.status;
         let storeID = req._user.roles.clerk.storeID;
-        let startFrom = req.params.startFrom;
+        let startFrom = parseInt(req.params.startFrom);
         let boxObjs = [];
-
+        console.log(dateCheckpoint(startFrom))
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
@@ -833,7 +833,7 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
  * @apiName Containers reload history
  * @apiGroup Containers
  *
- * @api {get} /containers/get/reloadHistory Reload history
+ * @api {get} /deliveryList/reloadHistory Reload history
  * 
  * @apiUse JWT
  * @apiPermission admin
@@ -871,92 +871,92 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
  *
  */
 
-// router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
-//     var dbUser = req._user;
-//     var dbKey = req._key;
-//     var typeDict = DataCacheFactory.get('containerType');
-//     var queryCond;
-//     var queryDays;
-//     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
-//     else queryDays = historyDays;
-//     if (dbKey.roleType === UserRole.CLERK)
-//         queryCond = {
-//             '$or': [{
-//                 'tradeType.action': 'ReadyToClean',
-//                 'oriUser.storeID': dbUser.roles.clerk.storeID
-//             }, {
-//                 'tradeType.action': 'UndoReadyToClean'
-//             }],
-//             'tradeTime': {
-//                 '$gte': dateCheckpoint(1 - queryDays)
-//             }
-//         };
-//     else
-//         queryCond = {
-//             'tradeType.action': {
-//                 '$in': ['ReadyToClean', 'UndoReadyToClean']
-//             },
-//             'tradeTime': {
-//                 '$gte': dateCheckpoint(1 - queryDays)
-//             }
-//         };
-//     Trade.find(queryCond, function (err, list) {
-//         if (err) return next(err);
-//         if (list.length === 0) return res.json({
-//             reloadHistory: []
-//         });
-//         list.sort((a, b) => a.tradeTime - b.tradeTime);
-//         cleanUndoTrade('ReadyToClean', list);
+router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
+    var dbUser = req._user;
+    var dbKey = req._key;
+    var typeDict = DataCacheFactory.get('containerType');
+    var queryCond;
+    var queryDays;
+    if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
+    else queryDays = historyDays;
+    if (dbKey.roleType === UserRole.CLERK)
+        queryCond = {
+            '$or': [{
+                'tradeType.action': 'ReadyToClean',
+                'oriUser.storeID': dbUser.roles.clerk.storeID
+            }, {
+                'tradeType.action': 'UndoReadyToClean'
+            }],
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - queryDays)
+            }
+        };
+    else
+        queryCond = {
+            'tradeType.action': {
+                '$in': ['ReadyToClean', 'UndoReadyToClean']
+            },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - queryDays)
+            }
+        };
+    Trade.find(queryCond, function (err, list) {
+        if (err) return next(err);
+        if (list.length === 0) return res.json({
+            reloadHistory: []
+        });
+        list.sort((a, b) => a.tradeTime - b.tradeTime);
+        cleanUndoTrade('ReadyToClean', list);
 
-//         var tradeTimeDict = {};
-//         list.forEach(aTrade => {
-//             if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
-//             tradeTimeDict[aTrade.tradeTime].push(aTrade);
-//         });
+        var tradeTimeDict = {};
+        list.forEach(aTrade => {
+            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
+            tradeTimeDict[aTrade.tradeTime].push(aTrade);
+        });
 
-//         var boxDict = {};
-//         var boxDictKey;
-//         var thisTypeName;
-//         for (var aTradeTime in tradeTimeDict) {
-//             tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
-//             tradeTimeDict[aTradeTime].forEach(theTrade => {
-//                 thisTypeName = typeDict[theTrade.container.typeCode].name;
-//                 boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
-//                 if (!boxDict[boxDictKey])
-//                     boxDict[boxDictKey] = {
-//                         boxTime: theTrade.tradeTime,
-//                         typeList: [],
-//                         containerList: {},
-//                         action: {
-//                             status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
-//                             phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
-//                         },
-//                         storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
-//                     };
-//                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
-//                     boxDict[boxDictKey].typeList.push(thisTypeName);
-//                     boxDict[boxDictKey].containerList[thisTypeName] = [];
-//                 }
-//                 boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
-//             });
-//         }
+        var boxDict = {};
+        var boxDictKey;
+        var thisTypeName;
+        for (var aTradeTime in tradeTimeDict) {
+            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
+            tradeTimeDict[aTradeTime].forEach(theTrade => {
+                thisTypeName = typeDict[theTrade.container.typeCode].name;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                if (!boxDict[boxDictKey])
+                    boxDict[boxDictKey] = {
+                        containerList: {},
+                        status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
+                        action: {
+                            boxStatus: BoxStatus.Archived,
+                            phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
+                            timestamps: theTrade.tradeTime
+                        },
+                        storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
+                    };
+                if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
+                    boxDict[boxDictKey].typeList.push(thisTypeName);
+                    boxDict[boxDictKey].containerList[thisTypeName] = [];
+                }
+                boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
+            });
+        }
 
-//         var boxArr = Object.values(boxDict);
-//         boxArr.sort((a, b) => b.boxTime - a.boxTime);
-//         for (var i = 0; i < boxArr.length; i++) {
-//             boxArr[i].containerOverview = [];
-//             for (var j = 0; j < boxArr[i].typeList.length; j++) {
-//                 boxArr[i].containerOverview.push({
-//                     containerType: boxArr[i].typeList[j],
-//                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
-//                 });
-//             }
-//         }
-//         var resJSON = {
-//             boxArr
-//         };
-//         res.json(resJSON);
-//     });
-// });
+        var boxArr = Object.values(boxDict);
+        boxArr.sort((a, b) => b.boxTime - a.boxTime);
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].containerOverview = [];
+            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                boxArr[i].containerOverview.push({
+                    containerType: boxArr[i].typeList[j],
+                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+                });
+            }
+        }
+        var resJSON = {
+            boxArr
+        };
+        res.json(resJSON);
+    });
+});
 
 module.exports = router;
