@@ -676,7 +676,7 @@ router.get(
         let storeID = req._user.roles.clerk.storeID;
         let startFrom = parseInt(req.params.startFrom);
         let boxObjs = [];
-        console.log(dateCheckpoint(startFrom))
+
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
