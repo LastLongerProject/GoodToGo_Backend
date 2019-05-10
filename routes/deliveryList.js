@@ -23,12 +23,12 @@ const validateModifyApiContent = require('../middlewares/validation/deliveryList
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
-const Trade = require('../../models/DB/tradeDB');
+const Trade = require('../models/DB/tradeDB');
 
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
-const UserRole = require('../../models/enums/userEnum').UserRole;
+const UserRole = require('../models/enums/userEnum').UserRole;
 
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
