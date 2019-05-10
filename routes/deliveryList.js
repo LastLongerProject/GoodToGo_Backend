@@ -674,12 +674,16 @@ router.get(
 
         let boxStatus = req.params.status;
         let storeID = req._user.roles.clerk.storeID;
-        let startFrom = new Date(req.params.startFrom);
+        let startFrom = req.params.startFrom;
         let boxObjs = [];
 
         Box.find({
             'status': boxStatus,
-            'storeID': storeID
+            'storeID': storeID,
+            'createdAt': {
+                '$gte': dateCheckpoint(startFrom),
+                '$lt': dateCheckpoint(startFrom + 14)
+            },
         }, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
