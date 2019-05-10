@@ -673,7 +673,7 @@ router.get(
     async function (req, res, next) {
 
         let boxStatus = req.params.status;
-        let storeID = req._user.roles.clerk.storeID;
+        let storeID = parseInt(req._user.roles.clerk.storeID);
         let startFrom = parseInt(req.params.startFrom);
         let boxObjs = [];
 
@@ -681,8 +681,8 @@ router.get(
             'status': boxStatus,
             'storeID': storeID,
             'createdAt': {
-                '$gte': dateCheckpoint(startFrom),
-                '$lt': dateCheckpoint(startFrom + 14)
+                '$lte': dateCheckpoint(startFrom + 1),
+                '$gt': dateCheckpoint(startFrom - 14)
             },
         }, (err, boxes) => {
             if (err) return next(err);
@@ -856,7 +856,7 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
                             1,...
                         ]
                     },
-                    "containerOverview": [
+                    "orderContent": [
                         {
                             "containerType": "12oz 玻璃杯",
                             "amount": 1
@@ -917,6 +917,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         var boxDict = {};
         var boxDictKey;
         var thisTypeName;
+        let typeList = [];
         for (var aTradeTime in tradeTimeDict) {
             tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
             tradeTimeDict[aTradeTime].forEach(theTrade => {
@@ -924,7 +925,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
                 if (!boxDict[boxDictKey])
                     boxDict[boxDictKey] = {
-                        containerList: {},
+                        containerList: [],
                         status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
                         action: {
                             boxStatus: BoxStatus.Archived,
@@ -933,11 +934,11 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                         },
                         storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
                     };
-                if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
-                    boxDict[boxDictKey].typeList.push(thisTypeName);
-                    boxDict[boxDictKey].containerList[thisTypeName] = [];
+                if (typeList.indexOf(thisTypeName) === -1) {
+                    typeList.push(thisTypeName);
+                    boxDict[boxDictKey].containerList = [];
                 }
-                boxDict[boxDictKey].containerList[thisTypeName].push(theTrade.container.id);
+                boxDict[boxDictKey].containerList.push(theTrade.container.id);
             });
         }
 
@@ -945,17 +946,15 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         boxArr.sort((a, b) => b.boxTime - a.boxTime);
         for (var i = 0; i < boxArr.length; i++) {
             boxArr[i].orderContent = [];
-            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+            for (var j = 0; j < typeList.length; j++) {
                 boxArr[i].orderContent.push({
-                    containerType: boxArr[i].typeList[j],
+                    containerType: typeList[j],
                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
             }
         }
-        var resJSON = {
-            boxArr
-        };
-        res.json(resJSON);
+
+        res.json(boxArr);
     });
 });
 
