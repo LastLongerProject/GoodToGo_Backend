@@ -663,11 +663,11 @@ router.get(
                     containerList: Array //boxID,
                     comment: String // If comment === "" means no error
                 },...]
-            },...
+            }
         
  */
 router.get(
-    '/box/list/:status/:startFrom',
+    '/box/specificList/:status/:startFrom',
     regAsStore,
     validateRequest,
     async function (req, res, next) {
