@@ -65,8 +65,8 @@ var userSchema = mongoose.Schema({
         default: 0
     }
 }, {
-    usePushEach: true
-});
+        usePushEach: true
+    });
 
 userSchema.index({
     "user.phone": 1
@@ -91,9 +91,7 @@ userSchema.methods.getPurchaseStatus = function () {
         PurchaseStatus.FREE_USER;
 };
 userSchema.methods.getBannedTxt = function (action) {
-    return `${this.bannedTimes <= 1?
-        `您有容器逾期未歸還，請儘速歸還，不然無法借用容器、領取或使用優惠券喲！` :
-        `您已被停權，無法${action}！\n欲解除停權，請私訊好盒器粉專。`}`;
+    return `您有容器逾期未歸還，請儘速歸還，不然無法借用容器、領取或使用優惠券喲！`;
 };
 
 // create the model for users and expose it to our app
