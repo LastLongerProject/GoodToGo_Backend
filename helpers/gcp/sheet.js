@@ -22,6 +22,7 @@ const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
 
 const isNum = /^\d+$/;
+const ignorePlaceTypes = ["point_of_interest", "establishment"];
 const defaultPeriods = [];
 for (let i = 0; i < 7; i++) {
     defaultPeriods.push({
@@ -225,8 +226,10 @@ module.exports = {
                                                 } else {
                                                     dataFromApi.types.forEach(aType => {
                                                         const translated = dictionary[aType];
-                                                        if (translated) formattedType.push(translated);
-                                                        else debug.error(`[Sheet] New Word To Translate: ${aType}`);
+                                                        if (translated)
+                                                            formattedType.push(translated);
+                                                        else if (ignorePlaceTypes.indexOf(translated) === -1)
+                                                            debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                     });
                                                 }
                                                 let opening_hours;
