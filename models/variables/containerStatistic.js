@@ -7,7 +7,7 @@ module.exports = {
             "tradeType.action": "Return"
         }, function (err, count) {
             if (err) return cb(err);
-            cb(null, count + 14642);
+            cb(null, count);
         });
     },
     line_user_using: function (dbUser, cb) {
