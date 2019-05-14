@@ -88,7 +88,7 @@ module.exports = {
                 for (let userID in userDict) {
                     const dbUser = userDict[userID].dbUser;
                     if (userDict[userID].overdue.length > 0) {
-                        userTrade.banUser(dbUser, userDict[userID].overdue.length, sendNotice);
+                        userTrade.banUser(dbUser, userDict[userID].overdue, sendNotice);
                     } else {
                         const almostOverdueAmount = userDict[userID].almostOverdue.length;
                         if (almostOverdueAmount > 0 && sendNotice) {

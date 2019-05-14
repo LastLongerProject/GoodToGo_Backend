@@ -23,8 +23,8 @@ const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
-const PointLog = require('../models/DB/pointLogDB');
 const Coupon = require('../models/DB/couponDB');
+const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
@@ -1004,35 +1004,19 @@ router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, functi
 
 router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
-    const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) => {
-        User.findOneAndUpdate({
-            "user.phone": aUser.phone
-        }, {
-            "hasPurchase": true,
-            '$setOnInsert': {
-                'user.password': null,
-                "user.name": aUser.name,
-                "registerMethod": RegisterMethod.PURCHASE,
-                'roles.typeList': [UserRole.CUSTOMER]
-            }
-        }, {
-            upsert: true,
-            setDefaultsOnInsert: true,
-            new: true
-        }, (err, theUser) => {
+    const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) =>
+        userTrade.purchase(aUser, (err, oriUser) => {
             if (err) return reject(err);
-            resolve(theUser);
-            couponTrade.welcomeCoupon(theUser, (err) => {
-                if (err) debug.error(err);
-            });
-        });
-    }));
+            resolve(oriUser);
+        })));
     Promise
         .all(tasks)
         .then(result => {
+            result = result.filter()
             debug.log(`Add ${result.length} Purchase User.`);
             res.json({
-                success: true
+                success: true,
+                userList: result
             });
         })
         .catch(next);
@@ -1044,7 +1028,7 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
         "user.phone": userPhone
     }, (err, dbUser) => {
         if (err) return next(err);
-        userTrade.banUser(dbUser, -1, true);
+        userTrade.banUser(dbUser, null, true);
         res.json({
             success: true
         });
@@ -1057,7 +1041,7 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
         "user.phone": userPhone
     }, (err, dbUser) => {
         if (err) return next(err);
-        userTrade.unbanUser(dbUser);
+        userTrade.unbanUser(dbUser, true);
         res.json({
             success: true
         });

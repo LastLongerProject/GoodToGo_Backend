@@ -20,5 +20,10 @@ module.exports = {
     DueDays: Object.freeze({
         free_user: 2,
         purchased_user: 8
+    }),
+    TradeAction: Object.freeze({
+        BANNED: "banned",
+        UNBANNED: "unbanned",
+        PURCHASED: "purchased"
     })
 };
