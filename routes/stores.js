@@ -6,7 +6,6 @@ const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
 const baseUrl = require('../config/config.js').serverBaseUrl;
-const wetag = require('@lastlongerproject/toolkit').wetag;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
@@ -108,9 +107,6 @@ router.get('/list', validateDefault, function (req, res, next) {
                         close: storeList[i].opening_hours[j].close,
                         open: storeList[i].opening_hours[j].open
                     });
-                tmpOpening.sort((a, b) => {
-                    return a.close.day - b.close.day;
-                });
                 tmpArr.push({
                     id: storeList[i].id,
                     name: storeList[i].name,
@@ -645,7 +641,6 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
                 }
                 cleanUndoTrade("Return", trades);
                 if (typeof trades !== 'undefined') {
-
                     for (var i in trades) {
                         if (trades[i].tradeType.action === 'Rent')
                             resJson.todayData.rent++;
@@ -965,7 +960,8 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
         var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
         Box.find({
-            'storeID': dbStore.roles.clerk.storeID
+            'storeID': dbStore.roles.clerk.storeID,
+            'delivering': true
         }, {}, {
             "sort": {
                 "updatedAt": -1
@@ -1173,7 +1169,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
                     parseHistory(rentTrades, 'Rent', type, function (parsedRent) {
-                        resJson = {
+                        let resJson = {
                             rentHistory: {
                                 amount: parsedRent.length,
                                 dataList: parsedRent
@@ -1618,8 +1614,8 @@ function parseHistory(data, dataType, type, callback) {
     var tmpOrderAmount = 0;
     var date = 0;
     for (var i = 0; i < byOrderArr.length; i++) {
-        aOrder = byOrderArr[i];
-        nextOrder = byOrderArr[i + 1];
+        let aOrder = byOrderArr[i];
+        let nextOrder = byOrderArr[i + 1];
         if (aOrder.time < dateCheckpoint(date + 1) && aOrder.time >= dateCheckpoint(date)) {
             aOrder.time = timeFormatter(aOrder.time);
             tmpOrderList.push(aOrder);

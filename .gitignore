@@ -43,7 +43,7 @@ config
 
 # No need sycn
 assets
-
+apidoc/
 # Developping trash file
 tmp
 .dist
