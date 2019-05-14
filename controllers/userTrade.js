@@ -92,6 +92,8 @@ module.exports = {
             couponTrade.welcomeCoupon(theUser, err => {
                 if (err) return debug.error(err);
             });
+            if (theUser.agreeTerms)
+                NotificationCenter.emit(NotificationEvent.USER_PURCHASED, theUser);
         });
     }
 }

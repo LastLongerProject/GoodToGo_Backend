@@ -48,6 +48,9 @@ module.exports = {
             case NotificationEvent.USER_UNBANNED:
                 pushBy.webhook(WebhookEvent.USER_UNBANNED, target, data);
                 break;
+            case NotificationEvent.USER_PURCHASED:
+                pushBy.webhook(WebhookEvent.USER_PURCHASED, target, data);
+                break;
         }
     }
 };

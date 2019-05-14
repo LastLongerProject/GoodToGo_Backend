@@ -37,39 +37,39 @@ module.exports = {
                 case SnsEvent.CONTAINER_DELIVERY:
                     return {
                         content: {
-                            title: "新容器送到囉！",
-                            body: `點我簽收 #${data.boxID}`,
-                            options: {
-                                action: "BOX_DELIVERY"
-                            }
-                        },
-                        errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
+                                title: "新容器送到囉！",
+                                body: `點我簽收 #${data.boxID}`,
+                                options: {
+                                    action: "BOX_DELIVERY"
+                                }
+                            },
+                            errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
                     }
-                case SnsEvent.CONTAINER_RENT:
-                    formattedData = containerFormatter(data);
-                    return {
-                        content: {
-                            title: `借用了${formattedData.amount}個容器！`,
-                            body: formattedData.IDlist.join('、'),
-                            options: {
-                                action: "RELOAD_USAGE"
-                            }
-                        },
-                        errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
-                    };
+                    case SnsEvent.CONTAINER_RENT:
+                        formattedData = containerFormatter(data);
+                        return {
+                            content: {
+                                    title: `借用了${formattedData.amount}個容器！`,
+                                    body: formattedData.IDlist.join('、'),
+                                    options: {
+                                        action: "RELOAD_USAGE"
+                                    }
+                                },
+                                errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
+                        };
 
-                case SnsEvent.CONTAINER_RETURN:
-                    formattedData = containerFormatter(data);
-                    return {
-                        content: {
-                            title: `歸還了${formattedData.amount}個容器！`,
-                            body: formattedData.IDlist.join("、"),
-                            options: {
-                                action: "RELOAD_USAGE"
-                            }
-                        },
-                        errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
-                    };
+                    case SnsEvent.CONTAINER_RETURN:
+                        formattedData = containerFormatter(data);
+                        return {
+                            content: {
+                                    title: `歸還了${formattedData.amount}個容器！`,
+                                    body: formattedData.IDlist.join("、"),
+                                    options: {
+                                        action: "RELOAD_USAGE"
+                                    }
+                                },
+                                errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
+                        };
             }
         } catch (error) {
             debug.error(error);
@@ -77,7 +77,7 @@ module.exports = {
         }
     },
     webhook: function (event, target, data) {
-        let para = data;
+        let para = data || {};
         try {
             switch (event) {
                 case WebhookEvent.USER_USAGE_UPDATE_RENT:
@@ -88,6 +88,7 @@ module.exports = {
                 case WebhookEvent.USER_ALMOST_OVERDUE:
                 case WebhookEvent.USER_BANNED:
                 case WebhookEvent.USER_UNBANNED:
+                case WebhookEvent.USER_PURCHASED:
                     Object.assign(para, {
                         lineID: target.user.line_channel_userID
                     });

@@ -5,5 +5,7 @@ module.exports = Object.freeze({
     CONTAINER_RETURN_LINE: "container_return_line",
     USER_ALMOST_OVERDUE: "user_almost_overdue",
     USER_BANNED: "user_banned",
-    USER_UNBANNED: "user_unbanned"
+    USER_UNBANNED: "user_unbanned",
+    USER_STATUS_UPDATE: "user_status_update",
+    USER_PURCHASED: "user_purchased"
 });
