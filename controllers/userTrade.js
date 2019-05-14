@@ -65,35 +65,51 @@ module.exports = {
         }
     },
     purchase: function (aUser, cb) {
-        User.findOneAndUpdate({
+        User.findOne({
             "user.phone": aUser.phone
-        }, {
-            "hasPurchase": true,
-            '$setOnInsert': {
-                'user.password': null,
-                "user.name": aUser.name,
-                "registerMethod": RegisterMethod.PURCHASE,
-                'roles.typeList': [UserRole.CUSTOMER]
-            }
-        }, {
-            upsert: true,
-            setDefaultsOnInsert: true,
-            new: true
         }, (err, theUser) => {
             if (err) return cb(err);
-            cb(null, theUser);
-            UserTradeLog.create({
-                "user": theUser.user.phone,
-                "action": TradeAction.PURCHASED,
-                "describe": null
-            }, err => {
-                if (err) return debug.error(err);
-            });
-            couponTrade.welcomeCoupon(theUser, err => {
-                if (err) return debug.error(err);
-            });
-            if (theUser.agreeTerms)
-                NotificationCenter.emit(NotificationEvent.USER_PURCHASED, theUser);
+            if (!theUser) {
+                let newUser = new User({
+                    user: {
+                        phone: aUser.phone,
+                        password: null,
+                        name: aUser.name
+                    },
+                    hasPurchase: true,
+                    registerMethod: RegisterMethod.PURCHASE,
+                    roles: {
+                        typeList: [UserRole.CUSTOMER]
+                    }
+                });
+                newUser.save(err => {
+                    if (err) return cb(err);
+                    cb(null, newUser);
+                    userPurchased(newUser);
+                });
+            } else {
+                if (theUser.hasPurchase) return cb(null, null);
+                theUser.hasPurchase = true;
+                theUser.save(err => {
+                    if (err) return cb(err);
+                    cb(null, theUser);
+                    userPurchased(theUser);
+                    NotificationCenter.emit(NotificationEvent.USER_PURCHASED, theUser);
+                });
+            }
         });
     }
+}
+
+function userPurchased(theUser) {
+    UserTradeLog.create({
+        "user": theUser.user.phone,
+        "action": TradeAction.PURCHASED,
+        "describe": null
+    }, err => {
+        if (err) return debug.error(err);
+    });
+    couponTrade.welcomeCoupon(theUser, err => {
+        if (err) return debug.error(err);
+    });
 }

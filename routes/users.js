@@ -1011,12 +1011,12 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
         })));
     Promise
         .all(tasks)
-        .then(result => {
-            result = result.filter()
-            debug.log(`Add ${result.length} Purchase User.`);
+        .then(results => {
+            results = results.filter(aResult => aResult !== null)
+            debug.log(`Add ${results.length} Purchase User.`);
             res.json({
                 success: true,
-                userList: result
+                userList: results
             });
         })
         .catch(next);
