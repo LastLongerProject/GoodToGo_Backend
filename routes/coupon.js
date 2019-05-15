@@ -69,7 +69,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                 provider: theCouponType.provider,
                 title: theCouponType.title,
                 expirationDate: theCouponType.expirationDate,
-                notice_struc: theCouponType.generateStrucNotice(),
+                notice_struc: theCouponType.structuredNotice,
                 imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
             };
             if (!aCoupon.used && !aCoupon.expired) {
@@ -185,7 +185,6 @@ router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res
  *			    expirationDate : Date,
  *			    price : Number,
  *			    amount : Number,
- *              notice : String,
  *              notice_struc : [
  *                  {
  *                      title : String,
@@ -216,12 +215,13 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
         if (err) return next(err);
 
         couponTypeList.sort((a, b) => {
-            if (a.order !== b.order) return b - a;
-            else return b.updatedAt - a.updatedAt;
+            if (a.order !== b.order) return a > b ? -1 : 1;
+            else if (a.expirationDate - b.expirationDate !== 0) return a.expirationDate.valueOf() > b.expirationDate.valueOf() ? 1 : -1;
+            else if (!isNaN(parseInt(a.couponTypeID)) && !isNaN(parseInt(b.couponTypeID))) return parseInt(a.couponTypeID) > parseInt(b.couponTypeID) ? 1 : -1;
+            else return a.createdAt > b.createdAt ? 1 : -1;
         });
 
-        let formattedCouponType = [];
-        couponTypeList.forEach(aCouponType => {
+        let formattedCouponTypeList = couponTypeList.map(aCouponType => {
             let aFormattedCouponType = {
                 couponTypeID: aCouponType.couponTypeID,
                 provider: aCouponType.provider,
@@ -229,7 +229,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                 expirationDate: aCouponType.purchaseDeadline,
                 price: aCouponType.price,
                 amount: aCouponType.amount.current,
-                notice_struc: aCouponType.generateStrucNotice(),
+                notice_struc: aCouponType.structuredNotice,
                 imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
             };
             if (aCouponType.amount.current <= 0) {
@@ -239,11 +239,11 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
             } else {
                 aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
             }
-            formattedCouponType.push(aFormattedCouponType);
+            return aFormattedCouponType;
         });
         res.json({
             userPoint: dbUser.point,
-            allCouponList: formattedCouponType
+            allCouponList: formattedCouponTypeList
         });
     });
 });
@@ -264,7 +264,6 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *          expirationDate : Date,
  *          price : Number,
  *          amount : Number,
- *          notice : String,
  *          notice_struc : [
  *              {
  *                  title : String,
@@ -316,7 +315,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
             expirationDate: theCouponType.purchaseDeadline,
             price: theCouponType.price,
             amount: theCouponType.amount.current,
-            notice_struc: theCouponType.generateStrucNotice(),
+            notice_struc: theCouponType.structuredNotice,
             imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
         };
         if (theCouponType.amount.current <= 0) {

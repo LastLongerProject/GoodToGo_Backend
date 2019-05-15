@@ -13,6 +13,7 @@ const refreshStore = require('../helpers/appInit').refreshStore;
 const refreshStoreImg = require('../helpers/appInit').refreshStoreImg;
 const refreshContainer = require('../helpers/appInit').refreshContainer;
 const refreshActivity = require('../helpers/appInit').refreshActivity;
+const refreshCoupon = require('../helpers/appInit').refreshCoupon;
 const refreshCouponImage = require('../helpers/appInit').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/appInit').refreshContainerIcon;
 const cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
@@ -1978,11 +1979,35 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
  * 
  */
 router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
     refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
+        });
+    });
+});
+
+/**
+ * @apiName Manage refresh coupon type
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/couponType Refresh CouponType
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
+router.patch('/refresh/couponType', regAsAdminManager, validateRequest, function (req, res, next) {
+    refreshCoupon((err, data) => {
+        if (err) return next(err);
+        res.json({
+            "success": true,
+            data
         });
     });
 });

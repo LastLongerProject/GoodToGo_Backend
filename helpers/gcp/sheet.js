@@ -7,14 +7,16 @@ const debug = require('../debugger')('google_sheet');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
 
-const PlaceID = require('../../models/DB/placeIdDB');
-const Store = require('../../models/DB/storeDB');
-const Activity = require('../../models/DB/activityDB');
 const User = require('../../models/DB/userDB');
+const Store = require('../../models/DB/storeDB');
+const PlaceID = require('../../models/DB/placeIdDB');
 const UserKeys = require('../../models/DB/userKeysDB');
-const ContainerType = require('../../models/DB/containerTypeDB');
+const Activity = require('../../models/DB/activityDB');
 const Container = require('../../models/DB/containerDB');
+const CouponType = require('../../models/DB/couponTypeDB');
+const ContainerType = require('../../models/DB/containerTypeDB');
 
 const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
@@ -377,6 +379,71 @@ module.exports = {
                     .catch((err) => {
                         if (err) return debug.error(err);
                     });
+            });
+        });
+    },
+    getCoupon: function (cb) {
+        googleAuth(function getSheet(auth) {
+            sheets.spreadsheets.values.get({
+                auth: auth,
+                spreadsheetId: configs.coupon_sheet_ID,
+                range: 'coupon_type_list!A2:P'
+            }, function (err, response) {
+                if (err) return cb('[Sheet API ERR (getCoupon)] Error: ' + err);
+                const couponTypeList = response.data.values.filter(aRow => (aRow[0] !== "" && aRow[1] !== "" && aRow[2] !== ""));
+                CouponType.find((err, oriCouponTypeList) => {
+                    if (err) return cb(err);
+                    Promise
+                        .all(couponTypeList.map(aCouponType => new Promise((resolve, reject) => {
+                            const oriCouponType = oriCouponTypeList.find(aCouponType => aCouponType.couponTypeID === aCouponType[0]);
+                            let newImgVersion;
+                            if (oriCouponType) {
+                                newImgVersion = oriCouponType.img_info.img_src === aCouponType[10] ?
+                                    oriCouponType.img_info.img_version : oriCouponType.img_info.img_version + 1;
+                            } else {
+                                newImgVersion = 0;
+                            }
+                            CouponType.generateStrucNotice(aCouponType[12], aCouponType[11], (err, structuredNotice) => {
+                                if (err) return reject(err);
+                                CouponType.findOneAndUpdate({
+                                    "couponTypeID": aCouponType[0]
+                                }, {
+                                    "provider": aCouponType[1],
+                                    "title": aCouponType[2],
+                                    "announceDate": getDateCheckpoint(new Date(aCouponType[3])),
+                                    "purchaseDeadline": getDateCheckpoint(new Date(aCouponType[4])),
+                                    "expirationDate": getDateCheckpoint(new Date(aCouponType[5])),
+                                    "price": aCouponType[7],
+                                    "amount.total": aCouponType[6],
+                                    "extraNotice": aCouponType[11],
+                                    "extraContent": aCouponType[12],
+                                    "structuredNotice": structuredNotice,
+                                    "img_info": {
+                                        img_src: aCouponType[10],
+                                        img_version: newImgVersion
+                                    },
+                                    "order": aCouponType[8] === "TRUE" ? 10 : 5,
+                                    "welcomeGift": aCouponType[9] === "TRUE",
+                                    "usingCallback": {
+                                        "rentContainer": aCouponType[13] === "TRUE",
+                                        "containerAmount": aCouponType[14] === "null" ? null : aCouponType[14]
+                                    },
+                                    "availableForFreeUser": aCouponType[15] === "TRUE",
+                                    "$setOnInsert": {
+                                        "amount.current": aCouponType[6]
+                                    }
+                                }, {
+                                    upsert: true,
+                                    setDefaultsOnInsert: true
+                                }, (err, result) => {
+                                    if (err) return reject(err);
+                                    resolve(result);
+                                });
+                            });
+                        })))
+                        .then(couponTypeList => cb(null, couponTypeList))
+                        .catch(cb);
+                });
             });
         });
     }

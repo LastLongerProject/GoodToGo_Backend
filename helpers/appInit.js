@@ -132,11 +132,12 @@ module.exports = {
         });
     },
     refreshCoupon: function (cb) {
-        sheet.getCoupon(data => {
+        sheet.getCoupon((err, data) => {
+            if (err) return cb(err);
             couponListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('couponTypeList refresh');
-                cb();
+                cb(null, data);
             });
         });
     },

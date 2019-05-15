@@ -101,7 +101,7 @@ module.exports = {
                             provider: theCouponType.provider,
                             title: theCouponType.title,
                             expirationDate: theCouponType.expirationDate,
-                            notice_struc: theCouponType.generateStrucNotice(),
+                            notice_struc: theCouponType.structuredNotice,
                             imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
                             state: CouponState.AVAILABLE
                         });
@@ -120,8 +120,11 @@ module.exports = {
                 "announceDate": {
                     "$lt": Date.now()
                 },
+                "purchaseDeadline": {
+                    "$gte": Date.now()
+                },
                 "amount.current": {
-                    $gt: 0
+                    "$gt": 0
                 }
             }, (err, couponTypeList) => {
                 if (err) return done(err);
