@@ -394,14 +394,4 @@ router.post('/purchase/:couponTypeID', validateLine, forPurchasedUser, function 
     });
 });
 
-router.post('/addCouponType', regAsAdminManager, validateRequest, function (req, res, next) {
-    const newCouponTypeData = req.body.data;
-
-    const newCouponType = new CouponType(newCouponTypeData);
-    newCouponType.save((err) => {
-        if (err) return next(err);
-        res.json({});
-    })
-});
-
 module.exports = router;
