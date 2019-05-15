@@ -47,6 +47,10 @@ const userSchema = mongoose.Schema({
         containerAmount: {
             type: Number,
             default: null
+        },
+        storeCode: {
+            type: String,
+            default: null
         }
     },
     availableForFreeUser: {

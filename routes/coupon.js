@@ -104,7 +104,12 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
  *     {
  *          code: '???',
  *          type: 'couponMessage',
- *          message: 'Use Coupon Success'
+ *          message: 'Use Coupon Success',
+ *          usingCallback: {
+ *              rentContainer: Boolean, // true
+ *              containerAmount: Number, // 2
+ *              storeCode: String // "0406"
+ *          }
  *      }
  */
 
@@ -159,7 +164,8 @@ router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res
                 res.json({
                     code: '???',
                     type: 'couponMessage',
-                    message: 'Use Coupon Success'
+                    message: 'Use Coupon Success',
+                    usingCallback: CouponTypeDict[theCoupon.couponType].usingCallback
                 });
             });
         }

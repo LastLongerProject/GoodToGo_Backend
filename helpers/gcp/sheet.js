@@ -387,7 +387,7 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.coupon_sheet_ID,
-                range: 'coupon_type_list!A2:P'
+                range: 'coupon_type_list!A2:Q'
             }, function (err, response) {
                 if (err) return cb('[Sheet API ERR (getCoupon)] Error: ' + err);
                 const couponTypeList = response.data.values.filter(aRow => (aRow[0] !== "" && aRow[1] !== "" && aRow[2] !== ""));
@@ -426,15 +426,17 @@ module.exports = {
                                     "welcomeGift": aCouponType[9] === "TRUE",
                                     "usingCallback": {
                                         "rentContainer": aCouponType[13] === "TRUE",
-                                        "containerAmount": aCouponType[14] === "null" ? null : aCouponType[14]
+                                        "containerAmount": aCouponType[14] === "null" ? null : aCouponType[14],
+                                        "storeCode": aCouponType[15] === "null" ? null : aCouponType[15]
                                     },
-                                    "availableForFreeUser": aCouponType[15] === "TRUE",
+                                    "availableForFreeUser": aCouponType[16] === "TRUE",
                                     "$setOnInsert": {
                                         "amount.current": aCouponType[6]
                                     }
                                 }, {
                                     upsert: true,
-                                    setDefaultsOnInsert: true
+                                    setDefaultsOnInsert: true,
+                                    new: true
                                 }, (err, result) => {
                                     if (err) return reject(err);
                                     resolve(result);
