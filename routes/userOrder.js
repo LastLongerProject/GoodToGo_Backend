@@ -121,6 +121,7 @@ router.get('/list', validateLine, function (req, res, next) {
  * 
  * @apiParam {String} storeCode storeCode.
  * @apiParam {Number} containerAmount containerAmount.
+ * @apiParam {Boolean} byCallback byCallback.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
@@ -132,6 +133,7 @@ router.get('/list', validateLine, function (req, res, next) {
 
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
+    const byCallback = req.body.byCallback == true;
     const storeCode = req.body.storeCode;
     const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const containerAmount = parseInt(req.body.containerAmount);
@@ -162,7 +164,7 @@ router.post('/add', validateLine, function (req, res, next) {
     userUsingAmount(dbUser, (err, usingAmount) => {
         if (err) return next(err);
 
-        if ((!dbUser.hasPurchase && (containerAmount + usingAmount) > 1))
+        if (!dbUser.hasPurchase && !byCallback && (containerAmount + usingAmount) > 1)
             return res.status(403).json({
                 code: 'L004',
                 type: 'userOrderMessage',
