@@ -7,8 +7,6 @@ const baseUrl = require('../config/config.js').serverBaseUrl;
 const couponTrade = require('../controllers/couponTrade');
 const validateLine = require('../middlewares/validation/validateLine').all;
 const forPurchasedUser = require('../middlewares/validation/validateLine').forPurchasedUser;
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
@@ -113,7 +111,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res, next) {
+router.post('/use/:couponID', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const CouponID = req.params.couponID;
     const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
@@ -145,6 +143,13 @@ router.post('/use/:couponID', validateLine, forPurchasedUser, function (req, res
                 type: 'couponMessage',
                 message: `Can't find that Coupon.\nCouponID: ${CouponID}`,
                 txt: "系統維修中>< 請稍後再試！"
+            });
+        if (!dbUser.hasPurchase && !theCoupon.availableForFreeUser)
+            return res.status(403).json({
+                code: 'L008',
+                type: 'couponTradeMessage',
+                message: `Please Purchase First`,
+                txt: "需成為鐵粉會員才可使用"
             });
         if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now()) {
             theCoupon.expired = true
