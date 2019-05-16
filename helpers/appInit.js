@@ -48,7 +48,7 @@ module.exports = {
         Coupon.find({
             "expired": false
         }, (err, couponList) => {
-            if (err) return debug.error(err);
+            if (err) return cb(err);
             const now = Date.now();
             couponList.forEach(aCoupon => {
                 if (CouponTypeDict[aCoupon.couponType].expirationDate < now) {
@@ -58,7 +58,7 @@ module.exports = {
                     });
                 }
             });
-            if (cb) return cb();
+            if (cb) return cb(null);
             debug.log('Expired Coupon is Check');
         });
     },
@@ -67,16 +67,16 @@ module.exports = {
             storeListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('storeList refresh');
-                cb();
+                cb(null, data);
             });
         });
     },
     refreshContainer: function (dbUser, cb) {
-        sheet.getContainer(dbUser, () => {
+        sheet.getContainer(dbUser, data => {
             containerListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('containerList refresh');
-                cb();
+                cb(null, data);
             });
         });
     },
@@ -85,7 +85,7 @@ module.exports = {
             activityListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('activityList refresh');
-                cb();
+                cb(null, data);
             });
         });
     },
@@ -240,7 +240,7 @@ module.exports = {
                 },
                 "archived": false
             }, (err, userOrderList) => {
-                if (err) return debug.error(err);
+                if (err) return cb(err);
 
                 const now = Date.now();
                 userOrderList.forEach(aUserOrder => {
@@ -288,7 +288,7 @@ module.exports = {
                     });
                 }
                 if (cb) return cb(null, userDict);
-                debug.log('Banned User is Check');
+                debug.log('User Status is Refresh');
             });
         });
     }

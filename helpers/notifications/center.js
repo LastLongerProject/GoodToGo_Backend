@@ -51,6 +51,9 @@ module.exports = {
             case NotificationEvent.USER_PURCHASED:
                 pushBy.webhook(WebhookEvent.USER_PURCHASED, target, data);
                 break;
+            case NotificationEvent.USER_STATUS_UPDATE:
+                pushBy.webhook(WebhookEvent.USER_STATUS_UPDATE, target, data);
+                break;
         }
     }
 };

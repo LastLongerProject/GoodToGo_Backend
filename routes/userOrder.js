@@ -11,6 +11,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
+const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
@@ -198,6 +199,9 @@ router.post('/add', validateLine, function (req, res, next) {
                     containerAmount,
                     time: now
                 });
+                refreshUserUsingStatus(false, dbUser, err => {
+                    if (err) return debug.error(err);
+                });
             })
             .catch(next);
     });
@@ -311,6 +315,9 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                     });
                 });
                 tradeCallback.rent(tradeDetail);
+                refreshUserUsingStatus(false, dbUser, err => {
+                    if (err) return debug.error(err);
+                });
             });
         });
     });

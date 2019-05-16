@@ -61,7 +61,7 @@ module.exports = {
                     userOrders.forEach(aUserOrder => {
                         aUserOrder.archived = true;
                         aUserOrder.save(err => {
-                            if (err) debug.error(err);
+                            if (err) return debug.error(err);
                         });
                     });
                     const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
@@ -69,11 +69,11 @@ module.exports = {
                     const isOverdueReturn = dbCustomer.hasBanned;
                     const isPurchasedUser = dbCustomer.hasPurchase;
                     pointTrade.calculatePoint(dbCustomer, userOrders, (err, pointDetail) => {
-                        if (err) debug.error(err);
+                        if (err) return debug.error(err);
                         const point = pointDetail.point;
                         const bonusPointActivity = pointDetail.bonusPointActivity;
                         refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
-                            if (err) debug.error(err);
+                            if (err) return debug.error(err);
                             const overdueAmount = userDict[dbCustomer._id].almostOverdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
                             NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {

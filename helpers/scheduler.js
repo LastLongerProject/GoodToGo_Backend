@@ -9,7 +9,10 @@ const ROOT_DIR = require('../config/config').rootDir;
 const crypto = require('crypto');
 const debug = require('./debugger')('scheduler');
 
-function cb() {} //do nothing
+function cb(err) {
+    if (err) return debug.error(err);
+}
+
 function driveCb(succeed, data) {
     if (succeed) {
         debug.log(data.type + ' succeed');

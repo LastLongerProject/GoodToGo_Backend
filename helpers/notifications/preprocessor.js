@@ -89,6 +89,7 @@ module.exports = {
                 case WebhookEvent.USER_BANNED:
                 case WebhookEvent.USER_UNBANNED:
                 case WebhookEvent.USER_PURCHASED:
+                case WebhookEvent.USER_STATUS_UPDATE:
                     Object.assign(para, {
                         lineID: target.user.line_channel_userID
                     });
