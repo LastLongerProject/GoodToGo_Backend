@@ -13,6 +13,8 @@ const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
+const NotificationCenter = require('../helpers/notifications/center');
+const NotificationEvent = require('../helpers/notifications/enums/events');
 
 const userTrade = require('../controllers/userTrade');
 
@@ -58,50 +60,6 @@ module.exports = {
             });
             if (cb) return cb();
             debug.log('Expired Coupon is Check');
-        });
-    },
-    checkUsersShouldBeBanned: function (sendNotice, specificUser, cb) {
-        if (!(specificUser instanceof User)) specificUser = null;
-        findUsersToCheckShouldBanned(specificUser, reply => {
-            const userDict = reply.userDict;
-            const userObjectIDList = reply.userObjectIDList;
-            UserOrder.find({
-                "user": {
-                    "$in": userObjectIDList
-                },
-                "archived": false
-            }, (err, userOrderList) => {
-                if (err) return debug.error(err);
-
-                const now = Date.now();
-                userOrderList.forEach(aUserOrder => {
-                    const userID = aUserOrder.user;
-                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
-                    if (daysOverDue > 0) {
-                        userDict[userID].overdue.push(aUserOrder);
-                    } else if (daysOverDue === 0) {
-                        userDict[userID].almostOverdue.push(aUserOrder);
-                    }
-                });
-
-                for (let userID in userDict) {
-                    const dbUser = userDict[userID].dbUser;
-                    if (userDict[userID].overdue.length > 0) {
-                        userTrade.banUser(dbUser, userDict[userID].overdue, sendNotice);
-                    } else {
-                        const almostOverdueAmount = userDict[userID].almostOverdue.length;
-                        if (almostOverdueAmount > 0 && sendNotice) {
-                            userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
-                        }
-                        if (dbUser.bannedTimes <= 1) {
-                            userTrade.unbanUser(dbUser);
-                        }
-                    }
-                }
-                if (cb) return cb(null, userDict);
-                debug.log('Banned User is Check');
-            });
         });
     },
     refreshStore: function (cb) {
@@ -270,6 +228,69 @@ module.exports = {
                 });
             }
         });
+    },
+    refreshUserUsingStatus: function (sendNotice, specificUser, cb) {
+        if (!(specificUser instanceof User)) specificUser = null;
+        findUsersToCheckStatus(specificUser, reply => {
+            const userDict = reply.userDict;
+            const userObjectIDList = reply.userObjectIDList;
+            UserOrder.find({
+                "user": {
+                    "$in": userObjectIDList
+                },
+                "archived": false
+            }, (err, userOrderList) => {
+                if (err) return debug.error(err);
+
+                const now = Date.now();
+                userOrderList.forEach(aUserOrder => {
+                    const userID = aUserOrder.user;
+                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
+                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
+                    if (aUserOrder.containerID === null) {
+                        if (daysOverDue > 0) {
+                            userDict[userID].idNotRegistered.overdue.push(aUserOrder);
+                        } else if (daysOverDue === 0) {
+                            userDict[userID].idNotRegistered.almostOverdue.push(aUserOrder);
+                        }
+                    } else {
+                        if (daysOverDue > 0) {
+                            userDict[userID].idRegistered.overdue.push(aUserOrder);
+                        } else if (daysOverDue === 0) {
+                            userDict[userID].idRegistered.almostOverdue.push(aUserOrder);
+                        }
+                    }
+                });
+
+                for (let userID in userDict) {
+                    const classifiedOrder = userDict[userID];
+                    const dbUser = classifiedOrder.dbUser;
+                    const hasOverdueContainer = classifiedOrder.idRegistered.overdue.length > 0 || classifiedOrder.idNotRegistered.overdue.length > 0;
+                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 || classifiedOrder.idNotRegistered.almostOverdue.length > 0;
+                    const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
+                    const hasAlmostOverdueContainer = almostOverdueAmount > 0;
+                    if (hasOverdueContainer) {
+                        userTrade.banUser(dbUser, classifiedOrder.overdue);
+                    } else {
+                        if (hasAlmostOverdueContainer && sendNotice) {
+                            userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
+                        }
+                        if (dbUser.bannedTimes <= 1) {
+                            userTrade.unbanUser(dbUser, false);
+                        }
+                    }
+                    classifiedOrder.almostOverdueAmount = almostOverdueAmount;
+                    NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+                        userIsBanned: dbUser.hasBanned,
+                        hasOverdueContainer,
+                        hasUnregisteredOrder,
+                        hasAlmostOverdueContainer
+                    });
+                }
+                if (cb) return cb(null, userDict);
+                debug.log('Banned User is Check');
+            });
+        });
     }
 }
 
@@ -348,14 +369,20 @@ function couponListGenerator(cb) {
     });
 }
 
-function findUsersToCheckShouldBanned(specificUser, cb) {
+function findUsersToCheckStatus(specificUser, cb) {
     if (specificUser) {
         const userID = specificUser._id;
         const userDict = {
             [userID]: {
                 dbUser: specificUser,
-                almostOverdue: [],
-                overdue: []
+                idRegistered: {
+                    almostOverdue: [],
+                    overdue: []
+                },
+                idNotRegistered: {
+                    almostOverdue: [],
+                    overdue: []
+                }
             }
         };
         const userObjectIDList = [userID];
@@ -373,8 +400,14 @@ function findUsersToCheckShouldBanned(specificUser, cb) {
                 const userID = aUser._id;
                 userDict[userID] = {
                     dbUser: aUser,
-                    almostOverdue: [],
-                    overdue: []
+                    idRegistered: {
+                        almostOverdue: [],
+                        overdue: []
+                    },
+                    idNotRegistered: {
+                        almostOverdue: [],
+                        overdue: []
+                    }
                 };
                 return userID;
             });

@@ -5,7 +5,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 
 const pointTrade = require('../controllers/pointTrade');
 
-const checkUserShouldUnban = require('../helpers/appInit').checkUsersShouldBeBanned;
+const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 
@@ -68,11 +68,13 @@ module.exports = {
                     const quantity = containerList.length;
                     const isOverdueReturn = dbCustomer.hasBanned;
                     const isPurchasedUser = dbCustomer.hasPurchase;
-                    pointTrade.getAndSendPoint(dbCustomer, userOrders, (err, point, bonusPointActivity) => {
+                    pointTrade.calculatePoint(dbCustomer, userOrders, (err, pointDetail) => {
                         if (err) debug.error(err);
-                        checkUserShouldUnban(false, dbCustomer, (err, userDict) => {
+                        const point = pointDetail.point;
+                        const bonusPointActivity = pointDetail.bonusPointActivity;
+                        refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
                             if (err) debug.error(err);
-                            const overdueAmount = userDict[dbCustomer._id].overdue.length;
+                            const overdueAmount = userDict[dbCustomer._id].almostOverdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
                             NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
                                 customer: dbCustomer

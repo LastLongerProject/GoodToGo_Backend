@@ -1028,7 +1028,7 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
         "user.phone": userPhone
     }, (err, dbUser) => {
         if (err) return next(err);
-        userTrade.banUser(dbUser, null, true);
+        userTrade.banUser(dbUser, null);
         res.json({
             success: true
         });

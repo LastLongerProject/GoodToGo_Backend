@@ -12,7 +12,7 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 module.exports = {
-    banUser: function (dbUser, overdueDetailList, sendNotice) {
+    banUser: function (dbUser, overdueDetailList) {
         if (!dbUser.hasBanned) {
             dbUser.hasBanned = true;
             dbUser.bannedTimes++;
@@ -29,18 +29,9 @@ module.exports = {
                         if (err) return debug.error(err);
                     });
             });
-            if (sendNotice)
-                NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
-                    bannedTimes: dbUser.bannedTimes,
-                    overdueAmount: overdueDetailList === null ? -1 : overdueDetailList.length
-                });
-        }
-    },
-    noticeUserWhoIsGoingToBeBanned: function (dbUser, almostOverdueAmount) {
-        if (!dbUser.hasBanned) {
-            NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
+            NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
                 bannedTimes: dbUser.bannedTimes,
-                almostOverdueAmount
+                overdueAmount: overdueDetailList === null ? -1 : overdueDetailList.length
             });
         }
     },
@@ -61,6 +52,14 @@ module.exports = {
             NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, {
                 bannedTimes: dbUser.bannedTimes,
                 purchaseStatus: dbUser.getPurchaseStatus()
+            });
+        }
+    },
+    noticeUserWhoIsGoingToBeBanned: function (dbUser, almostOverdueAmount) {
+        if (!dbUser.hasBanned) {
+            NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
+                bannedTimes: dbUser.bannedTimes,
+                almostOverdueAmount
             });
         }
     },

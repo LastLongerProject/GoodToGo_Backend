@@ -47,7 +47,7 @@ module.exports = function () {
             let tasks = function tasks() {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 appInit.checkCouponIsExpired(cb);
-                appInit.checkUsersShouldBeBanned(true, null, cb);
+                appInit.refreshUserUsingStatus(false, null, cb);
             };
             tasks();
             setInterval(tasks, 1000 * 60 * 60 * 24);
@@ -91,5 +91,13 @@ module.exports = function () {
             tasks();
             setInterval(tasks, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
+        setTimeout(function taskToDoAtTenInTheMorning() {
+            let tasks = function tasks() {
+                debug.log('[Scheduler | Ten In The Morning] start');
+                appInit.refreshUserUsingStatus(true, null, cb);
+            };
+            tasks();
+            setInterval(tasks, 1000 * 60 * 60 * 24);
+        }, shouldWait + 1000 * 60 * 60 * 10);
     });
 };
