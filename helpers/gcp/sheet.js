@@ -230,7 +230,7 @@ module.exports = {
                                                         const translated = dictionary[aType];
                                                         if (translated)
                                                             formattedType.push(translated);
-                                                        else if (ignorePlaceTypes.indexOf(translated) === -1)
+                                                        else if (ignorePlaceTypes.indexOf(aType) === -1)
                                                             debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                     });
                                                 }
