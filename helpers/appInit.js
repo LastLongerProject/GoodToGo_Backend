@@ -270,7 +270,7 @@ module.exports = {
                     const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
                     const hasAlmostOverdueContainer = almostOverdueAmount > 0;
                     if (hasOverdueContainer) {
-                        userTrade.banUser(dbUser, classifiedOrder.overdue);
+                        userTrade.banUser(dbUser, classifiedOrder.idRegistered.overdue.concat(classifiedOrder.idNotRegistered.overdue));
                     } else {
                         if (hasAlmostOverdueContainer && sendNotice) {
                             userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
