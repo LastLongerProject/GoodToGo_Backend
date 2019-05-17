@@ -381,6 +381,11 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *                  }, ...
  *              ],
  *			    imgSrc : Url,
+ *              usingCallback: {
+ *                  rentContainer: Boolean, // true
+ *                  containerAmount: Number, // 2
+ *                  storeCode: String // "0406"
+ *              },
  *              state : String ("used" or "available" or "expired" or "unknown")
  *		    }
  *      }

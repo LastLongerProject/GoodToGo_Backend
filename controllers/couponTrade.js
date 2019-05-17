@@ -103,6 +103,7 @@ module.exports = {
                             expirationDate: theCouponType.expirationDate,
                             notice_struc: theCouponType.structuredNotice,
                             imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
+                            usingCallback: theCouponType.usingCallback,
                             state: CouponState.AVAILABLE
                         });
                     })
