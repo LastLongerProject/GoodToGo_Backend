@@ -230,7 +230,7 @@ module.exports = {
                                                         const translated = dictionary[aType];
                                                         if (translated)
                                                             formattedType.push(translated);
-                                                        else if (ignorePlaceTypes.indexOf(translated) === -1)
+                                                        else if (ignorePlaceTypes.indexOf(aType) === -1)
                                                             debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                     });
                                                 }
@@ -395,7 +395,7 @@ module.exports = {
                     if (err) return cb(err);
                     Promise
                         .all(couponTypeList.map(aCouponType => new Promise((resolve, reject) => {
-                            const oriCouponType = oriCouponTypeList.find(aCouponType => aCouponType.couponTypeID === aCouponType[0]);
+                            const oriCouponType = oriCouponTypeList.find(aOriCouponType => aOriCouponType.couponTypeID === aCouponType[0]);
                             let newImgVersion;
                             if (oriCouponType) {
                                 newImgVersion = oriCouponType.img_info.img_src === aCouponType[10] ?
