@@ -7,12 +7,10 @@ const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const PointLog = require('../models/DB/pointLogDB');
 
-const CouponState = require('../models/enums/couponEnum').CouponState;
+const MyCoupon = require('../models/reply/coupon').myCoupon;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
-
-const baseUrl = require('../config/config.js').serverBaseUrl;
 
 module.exports = {
     purchaseCoupon: function (couponTypeID, dbUser, oriDone) {
@@ -96,16 +94,7 @@ module.exports = {
                         })
                     ])
                     .then(() => {
-                        done(null, false, {
-                            couponID: newCoupon.couponID,
-                            provider: theCouponType.provider,
-                            title: theCouponType.title,
-                            expirationDate: theCouponType.expirationDate,
-                            notice_struc: theCouponType.structuredNotice,
-                            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
-                            usingCallback: theCouponType.usingCallback,
-                            state: CouponState.AVAILABLE
-                        });
+                        done(null, false, new MyCoupon(newCoupon));
                     })
                     .catch(done);
             });
