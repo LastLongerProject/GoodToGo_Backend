@@ -395,7 +395,7 @@ module.exports = {
                     if (err) return cb(err);
                     Promise
                         .all(couponTypeList.map(aCouponType => new Promise((resolve, reject) => {
-                            const oriCouponType = oriCouponTypeList.find(aCouponType => aCouponType.couponTypeID === aCouponType[0]);
+                            const oriCouponType = oriCouponTypeList.find(aOriCouponType => aOriCouponType.couponTypeID === aCouponType[0]);
                             let newImgVersion;
                             if (oriCouponType) {
                                 newImgVersion = oriCouponType.img_info.img_src === aCouponType[10] ?
