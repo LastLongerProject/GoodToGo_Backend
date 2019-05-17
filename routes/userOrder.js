@@ -8,7 +8,6 @@ const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;

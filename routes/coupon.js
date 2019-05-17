@@ -40,6 +40,11 @@ const DataCacheFactory = require('../models/dataCacheFactory');
  *                  }, ...
  *              ],
  *			    imgSrc : Url,
+ *              usingCallback: {
+ *                  rentContainer: Boolean, // true
+ *                  containerAmount: Number, // 2
+ *                  storeCode: String // "0406"
+ *              },
  *              state : String ("used" or "available" or "expired" or "unknown")
  *		    }, ...
  *	        ]
@@ -68,7 +73,8 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
                 title: theCouponType.title,
                 expirationDate: theCouponType.expirationDate,
                 notice_struc: theCouponType.structuredNotice,
-                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
+                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
+                usingCallback: theCouponType.usingCallback
             };
             if (!aCoupon.used && !aCoupon.expired) {
                 aFormattedCoupon.state = CouponState.AVAILABLE;
@@ -102,12 +108,7 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
  *     {
  *          code: '???',
  *          type: 'couponMessage',
- *          message: 'Use Coupon Success',
- *          usingCallback: {
- *              rentContainer: Boolean, // true
- *              containerAmount: Number, // 2
- *              storeCode: String // "0406"
- *          }
+ *          message: 'Use Coupon Success'
  *      }
  */
 
@@ -169,8 +170,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
                 res.json({
                     code: '???',
                     type: 'couponMessage',
-                    message: 'Use Coupon Success',
-                    usingCallback: CouponTypeDict[theCoupon.couponType].usingCallback
+                    message: 'Use Coupon Success'
                 });
             });
         }
@@ -205,6 +205,11 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
  *                  }, ...
  *              ],
  *			    imgSrc : Url,
+ *              usingCallback: {
+ *                  rentContainer: Boolean, // true
+ *                  containerAmount: Number, // 2
+ *                  storeCode: String // "0406"
+ *              },
  *              state : String ("sold_out" or "purchasable" or "cannot_afford")
  *		    }, ...
  *	        ]
@@ -241,7 +246,8 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
                 price: aCouponType.price,
                 amount: aCouponType.amount.current,
                 notice_struc: aCouponType.structuredNotice,
-                imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`
+                imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`,
+                usingCallback: aCouponType.usingCallback
             };
             if (aCouponType.amount.current <= 0) {
                 aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
@@ -284,6 +290,11 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *              }, ...
  *          ],
  *          imgSrc : Url,
+ *          usingCallback: {
+ *              rentContainer: Boolean, // true
+ *              containerAmount: Number, // 2
+ *              storeCode: String // "0406"
+ *          },
  *          state : String ("sold_out" or "purchasable" or "cannot_afford")
  *      }
  */
@@ -327,7 +338,8 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
             price: theCouponType.price,
             amount: theCouponType.amount.current,
             notice_struc: theCouponType.structuredNotice,
-            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`
+            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
+            usingCallback: theCouponType.usingCallback
         };
         if (theCouponType.amount.current <= 0) {
             aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
