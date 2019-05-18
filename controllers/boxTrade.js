@@ -144,11 +144,11 @@ let changeStateProcess = async function (element, box, phone) {
             $pull: {
                 action: {
                     $or: [{
-                            boxStatus: BoxStatus.Delivering
-                        },
-                        {
-                            boxStatus: BoxStatus.Signed
-                        }
+                        boxStatus: BoxStatus.Delivering
+                    },
+                    {
+                        boxStatus: BoxStatus.Signed
+                    }
                     ]
                 }
             }
@@ -349,8 +349,8 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
         await aBox.update(boxInfo).exec();
 
         return Promise.resolve({
-            type: "ChangeStateMessage",
-            message: "Change state successfully"
+            type: "SignMessage",
+            message: "Sign successfully"
         });
     }
 }

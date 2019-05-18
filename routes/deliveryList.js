@@ -79,14 +79,14 @@ router.post(
         let storeID = parseInt(req.params.storeID);
 
         Promise.all(req._boxArray.map(box => box.save()))
-            .then(success => {
+            .then(() => {
                 let list = new DeliveryList({
                     listID: req._listID,
                     boxList: req._boxIDs,
                     storeID,
                     creator: creator,
                 });
-                list.save().then(result => {
+                list.save().then(() => {
                     return res.status(200).json({
                         type: 'CreateMessage',
                         message: 'Create delivery list successfully',
@@ -337,7 +337,7 @@ router.post(
                         if (boxInfo.status === ProgramStatus.Success) {
                             return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
                         } else {
-                            ErrorResponse.H007.message = result.message;
+                            ErrorResponse.H007.message = boxInfo.message;
                             return res.status(403).json(ErrorResponse.H007);
                         }
                     } catch (err) {
@@ -403,8 +403,8 @@ router.post(
                             message: 'Box is not exist',
                         });
                     try {
-                        let result = await changeStateProcess(element, aBox, phone);
-                        if (result.status === ProgramStatus.Success) {
+                        let boxInfo = await changeStateProcess(element, aBox, phone);
+                        if (boxInfo.status === ProgramStatus.Success) {
                             return changeContainersState(
                                 aBox.containerList,
                                 dbUser, {
@@ -414,16 +414,13 @@ router.post(
                                     boxID,
                                     storeID: reqByAdmin ? aBox.storeID : undefined
                                 },
-                                (err, tradeSuccess, reply) => {
+                                async (err, tradeSuccess, reply) => {
                                     if (err) return next(err);
                                     if (!tradeSuccess) return res.status(500).json(reply);
-                                    return res.status(200).json({
-                                        type: "SignMessage",
-                                        message: "Sign successfully"
-                                    });
+                                    return containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info, res, next);
                                 });
                         }
-                        ErrorResponse.H007.message = result.message;
+                        ErrorResponse.H007.message = boxInfo.message;
                         return res.status(403).json(ErrorResponse.H007);
                     } catch (err) {
                         debug.error(err);
