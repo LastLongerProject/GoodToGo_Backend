@@ -348,7 +348,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
     if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
         await aBox.update(boxInfo).exec();
 
-        return Promise.resolve({
+        return res.status(200).json({
             type: "SignMessage",
             message: "Sign successfully"
         });
