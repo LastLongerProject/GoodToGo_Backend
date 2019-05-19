@@ -403,6 +403,10 @@ module.exports = {
                             } else {
                                 newImgVersion = 0;
                             }
+                            const oriPurchaseDeadline = getDateCheckpoint(new Date(aCouponType[4]));
+                            const purchaseDeadline = oriPurchaseDeadline.setSeconds(oriPurchaseDeadline.getSeconds() + (60 * 60 * 24 - 1));
+                            const oriExpirationDate = getDateCheckpoint(new Date(aCouponType[5]));
+                            const expirationDate = oriExpirationDate.setSeconds(oriExpirationDate.getSeconds() + (60 * 60 * 24 - 1));
                             CouponType.generateStrucNotice(aCouponType[12], aCouponType[11], (err, structuredNotice) => {
                                 if (err) return reject(err);
                                 CouponType.findOneAndUpdate({
@@ -411,8 +415,8 @@ module.exports = {
                                     "provider": aCouponType[1],
                                     "title": aCouponType[2],
                                     "announceDate": getDateCheckpoint(new Date(aCouponType[3])),
-                                    "purchaseDeadline": getDateCheckpoint(new Date(aCouponType[4])),
-                                    "expirationDate": getDateCheckpoint(new Date(aCouponType[5])),
+                                    "purchaseDeadline": purchaseDeadline,
+                                    "expirationDate": expirationDate,
                                     "price": aCouponType[7],
                                     "amount.total": aCouponType[6],
                                     "extraNotice": aCouponType[11],
