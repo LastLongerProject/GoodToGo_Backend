@@ -811,15 +811,32 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 
 router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
+    let dbAdmin = req._user;
 
-    Box.remove({
+    Box.findOne({
         boxID
     })
         .exec()
-        .then(() => res.status(200).json({
-            type: "DeleteMessage",
-            message: "Delete successfully"
-        })).catch(err => {
+        .then(aBox => {
+            return changeContainersState(
+                aBox.containerList,
+                dbAdmin, {
+                    action: 'Unboxing',
+                    newState: 4
+                }, {
+                    bypassStateValidation: true,
+                },
+                async (err, tradeSuccess, reply) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    await aBox.remove();
+                    return res.status(200).json({
+                        type: "DeleteMessage",
+                        message: "Delete successfully"
+                    });
+                }
+            );
+        }).catch(err => {
             debug.error(err);
             return next(err);
         });
