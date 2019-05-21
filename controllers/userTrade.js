@@ -29,11 +29,10 @@ module.exports = {
                         if (err) return debug.error(err);
                     });
             });
-            if (sendNotice)
-                NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
-                    bannedTimes: dbUser.bannedTimes,
-                    overdueAmount: overdueDetailList === null ? -1 : overdueDetailList.length
-                });
+            NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
+                bannedTimes: dbUser.bannedTimes,
+                overdueAmount: overdueDetailList === null ? -1 : overdueDetailList.length
+            });
         }
     },
     noticeUserWhoIsGoingToBeBanned: function (dbUser, almostOverdueAmount) {
