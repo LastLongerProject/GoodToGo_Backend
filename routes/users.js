@@ -19,6 +19,7 @@ const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 const SnsAppType = require('../helpers/notifications/enums/sns/appType');
+const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
@@ -1029,6 +1030,9 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
     }, (err, dbUser) => {
         if (err) return next(err);
         userTrade.banUser(dbUser, null);
+        refreshUserUsingStatus(false, dbUser, err => {
+            if (err) return debug.error(err);
+        });
         res.json({
             success: true
         });
@@ -1042,6 +1046,9 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
     }, (err, dbUser) => {
         if (err) return next(err);
         userTrade.unbanUser(dbUser, true);
+        refreshUserUsingStatus(false, dbUser, err => {
+            if (err) return debug.error(err);
+        });
         res.json({
             success: true
         });

@@ -252,12 +252,16 @@ module.exports = {
                             userDict[userID].idNotRegistered.overdue.push(aUserOrder);
                         } else if (daysOverDue === 0) {
                             userDict[userID].idNotRegistered.almostOverdue.push(aUserOrder);
+                        } else {
+                            userDict[userID].idNotRegistered.others.push(aUserOrder);
                         }
                     } else {
                         if (daysOverDue > 0) {
                             userDict[userID].idRegistered.overdue.push(aUserOrder);
                         } else if (daysOverDue === 0) {
                             userDict[userID].idRegistered.almostOverdue.push(aUserOrder);
+                        } else {
+                            userDict[userID].idRegistered.others.push(aUserOrder);
                         }
                     }
                 });
@@ -265,8 +269,11 @@ module.exports = {
                 for (let userID in userDict) {
                     const classifiedOrder = userDict[userID];
                     const dbUser = classifiedOrder.dbUser;
-                    const hasOverdueContainer = classifiedOrder.idRegistered.overdue.length > 0 || classifiedOrder.idNotRegistered.overdue.length > 0;
-                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 || classifiedOrder.idNotRegistered.almostOverdue.length > 0;
+                    const hasOverdueContainer = classifiedOrder.idRegistered.overdue.length > 0 ||
+                        classifiedOrder.idNotRegistered.overdue.length > 0;
+                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 ||
+                        classifiedOrder.idNotRegistered.almostOverdue.length > 0 ||
+                        classifiedOrder.idNotRegistered.others.length > 0;
                     const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
                     const hasAlmostOverdueContainer = almostOverdueAmount > 0;
                     if (hasOverdueContainer) {
@@ -377,11 +384,13 @@ function findUsersToCheckStatus(specificUser, cb) {
                 dbUser: specificUser,
                 idRegistered: {
                     almostOverdue: [],
-                    overdue: []
+                    overdue: [],
+                    others: []
                 },
                 idNotRegistered: {
                     almostOverdue: [],
-                    overdue: []
+                    overdue: [],
+                    others: []
                 }
             }
         };
@@ -392,7 +401,8 @@ function findUsersToCheckStatus(specificUser, cb) {
         });
     } else {
         User.find({
-            "agreeTerms": true
+            "agreeTerms": true,
+            "user.phone": "0936033091"
         }, (err, userList) => {
             if (err) return debug.error(err);
             const userDict = {};
@@ -402,11 +412,13 @@ function findUsersToCheckStatus(specificUser, cb) {
                     dbUser: aUser,
                     idRegistered: {
                         almostOverdue: [],
-                        overdue: []
+                        overdue: [],
+                        others: []
                     },
                     idNotRegistered: {
                         almostOverdue: [],
-                        overdue: []
+                        overdue: [],
+                        others: []
                     }
                 };
                 return userID;
