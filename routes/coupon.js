@@ -2,16 +2,15 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('coupon');
 
-const baseUrl = require('../config/config.js').serverBaseUrl;
-
 const couponTrade = require('../controllers/couponTrade');
 const validateLine = require('../middlewares/validation/validateLine').all;
 const forPurchasedUser = require('../middlewares/validation/validateLine').forPurchasedUser;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
+const MyCoupon = require('../models/reply/coupon').myCoupon;
+const CouponDetail = require('../models/reply/coupon').couponDetail;
 const CouponState = require('../models/enums/couponEnum').CouponState;
-const CouponTypeState = require('../models/enums/couponEnum').CouponTypeState;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 /**
@@ -25,7 +24,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
  *     HTTP/1.1 200 
  *     {
  *	        myCouponList : [
- *		    {
+ *		    MyCoupon {
  *			    couponID : String,
  *			    provider : String,
  *			    title : String,
@@ -53,7 +52,6 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 
 router.get('/myCoupons', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
     Coupon.find({
         "user": dbUser._id
     }, {}, {
@@ -66,27 +64,10 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
         let availableCouponList = [];
         let unavailableCouponList = [];
         couponList.forEach(aCoupon => {
-            let theCouponType = CouponTypeDict[aCoupon.couponType];
-            let aFormattedCoupon = {
-                couponID: aCoupon.couponID,
-                provider: theCouponType.provider,
-                title: theCouponType.title,
-                expirationDate: theCouponType.expirationDate,
-                notice_struc: theCouponType.structuredNotice,
-                imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
-                usingCallback: theCouponType.usingCallback
-            };
-            if (!aCoupon.used && !aCoupon.expired) {
-                aFormattedCoupon.state = CouponState.AVAILABLE;
+            let aFormattedCoupon = new MyCoupon(aCoupon);
+            if (aFormattedCoupon.state === CouponState.AVAILABLE) {
                 availableCouponList.push(aFormattedCoupon);
             } else {
-                if (aCoupon.used) {
-                    aFormattedCoupon.state = CouponState.USED;
-                } else if (aCoupon.expired) {
-                    aFormattedCoupon.state = CouponState.EXPIRED;
-                } else {
-                    aFormattedCoupon.state = CouponState.UNKNOWN;
-                }
                 unavailableCouponList.push(aFormattedCoupon);
             }
         });
@@ -189,7 +170,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
  *     {
  *          userPoint : Number,
  *	        allCouponList : [
- *		    {
+ *		    CouponDetail {
  *			    couponTypeID : String,
  *			    provider : String,
  *			    title : String,
@@ -237,27 +218,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
             else return a.createdAt > b.createdAt ? 1 : -1;
         });
 
-        let formattedCouponTypeList = couponTypeList.map(aCouponType => {
-            let aFormattedCouponType = {
-                couponTypeID: aCouponType.couponTypeID,
-                provider: aCouponType.provider,
-                title: aCouponType.title,
-                expirationDate: aCouponType.purchaseDeadline,
-                price: aCouponType.price,
-                amount: aCouponType.amount.current,
-                notice_struc: aCouponType.structuredNotice,
-                imgSrc: `${baseUrl}/images/coupon/${aCouponType.couponTypeID}?ver=${aCouponType.img_info.img_version}`,
-                usingCallback: aCouponType.usingCallback
-            };
-            if (aCouponType.amount.current <= 0) {
-                aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
-            } else if (aCouponType.price > dbUser.point) {
-                aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
-            } else {
-                aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
-            }
-            return aFormattedCouponType;
-        });
+        let formattedCouponTypeList = couponTypeList.map(aCouponType => new CouponDetail(aCouponType, dbUser));
         res.json({
             userPoint: dbUser.point,
             allCouponList: formattedCouponTypeList
@@ -274,7 +235,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  * 
  * @apiSuccessExample {json} Success-Response:
  *      HTTP/1.1 200 
- *      {
+ *      CouponDetail {
  *          couponTypeID : String,
  *          provider : String,
  *          title : String,
@@ -330,24 +291,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
                 txt: "系統維修中>< 請稍後再試！"
             });
 
-        let aFormattedCouponType = {
-            couponTypeID: theCouponType.couponTypeID,
-            provider: theCouponType.provider,
-            title: theCouponType.title,
-            expirationDate: theCouponType.purchaseDeadline,
-            price: theCouponType.price,
-            amount: theCouponType.amount.current,
-            notice_struc: theCouponType.structuredNotice,
-            imgSrc: `${baseUrl}/images/coupon/${theCouponType.couponTypeID}?ver=${theCouponType.img_info.img_version}`,
-            usingCallback: theCouponType.usingCallback
-        };
-        if (theCouponType.amount.current <= 0) {
-            aFormattedCouponType.state = CouponTypeState.SOLD_OUT;
-        } else if (theCouponType.price > dbUser.point) {
-            aFormattedCouponType.state = CouponTypeState.CANNOT_AFFORD;
-        } else {
-            aFormattedCouponType.state = CouponTypeState.PURCHASEABLE;
-        }
+        let aFormattedCouponType = new CouponDetail(theCouponType, dbUser);
 
         res.json(aFormattedCouponType);
     });
@@ -366,7 +310,8 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *          code: '???',
  *          type: 'couponMessage',
  *          message: 'Purchase Coupon Success',
- *          newCoupon: {
+ *          newCoupon: 
+ *          MyCoupon {
  *			    couponID : String,
  *			    provider : String,
  *			    title : String,
