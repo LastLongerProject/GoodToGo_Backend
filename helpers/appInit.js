@@ -43,20 +43,23 @@ module.exports = {
     },
     checkCouponIsExpired: function (cb) {
         const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
-        Coupon.find({
-            "expired": false
-        }, (err, couponList) => {
+        Coupon.find((err, couponList) => {
             if (err) return debug.error(err);
             const now = Date.now();
             couponList.forEach(aCoupon => {
-                if (CouponTypeDict[aCoupon.couponType].expirationDate < now) {
+                if (!aCoupon.expired && CouponTypeDict[aCoupon.couponType].expirationDate <= now) {
                     aCoupon.expired = true;
+                    aCoupon.save(err => {
+                        if (err) return debug.error(err);
+                    });
+                } else if (aCoupon.expired && CouponTypeDict[aCoupon.couponType].expirationDate > now) {
+                    aCoupon.expired = false;
                     aCoupon.save(err => {
                         if (err) return debug.error(err);
                     });
                 }
             });
-            if (cb) return cb();
+            if (cb) return cb(null);
             debug.log('Expired Coupon is Check');
         });
     },
