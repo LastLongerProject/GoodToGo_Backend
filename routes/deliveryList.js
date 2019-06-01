@@ -909,9 +909,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         };
     Trade.find(queryCond, function (err, list) {
         if (err) return next(err);
-        if (list.length === 0) return res.json({
-            reloadHistory: []
-        });
+        if (list.length === 0) return res.json([]);
         list.sort((a, b) => a.tradeTime - b.tradeTime);
         cleanUndoTrade('ReadyToClean', list);
 
@@ -964,5 +962,50 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         res.json(boxArr);
     });
 });
+
+/**
+ * @apiName DeliveryList Get delivery list overview
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/overview Specific clean station's overview
+ * @apiPermission admin
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        
+            {
+                Boxing: Number,
+                Delivering: Number,
+                Stocked: Number
+            }
+        
+ */
+router.get(
+    '/overview',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let storeID = parseInt(req._user.roles.admin.stationID);
+        let result = {
+            Boxing: 0,
+            Delivering: 0,
+            Stocked: 0
+        };
+
+        Box.find({
+            'storeID': storeID,
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (box.status === BoxStatus.Boxing) result.Boxing += 1;
+                if (box.status === BoxStatus.Delivering) result.Delivering += 1;
+                if (box.status === BoxStatus.Stocked) result.Stocked += 1;
+            }
+
+            return res.status(200).json(result);
+        });
+    }
+);
 
 module.exports = router;
