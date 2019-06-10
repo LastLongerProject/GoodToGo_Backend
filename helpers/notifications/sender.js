@@ -19,8 +19,6 @@ module.exports = {
     },
     webhook: function (formatted) {
         if (formatted) {
-            if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "develop")
-                return function doNothing() {};
             return function (url) {
                 request
                     .post(url, formatted)
