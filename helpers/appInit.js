@@ -404,8 +404,7 @@ function findUsersToCheckStatus(specificUser, cb) {
         });
     } else {
         User.find({
-            "agreeTerms": true,
-            "user.phone": "0936033091"
+            "agreeTerms": true
         }, (err, userList) => {
             if (err) return debug.error(err);
             const userDict = {};
