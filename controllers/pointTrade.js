@@ -9,7 +9,10 @@ const DueDays = require('../models/enums/userEnum').DueDays;
 
 module.exports = {
     calculatePoint: function (dbUser, userOrders, cb) {
-        if (!dbUser.hasPurchase) return cb(null, null);
+        if (!dbUser.hasPurchase) return cb(null, {
+            point: 0,
+            bonusPointActivity: null
+        });
         scanBonusPointActivity(dbUser, userOrders, cb);
     },
     sendPoint: function (point, toUser, logContext) {
