@@ -416,7 +416,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                     rentToUser: theCustomer,
                     orderTime: res._payload.orderTime,
                     activity: "沒活動",
-                    inLineSystem: false
+                    inLineSystem: true
                 }, (err, tradeSuccess, reply, tradeDetail) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
