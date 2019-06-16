@@ -12,7 +12,8 @@ var schema = mongoose.Schema({
         },
         lineId: String,
         line_liff_userID: String,
-        line_channel_userID: String
+        line_channel_userID: String,
+        worker_id: String
     },
     role: {
         typeCode: String,
