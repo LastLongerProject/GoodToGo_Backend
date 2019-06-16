@@ -16,8 +16,9 @@ const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingSta
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
+const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
-const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
+const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const storeCodeValidater = /\d{4}/;
 
@@ -133,24 +134,17 @@ router.get('/list', validateLine, function (req, res, next) {
 
 router.post('/add', validateLine, function (req, res, next) {
     const dbUser = req._user;
-    const byCallback = req.body.byCallback == true;
+    const bypassCheck = req.body.byCallback == true;
     const storeCode = req.body.storeCode;
     const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const containerAmount = parseInt(req.body.containerAmount);
 
-    if (dbUser.hasBanned)
-        return res.status(403).json({
-            code: 'L001',
-            type: 'userOrderMessage',
-            message: `User is Banned.`,
-            txt: dbUser.getBannedTxt("借用")
-        });
     if (typeof storeCode !== "string" || !storeCodeValidater.test(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
             code: 'L002',
             type: 'userOrderMessage',
             message: `Content not in Correct Format.\n` +
-                `StoreCode: ${storeCode}, ContainerAmount: ${req.body.containerAmount}`,
+                `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}`,
             txt: "系統維修中>< 請稍後再試！"
         });
     if (!isValidStoreCode(storeCode))
@@ -161,20 +155,30 @@ router.post('/add', validateLine, function (req, res, next) {
             txt: "店舖代碼錯誤，請輸入正確店舖代碼！"
         });
 
-    userUsingAmount(dbUser, (err, usingAmount) => {
-        if (err) return next(err);
-
-        if (!dbUser.hasPurchase && !byCallback && (containerAmount + usingAmount) > 1)
-            return res.status(403).json({
-                code: 'L004',
-                type: 'userOrderMessage',
-                message: `ContainerAmount is Over Quantity Limitation. \n` +
-                    `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
-                txt: "您最多只能借一個容器"
-            });
+    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
+        if (err)
+            return next(err);
+        if (!isAvailable) {
+            if (detail.rentalQualification === RentalQualification.BANNED)
+                return res.status(403).json({
+                    code: 'L001',
+                    type: 'userOrderMessage',
+                    message: `User is Banned.`,
+                    txt: dbUser.getBannedTxt("借用")
+                });
+            if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                return res.status(403).json({
+                    code: 'L004',
+                    type: 'userOrderMessage',
+                    message: `ContainerAmount is Over Quantity Limitation. \n` +
+                        `ContainerAmount: ${containerAmount}, UsingAmount: ${detail.data.usingAmount}`,
+                    txt: `您最多只能借 ${detail.data.holdingQuantityLimitation} 個容器`
+                });
+            else
+                return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+        }
 
         const storeID = parseInt(storeCode.substring(0, 3));
-
         const funcList = [];
         const now = Date.now();
         for (let i = 0; i < containerAmount; i++) {

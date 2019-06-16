@@ -31,6 +31,9 @@ const getGlobalUsedAmount = require('../models/variables/containerStatistic').gl
 const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const UserRole = require('../models/enums/userEnum').UserRole;
+const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+
+const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const historyDays = 14;
 const redisKey = storeID => `store_favorite:${storeID}`;
@@ -750,32 +753,56 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
     process.nextTick(function () {
         User.findOne({
             'user.phone': new RegExp(phone.toString() + '$', "i")
-        }, function (err, user) {
+        }, function (err, dbUser) {
             if (err)
                 return next(err);
-            if (!user) {
-                res.status(403).json({
+            if (!dbUser)
+                return res.status(403).json({
                     code: 'E001',
                     type: "userSearchingError",
                     message: "No User: [" + phone + "] Found",
                     data: phone
                 });
-            } else {
+            userIsAvailableForRentContainer(dbUser, null, false, (err, isAvailable, detail) => {
+                if (err) return next(err);
+                if (!isAvailable) {
+                    if (detail.rentalQualification === RentalQualification.BANNED)
+                        return res.status(403).json({
+                            code: 'F014',
+                            type: 'userSearchingError',
+                            message: 'User is banned'
+                        });
+                    if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                        return res.status(403).json({
+                            code: 'F015',
+                            type: 'userSearchingError',
+                            message: 'User is Out of quota',
+                            data: {
+                                purchaseStatus: dbUser.getPurchaseStatus(),
+                                usingAmount: detail.data.usingAmount,
+                                holdingQuantityLimitation: detail.data.holdingQuantityLimitation
+                            }
+                        });
+                    else
+                        return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+                }
+
                 var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                redis.set('user_token:' + token, user.user.phone, (err, reply) => {
+                redis.set('user_token:' + token, dbUser.user.phone, (err, reply) => {
                     if (err) return next(err);
                     if (reply !== 'OK') return next(reply);
                     redis.expire('user_token:' + token, 60 * 30, (err, replyNum) => {
                         if (err) return next(err);
                         if (replyNum !== 1) return next(replyNum);
                         res.status(200).json({
-                            'phone': user.user.phone,
-                            'apiKey': token
+                            phone: dbUser.user.phone,
+                            apiKey: token,
+                            availableAmount: detail.data.availableAmount
                         });
-                        redis.zincrby(thisRedisKey, 1, user.user.phone);
+                        redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
                     });
                 });
-            }
+            });
         });
     });
 });

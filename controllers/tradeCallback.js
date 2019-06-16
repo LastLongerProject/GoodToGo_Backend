@@ -8,9 +8,10 @@ const pointTrade = require('../controllers/pointTrade');
 const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
+const generateUUID = require('../helpers/tools').generateUUID;
 
 module.exports = {
-    rent: function (tradeDetail) {
+    rent: function (tradeDetail, storeID) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
         integrateTradeDetailForNotification(tradeDetail,
                 aTradeDetail => aTradeDetail.newUser,
@@ -20,6 +21,19 @@ module.exports = {
                     customer: aCustomerTradeDetail.customer
                 }, {
                     containerList: aCustomerTradeDetail.containerList
+                });
+                const now = Date.now();
+                aCustomerTradeDetail.containerList.forEach(aContainer => {
+                    let newOrder = new UserOrder({
+                        orderID: generateUUID(),
+                        user: aCustomerTradeDetail.customer._id,
+                        storeID,
+                        orderTime: now,
+                        containerID: aContainer.ID
+                    });
+                    newOrder.save((err) => {
+                        if (err) return debug.error(err);
+                    });
                 });
             });
     },

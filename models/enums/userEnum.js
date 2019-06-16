@@ -25,5 +25,14 @@ module.exports = {
         BANNED: "banned",
         UNBANNED: "unbanned",
         PURCHASED: "purchased"
+    }),
+    RentalQualification: Object.freeze({
+        BANNED: "banned",
+        OUT_OF_QUOTA: "out_of_quota",
+        AVAILABLE: "available"
+    }),
+    HoldingQuantityLimitation: Object.freeze({
+        FREE_USER: 1,
+        PURCHASED_USER: -1
     })
 };

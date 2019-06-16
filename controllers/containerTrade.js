@@ -111,7 +111,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const options = option || {};
     const boxID = options.boxID; // Boxing Delivery Sign NEED
     const storeID = options.storeID; // Delivery Sign Return NEED
-    const rentToUser = options.rentToUser; // Rent NEED
+    const rentToUser = options.rentToUser || null; // Rent NEED
     const inLineSystem = options.inLineSystem; // Rent NEED
     const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
@@ -174,7 +174,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
 
                     validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
-
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
                             let errorDict = {
@@ -203,9 +202,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 return resolveWithErr(errorMsg);
                             }
                         } else {
-                            User.findOne({
-                                'user.phone': (action === 'Rent') ? rentToUser : theContainer.conbineTo
-                            }, function (err, oriUser) {
+                            getOriUser(action, theContainer, rentToUser, function (err, oriUser) {
                                 if (err)
                                     return reject(err);
                                 if (!oriUser) {
@@ -216,11 +213,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         message: 'No user found'
                                     });
                                 }
-                                if (!oriUser.active && action === 'Rent')
-                                    return reject({
-                                        code: 'F005',
-                                        message: 'User has Banned'
-                                    });
 
                                 let storeID_newUser, storeID_oriUser;
                                 if (action === 'Sign') {
@@ -307,6 +299,13 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
             });
         });
     };
+}
+
+function getOriUser(action, theContainer, rentToUser, cb) {
+    if (action === "Rent" && rentToUser) return cb(null, rentToUser);
+    else return User.findOne({
+        'user.phone': theContainer.conbineTo
+    }, cb);
 }
 
 module.exports = changeContainersState;

@@ -7,6 +7,7 @@ const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
+const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
@@ -16,6 +17,7 @@ const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
 const NotificationCenter = require('../../helpers/notifications/center');
 const NotificationEvent = require('../../helpers/notifications/enums/events');
+const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
@@ -349,8 +351,8 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
  * @apiUse ChangeStateError
  */
 router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var key = req.headers.userapikey;
+    const dbStore = req._user;
+    const key = req.headers.userapikey;
     if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
             code: 'F009',
@@ -371,42 +373,56 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                 type: 'borrowContainerMessage',
                 message: 'Rent Request Expired'
             });
-        var container = req.params.id;
-        if (container === "list") container = req.body.containers;
-        changeContainersState(container, dbStore, {
-            action: "Rent",
-            newState: 2
-        }, {
-            rentToUser: userPhone,
-            orderTime: res._payload.orderTime,
-            activity: "沒活動",
-            inLineSystem: false
-        }, (err, tradeSuccess, reply, tradeDetail) => {
-            if (err) return next(err);
-            if (!tradeSuccess) return res.status(403).json(reply);
-            tradeCallback.rent(tradeDetail);
-            return res.json(reply);
-            // Container.find({
-            //     ID: parseInt(container) *** BUG HERE ***
-            // }).exec().then(container => {
-            //     if (!container) return res.status(403).json({
-            //         code: 'Fxxx',
-            //         type: 'borrowContainerMessage',
-            //         message: 'can not find container id'
-            //     });
-            //     let boxID = container[0].boxID;
-            //     Box.deleteOne({
-            //         boxID
-            //     }).exec().then(result => {
-            //         return res.json(reply);
-            //     }).catch(err => {
-            //         debug.error(err);
-            //         return next(err);
-            //     });
-            // }).catch(err => {
-            //     debug.error(err);
-            //     return next(err);
-            // });
+        let container = req.params.id;
+        let containerAmount = 1;
+        if (container === "list") {
+            container = req.body.containers;
+            containerAmount = req.body.containers.length;
+        }
+        User.findOne({
+            "user.phone": userPhone
+        }, (err, theCustomer) => {
+            if (err)
+                return next(err);
+            if (!theCustomer)
+                return res.status(403).json({
+                    code: 'F004',
+                    type: 'RentMessage',
+                    message: 'No user found'
+                });
+            userIsAvailableForRentContainer(theCustomer, containerAmount, false, (err, isAvailable, detail) => {
+                if (err) return next(err);
+                if (!isAvailable) {
+                    if (detail.rentalQualification === RentalQualification.BANNED)
+                        return res.status(403).json({
+                            code: 'F014',
+                            type: 'userSearchingError',
+                            message: 'User is banned'
+                        });
+                    else if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                        return res.status(403).json({
+                            code: 'F016',
+                            type: 'userSearchingError',
+                            message: 'Container amount is over limitation'
+                        });
+                    else
+                        return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+                }
+                changeContainersState(container, dbStore, {
+                    action: "Rent",
+                    newState: 2
+                }, {
+                    rentToUser: theCustomer,
+                    orderTime: res._payload.orderTime,
+                    activity: "沒活動",
+                    inLineSystem: false
+                }, (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    tradeCallback.rent(tradeDetail, dbStore.roles.clerk.storeID);
+                    return res.json(reply);
+                });
+            });
         });
     });
 });
