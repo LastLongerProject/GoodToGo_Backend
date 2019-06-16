@@ -742,9 +742,11 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
         HTTP/1.1 200 
         { 
             phone: '09xxxxxxxx', 
-            apiKey: String 
+            apiKey: String,
+            availableAmount: Number
         }
  * 
+ * @apiUse RentalQualificationError
  */
 router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
@@ -768,13 +770,13 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
                 if (!isAvailable) {
                     if (detail.rentalQualification === RentalQualification.BANNED)
                         return res.status(403).json({
-                            code: 'F014',
+                            code: 'F005',
                             type: 'userSearchingError',
                             message: 'User is banned'
                         });
                     if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
                         return res.status(403).json({
-                            code: 'F015',
+                            code: 'F014',
                             type: 'userSearchingError',
                             message: 'User is Out of quota',
                             data: {

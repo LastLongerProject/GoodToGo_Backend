@@ -61,7 +61,7 @@ Default Format of Error Message
         > Extra Key-Value :
         > `data : String // Container ID`
     - **F004** - `status : 403, msg : No user found` - DB unexpected conflict, Plz contact me ASAP
-    - **F005** - `status : 403, msg : User has Banned` - The user has banned by admin or account subscription is expirated
+    - **F005** - `status : 403, msg : User is Banned` - The user has banned because of didn't return container on time
     - **F006** - `status : 403, msg : Missing Order Time` - JWT payload missing `orderTime`
     - **F007** - `status : 403, msg : Can't Find The Box` - The box ID is wrong
     - **F008** - `status : 403, msg : Box is not belong to user's store` - As msg says
@@ -70,6 +70,8 @@ Default Format of Error Message
     - **F011** - `status : 403, msg : Boxing req body incomplete` - Missing `containerList` or `boxId` in request body
     - **F012** - `status : 403, msg : Box is already exist` - The box you request is in used
     - **F013** - `status : 403, msg : Rent Request Expired` - UserApiKey expired, tell user to search users phone again (call '/getUser' API again)
+    - **F014** - `status : 403, msg : User is Out of quota` - The user has reach rental quantity limitation
+    - **F015** - `status : 403, msg : Container amount is over limitation` - Rent too much container
 - G series - `type : readImgERR`
     - **G001** - `status : 500, msg : No Image found` - Server Can't Load IMG, Plz contact me ASAP
         > Extra Key-Value :

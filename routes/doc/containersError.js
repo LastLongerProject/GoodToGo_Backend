@@ -68,5 +68,11 @@
  * @apiError {String} F002 status : 403, msg : No container found
  * @apiError {String} F003 status : 403, msg : Container not available
  * @apiError {String} F004 status : 403, msg : No user found
- * @apiError {String} F005 status : 403, msg : User has Banned
+ */
+
+/**
+ * @apiDefine RentalQualificationError
+ * @apiError {String} F005 status : 403, msg : User is Banned
+ * @apiError {String} F014 status : 403, msg : User is Out of quota, data : { purchaseStatus: "free_user" or "purchased_user", usingAmount: Number, holdingQuantityLimitation: Number }
+ * @apiError {String} F015 status : 403, msg : Container amount is over limitation
  */

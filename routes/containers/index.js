@@ -349,6 +349,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
         }
  * @apiUse RentError
  * @apiUse ChangeStateError
+ * @apiUse RentalQualificationError
  */
 router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
     const dbStore = req._user;
@@ -395,13 +396,13 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                 if (!isAvailable) {
                     if (detail.rentalQualification === RentalQualification.BANNED)
                         return res.status(403).json({
-                            code: 'F014',
+                            code: 'F005',
                             type: 'userSearchingError',
                             message: 'User is banned'
                         });
                     else if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
                         return res.status(403).json({
-                            code: 'F016',
+                            code: 'F015',
                             type: 'userSearchingError',
                             message: 'Container amount is over limitation'
                         });
