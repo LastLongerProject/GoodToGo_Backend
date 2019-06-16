@@ -202,6 +202,7 @@ module.exports = {
         const verificationCode = req.body.verification_code;
         const line_liff_userID = req.body.line_liff_userID;
         const line_channel_userID = req.body.line_channel_userID;
+        const worker_id = req.body.worker_id;
         let options = req._options || {};
 
         if (typeof phone === 'undefined' || typeof line_liff_userID === 'undefined' || typeof line_channel_userID === 'undefined') {
@@ -261,6 +262,7 @@ module.exports = {
 
                         userToSave.user.line_liff_userID = line_liff_userID;
                         userToSave.user.line_channel_userID = line_channel_userID;
+                        userToSave.user.worker_id = worker_id;
                         userToSave.hasVerified = true;
                         userToSave.agreeTerms = true;
                         userToSave.save(function (err) {
