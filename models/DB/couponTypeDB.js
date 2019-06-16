@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const config = require('../../config/config');
 
-const userSchema = mongoose.Schema({
+const schema = mongoose.Schema({
     couponTypeID: String,
     provider: String,
     title: String,
@@ -63,7 +63,7 @@ const userSchema = mongoose.Schema({
 
 const templateKeyValidater = /[a-z_&]+/;
 
-userSchema.statics.generateStrucNotice = function (extraContent, extraNotice, cb) {
+schema.statics.generateStrucNotice = function (extraContent, extraNotice, cb) {
     fs.readFile(`${config.staticFileDir}/assets/json/couponContentTemplate.json`, (err, rawData) => {
         if (err) return cb(err);
         const templates = JSON.parse(rawData);
@@ -91,4 +91,4 @@ userSchema.statics.generateStrucNotice = function (extraContent, extraNotice, cb
     });
 };
 
-module.exports = mongoose.model("CouponType", userSchema);
+module.exports = mongoose.model("CouponType", schema);

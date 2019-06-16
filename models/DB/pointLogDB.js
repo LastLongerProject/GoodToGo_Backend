@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     user: mongoose.Schema.Types.ObjectId,
     logTime: {
         type: Date,
@@ -11,8 +11,8 @@ var userSchema = mongoose.Schema({
     quantityChange: Number
 });
 
-userSchema.index({
+schema.index({
     "user": 1
 });
 
-module.exports = mongoose.model("PointLog", userSchema);
+module.exports = mongoose.model("PointLog", schema);

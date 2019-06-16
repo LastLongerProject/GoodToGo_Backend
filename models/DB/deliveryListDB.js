@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     listID: String,
     creator: String,
     boxList: Array,
@@ -10,8 +10,8 @@ var userSchema = mongoose.Schema({
     usePushEach: true
 });
 
-userSchema.index({
+schema.index({
     "listID": 1
 });
 
-module.exports = mongoose.model('DeliveryList', userSchema);
+module.exports = mongoose.model('DeliveryList', schema);

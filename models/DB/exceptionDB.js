@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     containerID: Number,
     storeID: Number,
     oriState: String,
@@ -12,8 +12,8 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-userSchema.index({
+schema.index({
     "createAt": -1
 });
 
-module.exports = mongoose.model('Exception', userSchema);
+module.exports = mongoose.model('Exception', schema);

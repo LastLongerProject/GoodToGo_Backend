@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 // define the schema for our user model
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     listID: String,
     boxID: Number,
     boxName: String,
@@ -39,12 +39,12 @@ var userSchema = mongoose.Schema({
     usePushEach: true
 });
 
-userSchema.index({
+schema.index({
     "storeID": 1
 });
-userSchema.index({
+schema.index({
     "boxID": 1
 });
 
 // create the model for users and expose it to our app
-module.exports = mongoose.model('Box', userSchema);
+module.exports = mongoose.model('Box', schema);
