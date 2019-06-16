@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     couponID: String,
     user: mongoose.Schema.Types.ObjectId,
     couponType: mongoose.Schema.Types.ObjectId,
@@ -16,8 +16,8 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-userSchema.index({
+schema.index({
     "user": 1
 });
 
-module.exports = mongoose.model("Coupon", userSchema);
+module.exports = mongoose.model("Coupon", schema);

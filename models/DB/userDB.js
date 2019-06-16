@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 var bcrypt = require('bcrypt-nodejs');
 
 // define the schema for our user model
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     user: {
         phone: String,
         password: String,
@@ -68,33 +68,33 @@ var userSchema = mongoose.Schema({
     usePushEach: true
 });
 
-userSchema.index({
+schema.index({
     "user.phone": 1
 });
-userSchema.index({
+schema.index({
     "user.apiKey": 1
 });
 
-userSchema.methods.generateHash = function (password) {
+schema.methods.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
-userSchema.methods.validPassword = function (password) {
+schema.methods.validPassword = function (password) {
     return bcrypt.compareSync(password, this.user.password);
 };
 
 const PurchaseStatus = require('../enums/userEnum').PurchaseStatus;
 
-userSchema.methods.getPurchaseStatus = function () {
+schema.methods.getPurchaseStatus = function () {
     return this.hasPurchase ?
         PurchaseStatus.PURCHASED_USER :
         PurchaseStatus.FREE_USER;
 };
-userSchema.methods.getBannedTxt = function (action) {
+schema.methods.getBannedTxt = function (action) {
     return `${this.bannedTimes <= 1?
         `您有容器逾期未歸還，請儘速歸還，不然無法借用容器、領取或使用優惠券喲！` :
         `您已被停權，無法${action}！\n欲解除停權，請私訊好盒器粉專。`}`;
 };
 
 // create the model for users and expose it to our app
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('User', schema);

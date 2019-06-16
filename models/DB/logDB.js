@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 // define the schema for our user model
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     ip: String,
     url: String,
     method: String,
@@ -23,6 +23,6 @@ var userSchema = mongoose.Schema({
     user: String
 });
 
-userSchema.index({ "logTime": -1 });
+schema.index({ "logTime": -1 });
 
-module.exports = mongoose.model('serverLog', userSchema);
+module.exports = mongoose.model('serverLog', schema);
