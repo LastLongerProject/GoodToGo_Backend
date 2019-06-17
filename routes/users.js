@@ -18,6 +18,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
+const NotificationEvent = require('../helpers/notifications/enums/events');
 const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 
@@ -31,6 +32,7 @@ const getGlobalUsedAmount = require('../models/variables/containerStatistic').gl
 
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
+const NotificationCenter = require('../helpers/notifications/center');
 
 router.post(['/signup', '/signup/*'], function (req, res, next) {
     req._options = {};
@@ -1029,9 +1031,16 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
         "user.phone": userPhone
     }, (err, dbUser) => {
         if (err) return next(err);
+        if (!dbUser) return res.json({
+            success: false,
+            describe: "Can't find user"
+        });
         userTrade.banUser(dbUser, null);
-        refreshUserUsingStatus(false, dbUser, err => {
-            if (err) return debug.error(err);
+        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+            userIsBanned: dbUser.hasBanned,
+            hasOverdueContainer: 9999,
+            hasUnregisteredOrder: 9999,
+            hasAlmostOverdueContainer: 9999
         });
         res.json({
             success: true
@@ -1045,9 +1054,16 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
         "user.phone": userPhone
     }, (err, dbUser) => {
         if (err) return next(err);
+        if (!dbUser) return res.json({
+            success: false,
+            describe: "Can't find user"
+        });
         userTrade.unbanUser(dbUser, true);
-        refreshUserUsingStatus(false, dbUser, err => {
-            if (err) return debug.error(err);
+        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+            userIsBanned: dbUser.hasBanned,
+            hasOverdueContainer: 9999,
+            hasUnregisteredOrder: 9999,
+            hasAlmostOverdueContainer: 9999
         });
         res.json({
             success: true
