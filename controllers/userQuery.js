@@ -12,6 +12,7 @@ const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 const UserRole = require('../models/enums/userEnum').UserRole;
+const UserGroup = require('../models/enums/userEnum').UserGroup;
 
 function sendVerificationCode(phone, done) {
     var newCode = keys.getVerificationCode();
@@ -175,6 +176,9 @@ module.exports = {
                             }
                             if (newUser.roles.typeList.indexOf(UserRole.CUSTOMER) === -1)
                                 newUser.roles.typeList.push(UserRole.CUSTOMER);
+                            newUser.roles.customer = {
+                                group: UserGroup.GOODTOGO_MEMBER
+                            };
                             userToSave = newUser;
                         }
 
@@ -202,7 +206,7 @@ module.exports = {
         const verificationCode = req.body.verification_code;
         const line_liff_userID = req.body.line_liff_userID;
         const line_channel_userID = req.body.line_channel_userID;
-        const worker_id = req.body.worker_id;
+        const worker_id = req.body.worker_id || null;
         let options = req._options || {};
 
         if (typeof phone === 'undefined' || typeof line_liff_userID === 'undefined' || typeof line_channel_userID === 'undefined') {
@@ -262,6 +266,16 @@ module.exports = {
 
                         userToSave.user.line_liff_userID = line_liff_userID;
                         userToSave.user.line_channel_userID = line_channel_userID;
+                        if (worker_id !== null) {
+                            userToSave.roles.customer = {
+                                group: UserGroup.KUANG_TIEN_STAFF,
+                                worker_id
+                            };
+                        } else {
+                            userToSave.roles.customer = {
+                                group: UserGroup.GOODTOGO_MEMBER
+                            };
+                        }
                         userToSave.user.worker_id = worker_id;
                         userToSave.hasVerified = true;
                         userToSave.agreeTerms = true;

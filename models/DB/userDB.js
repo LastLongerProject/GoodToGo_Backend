@@ -12,8 +12,7 @@ var schema = mongoose.Schema({
         },
         lineId: String,
         line_liff_userID: String,
-        line_channel_userID: String,
-        worker_id: String
+        line_channel_userID: String
     },
     role: {
         typeCode: String,
@@ -24,6 +23,7 @@ var schema = mongoose.Schema({
     },
     roles: {
         typeList: [],
+        customer: Object,
         clerk: Object,
         admin: Object,
         bot: Object

@@ -20,7 +20,6 @@ const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 const NotificationEvent = require('../helpers/notifications/enums/events');
 const SnsAppType = require('../helpers/notifications/enums/sns/appType');
-const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');

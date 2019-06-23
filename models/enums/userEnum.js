@@ -34,5 +34,9 @@ module.exports = {
     HoldingQuantityLimitation: Object.freeze({
         FREE_USER: 1,
         PURCHASED_USER: -1
+    }),
+    UserGroup: Object.freeze({
+        GOODTOGO_MEMBER: "GoodToGo_member",
+        KUANG_TIEN_STAFF: "Kuang_Tien_staff"
     })
 };
