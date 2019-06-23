@@ -163,7 +163,7 @@ router.post('/add', validateLine, function (req, res, next) {
 
     userUsingAmount(dbUser, (err, usingAmount) => {
         if (err) return next(err);
-        /*
+
         if (!dbUser.hasPurchase && !byCallback && (containerAmount + usingAmount) > 1)
             return res.status(403).json({
                 code: 'L004',
@@ -172,7 +172,7 @@ router.post('/add', validateLine, function (req, res, next) {
                     `ContainerAmount: ${req.body.containerAmount}, UsingAmount: ${usingAmount}`,
                 txt: "您最多只能借一個容器"
             });
-        */
+
         const storeID = parseInt(storeCode.substring(0, 3));
 
         const funcList = [];
