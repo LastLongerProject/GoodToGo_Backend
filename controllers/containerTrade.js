@@ -286,7 +286,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                             });
                                         });
                                     },
-                                    tradeDetail: action === "Rent" || action === "Return" ? {
+                                    tradeDetail: action === "Rent" || (action === "Return" && oriState === 2) ? {
                                         oriUser,
                                         newUser,
                                         container: theContainer
