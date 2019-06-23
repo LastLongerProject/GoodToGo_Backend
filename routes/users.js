@@ -915,6 +915,28 @@ router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
 });
 
 /**
+ * @apiName GetMyPhone
+ * @apiGroup Users
+ * 
+ * @api {get} /users/getMyPhone Get user's phone number
+ * @apiUse LINE_Channel
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *         phone : String
+ *     }
+ */
+
+router.get('/getMyPhone', validateLine.all, function (req, res, next) {
+    const dbUser = req._user;
+
+    res.json({
+        phone: dbUser.user.phone
+    });
+});
+
+/**
  * @apiName UsedHistory
  * @apiGroup Users
  * 
