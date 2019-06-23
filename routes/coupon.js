@@ -64,11 +64,15 @@ router.get('/myCoupons', validateLine, function (req, res, next) {
         let availableCouponList = [];
         let unavailableCouponList = [];
         couponList.forEach(aCoupon => {
-            let aFormattedCoupon = new MyCoupon(aCoupon);
-            if (aFormattedCoupon.state === CouponState.AVAILABLE) {
-                availableCouponList.push(aFormattedCoupon);
-            } else {
-                unavailableCouponList.push(aFormattedCoupon);
+            try {
+                let aFormattedCoupon = new MyCoupon(aCoupon);
+                if (aFormattedCoupon.state === CouponState.AVAILABLE) {
+                    availableCouponList.push(aFormattedCoupon);
+                } else {
+                    unavailableCouponList.push(aFormattedCoupon);
+                }
+            } catch (error) {
+                return debug.error(error);
             }
         });
         res.json({
