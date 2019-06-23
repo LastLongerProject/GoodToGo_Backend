@@ -5,6 +5,10 @@ module.exports = {
         CUSTOMER: "customer",
         BOT: "bot"
     }),
+    UserGroup: Object.freeze({
+        GOODTOGO_MEMBER: "GoodToGo_member",
+        KUANG_TIEN_STAFF: "Kuang_Tien_staff"
+    }),
     RegisterMethod: Object.freeze({
         CUSTOMER_APP: "customer_app",
         CLECK_APP: "cleck_app",
@@ -17,10 +21,6 @@ module.exports = {
         FREE_USER: "free_user",
         PURCHASED_USER: "purchased_user"
     }),
-    DueDays: Object.freeze({
-        free_user: 2,
-        purchased_user: 8
-    }),
     TradeAction: Object.freeze({
         BANNED: "banned",
         UNBANNED: "unbanned",
@@ -31,12 +31,12 @@ module.exports = {
         OUT_OF_QUOTA: "out_of_quota",
         AVAILABLE: "available"
     }),
-    HoldingQuantityLimitation: Object.freeze({
-        FREE_USER: 1,
-        PURCHASED_USER: -1
+    DueDays: Object.freeze({
+        free_user: 1,
+        purchased_user: 7
     }),
-    UserGroup: Object.freeze({
-        GOODTOGO_MEMBER: "GoodToGo_member",
-        KUANG_TIEN_STAFF: "Kuang_Tien_staff"
+    HoldingQuantityLimitation: Object.freeze({
+        FREE_USER: 6,
+        PURCHASED_USER: -1
     })
 };

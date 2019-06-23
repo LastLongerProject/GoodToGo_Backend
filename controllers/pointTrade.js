@@ -9,10 +9,6 @@ const DueDays = require('../models/enums/userEnum').DueDays;
 
 module.exports = {
     calculatePoint: function (dbUser, userOrders, cb) {
-        if (!dbUser.hasPurchase) return cb(null, {
-            point: 0,
-            bonusPointActivity: null
-        });
         scanBonusPointActivity(dbUser, userOrders, cb);
     },
     sendPoint: function (point, toUser, logContext) {
@@ -46,24 +42,32 @@ function scanBonusPointActivity(dbUser, userOrders, cb) {
         if (!bonusPointActivityLogic[activityType] || !activityDetail)
             return cb(null, noBonusReply);
         const now = Date.now();
+        let overdueReturn = 0;
         const totalPoint = userOrders.map(aUserOrder => {
+            const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[dbUser.getPurchaseStatus()];
+            if (daysOverDue > 0) {
+                overdueReturn++;
+                return 0;
+            }
+            return 1;
+            /*
             const storeIDOfRent = aUserOrder.storeID;
             const rentTime = aUserOrder.orderTime;
             const activityDetailOfStore = activityDetail.store[storeIDOfRent];
-            const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[dbUser.getPurchaseStatus()];
-            if (daysOverDue > 0) return 0;
             if (!activityDetailOfStore ||
                 activityDetailOfStore.startTime > rentTime ||
                 ((rentTime - activityDetailOfStore.startTime) > activityDetailOfStore.duration))
                 return 1;
             return bonusPointActivityLogic[activityType](1);
+            */
         }).reduce((a, b) => a + b, 0);
         return cb(null, {
             point: totalPoint,
             bonusPointActivity: totalPoint > returnAmount ? {
                 name: activityDetail.name,
                 txt: activityDetail.txtForPointLog
-            } : null
+            } : null,
+            overdueReturn
         });
     });
 }

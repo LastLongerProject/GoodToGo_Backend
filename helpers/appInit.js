@@ -272,8 +272,8 @@ module.exports = {
                 for (let userID in userDict) {
                     const classifiedOrder = userDict[userID];
                     const dbUser = classifiedOrder.dbUser;
-                    const hasOverdueContainer = classifiedOrder.idRegistered.overdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.overdue.length > 0;
+                    const overdueAmount = classifiedOrder.idRegistered.overdue.length + classifiedOrder.idNotRegistered.overdue.length;
+                    const hasOverdueContainer = overdueAmount > 0;
                     const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 ||
                         classifiedOrder.idNotRegistered.almostOverdue.length > 0 ||
                         classifiedOrder.idNotRegistered.others.length > 0;
@@ -289,6 +289,7 @@ module.exports = {
                             userTrade.unbanUser(dbUser, false);
                         }
                     }
+                    classifiedOrder.overdueAmount = overdueAmount;
                     classifiedOrder.almostOverdueAmount = almostOverdueAmount;
                     NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
                         userIsBanned: dbUser.hasBanned,
