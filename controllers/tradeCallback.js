@@ -72,6 +72,7 @@ module.exports = {
                     "archived": false
                 }, (err, userOrders) => {
                     if (err) return debug.error(err);
+                    if (userOrders.length === 0) return;
                     userOrders.forEach(aUserOrder => {
                         aUserOrder.archived = true;
                         aUserOrder.save(err => {

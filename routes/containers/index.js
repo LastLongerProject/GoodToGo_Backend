@@ -956,53 +956,66 @@ router.get(
     }
 );
 
-/**
- * @apiName Containers add container
- * @apiGroup Containers
- *
- * @api {post} /containers/add/:id/:type Add container with id and type
- * @apiPrivate
- * 
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "addContainerMessage",
-            message: "Add succeeded"
+router.post('/triggerTradeCallback/return/:container/:userPhone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const containerID = req.params.container;
+    const userPhone = req.params.userPhone;
+    Trade.findOne({
+        "container.id": containerID,
+        "oriUser.phone": userPhone,
+        "tradeType.action": "Return"
+    }, {}, {
+        sort: {
+            tradeTime: -1
         }
- * @apiError 403 type: addContainerMessage, message: That ID is already exist.
- */
-router.post('/add/:id/:type', function (req, res, next) {
-    var id = req.params.id;
-    var typeCode = req.params.type;
-    process.nextTick(function () {
-        Container.findOne({
-                ID: id,
-            },
-            function (err, container) {
+    }, function (err, theTrade) {
+        if (err) return next(err);
+        if (!theTrade)
+            return res.status(403).json({
+                success: false,
+                msg: "Can't find that trade"
+            });
+        User.findOne({
+            "user.phone": theTrade.oriUser.phone
+        }, (err, oriUser) => {
+            if (err) return next(err);
+            if (!oriUser)
+                return res.status(403).json({
+                    success: false,
+                    msg: "Can't find oriUser"
+                });
+            User.findOne({
+                "user.phone": theTrade.newUser.phone
+            }, (err, newUser) => {
                 if (err) return next(err);
-                if (container) {
+                if (!newUser)
                     return res.status(403).json({
-                        type: 'addContainerMessage',
-                        message: 'That ID is already exist.'
+                        success: false,
+                        msg: "Can't find newUser"
                     });
-                } else {
-                    var newContainer = new Container();
-                    newContainer.ID = id;
-                    newContainer.typeCode = typeCode;
-                    newContainer.statusCode = 4;
-                    newContainer.conbineTo = '0900000000';
-                    newContainer.save(function (err) {
-                        // save the container
-                        if (err) return next(err);
-                        res.status(200).json({
-                            type: 'addContainerMessage',
-                            message: 'Add succeeded'
+                Container.findOne({
+                    "ID": theTrade.container.id
+                }, (err, theContainer) => {
+                    if (err) return next(err);
+                    if (!theContainer)
+                        return res.status(403).json({
+                            success: false,
+                            msg: "Can't find theContainer"
                         });
+                    const tradeDetail = {
+                        oriUser,
+                        newUser,
+                        container: theContainer
+                    };
+                    tradeCallback.return([tradeDetail], {
+                        storeID: theTrade.newUser.storeID
                     });
-                }
-            }
-        );
+                    res.json({
+                        success: true,
+                        msg: "Doing task"
+                    });
+                });
+            });
+        });
     });
 });
 
