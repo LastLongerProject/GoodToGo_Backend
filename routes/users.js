@@ -1081,7 +1081,7 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             success: false,
             describe: "Can't find user"
         });
-        userTrade.unbanUser(dbUser, true, byUser);
+        userTrade.unbanUser(dbUser, true, byUser.user.phone);
         NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
             userIsBanned: dbUser.hasBanned,
             hasOverdueContainer: 9999,
