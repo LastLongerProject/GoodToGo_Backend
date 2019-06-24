@@ -49,6 +49,8 @@ module.exports = {
             if (err) return debug.error(err);
             const now = Date.now();
             couponList.forEach(aCoupon => {
+                if (!CouponTypeDict[aCoupon.couponType]) return
+
                 if (!aCoupon.expired && CouponTypeDict[aCoupon.couponType].expirationDate <= now) {
                     aCoupon.expired = true;
                     aCoupon.save(err => {
