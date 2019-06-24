@@ -301,7 +301,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                 action: "Rent",
                 newState: 2
             }, {
-                rentToUser: dbUser.user.phone,
+                rentToUser: dbUser,
                 orderTime: theUserOrder.orderTime,
                 activity: "沒活動",
                 inLineSystem: true
