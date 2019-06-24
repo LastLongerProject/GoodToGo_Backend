@@ -902,15 +902,17 @@ router.get('/pointLog', validateLine.all, function (req, res, next) {
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
- *	        purchaseStatus : String
- *      }
+ *         purchaseStatus : String,
+ *         userGroup : String
+ *     }
  */
 
 router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     var dbUser = req._user;
 
     res.json({
-        purchaseStatus: dbUser.getPurchaseStatus()
+        purchaseStatus: dbUser.getPurchaseStatus(),
+        userGroup: dbUser.roles.customer.group
     });
 });
 
