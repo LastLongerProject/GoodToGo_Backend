@@ -31,9 +31,9 @@ module.exports = {
         OUT_OF_QUOTA: "out_of_quota",
         AVAILABLE: "available"
     }),
-    DueDays: Object.freeze({
-        free_user: 1,
-        purchased_user: 7
+    DueDays: Object.freeze({ // Remember to add one
+        free_user: 2,
+        purchased_user: 8
     }),
     HoldingQuantityLimitation: Object.freeze({
         FREE_USER: 6,

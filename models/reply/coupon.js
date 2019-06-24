@@ -9,6 +9,7 @@ module.exports = {
     myCoupon: function MyCoupon(aCoupon) {
         const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
         const theCouponType = CouponTypeDict[aCoupon.couponType];
+        if (!theCouponType) throw new Error("Can't match coupon type");
         let aFormattedCoupon = {
             couponID: aCoupon.couponID,
             provider: theCouponType.provider,

@@ -271,6 +271,7 @@ module.exports = {
                                 group: UserGroup.KUANG_TIEN_STAFF,
                                 worker_id
                             };
+                            userToSave.hasPurchase = true;
                         } else {
                             userToSave.roles.customer = {
                                 group: UserGroup.GOODTOGO_MEMBER
