@@ -123,7 +123,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
     }, (err, theCoupon) => {
         if (err) return next(err);
 
-        if (!theCoupon || !theCoupon.user.equals(dbUser._id))
+        if (!theCoupon || !theCoupon.user.equals(dbUser._id) || !CouponTypeDict[theCoupon.couponType])
             return res.status(403).json({
                 code: 'L011',
                 type: 'couponMessage',
