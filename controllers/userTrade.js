@@ -12,7 +12,7 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 module.exports = {
-    banUser: function (dbUser, overdueDetailList) {
+    banUser: function (dbUser, overdueDetailList, byUser) {
         if (!dbUser.hasBanned) {
             dbUser.hasBanned = true;
             dbUser.bannedTimes++;
@@ -28,6 +28,14 @@ module.exports = {
                     }, err => {
                         if (err) return debug.error(err);
                     });
+                else
+                    UserTradeLog.create({
+                        "user": dbUser.user.phone,
+                        "action": TradeAction.BANNED,
+                        "describe": `Manual, By: ${byUser}`
+                    }, err => {
+                        if (err) return debug.error(err);
+                    });
             });
             NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
                 bannedTimes: dbUser.bannedTimes,
@@ -35,7 +43,7 @@ module.exports = {
             });
         }
     },
-    unbanUser: function (dbUser, isTest) {
+    unbanUser: function (dbUser, isTest, byUser) {
         if (dbUser.hasBanned) {
             dbUser.hasBanned = false;
             dbUser.save(err => {
@@ -44,7 +52,15 @@ module.exports = {
                     UserTradeLog.create({
                         "user": dbUser.user.phone,
                         "action": TradeAction.UNBANNED,
-                        "describe": null
+                        "describe": "By automatic process"
+                    }, err => {
+                        if (err) return debug.error(err);
+                    });
+                else
+                    UserTradeLog.create({
+                        "user": dbUser.user.phone,
+                        "action": TradeAction.UNBANNED,
+                        "describe": `Manual, By: ${byUser}`
                     }, err => {
                         if (err) return debug.error(err);
                     });

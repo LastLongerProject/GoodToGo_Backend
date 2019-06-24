@@ -1047,6 +1047,7 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
 });
 
 router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
         "user.phone": userPhone
@@ -1056,7 +1057,7 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
             success: false,
             describe: "Can't find user"
         });
-        userTrade.banUser(dbUser, null);
+        userTrade.banUser(dbUser, null, byUser.user.phone);
         NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
             userIsBanned: dbUser.hasBanned,
             hasOverdueContainer: 9999,
@@ -1070,6 +1071,7 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
 });
 
 router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
         "user.phone": userPhone
@@ -1079,7 +1081,7 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             success: false,
             describe: "Can't find user"
         });
-        userTrade.unbanUser(dbUser, true);
+        userTrade.unbanUser(dbUser, true, byUser);
         NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
             userIsBanned: dbUser.hasBanned,
             hasOverdueContainer: 9999,
