@@ -46,6 +46,7 @@ module.exports = function () {
             });
         }
         const shouldWait = dateCheckpoint(1) - Date.now();
+        debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
         setTimeout(function timeSensitiveTask() {
             let tasks = function tasks() {
                 debug.log('[Scheduler | Time-Sensitive] start');
