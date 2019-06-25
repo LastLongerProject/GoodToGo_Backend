@@ -36,6 +36,16 @@ module.exports = {
         free_user: 2,
         purchased_user: 8
     }),
+    LastCallDays: Object.freeze({
+        free_user: 2,
+        purchased_user: 2
+    }),
+    DueStatus: Object.freeze({
+        NOT_DUE: "not_due",
+        ALMOST_OVERDUE: "almost_overdue",
+        LAST_CALL: "last_call",
+        OVERDUE: "overdue"
+    }),
     HoldingQuantityLimitation: Object.freeze({
         FREE_USER: 6,
         PURCHASED_USER: -1

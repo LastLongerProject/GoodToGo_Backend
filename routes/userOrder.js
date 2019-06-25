@@ -12,13 +12,12 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
-const DueDays = require('../models/enums/userEnum').DueDays;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 /**
@@ -65,9 +64,10 @@ router.get('/list', validateLine, function (req, res, next) {
         if (err) return next(err);
         let orderListWithoutID = {};
         let orderListWithID = [];
+        const now = Date.now();
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
-            const daysToDue = DueDays[dbUser.getPurchaseStatus()] - computeDaysOfUsing(aUserOrder.orderTime, Date.now());
+            const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -327,7 +327,9 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
 
 router.post('/challenge/storeCode', validateLine, validateStoreCode, async (req, res, next) => {
     res.status(200).json({
-        code: '???', type: 'userOrderMessage', message: 'Verified'
+        code: '???',
+        type: 'userOrderMessage',
+        message: 'Verified'
     })
 })
 
@@ -365,7 +367,7 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
             txt: "系統維修中>< 請稍後再試！"
         });
 
-    containers = containers.map(id=>parseInt(id));
+    containers = containers.map(id => parseInt(id));
 
     for (let id of containers) {
         if (!ContainerDict[id])
@@ -430,7 +432,7 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
         }
         dbBot.roles.clerk.storeID = storeID;
 
-        let userOrders = containers.map(id => 
+        let userOrders = containers.map(id =>
             new UserOrder({
                 orderID: generateUUID(),
                 user: dbUser._id,
@@ -441,24 +443,27 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
         );
 
         new Promise((resolve, reject) => {
-            changeContainersState(containers, dbBot, {
-                action: "Rent",
-                newState: 2
-            }, {
-                rentToUser: dbUser,
-                orderTime: now,
-                activity: "沒活動",
-                inLineSystem: true
-            }, (err, tradeSuccess, reply, tradeDetail) => {
-                if (err) return next(err);
-                return  tradeSuccess ?
-                    resolve(tradeCallback.rent(tradeDetail, null)) :
-                    reject({status: 403, json: Object.assign(reply, {
-                        txt: "容器ID錯誤，請輸入正確容器 ID！"
-                    })})
-            });      
-        })
-            .then(()=> userOrders.map(order=>order.save()))
+                changeContainersState(containers, dbBot, {
+                    action: "Rent",
+                    newState: 2
+                }, {
+                    rentToUser: dbUser,
+                    orderTime: now,
+                    activity: "沒活動",
+                    inLineSystem: true
+                }, (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) return next(err);
+                    return tradeSuccess ?
+                        resolve(tradeCallback.rent(tradeDetail, null)) :
+                        reject({
+                            status: 403,
+                            json: Object.assign(reply, {
+                                txt: "容器ID錯誤，請輸入正確容器 ID！"
+                            })
+                        })
+                });
+            })
+            .then(() => userOrders.map(order => order.save()))
             .then(() => {
                 res.status(200).json({
                     code: '???',
@@ -466,12 +471,12 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
                     message: 'Create user order with containers successfully',
                     storeName: StoreDict[storeID].name
                 })
-                
+
                 return userTrade.refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
             })
-            .catch( err => {
+            .catch(err => {
                 if (err.status && err.json) {
                     res.status(err.status).json(err.json)
                 } else {

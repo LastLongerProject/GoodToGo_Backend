@@ -42,8 +42,6 @@ module.exports = {
             } else {
                 debug.log(`${ENV} Server no scheduler`);
             }
-        } else {
-            debug.log("Undefined Server no scheduler");
         }
 
         Promise
@@ -66,4 +64,4 @@ module.exports = {
             })
             .catch(debug.error);
     }
-};
+}
