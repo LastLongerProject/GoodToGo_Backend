@@ -10,13 +10,12 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
-const DueDays = require('../models/enums/userEnum').DueDays;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
@@ -77,9 +76,10 @@ router.get('/list', validateLine, function (req, res, next) {
         if (err) return next(err);
         let orderListWithoutID = {};
         let orderListWithID = [];
+        const now = Date.now();
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
-            const daysToDue = DueDays[dbUser.getPurchaseStatus()] - computeDaysOfUsing(aUserOrder.orderTime, Date.now());
+            const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;

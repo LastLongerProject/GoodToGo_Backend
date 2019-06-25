@@ -9,7 +9,7 @@ const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 
-const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
+const getGlobalUsedAmount = require('../../models/computed/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;

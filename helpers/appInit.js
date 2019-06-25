@@ -1,6 +1,9 @@
 const debug = require('./debugger')('appInit');
 const DataCacheFactory = require("../models/dataCacheFactory");
-const DueDays = require('../models/enums/userEnum').DueDays;
+
+const DueStatus = require('../models/enums/userEnum').DueStatus;
+const getDueStatus = require('../models/computed/dueStatus').dueStatus;
+const UserOrderCatalog = require('../models/variable/userOrderCatalog');
 
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -12,7 +15,6 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 
@@ -249,39 +251,46 @@ module.exports = {
                 const now = Date.now();
                 userOrderList.forEach(aUserOrder => {
                     const userID = aUserOrder.user;
-                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
-                    if (aUserOrder.containerID === null) {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idNotRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idNotRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idNotRegistered.others.push(aUserOrder);
-                        }
-                    } else {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idRegistered.others.push(aUserOrder);
-                        }
+                    const theUserOrderCatalog = userDict[userID];
+                    const dueStatus = getDueStatus(aUserOrder.orderTime, theUserOrderCatalog.dbUser.getPurchaseStatus(), now);
+                    const isIdRegistered = aUserOrder.containerID === null ? "idNotRegistered" : "idRegistered";
+                    switch (dueStatus) {
+                        case DueStatus.NOT_DUE:
+                            theUserOrderCatalog[isIdRegistered].others.push(aUserOrder);
+                            break;
+                        case DueStatus.ALMOST_OVERDUE:
+                            theUserOrderCatalog[isIdRegistered].almostOverdue.push(aUserOrder);
+                            break;
+                        case DueStatus.LAST_CALL:
+                            theUserOrderCatalog[isIdRegistered].lastCall.push(aUserOrder);
+                            break;
+                        case DueStatus.OVERDUE:
+                            theUserOrderCatalog[isIdRegistered].overdue.push(aUserOrder);
+                            break;
+                        default:
+                            debug.error("Can't identfy due status: ", dueStatus);
                     }
                 });
 
                 for (let userID in userDict) {
-                    const classifiedOrder = userDict[userID];
-                    const dbUser = classifiedOrder.dbUser;
-                    const overdueAmount = classifiedOrder.idRegistered.overdue.length + classifiedOrder.idNotRegistered.overdue.length;
+                    const theUserOrderCatalog = userDict[userID];
+                    const dbUser = theUserOrderCatalog.dbUser;
+
+                    const hasUnregisteredOrder = theUserOrderCatalog.idNotRegistered.overdue.length > 0 ||
+                        theUserOrderCatalog.idNotRegistered.almostOverdue.length > 0 ||
+                        theUserOrderCatalog.idNotRegistered.lastCall.length > 0 ||
+                        theUserOrderCatalog.idNotRegistered.others.length > 0;
+                    const overdueAmount = theUserOrderCatalog.idRegistered.overdue.length +
+                        theUserOrderCatalog.idNotRegistered.overdue.length;
                     const hasOverdueContainer = overdueAmount > 0;
-                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.almostOverdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.others.length > 0;
-                    const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
+                    const almostOverdueAmount = theUserOrderCatalog.idRegistered.almostOverdue.length +
+                        theUserOrderCatalog.idNotRegistered.almostOverdue.length;
                     const hasAlmostOverdueContainer = almostOverdueAmount > 0;
+                    const lastCallAmount = theUserOrderCatalog.idNotRegistered.lastCall.length +
+                        theUserOrderCatalog.idRegistered.lastCall.length;
+
                     if (hasOverdueContainer) {
-                        userTrade.banUser(dbUser, classifiedOrder.idRegistered.overdue.concat(classifiedOrder.idNotRegistered.overdue));
+                        userTrade.banUser(dbUser, theUserOrderCatalog.idRegistered.overdue.concat(theUserOrderCatalog.idNotRegistered.overdue));
                     } else {
                         if (hasAlmostOverdueContainer && sendNotice) {
                             userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
@@ -290,8 +299,11 @@ module.exports = {
                             userTrade.unbanUser(dbUser, false);
                         }
                     }
-                    classifiedOrder.overdueAmount = overdueAmount;
-                    classifiedOrder.almostOverdueAmount = almostOverdueAmount;
+
+                    theUserOrderCatalog.overdueAmount = overdueAmount;
+                    theUserOrderCatalog.lastCallAmount = lastCallAmount;
+                    theUserOrderCatalog.almostOverdueAmount = almostOverdueAmount;
+
                     NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
                         userIsBanned: dbUser.hasBanned,
                         hasOverdueContainer,
@@ -385,19 +397,7 @@ function findUsersToCheckStatus(specificUser, cb) {
     if (specificUser) {
         const userID = specificUser._id;
         const userDict = {
-            [userID]: {
-                dbUser: specificUser,
-                idRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                },
-                idNotRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                }
-            }
+            [userID]: new UserOrderCatalog(specificUser)
         };
         const userObjectIDList = [userID];
         return cb({
@@ -412,19 +412,7 @@ function findUsersToCheckStatus(specificUser, cb) {
             const userDict = {};
             const userObjectIDList = userList.map(aUser => {
                 const userID = aUser._id;
-                userDict[userID] = {
-                    dbUser: aUser,
-                    idRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    },
-                    idNotRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    }
-                };
+                userDict[userID] = new UserOrderCatalog(aUser);
                 return userID;
             });
             return cb({
