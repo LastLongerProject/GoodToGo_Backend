@@ -799,8 +799,7 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
                         res.status(200).json({
                             phone: dbUser.user.phone,
                             apiKey: token,
-                            availableAmount: detail.data.availableAmount === null ?
-                                undefined : detail.data.availableAmount
+                            availableAmount: detail.data.availableAmount
                         });
                         redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
                     });
