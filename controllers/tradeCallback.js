@@ -22,6 +22,7 @@ module.exports = {
                 }, {
                     containerList: aCustomerTradeDetail.containerList
                 });
+                if (storeID === null) return;
                 const now = Date.now();
                 aCustomerTradeDetail.containerList.forEach(aContainer => {
                     let newOrder = new UserOrder({

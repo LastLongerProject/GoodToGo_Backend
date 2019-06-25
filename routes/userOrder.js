@@ -318,7 +318,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                         message: 'Register ContainerID of UserOrder Success'
                     });
                 });
-                tradeCallback.rent(tradeDetail);
+                tradeCallback.rent(tradeDetail, null);
                 refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
