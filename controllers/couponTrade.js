@@ -31,6 +31,13 @@ module.exports = {
                         message: `Can't find that CouponType`,
                         txt: "系統維修中>< 請稍後再試！"
                     });
+                if (!dbUser.hasPurchase && !theCouponType.availableForFreeUser)
+                    return done(null, {
+                        code: 'L008',
+                        type: 'couponTradeMessage',
+                        message: `Please Purchase First`,
+                        txt: "需成為鐵粉會員才可使用"
+                    });
                 if (theCouponType.purchaseDeadline < Date.now())
                     return done(null, {
                         code: 'L017',

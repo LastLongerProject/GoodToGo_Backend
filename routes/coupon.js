@@ -4,7 +4,6 @@ const debug = require('../helpers/debugger')('coupon');
 
 const couponTrade = require('../controllers/couponTrade');
 const validateLine = require('../middlewares/validation/validateLine').all;
-const forPurchasedUser = require('../middlewares/validation/validateLine').forPurchasedUser;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
@@ -340,7 +339,7 @@ router.get('/detail/:couponTypeID', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/purchase/:couponTypeID', validateLine, forPurchasedUser, function (req, res, next) {
+router.post('/purchase/:couponTypeID', validateLine, function (req, res, next) {
     const dbUser = req._user;
     const CouponTypeID = req.params.couponTypeID;
 

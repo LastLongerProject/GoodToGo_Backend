@@ -1,16 +1,6 @@
 const User = require('../../models/DB/userDB'); // load up the user model
 
 module.exports = {
-    forPurchasedUser: function (req, res, next) {
-        if (!req._user.hasPurchase)
-            return res.status(403).json({
-                code: 'L008',
-                type: 'couponTradeMessage',
-                message: `Please Purchase First`,
-                txt: "需成為鐵粉會員才可使用"
-            });
-        next();
-    },
     liff: function (req, res, next) {
         const lineId = req.headers['line-id'];
         if (!lineId)
