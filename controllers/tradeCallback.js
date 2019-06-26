@@ -64,7 +64,6 @@ module.exports = {
                     containerList: containerList
                 });
 
-                if (!dbCustomer.agreeTerms) return null;
                 UserOrder.find({
                     "user": dbCustomer._id,
                     "containerID": {
@@ -80,15 +79,18 @@ module.exports = {
                             if (err) return debug.error(err);
                         });
                     });
+
                     const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
                     const quantity = containerList.length;
                     const isOverdueReturn = dbCustomer.hasBanned;
                     const isPurchasedUser = dbCustomer.hasPurchase;
+
                     pointTrade.calculatePoint(dbCustomer, userOrders, (err, pointDetail) => {
                         if (err) return debug.error(err);
                         const point = pointDetail.point;
                         const bonusPointActivity = pointDetail.bonusPointActivity;
                         const overdueReturn = pointDetail.overdueReturn;
+
                         refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
                             if (err) return debug.error(err);
                             const overdueAmount = userDict[dbCustomer._id].overdueAmount;
@@ -113,6 +115,7 @@ module.exports = {
                                 }
                             });
                         });
+
                         pointTrade.sendPoint(point, dbCustomer, {
                             title: `歸還了${quantity}個容器` + `${overdueReturn > 0? `其中${overdueReturn}個已逾期`:``}`,
                             body: `${containerList.map(aContainerModel=>`#${aContainerModel.ID}`).join(", ")}` +
