@@ -128,7 +128,7 @@ module.exports = {
 };
 
 function tradeDetailIsEmpty(tradeDetail) {
-    return !(tradeDetail && tradeDetail.length > 0);
+    return !(Array.isArray(tradeDetail) && tradeDetail.length > 0);
 }
 
 function integrateTradeDetail(oriTradeDetail, keyGenerator, dataExtractor) {

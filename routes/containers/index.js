@@ -470,8 +470,8 @@ router.post(
                 type: 'returnContainerMessage',
                 message: 'Missing Order Time'
             });
-        var container = req.params.id;
-        const storeID = req.body.storeId
+        let container = req.params.id;
+        const storeID = req.body.storeId;
         if (container === 'list') container = req.body.containers;
         else container = [container];
         changeContainersState(
