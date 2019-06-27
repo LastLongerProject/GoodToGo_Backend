@@ -5,7 +5,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 
 const pointTrade = require('../controllers/pointTrade');
 
-const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
+const refreshUserUsingStatus = require('../helpers/tasks').refreshUserUsingStatus;
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 const generateUUID = require('../helpers/tools').generateUUID;

@@ -1,7 +1,7 @@
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 
-const appInit = require('./appInit');
+const tasks = require('./tasks');
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
 const fs = require('fs');
@@ -48,24 +48,24 @@ module.exports = function () {
         const shouldWait = dateCheckpoint(1) - Date.now();
         debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
         setTimeout(function timeSensitiveTask() {
-            let tasks = function tasks() {
+            let taskList = function taskList() {
                 debug.log('[Scheduler | Time-Sensitive] start');
-                appInit.checkCouponIsExpired(cb);
-                appInit.refreshUserUsingStatus(false, null, cb);
+                tasks.checkCouponIsExpired(cb);
+                tasks.refreshUserUsingStatus(false, null, cb);
             };
-            tasks();
-            setInterval(tasks, 1000 * 60 * 60 * 24);
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait);
         setTimeout(function noneTimeSensitiveTask() {
-            let tasks = function () {
+            let taskList = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
-                setTimeout(appInit.refreshContainer, 0, bot, cb);
-                setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
-                setTimeout(appInit.refreshActivity, 1000 * 60 * 7, cb);
-                setTimeout(appInit.refreshCoupon, 1000 * 60 * 8, cb);
-                setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
-                setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
-                setTimeout(appInit.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
+                setTimeout(tasks.refreshContainer, 0, bot, cb);
+                setTimeout(tasks.refreshStore, 1000 * 60 * 5, cb);
+                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, cb);
+                setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, cb);
+                setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
+                setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
+                setTimeout(tasks.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
                 setTimeout(function () {
                     UserKeys.remove({
                         'updatedAt': {
@@ -92,16 +92,16 @@ module.exports = function () {
                     });
                 }, 1000 * 60 * 25);
             };
-            tasks();
-            setInterval(tasks, 1000 * 60 * 60 * 24);
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
         setTimeout(function taskToDoAtTenInTheMorning() {
-            let tasks = function tasks() {
+            let taskList = function taskList() {
                 debug.log('[Scheduler | Ten In The Morning] start');
-                appInit.refreshUserUsingStatus(true, null, cb);
+                tasks.refreshUserUsingStatus(true, null, cb);
             };
-            tasks();
-            setInterval(tasks, 1000 * 60 * 60 * 24);
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60 * 10);
     });
 };

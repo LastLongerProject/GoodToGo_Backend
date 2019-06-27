@@ -11,7 +11,7 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
-const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
+const refreshUserUsingStatus = require('../helpers/tasks').refreshUserUsingStatus;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
