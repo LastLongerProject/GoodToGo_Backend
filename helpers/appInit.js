@@ -54,6 +54,8 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
+
+                    tasks.solveUnusualUserOrder()
                 })
             ])
             .then(() => {

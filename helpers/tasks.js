@@ -3,6 +3,7 @@ const DataCacheFactory = require("../models/dataCacheFactory");
 const DueDays = require('../models/enums/userEnum').DueDays;
 
 const User = require('../models/DB/userDB');
+const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
 const Coupon = require('../models/DB/couponDB');
 const PlaceID = require('../models/DB/placeIdDB');
@@ -17,6 +18,7 @@ const NotificationCenter = require('./notifications/center');
 const NotificationEvent = require('./notifications/enums/events');
 
 const userTrade = require('../controllers/userTrade');
+const tradeCallback = require("../controllers/tradeCallback");
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
@@ -301,6 +303,60 @@ module.exports = {
                 }
                 if (cb) return cb(null, userDict);
                 debug.log('User Status is Refresh');
+            });
+        });
+    },
+    solveUnusualUserOrder: function () {
+        UserOrder.find({
+            "archived": false,
+            "containerID": {
+                "$ne": null
+            }
+        }, (err, userOrderList) => {
+            if (err) return debug.error(err);
+            userOrderList.forEach(aUserOrder => {
+
+                User.findById(aUserOrder.user, (err, oriUser) => {
+                    if (err) return debug.error(err);
+                    if (!oriUser) return debug.error(`[FixUserOrder] Can't find oriUser, OrderID: ${aUserOrder.orderID}`);
+
+                    Trade.findOne({
+                        "container.id": aUserOrder.containerID,
+                        "oriUser.phone": oriUser.user.phone,
+                        "tradeType.action": "Return"
+                    }, {}, {
+                        sort: {
+                            tradeTime: -1
+                        }
+                    }, function (err, theTrade) {
+                        if (err) return debug.error(err);
+                        if (!theTrade) return debug.error(`[FixUserOrder] Can't find that trade, OrderID: ${aUserOrder.orderID}`);
+
+                        User.findOne({
+                            "user.phone": theTrade.newUser.phone
+                        }, (err, newUser) => {
+                            if (err) return debug.error(err);
+                            if (!newUser) return debug.error(`[FixUserOrder] Can't find newUser, OrderID: ${aUserOrder.orderID}`);
+
+                            Container.findOne({
+                                "ID": theTrade.container.id
+                            }, (err, theContainer) => {
+                                if (err) return debug.error(err);
+                                if (!theContainer) return debug.error(`[FixUserOrder] Can't find theContainer, OrderID: ${aUserOrder.orderID}`);
+
+                                const tradeDetail = {
+                                    oriUser,
+                                    newUser,
+                                    container: theContainer
+                                };
+                                tradeCallback.return([tradeDetail], {
+                                    storeID: theTrade.newUser.storeID
+                                });
+                                debug.log(`[FixUserOrder] Try to fix UserOrder, OrderID: ${aUserOrder.orderID}`);
+                            });
+                        });
+                    });
+                });
             });
         });
     }

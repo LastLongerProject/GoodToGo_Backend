@@ -47,6 +47,7 @@ module.exports = function () {
         }
         const shouldWait = dateCheckpoint(1) - Date.now();
         debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
+
         setTimeout(function timeSensitiveTask() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Time-Sensitive] start');
@@ -56,6 +57,7 @@ module.exports = function () {
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait);
+
         setTimeout(function noneTimeSensitiveTask() {
             let taskList = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
@@ -91,10 +93,12 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
+                setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
+
         setTimeout(function taskToDoAtTenInTheMorning() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Ten In The Morning] start');
