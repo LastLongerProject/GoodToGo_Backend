@@ -5,7 +5,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 
 const pointTrade = require('../controllers/pointTrade');
 
-const refreshUserUsingStatus = require('../helpers/tasks').refreshUserUsingStatus;
+const tasks = require('../helpers/tasks');
 const NotificationCenter = require('../helpers/notifications/center');
 const NotificationEvent = require('../helpers/notifications/enums/events');
 const generateUUID = require('../helpers/tools').generateUUID;
@@ -91,7 +91,7 @@ module.exports = {
                         const bonusPointActivity = pointDetail.bonusPointActivity;
                         const overdueReturn = pointDetail.overdueReturn;
 
-                        refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
+                        tasks.refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
                             if (err) return debug.error(err);
                             const overdueAmount = userDict[dbCustomer._id].overdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
