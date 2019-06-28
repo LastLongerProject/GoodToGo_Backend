@@ -93,7 +93,11 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
-                setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30);
+                setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30, (err, results) => {
+                    if (err) return debug.error(err);
+                    results.failMsg.forEach(debug.error);
+                    results.successMsg.forEach(debug.log);
+                });
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);

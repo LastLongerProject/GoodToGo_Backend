@@ -33,12 +33,17 @@ module.exports = {
             .catch(debug.error);
     },
     afterStartUp: function () {
-        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "testing") {
-            scheduler();
-        } else if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "development") {
-            debug.log("Development Server no scheduler");
+        if (process.env.NODE_ENV) {
+            const ENV = process.env.NODE_ENV.replace(/"|\s/g, "");
+            if (ENV === "testing") {
+                scheduler();
+            } else if (ENV === "development") {
+                debug.log("Development Server no scheduler");
+            } else {
+                debug.log(`${ENV} Server no scheduler`);
+            }
         } else {
-            debug.log("Deploy Server no scheduler");
+            debug.log("Undefined Server no scheduler");
         }
 
         Promise
@@ -54,8 +59,6 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
-
-                    tasks.solveUnusualUserOrder()
                 })
             ])
             .then(() => {
