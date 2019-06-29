@@ -4,6 +4,7 @@ const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine').all;
 
+const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
@@ -11,14 +12,13 @@ const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
-const refreshUserUsingStatus = require('../helpers/tasks').refreshUserUsingStatus;
+const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
-const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const storeCodeValidater = /\d{4}/;
 
@@ -203,7 +203,7 @@ router.post('/add', validateLine, function (req, res, next) {
                     containerAmount,
                     time: now
                 });
-                refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
             })
@@ -319,7 +319,7 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                     });
                 });
                 tradeCallback.rent(tradeDetail, null);
-                refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
             });

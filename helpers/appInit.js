@@ -55,7 +55,7 @@ module.exports = {
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    tasks.refreshUserUsingStatus(false, null, err => {
+                    tasks.refreshAllUserUsingStatus(false, err => {
                         if (err) return reject(err);
                         resolve();
                     });

@@ -1,6 +1,5 @@
 const debug = require('./debugger')('tasks');
 const DataCacheFactory = require("../models/dataCacheFactory");
-const DueDays = require('../models/enums/userEnum').DueDays;
 
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
@@ -13,12 +12,8 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
-const computeDaysOfUsing = require("./tools").computeDaysOfUsing;
-const NotificationCenter = require('./notifications/center');
-const NotificationEvent = require('./notifications/enums/events');
-
-const userTrade = require('../controllers/userTrade');
 const tradeCallback = require("../controllers/tradeCallback");
+const userTrade = require("../controllers/userTrade");
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
@@ -235,76 +230,8 @@ module.exports = {
             }
         });
     },
-    refreshUserUsingStatus: function (sendNotice, specificUser, cb) {
-        if (!(specificUser instanceof User)) specificUser = null;
-        findUsersToCheckStatus(specificUser, reply => {
-            const userDict = reply.userDict;
-            const userObjectIDList = reply.userObjectIDList;
-            UserOrder.find({
-                "user": {
-                    "$in": userObjectIDList
-                },
-                "archived": false
-            }, (err, userOrderList) => {
-                if (err) return cb(err);
-
-                const now = Date.now();
-                userOrderList.forEach(aUserOrder => {
-                    const userID = aUserOrder.user;
-                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
-                    if (aUserOrder.containerID === null) {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idNotRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idNotRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idNotRegistered.others.push(aUserOrder);
-                        }
-                    } else {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idRegistered.others.push(aUserOrder);
-                        }
-                    }
-                });
-
-                for (let userID in userDict) {
-                    const classifiedOrder = userDict[userID];
-                    const dbUser = classifiedOrder.dbUser;
-                    const overdueAmount = classifiedOrder.idRegistered.overdue.length + classifiedOrder.idNotRegistered.overdue.length;
-                    const hasOverdueContainer = overdueAmount > 0;
-                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.almostOverdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.others.length > 0;
-                    const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
-                    const hasAlmostOverdueContainer = almostOverdueAmount > 0;
-                    if (hasOverdueContainer) {
-                        userTrade.banUser(dbUser, classifiedOrder.idRegistered.overdue.concat(classifiedOrder.idNotRegistered.overdue));
-                    } else {
-                        if (hasAlmostOverdueContainer && sendNotice) {
-                            userTrade.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
-                        }
-                        if (dbUser.bannedTimes <= 1) {
-                            userTrade.unbanUser(dbUser, false);
-                        }
-                    }
-                    classifiedOrder.overdueAmount = overdueAmount;
-                    classifiedOrder.almostOverdueAmount = almostOverdueAmount;
-                    NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-                        userIsBanned: dbUser.hasBanned,
-                        hasOverdueContainer,
-                        hasUnregisteredOrder,
-                        hasAlmostOverdueContainer
-                    });
-                }
-                if (cb) return cb(null, userDict);
-                debug.log('User Status is Refresh');
-            });
-        });
+    refreshAllUserUsingStatus: function (sendNotice, cb) {
+        userTrade.refreshUserUsingStatus(sendNotice, null, cb);
     },
     solveUnusualUserOrder: function (cb) {
         UserOrder.find({
@@ -479,58 +406,4 @@ function couponListGenerator(cb) {
         DataCacheFactory.set(DataCacheFactory.keys.COUPON_TYPE, couponTypeDict);
         cb();
     });
-}
-
-function findUsersToCheckStatus(specificUser, cb) {
-    if (specificUser) {
-        const userID = specificUser._id;
-        const userDict = {
-            [userID]: {
-                dbUser: specificUser,
-                idRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                },
-                idNotRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                }
-            }
-        };
-        const userObjectIDList = [userID];
-        return cb({
-            userDict,
-            userObjectIDList
-        });
-    } else {
-        User.find({
-            "agreeTerms": true
-        }, (err, userList) => {
-            if (err) return debug.error(err);
-            const userDict = {};
-            const userObjectIDList = userList.map(aUser => {
-                const userID = aUser._id;
-                userDict[userID] = {
-                    dbUser: aUser,
-                    idRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    },
-                    idNotRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    }
-                };
-                return userID;
-            });
-            return cb({
-                userDict,
-                userObjectIDList
-            });
-        })
-    }
 }
