@@ -15,7 +15,7 @@ const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
-const tasks = require('../../helpers/tasks');
+const tools = require('../../helpers/tools');
 const NotificationCenter = require('../../helpers/notifications/center');
 const NotificationEvent = require('../../helpers/notifications/enums/events');
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
@@ -958,7 +958,7 @@ router.get(
 );
 
 router.post('/triggerTradeCallback/return/all', regAsAdminManager, validateRequest, function (req, res, next) {
-    tasks.solveUnusualUserOrder((err, results) => {
+    tools.solveUnusualUserOrder((err, results) => {
         if (err) return next(err);
         res.json({
             success: true,
