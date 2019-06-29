@@ -2,7 +2,6 @@ const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 
 const tasks = require('./tasks');
-const tools = require('./tools');
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
 const fs = require('fs');
@@ -94,7 +93,7 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
-                setTimeout(tools.solveUnusualUserOrder, 1000 * 60 * 30, (err, results) => {
+                setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30, (err, results) => {
                     if (err) return debug.error(err);
                     results.failMsg.forEach(debug.error);
                     results.successMsg.forEach(debug.log);
