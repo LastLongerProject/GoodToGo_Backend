@@ -169,7 +169,7 @@ module.exports = {
             }, function (err, response) {
                 if (err) return debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                 const rowsFromSheet = response.data.values;
-                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== ""));
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length > 11));
                 Promise
                     .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({

@@ -4,20 +4,20 @@ const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine').all;
 
+const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
-const refreshUserUsingStatus = require('../helpers/appInit').refreshUserUsingStatus;
+const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
-const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
 const storeCodeValidater = /\d{4}/;
 
@@ -203,7 +203,7 @@ router.post('/add', validateLine, function (req, res, next) {
                     containerAmount,
                     time: now
                 });
-                refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
             })
@@ -318,8 +318,8 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                         message: 'Register ContainerID of UserOrder Success'
                     });
                 });
-                tradeCallback.rent(tradeDetail);
-                refreshUserUsingStatus(false, dbUser, err => {
+                tradeCallback.rent(tradeDetail, null);
+                userTrade.refreshUserUsingStatus(false, dbUser, err => {
                     if (err) return debug.error(err);
                 });
             });

@@ -3,25 +3,29 @@ const router = express.Router();
 const debug = require('../../helpers/debugger')('containers');
 const redis = require("../../models/redis");
 
+const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
+
 const Box = require('../../models/DB/boxDB');
+const User = require('../../models/DB/userDB');
 const Trade = require('../../models/DB/tradeDB');
-const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
-
 const getGlobalUsedAmount = require('../../models/computed/containerStatistic').global_used;
-const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+
+const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
 const NotificationEvent = require('../../helpers/notifications/enums/events');
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
+
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
+
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
 const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
@@ -470,8 +474,8 @@ router.post(
                 type: 'returnContainerMessage',
                 message: 'Missing Order Time'
             });
-        var container = req.params.id;
-        const storeID = req.body.storeId
+        let container = req.params.id;
+        const storeID = req.body.storeId;
         if (container === 'list') container = req.body.containers;
         else container = [container];
         changeContainersState(
@@ -955,6 +959,17 @@ router.get(
         });
     }
 );
+
+router.post('/triggerTradeCallback/return/all', regAsAdminManager, validateRequest, function (req, res, next) {
+    tasks.solveUnusualUserOrder((err, results) => {
+        if (err) return next(err);
+        res.json({
+            success: true,
+            msg: "Try To Fix Following User Order",
+            results
+        });
+    });
+});
 
 router.post('/triggerTradeCallback/return/:container/:userPhone', regAsAdminManager, validateRequest, function (req, res, next) {
     const containerID = req.params.container;

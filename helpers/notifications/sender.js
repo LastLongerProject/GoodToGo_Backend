@@ -23,6 +23,7 @@ module.exports = {
                 request
                     .post(url, formatted)
                     .catch(error => {
+                        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "local_development") return null;
                         if (error.response) {
                             debug.error(`[Webhook|res] Data: ${error.response.data}`);
                             debug.error(`[Webhook|res] Status: ${error.response.status}`);
