@@ -18,12 +18,12 @@ module.exports = {
             body: logContext.body,
             quantityChange: point
         });
-        newPointLog.save((err) => {
-            if (err) debug.error(err);
-        });
         toUser.point += point;
         toUser.save((err) => {
-            if (err) debug.error(err);
+            if (err) return debug.error(err);
+            newPointLog.save((err) => {
+                if (err) return debug.error(err);
+            });
         });
     }
 };
