@@ -24,7 +24,8 @@ module.exports = {
     TradeAction: Object.freeze({
         BANNED: "banned",
         UNBANNED: "unbanned",
-        PURCHASED: "purchased"
+        PURCHASED: "purchased",
+        FIX_POINT: "fix_point"
     }),
     RentalQualification: Object.freeze({
         BANNED: "banned",

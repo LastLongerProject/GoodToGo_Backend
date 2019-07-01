@@ -188,6 +188,20 @@ const thisModule = module.exports = {
                 });
             }
         });
+    },
+    fixPoint: function (dbUser, newPoint) {
+        const oriPoint = dbUser.point;
+        dbUser.point = newPoint;
+        dbUser.save(err => {
+            if (err) return debug.error(err);
+            UserTradeLog.create({
+                "user": dbUser.user.phone,
+                "action": TradeAction.FIX_POINT,
+                "describe": `OriPoint: ${oriPoint}, NewPoint: ${newPoint}`
+            }, err => {
+                if (err) return debug.error(err);
+            });
+        });
     }
 };
 
