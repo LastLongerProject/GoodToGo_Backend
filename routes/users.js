@@ -985,11 +985,12 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     }, function (err, tradeList) {
         if (err) return next(err);
 
+        const rentHistory = {};
         const intergratedTrade = {};
         tradeList.forEach(aTrade => {
             const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
             if (aTrade.tradeType.action === "Rent") {
-                intergratedTrade[tradeKey] = {
+                rentHistory[tradeKey] = {
                     containerID: `#${aTrade.container.id}`,
                     containerType: ContainerTypeDict[aTrade.container.typeCode].name,
                     rentTime: aTrade.tradeTime,
@@ -997,8 +998,8 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
 
                 };
             } else if (aTrade.tradeType.action === "Return") {
-                if (!intergratedTrade[tradeKey]) return;
-                Object.assign(intergratedTrade[tradeKey], {
+                if (!rentHistory[tradeKey]) return;
+                intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
                     returnTime: aTrade.tradeTime,
                     returnStore: StoreDict[aTrade.newUser.storeID].name
                 });
