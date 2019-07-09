@@ -994,8 +994,7 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
                     containerID: `#${aTrade.container.id}`,
                     containerType: ContainerTypeDict[aTrade.container.typeCode].name,
                     rentTime: aTrade.tradeTime,
-                    rentStore: StoreDict[aTrade.oriUser.storeID].name,
-
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name
                 };
             } else if (aTrade.tradeType.action === "Return") {
                 if (!rentHistory[tradeKey]) return;
