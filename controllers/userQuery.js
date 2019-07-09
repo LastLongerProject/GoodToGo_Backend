@@ -47,9 +47,7 @@ module.exports = {
         const verificationCode = req.body.verification_code;
         let options = req._options || {};
 
-        if (typeof phone === 'undefined' ||
-            (typeof password === 'undefined' &&
-                !(typeof req._user !== 'undefined' && role.typeCode === UserRole.CLERK))) {
+        if (typeof phone === 'undefined' || typeof password === 'undefined') {
             return done(null, false, {
                 code: 'D001',
                 type: 'signupMessage',
@@ -78,18 +76,12 @@ module.exports = {
             if (err)
                 return done(err);
             if (dbUser && dbUser.hasVerified) {
+                let modifySomething = false;
                 if (dbUser.user.password === null) {
                     dbUser.user.password = dbUser.generateHash(password);
-                    dbUser.save(function (err) {
-                        if (err) return done(err);
-                        return done(null, dbUser, {
-                            body: {
-                                type: 'signupMessage',
-                                message: 'Authentication succeeded'
-                            }
-                        });
-                    });
-                } else if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                    modifySomething = true;
+                }
+                if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
                     switch (role.typeCode) {
                         case UserRole.CLERK:
                             dbUser.roles.typeList.push(UserRole.CLERK);
@@ -106,22 +98,24 @@ module.exports = {
                             };
                             break;
                     }
-                    dbUser.save(function (err) {
-                        if (err) return done(err);
-                        return done(null, dbUser, {
-                            body: {
-                                type: 'signupMessage',
-                                message: 'Authentication succeeded'
-                            }
-                        });
-                    });
-                } else {
+                    modifySomething = true;
+                }
+                if (!modifySomething) {
                     return done(null, false, {
                         code: 'D002',
                         type: 'signupMessage',
                         message: 'That phone is already taken'
                     });
                 }
+                dbUser.save(function (err) {
+                    if (err) return done(err);
+                    return done(null, dbUser, {
+                        body: {
+                            type: 'signupMessage',
+                            message: 'Authentication succeeded'
+                        }
+                    });
+                });
             } else {
                 if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     sendVerificationCode(phone, done);

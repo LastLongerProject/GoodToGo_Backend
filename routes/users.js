@@ -34,6 +34,8 @@ const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 const NotificationCenter = require('../helpers/notifications/center');
 
+const setDefaultPassword = require('../config/keys').setDefaultPassword;
+
 router.post(['/signup', '/signup/*'], function (req, res, next) {
     req._options = {};
     req._setSignupVerification = function (options) {
@@ -151,6 +153,7 @@ router.post(
             needVerified: false,
             passVerify: true
         });
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -200,6 +203,7 @@ router.post(
             passVerify: true
         });
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -342,6 +346,7 @@ router.post(
             needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
             passVerify: true
         });
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
