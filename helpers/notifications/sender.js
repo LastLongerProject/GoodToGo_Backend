@@ -6,23 +6,24 @@ const SNS = require('../aws/SNS');
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
 module.exports = {
-    sns: function(formatted) {
+    sns: function (formatted) {
         if (formatted) {
-            return function(arn) {
+            return function (arn) {
                 SNS.sns_publish(arn, formatted.content.title, formatted.content.body, formatted.content.options, (err, stack) => {
-                    if (err) debug.error(`${formatted.errMsgPrefix} Err：${JSON.stringify(err)} Stack：${JSON.stringify(stack)}`);
+                    if (err) debug.error(`${formatted.errMsgPrefix} Err：${err.message}`);
                 });
             };
         } else {
-            return function(arn) {};
+            return function (arn) {};
         }
     },
-    webhook: function(formatted) {
+    webhook: function (formatted) {
         if (formatted) {
-            return function(url) {
+            return function (url) {
                 request
                     .post(url, formatted)
                     .catch(error => {
+                        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "local_development") return null;
                         if (error.response) {
                             debug.error(`[Webhook|res] Data: ${error.response.data}`);
                             debug.error(`[Webhook|res] Status: ${error.response.status}`);
@@ -36,17 +37,17 @@ module.exports = {
                     });
             };
         } else {
-            return function(url) {};
+            return function (url) {};
         }
     },
-    socket: function(formatted) {
-        const SocketEmitter = DataCacheFactory.get("SocketEmitter");
+    socket: function (formatted) {
+        const SocketEmitter = DataCacheFactory.get(DataCacheFactory.keys.SOCKET_EMITTER);
         if (formatted && SocketEmitter) {
-            return function(event) {
+            return function (event) {
                 SocketEmitter.emit(event, formatted);
             };
         } else {
-            return function(url) {};
+            return function (url) {};
         }
     }
 };

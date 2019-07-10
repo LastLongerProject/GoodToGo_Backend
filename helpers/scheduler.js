@@ -1,6 +1,7 @@
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
-const appInit = require('./appInit');
+
+const tasks = require('./tasks');
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
 
 const fs = require('fs');
@@ -8,7 +9,10 @@ const ROOT_DIR = require('../config/config').rootDir;
 const crypto = require('crypto');
 const debug = require('./debugger')('scheduler');
 
-function cb() {} //do nothing
+function generalCb(err) {
+    if (err) return debug.error(err);
+}
+
 function driveCb(succeed, data) {
     if (succeed) {
         debug.log(data.type + ' succeed');
@@ -22,16 +26,48 @@ module.exports = function () {
         'user.phone': '0900000000'
     }, (err, bot) => {
         if (err) return debug.error(err);
-        if (!bot) return debug.error('missing bot acount');
-        var dateNow = new Date();
-        var shouldWait = dateCheckpoint(1) - dateNow;
-        setTimeout(function () {
-            setInterval(function tasks() {
-                debug.log('scheduler start');
-                setTimeout(appInit.refreshContainer, 0, bot, cb);
-                setTimeout(appInit.refreshStore, 1000 * 60 * 5, cb);
-                setTimeout(appInit.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
-                setTimeout(appInit.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
+        if (!bot) {
+            bot = new User({
+                user: {
+                    phone: "0900000000",
+                    password: null,
+                    name: "GoodToGoBot"
+                },
+                roles: {
+                    typeList: ["bot", "clerk"],
+                    clerk: {
+                        storeID: 17,
+                        manager: false
+                    }
+                }
+            });
+            bot.save(err => {
+                if (err) debug.error(err);
+            });
+        }
+        const shouldWait = dateCheckpoint(1) - Date.now();
+        debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
+
+        setTimeout(function timeSensitiveTask() {
+            let taskList = function taskList() {
+                debug.log('[Scheduler | Time-Sensitive] start');
+                tasks.checkCouponIsExpired(generalCb);
+                tasks.refreshAllUserUsingStatus(false, generalCb);
+            };
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
+        }, shouldWait);
+
+        setTimeout(function noneTimeSensitiveTask() {
+            let taskList = function () {
+                debug.log('[Scheduler | None-Time-Sensitive] start');
+                setTimeout(tasks.refreshContainer, 0, bot, generalCb);
+                setTimeout(tasks.refreshStore, 1000 * 60 * 5, generalCb);
+                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, generalCb);
+                setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, generalCb);
+                setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
+                setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
+                setTimeout(tasks.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
                 setTimeout(function () {
                     UserKeys.remove({
                         'updatedAt': {
@@ -57,8 +93,24 @@ module.exports = function () {
                         });
                     });
                 }, 1000 * 60 * 25);
-                return tasks;
-            }(), 1000 * 60 * 60 * 24);
+                setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30, (err, results) => {
+                    if (err) return debug.error(err);
+                    results.failMsg.forEach(debug.error);
+                    results.successMsg.forEach(debug.log);
+                });
+                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
+            };
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
         }, shouldWait + 1000 * 60 * 60);
+
+        setTimeout(function taskToDoAtTenInTheMorning() {
+            let taskList = function taskList() {
+                debug.log('[Scheduler | Ten In The Morning] start');
+                tasks.refreshAllUserUsingStatus(true, generalCb);
+            };
+            taskList();
+            setInterval(taskList, 1000 * 60 * 60 * 24);
+        }, shouldWait + 1000 * 60 * 60 * 10);
     });
 };

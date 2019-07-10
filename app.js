@@ -23,6 +23,9 @@ const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
+const coupon = require('./routes/coupon');
+const userOrder = require('./routes/userOrder');
+const notificationTest = require('./routes/notificationTest');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
@@ -54,17 +57,23 @@ app.use((req, res, next) => {
 });
 
 app.use('/manage', manage);
+app.use('/images', (req, res, next) => {
+    res.setHeader('Cache-Control', `max-age=${60 * 60 * 24 * 3}`);
+    next();
+}, images);
 
 app.use(timeout('10s'));
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
-app.use('/stores', stores);
 app.use('/users', users);
+app.use('/stores', stores);
+app.use('/coupon', coupon);
+app.use('/userOrder', userOrder);
 app.use('/containers', containers);
-app.use('/images', images);
 app.use('/deliveryList', deliveryList);
+app.use('/notificationTest', notificationTest);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -106,20 +115,17 @@ require("./models/redis");
 require("./models/mongo")(mongoose, startServer);
 
 process.on('SIGINT', () => {
-    debug.log('SIGINT signal received.')
+    debug.log('SIGINT signal received');
     let server = app.get('server');
     server.close(function (err) {
         if (err) {
-            debug.error(err)
-            process.exit(1)
+            debug.error(err);
         }
-
         mongoose.connection.close(function () {
-            debug.log('Mongoose connection disconnected')
-            process.exit(0)
-        })
-    })
-})
+            debug.log('Mongoose connection disconnected');
+        });
+    });
+});
 
 function startServer() {
     /**
@@ -148,7 +154,7 @@ function startServer() {
         .use(mSocket.auth)
         .on('connection', mSocket.serverEvent);
     app.set('socket.io', io);
-    DataCacheFactory.set('SocketEmitter', SocketEmitter);
+    DataCacheFactory.set(DataCacheFactory.keys.SOCKET_EMITTER, SocketEmitter);
     process.send('ready');
 }
 
@@ -225,7 +231,8 @@ function cors() {
     return function cors(req, res, next) {
         if (!res.headersSent) {
             res.header("Access-Control-Allow-Origin", "*");
-            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime");
+            res.header("Access-Control-Expose-Headers", "Authorization");
+            res.header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, apikey, authorization, reqid, reqtime, line-id");
         }
         return next();
     };

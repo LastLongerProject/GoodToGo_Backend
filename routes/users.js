@@ -3,30 +3,49 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
+const userTrade = require('../controllers/userTrade');
+const pointTrade = require('../controllers/pointTrade');
+const couponTrade = require('../controllers/couponTrade');
 
+const validateLine = require('../middlewares/validation/validateLine');
 const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest')
-    .JWT;
+const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
+const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
+const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
+const NotificationEvent = require('../helpers/notifications/enums/events');
 const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 
 const redis = require('../models/redis');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
+const Coupon = require('../models/DB/couponDB');
+const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
-const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
+const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
+const UserRole = require('../models/enums/userEnum').UserRole;
+const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
+const NotificationCenter = require('../helpers/notifications/center');
+
+router.post(['/signup', '/signup/*'], function (req, res, next) {
+    req._options = {};
+    req._setSignupVerification = function (options) {
+        if (typeof options === "undefined" ||
+            typeof options.passVerify === "undefined" ||
+            typeof options.passVerify === "undefined")
+            return next(new Error("Server Internal Error: Signup"));
+        req._options.passVerify = options.passVerify;
+        req._options.needVerified = options.needVerified;
+    };
+    next();
+});
 
 /**
  * @apiName SignUp
@@ -58,7 +77,7 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} verification code from sms
+ * @apiParam {String} verification_code verification code from sms
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -70,13 +89,13 @@ const getGlobalUsedAmount = require('../models/variables/globalUsedAmount');
 
 router.post('/signup', validateDefault, function (req, res, next) {
     // for CUSTOMER
-    req.body.active = true; // !!! Need to send by client when need purchasing !!!
+    req._options.registerMethod = RegisterMethod.CUSTOMER_APP;
     userQuery.signup(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -113,21 +132,25 @@ router.post(
         // for CLERK
         var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (dbKey.roleType === UserRole.CLERK) {
             req.body.role = {
-                typeCode: 'clerk',
+                typeCode: UserRole.CLERK,
                 manager: false,
                 storeID: dbUser.roles.clerk.storeID
             };
-        } else if (dbKey.roleType === 'admin') {
+            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
+        } else if (dbKey.roleType === UserRole.ADMIN) {
             req.body.role = {
-                typeCode: 'admin',
+                typeCode: UserRole.ADMIN,
                 manager: false,
                 stationID: dbUser.roles.admin.stationID,
             };
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req.body.active = true;
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -167,15 +190,16 @@ router.post(
     validateRequest,
     function (req, res, next) {
         // for CLERK
-        var dbUser = req._user;
-        var dbKey = req._key;
         req.body.role = {
-            typeCode: 'clerk',
+            typeCode: UserRole.CLERK,
             manager: true,
             storeID: req.body.storeID
         };
-        req.body.active = true;
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: false,
+            passVerify: true
+        });
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -183,6 +207,98 @@ router.post(
                 return res.status(401).json(info);
             } else {
                 res.json(info.body);
+            }
+        });
+    }
+);
+
+/**
+ * @apiName SignUp-LineUser
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
+ * @apiParam {String} phone phone of the User.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 205 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Send Again With Verification Code' 
+ *     }
+ * @apiUse SignupError
+ */
+
+/**
+ * @apiName SignUp-LineUser (add verification code)
+ * @apiGroup Users
+ * @apiPermission none
+ *
+ * @api {post} /users/signup/lineUser Sign up for new line user (step 2)
+ * @apiUse DefaultSecurityMethod
+ * 
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
+ * @apiParam {String} phone phone of the User.
+ * @apiParam {String} verification_code verification code from sms.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded',
+ *          userPurchaseStatus: String ("free_user" or "purchased_user")
+ *     }
+ * @apiUse SignupError
+ */
+
+router.post(
+    '/signup/lineUser',
+    validateDefault,
+    function (req, res, next) {
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.LINE;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
+            } else {
+                res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug.error(err);
+                });
+            }
+        });
+    }
+);
+
+router.post(
+    '/signup/lineUserRoot',
+    regAsAdminManager,
+    validateRequest,
+    function (req, res, next) {
+        req._options.passVerify = true;
+        req._options.agreeTerms = true;
+        req._options.registerMethod = RegisterMethod.BY_ADMIN;
+        userQuery.signupLineUser(req, function (err, user, info) {
+            if (err) {
+                return next(err);
+            } else if (!user) {
+                return res.status(401).json(info);
+            } else if (info.needVerificationCode) {
+                return res.status(205).json(info.body);
+            } else {
+                res.json(info.body);
+                couponTrade.welcomeCoupon(user, (err) => {
+                    if (err) debug.error(err);
+                });
             }
         });
     }
@@ -198,7 +314,6 @@ router.post(
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
- * @apiParam {String} [active] Add the param if the category of the store is 1, and set the value to false 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -214,15 +329,19 @@ router.post(
     validateRequest,
     function (req, res, next) {
         // for ADMIN and CLERK
-        req.body.active = req.body.active ? req.body.active : true;
-        var dbUser = req._user;
         var dbKey = req._key;
-        if (dbKey.roleType === 'clerk') {
+        if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
             req.body.role = {
-                typeCode: 'customer'
+                typeCode: UserRole.CUSTOMER
             };
+            req._options.registerMethod = RegisterMethod.CLECK_APP;
+        } else {
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
         }
-        req._passCode = true;
+        req._setSignupVerification({
+            needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
+            passVerify: true
+        });
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -234,7 +353,6 @@ router.post(
         });
     }
 );
-
 
 /**
  * @apiName Login
@@ -353,7 +471,7 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
             return next(err);
         } else if (!user) {
             return res.status(401).json(info);
-        } else if (info.needCode) {
+        } else if (info.needVerificationCode) {
             return res.status(205).json(info.body);
         } else {
             res.json(info.body);
@@ -524,7 +642,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
  * @apiName DataByToken
  * @apiGroup Users
  * 
- * @api {get} /users/data/:token Get user data by token
+ * @api {get} /users/byToken Get user data by token
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -564,8 +682,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
             },
             (err, dbUser) => {
                 if (err) return next(err);
-                var store = DataCacheFactory.get('store');
-                var containerType = DataCacheFactory.get('containerType');
+                var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+                var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
                 Trade.find({
                         $or: [{
                                 'tradeType.action': 'Rent',
@@ -661,8 +779,8 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
 
 router.get('/data', validateRequest, function (req, res, next) {
     var dbUser = req._user;
-    var store = DataCacheFactory.get('store');
-    var containerType = DataCacheFactory.get('containerType');
+    var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
             $or: [{
                     'tradeType.action': 'Rent',
@@ -729,6 +847,341 @@ router.get('/data', validateRequest, function (req, res, next) {
             });
         }
     );
+});
+
+/**
+ * @apiName PointLog
+ * @apiGroup Users
+ * 
+ * @api {get} /users/pointLog Get user pointLog
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *	        pointLogs : [
+ *		    {
+ *			    logTime : Date,
+ *			    title : String,
+ *			    body : String,
+ *			    quantityChange : Number
+ *		    }, ...
+ *	        ]
+ *      }
+ */
+
+router.get('/pointLog', validateLine.all, function (req, res, next) {
+    var dbUser = req._user;
+
+    PointLog.find({
+        "user": dbUser._id
+    }, {}, {
+        sort: {
+            logTime: -1
+        }
+    }, function (err, pointLogList) {
+        if (err) return next(err);
+
+        res.json({
+            pointLogs: pointLogList.map(aPointLog => ({
+                logTime: aPointLog.logTime,
+                title: aPointLog.title,
+                body: aPointLog.body,
+                quantityChange: aPointLog.quantityChange
+            }))
+        });
+    });
+});
+
+/**
+ * @apiName PurchaseStatus
+ * @apiGroup Users
+ * 
+ * @api {get} /users/purchaseStatus Get user purchaseStatus
+ * @apiUse LINE_Channel
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *         purchaseStatus : String,
+ *         userGroup : String
+ *     }
+ */
+
+router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
+    var dbUser = req._user;
+
+    res.json({
+        purchaseStatus: dbUser.getPurchaseStatus(),
+        userGroup: dbUser.roles.customer.group
+    });
+});
+
+/**
+ * @apiName GetMyPhone
+ * @apiGroup Users
+ * 
+ * @api {get} /users/getMyPhone Get user's phone number
+ * @apiUse LINE_Channel
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *         phone : String
+ *     }
+ */
+
+router.get('/getMyPhone', validateLine.all, function (req, res, next) {
+    const dbUser = req._user;
+
+    res.json({
+        phone: dbUser.user.phone
+    });
+});
+
+/**
+ * @apiName UsedHistory
+ * @apiGroup Users
+ * 
+ * @api {get} /users/usedHistory Get user's container using history 
+ * @apiUse LINE
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *  HTTP/1.1 200 
+ *  {
+ *      history : [
+ *          {
+ *              containerID : String, // "#123"
+ *              containerType : String, // "大器杯"
+ *              rentTime : Date,
+ *              rentStore : String, // "好盒器基地"
+ *              returnTime : Date,
+ *              returnStore : String // "好盒器基地"
+ *          }, ...
+ *      ]
+ *  }
+ */
+
+router.get('/usedHistory', validateLine.all, function (req, res, next) {
+    const dbUser = req._user;
+    const ContainerTypeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+
+    Trade.find({
+        "$or": [{
+                "newUser.phone": dbUser.user.phone,
+                "tradeType.action": "Rent",
+                "container.inLineSystem": true
+            },
+            {
+                "oriUser.phone": dbUser.user.phone,
+                "tradeType.action": "Return"
+            }
+        ]
+    }, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        const rentHistory = {};
+        const intergratedTrade = {};
+        tradeList.forEach(aTrade => {
+            const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
+            if (aTrade.tradeType.action === "Rent") {
+                rentHistory[tradeKey] = {
+                    containerID: `#${aTrade.container.id}`,
+                    containerType: ContainerTypeDict[aTrade.container.typeCode].name,
+                    rentTime: aTrade.tradeTime,
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name
+                };
+            } else if (aTrade.tradeType.action === "Return") {
+                if (!rentHistory[tradeKey]) return;
+                intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
+                    returnTime: aTrade.tradeTime,
+                    returnStore: StoreDict[aTrade.newUser.storeID].name
+                });
+            }
+        });
+
+        res.json({
+            history: Object.values(intergratedTrade).reverse()
+        });
+    });
+});
+
+router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const userToAddPoint = req.params.phone;
+
+    const pointMultiplier = parseInt(req.body.pointMultiplier);
+    const toStore = parseInt(req.body.toStore);
+    const containerIdList = req.body.containerIdList;
+    const bonusPointActivity = req.body.bonusPointActivity;
+
+    if (isNaN(pointMultiplier) || isNaN(toStore) || !Array.isArray(containerIdList) || (bonusPointActivity !== null && typeof bonusPointActivity.txt === "undefined"))
+        return res.status(403).json({
+            success: false,
+            msg: "Para not complete"
+        });
+
+    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const quantity = containerIdList.length;
+    const point = quantity * pointMultiplier;
+
+    if (quantity === 0) return res.status(403).json({
+        success: false,
+        msg: "No container"
+    });
+
+    User.findOne({
+        "user.phone": userToAddPoint
+    }, (err, theUser) => {
+        if (err) return next(err);
+        if (!theUser) return res.status(403).json({
+            success: false,
+            msg: "Can't find the User"
+        });
+        pointTrade.sendPoint(point, theUser, {
+            title: `歸還了${quantity}個容器`,
+            body: `${containerIdList.join(", ")}` +
+                ` @ ${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
+        });
+        res.json({
+            success: true,
+            phone: userToAddPoint,
+            newPoint: theUser.point,
+            msg: "Done"
+        });
+    });
+});
+
+
+router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const userToUnbind = req.params.phone;
+    User.updateOne({
+        "user.phone": userToUnbind
+    }, {
+        "agreeTerms": false,
+        "$unset": {
+            "user.line_liff_userID": 1,
+            "user.line_channel_userID": 1
+        }
+    }, (err, raw) => {
+        res.json({
+            err,
+            raw
+        });
+    });
+});
+
+router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
+    const usersToAdd = req.body.userList;
+    const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) =>
+        userTrade.purchase(aUser, (err, oriUser) => {
+            if (err) return reject(err);
+            resolve(oriUser);
+        })));
+    Promise
+        .all(tasks)
+        .then(results => {
+            results = results.filter(aResult => aResult !== null)
+            debug.log(`Add ${results.length} Purchase User.`);
+            res.json({
+                success: true,
+                userList: results
+            });
+        })
+        .catch(next);
+});
+
+router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const byUser = req._user;
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        if (!dbUser) return res.json({
+            success: false,
+            describe: "Can't find user"
+        });
+        userTrade.banUser(dbUser, null, byUser.user.phone);
+        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+            userIsBanned: dbUser.hasBanned,
+            hasOverdueContainer: 9999,
+            hasUnregisteredOrder: 9999,
+            hasAlmostOverdueContainer: 9999
+        });
+        res.json({
+            success: true
+        });
+    });
+});
+
+router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+    const byUser = req._user;
+    const userPhone = req.params.phone;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, dbUser) => {
+        if (err) return next(err);
+        if (!dbUser) return res.json({
+            success: false,
+            describe: "Can't find user"
+        });
+        userTrade.unbanUser(dbUser, true, byUser.user.phone);
+        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+            userIsBanned: dbUser.hasBanned,
+            hasOverdueContainer: 9999,
+            hasUnregisteredOrder: 9999,
+            hasAlmostOverdueContainer: 9999
+        });
+        res.json({
+            success: true
+        });
+    });
+});
+
+router.get("/bannedUser", (req, res, next) => { // none json reply
+    User.find({
+        "hasBanned": true
+    }, (err, result) => {
+        if (err) return next(err);
+        let txt = "";
+        result.forEach(aResult => {
+            txt += `[${aResult.user.phone}(${aResult.user.name})]、`
+        })
+        res.send(txt).end();
+    });
+});
+
+router.get("/couponUsingStatus", (req, res, next) => { // none json reply
+    User.find({
+        "hasPurchase": true,
+        "agreeTerms": true
+    }, (err, result) => {
+        if (err) return next(err);
+        Coupon.find({
+            "used": true
+        }, (err, couponList) => {
+            if (err) return next(err);
+            const couponDict = {};
+            couponList.forEach(aCoupon => {
+                if (!couponDict[aCoupon.user]) couponDict[aCoupon.user] = 0;
+                couponDict[aCoupon.user]++;
+            });
+            let txt = '<table border="1">' +
+                "<tr><th>電話（名字）</th><th>點數</th><th>使用過的優惠券數量</th></tr>";
+            result.forEach(aResult => {
+                txt += `<tr><td>${aResult.user.phone}（${aResult.user.name || "未命名"}）</td>` +
+                    `<td>${aResult.point}</td>` +
+                    `<td>${couponDict[aResult._id] || 0}</tr>`;
+            })
+            txt += "</table>"
+            res.send(txt).end();
+        });
+    });
 });
 
 module.exports = router;

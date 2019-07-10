@@ -154,7 +154,7 @@ describe('api-cycle', function() {
 
             let auth = jwt.encode(payload, roles.clerk.secretKey);
             request(app)
-                .get('/stores/getUser/0900000000')
+                .get('/stores/getUser/0905519292')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
@@ -198,6 +198,7 @@ describe('api-cycle', function() {
                         console.log(res.body);
                         return done(err);
                     }
+                    console.log(res.body);
                     done();
                 });
         });

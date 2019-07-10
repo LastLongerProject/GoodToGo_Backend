@@ -1,34 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jwt-simple');
-const crypto = require('crypto');
 const debug = require('../helpers/debugger')('deliveryList');
-const redis = require('../models/redis');
+const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const DataCacheFactory = require('../models/dataCacheFactory');
-
-const keys = require('../config/keys');
-const baseUrl = require('../config/config.js').serverBaseUrl;
-const wetag = require('@lastlongerproject/toolkit').wetag;
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
-const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
-const getDateCheckpoint = require('@lastlongerproject/toolkit')
-    .getDateCheckpoint;
-
-const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const regAsStore = require('../middlewares/validation/validateRequest')
     .regAsStore;
 const regAsAdmin = require('../middlewares/validation/validateRequest')
     .regAsAdmin;
-const regAsStoreManager = require('../middlewares/validation/validateRequest')
-    .regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest')
-    .regAsAdminManager;
 const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateCreateApiContent;
 const validateBoxingApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
@@ -37,26 +17,31 @@ const validateStockApiContent = require('../middlewares/validation/deliveryList/
     .validateStockApiContent;
 const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
     .validateChangeStateApiContent;
+const validateSignApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
+    .validateSignApiContent;
+const validateModifyApiContent = require('../middlewares/validation/deliveryList/contentValidation.js').validateModifyApiContent;
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
-
+const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
-const User = require('../models/DB/userDB');
-const Store = require('../models/DB/storeDB');
 const Trade = require('../models/DB/tradeDB');
-const Place = require('../models/DB/placeIdDB');
-const Container = require('../models/DB/containerDB');
+
 const DeliveryList = require('../models/DB/deliveryListDB.js');
-const ErrorResponse = require('../models/variables/error.js').ErrorResponse;
-const BoxStatus = require('../models/variables/boxEnum.js').BoxStatus;
+const ErrorResponse = require('../models/enums/error').ErrorResponse;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const UserRole = require('../models/enums/userEnum').UserRole;
+
+const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
 
 const changeContainersState = require('../controllers/containerTrade');
-const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatus;
+const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const historyDays = 14;
 
 /**
  * @apiName DeliveryList create delivery list
  * @apiGroup DeliveryList
  *
- * @api {post} /create/:destiantionStoreId Create delivery list
+ * @api {post} /deliveryList/create/:destiantionStoreId Create delivery list
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -67,10 +52,10 @@ const ProgramStatus = require('../models/variables/programEnum.js').ProgramStatu
  *                  boxName: String,
  *                  boxOrderContent: [
  *                      {
- *                          containerType: Number,
+ *                          containerType: String,
  *                          amount: Number
  *                      },...
- *                  ]
+ *                  ],
  *                  dueDate: Date
  *              }
  *          ]
@@ -89,32 +74,19 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateCreateApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
 
-        DeliveryList.find({
-                listID: req._listID,
-            })
-            .exec()
-            .then(result => {
-                if (result.length !== 0) {
-                    return res.status(403).json(ErrorResponse.H001);
-                }
-            })
-            .catch(err => {
-                debug.error(err);
-                return next(err);
-            });
         Promise.all(req._boxArray.map(box => box.save()))
-            .then(success => {
+            .then(() => {
                 let list = new DeliveryList({
                     listID: req._listID,
                     boxList: req._boxIDs,
                     storeID,
                     creator: creator,
                 });
-                list.save().then(result => {
+                list.save().then(() => {
                     return res.status(200).json({
                         type: 'CreateMessage',
                         message: 'Create delivery list successfully',
@@ -133,7 +105,7 @@ router.post(
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /box Boxing
+ * @api {post} /deliveryList/box Boxing
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -141,13 +113,7 @@ router.post(
  *          phone: String,
  *          boxList: [
  *              {
- *                  boxId: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
+ *                  ID: Number,
  *                  containerList: Array,
  *                  comment: String
  *              },...
@@ -160,28 +126,26 @@ router.post(
             message: "Box Succeed"
         }
  * @apiUse CreateError
- * @apiUse ChangeStateError
  */
 router.post(
     ['/cleanStation/box', '/box'],
     regAsAdmin,
     validateRequest,
     validateBoxingApiContent,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let boxList = req.body.boxList;
         let phone = req.body.phone;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
+            let boxID = element.ID;
             const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
             const comment = element.comment;
 
             Box.findOne({
-                    boxID: boxID,
-                },
-                function(err, aBox) {
+                boxID: boxID,
+            },
+                function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
@@ -189,7 +153,6 @@ router.post(
                             type: 'BoxingMessage',
                             message: 'Box is not exist',
                         });
-
                     changeContainersState(
                         containerList,
                         dbAdmin, {
@@ -197,6 +160,7 @@ router.post(
                             newState: 5,
                         }, {
                             boxID,
+                            storeID: aBox.storeID
                         },
                         (err, tradeSuccess, reply) => {
                             if (err) {
@@ -204,29 +168,27 @@ router.post(
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
-                                    boxDeliverContent: boxDeliverContent,
-                                    containerList: containerList,
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            timestamps: Date.now(),
-                                        }
-                                    },
-                                    status: BoxStatus.Boxing,
-                                }, {
-                                    upsert: true,
+                                containerList: containerList,
+                                comment: comment,
+                                $push: {
+                                    action: {
+                                        phone: phone,
+                                        boxStatus: BoxStatus.Boxing,
+                                        timestamps: Date.now(),
+                                    }
                                 },
-                                function(err, result) {
-                                    if (err) return res.status(500).json(ErrorResponse.H006);
-
+                                status: BoxStatus.Boxing,
+                            }, {
+                                    upsert: true,
+                                }).exec()
+                                .then(() => {
                                     return res.status(200).json({
                                         type: 'BoxingMessage',
                                         message: 'Boxing Succeeded',
                                     });
-                                }
-                            );
+                                }).catch(() => {
+                                    return res.status(500).json(ErrorResponse.H006);
+                                });
                         }
                     );
                 }
@@ -239,7 +201,7 @@ router.post(
  * @apiName DeliveryList stock
  * @apiGroup DeliveryList
  *
- * @api {post} /box Create stock box
+ * @api {post} /deliveryList/stock Create stock box
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
@@ -248,12 +210,6 @@ router.post(
  *          boxList: [
  *              {
  *                  boxName: String,
- *                  boxDeliverContent: [
- *                      {
- *                          containerType: String,
- *                          amount: Number
- *                      },...
- *                  ],
  *                  containerList: Array,
  *              },...
  *          ]
@@ -262,62 +218,49 @@ router.post(
         HTTP/1.1 200 
         {
             type: "StockMessage",
-            message: "Stock successfully"
+            message: "Stock successfully",
+            boxIDs: Array
         }
  * @apiUse CreateError
- * @apiUse ChangeStateError
  */
 router.post(
     '/stock',
     regAsAdmin,
     validateRequest,
     validateStockApiContent,
-    function(req, res, next) {
-        let dbAdmin = req._user;
-        let boxList = req.body.boxList;
-        let phone = req.body.phone;
+    function (req, res, next) {
+        const dbAdmin = req._user;
+        const boxList = req.body.boxList;
 
         for (let element of boxList) {
-            let boxID = element.boxId;
             const containerList = element.containerList;
-            const boxDeliverContent = element.boxDeliverContent;
-            const comment = element.comment;
+            const boxID = element.boxID;
 
-            Box.findOne({
-                    boxID: boxID,
+            changeContainersState(
+                containerList,
+                dbAdmin, {
+                    action: 'Boxing',
+                    newState: 5,
+                }, {
+                    boxID,
                 },
-                function(err, aBox) {
-                    if (err) return next(err);
-                    if (aBox)
-                        return res.status(403).json(ErrorResponse.F012);
-
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            Promise.all(req._boxArray.map(box => box.save()))
-                                .then(success => {
-                                    return res.status(200).json({
-                                        type: 'StockMessage',
-                                        message: 'Stock successfully',
-                                        boxIDs: req._boxIDs,
-                                    });
-                                })
-                                .catch(err => {
-                                    debug.error(err);
-                                    return res.status(500).json(ErrorResponse.H006);
-                                });
-                        }
-                    );
+                (err, tradeSuccess, reply) => {
+                    if (err) {
+                        return next(err);
+                    }
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    Promise.all(req._boxArray.map(box => box.save()))
+                        .then(() => {
+                            return res.status(200).json({
+                                type: 'StockMessage',
+                                message: 'Stock successfully',
+                                boxIDs: req._boxIDs
+                            });
+                        })
+                        .catch(err => {
+                            debug.error(err);
+                            return res.status(500).json(ErrorResponse.H006);
+                        });
                 }
             );
         }
@@ -325,28 +268,35 @@ router.post(
 );
 
 /**
- * @apiName DeliveryList boxing
+ * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
- * @api {post} /box change state
+ * @api {post} /deliveryList/changeState Change state
  * @apiPermission admin
  * @apiUse JWT
+ * @apiDescription
+ *      **available state changing list**: 
+ *      - Boxing -> Stocked 
+ *      - Boxing -> Delivering 
+ *      - Delivering -> Boxing 
+ *      - Signed -> Stocked 
+ *      - Stocked -> Boxing 
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
  *          boxList: [
  *              {
  *                  id: String
- *                  oldState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
- *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked']
+ *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
+ *                  [destinationStoreId]: String // only need when update Stocked to Boxing 
  *              },...
  *          ]
  *      }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            type: "BoxMessage",
-            message: "Box Succeed"
+            type: "ChangeStateMessage",
+            message: "Change state successfully"
         }
  * @apiUse CreateError
  * @apiUse ChangeStateError
@@ -356,32 +306,42 @@ router.post(
     regAsAdmin,
     validateRequest,
     validateChangeStateApiContent,
-    async function(req, res, next) {
+    function (req, res, next) {
         let dbAdmin = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
+
         for (let element of boxList) {
-            const oldState = element.oldState;
             const newState = element.newState;
             var boxID = element.id;
+
             Box.findOne({
-                    boxID: boxID,
-                },
-                async function(err, aBox) {
+                boxID: boxID,
+            },
+                async function (err, aBox) {
                     if (err) return next(err);
                     if (!aBox)
                         return res.status(403).json({
                             code: 'F012',
                             type: 'BoxingMessage',
-                            message: 'Box is not exist',
+                            message: 'Box is not exist'
                         });
+                    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
+                        return res.status(403).json(ErrorResponse.H005_3);
+                    }
+                    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+                        return res.status(403).json(ErrorResponse.H008);
+                    }
                     try {
-                        let result = await changeStateProcess(oldState, newState, aBox, phone);
-                        console.log(result)
-                        if (result.status === ProgramStatus.Success) {
-
+                        let boxInfo = await changeStateProcess(element, aBox, phone);
+                        if (boxInfo.status === ProgramStatus.Success) {
+                            return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
+                        } else {
+                            ErrorResponse.H007.message = boxInfo.message;
+                            return res.status(403).json(ErrorResponse.H007);
                         }
                     } catch (err) {
+                        debug.error(err);
                         next(err);
                     }
 
@@ -391,48 +351,661 @@ router.post(
     }
 );
 
-module.exports = router;
+/**
+ * @apiName DeliveryList sign
+ * @apiGroup DeliveryList
+ *
+ * @api {post} /deliveryList/sign Sign
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiParamExample {json} Request-Example:
+ *      {
+ *          phone: String,
+ *          boxList: [
+ *              {
+ *                  ID: String
+ *              },...
+ *          ]
+ *      }
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ChangeStateMessage",
+            message: "Change State successfully"
+        }
+ * @apiUse CreateError
+ * @apiUse ChangeStateError
+ */
+router.post(
+    '/sign',
+    regAsStore,
+    regAsAdmin,
+    validateRequest,
+    validateSignApiContent,
+    async function (req, res, next) {
+        let dbUser = req._user;
+        let phone = req.body.phone;
+        let boxList = req.body.boxList;
+        var reqByAdmin = req._key.roleType === 'admin';
 
-function containerStateFactory(oldState, newState, aBox, dbAdmin) {
-    if (oldState === BoxStatus.Boxing && newState === BoxStatus.Delivering) {
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: 'Delivery',
-                newState: 0,
-            }, {
-                boxID,
-                storeID,
+        for (let element of boxList) {
+            var boxID = element.ID;
+            element.newState = BoxStatus.Signed;
+            Box.findOne({
+                boxID: boxID,
             },
-            (err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                aBox.delivering = true;
-                aBox.stocking = false;
-                aBox.storeID = storeID;
-                aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function(err) {
+                async function (err, aBox) {
                     if (err) return next(err);
-                    res.json(reply);
+                    if (!aBox)
+                        return res.status(403).json({
+                            code: 'F012',
+                            type: 'BoxingMessage',
+                            message: 'Box is not exist',
+                        });
+                    try {
+                        let boxInfo = await changeStateProcess(element, aBox, phone);
+                        if (boxInfo.status === ProgramStatus.Success) {
+                            return changeContainersState(
+                                aBox.containerList,
+                                dbUser, {
+                                    action: 'Sign',
+                                    newState: 1
+                                }, {
+                                    boxID,
+                                    storeID: reqByAdmin ? aBox.storeID : undefined
+                                },
+                                async (err, tradeSuccess, reply) => {
+                                    if (err) return next(err);
+                                    if (!tradeSuccess) return res.status(500).json(reply);
+                                    return containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info, res, next);
+                                });
+                        }
+                        ErrorResponse.H007.message = boxInfo.message;
+                        return res.status(403).json(ErrorResponse.H007);
+                    } catch (err) {
+                        debug.error(err);
+                        next(err);
+                    }
+                }
+            );
+        }
+    }
+);
+
+/**
+ * @apiName DeliveryList Get list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list Box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+router.get(
+    '/box/list',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({}, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!String(box.storeID)) continue;
+
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
                 });
             }
-        );
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
+            return res.status(200).json(result);
+        });
     }
+);
 
-    if (oldState === BoxStatus.Delivering && newState === BoxStatus.Boxing) {
+/**
+ * @apiName DeliveryList Get specific status list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list/:status Specific status box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription
+ * **Status**
+ * - Created: "Created",
+ * - Boxing: "Boxing",
+ * - Delivering: "Delivering",
+ * - Signed: "Signed",
+ * - Stocked: "Stocked"
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+router.get(
+    '/box/list/:status',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let result = [];
+        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+        let boxStatus = req.params.status;
+        for (let i = 0; i < Object.keys(storeList).length; i++) {
+            result.push({
+                storeID: Number(Object.keys(storeList)[i]),
+                boxObjs: []
+            });
+        }
+        Box.find({
+            'status': boxStatus
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (!String(box.storeID)) continue;
 
+                result.forEach(obj => {
+                    if (String(obj.storeID) === String(box.storeID)) {
+                        obj.boxObjs.push({
+                            ID: box.boxID,
+                            boxName: box.boxName || "",
+                            dueDate: box.dueDate || "",
+                            status: box.status || "",
+                            action: box.action || [],
+                            deliverContent: getDeliverContent(box.containerList),
+                            orderContent: box.boxOrderContent || [],
+                            containerList: box.containerList,
+                            user: box.user,
+                            comment: box.comment || ""
+                        });
+                    }
+                });
+            }
+            result = result.filter(obj => {
+                return obj.boxObjs.length > 0;
+            });
+            return res.status(200).json(result);
+        });
     }
+);
 
-    if (oldState === BoxStatus.Signed && newState === BoxStatus.Stocked) {
+/**
+ * @apiName DeliveryList Get specific store list
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/specificList/:status/:startFrom Specific store and specific status box list
+ * @apiPermission clerk
+ * @apiUse JWT
+ * @apiDescription
+ * **Status**
+ * - Created: "Created",
+ * - Boxing: "Boxing",
+ * - Delivering: "Delivering",
+ * - Signed: "Signed",
+ * - Stocked: "Stocked"
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        
+            {
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            }
+        
+ */
+router.get(
+    '/box/specificList/:status/:startFrom',
+    regAsStore,
+    validateRequest,
+    async function (req, res, next) {
 
+        let boxStatus = req.params.status;
+        let storeID = parseInt(req._user.roles.clerk.storeID);
+        let startFrom = parseInt(req.params.startFrom);
+        let boxObjs = [];
+
+        Box.find({
+            'status': boxStatus,
+            'storeID': storeID,
+            'createdAt': {
+                '$lte': dateCheckpoint(startFrom + 1),
+                '$gt': dateCheckpoint(startFrom - 14)
+            },
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                boxObjs.push({
+                    ID: box.boxID,
+                    boxName: box.boxName || "",
+                    dueDate: box.dueDate || "",
+                    status: box.status || "",
+                    action: box.action || [],
+                    deliverContent: getDeliverContent(box.containerList),
+                    orderContent: box.boxOrderContent || [],
+                    containerList: box.containerList,
+                    user: box.user,
+                    comment: box.comment || ""
+                });
+            }
+
+            return res.status(200).json(boxObjs);
+        });
     }
+);
 
-    if (oldState === BoxStatus.Stocked && newState === BoxStatus.Boxing) {
+/**
+ * @apiName DeliveryList modify box info
+ * @apiGroup DeliveryList
+ *
+ * @api {patch} /deliveryList/modifyBoxInfo/:boxID Modify box info
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription 
+ * **Can modify** 
+ * 
+ * 1. "storeID: Number"
+ * 
+ * 2. "dueDate: Date"
+ * 
+ * 3. "boxOrderContent: [{containerType, amount},...]"
+ * 
+ * 4. "containerList: Array<Number>"
+ * 
+ * 5. "comment: String"
+ * 
+ * 6. "boxName: String" 
+ * 
+ * @apiParamExample {json} Request-Example:
+ *      {
+ *          <the key wanna modify> : <new value>,
+ *      }
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ModifyMessage",
+            message: "Modify successfully"
+        }
+ * @apiUse ModifyError
+ */
+router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModifyApiContent, async function (req, res, next) {
+    let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+    let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
+    req.body['dueDate'] ? req.body['dueDate'] = new Date(req.body['dueDate']) : undefined;
 
+    Box.findOne({
+        boxID
+    }, async (err, box) => {
+        try {
+            if (containerList) {
+                changeContainersState(
+                    box.containerList,
+                    dbAdmin, {
+                        action: 'Unboxing',
+                        newState: 4
+                    }, {
+                        bypassStateValidation: true,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) return next(err);
+                        if (!tradeSuccess) return res.status(403).json(reply);
+                        changeContainersState(
+                            containerList,
+                            dbAdmin, {
+                                action: 'Boxing',
+                                newState: 5
+                            }, {
+                                boxID,
+                            },
+                            async (err, tradeSuccess, reply) => {
+                                if (err) return next(err);
+                                if (!tradeSuccess) return res.status(403).json(reply);
+                                await box.update(req.body).exec();
+                                return res.status(200).json({
+                                    type: "ModifyMessage",
+                                    message: "Modify successfully"
+                                });
+                            }
+                        );
+                    }
+                );
+            } else {
+                await box.update(req.body).exec();
+                return res.status(200).json({
+                    type: "ModifyMessage",
+                    message: "Modify successfully"
+                });
+            }
+        } catch (err) {
+            debug.error(err);
+            return next(err);
+        }
+    });
+});
+
+/**
+ * @apiName DeliveryList delete box info
+ * @apiGroup DeliveryList
+ *
+ * @api {delete} /deliveryList/deleteBox/:boxID Delete box info
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiDescription 
+
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "DeleteMessage",
+            message: "Delete successfully"
+        }
+ */
+
+router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, res, next) {
+    let boxID = req.params.boxID;
+    let dbAdmin = req._user;
+
+    Box.findOne({
+        boxID
+    })
+        .exec()
+        .then(aBox => {
+            return changeContainersState(
+                aBox.containerList,
+                dbAdmin, {
+                    action: 'Unboxing',
+                    newState: 4
+                }, {
+                    bypassStateValidation: true,
+                },
+                async (err, tradeSuccess, reply) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    await aBox.remove();
+                    return res.status(200).json({
+                        type: "DeleteMessage",
+                        message: "Delete successfully"
+                    });
+                }
+            );
+        }).catch(err => {
+            debug.error(err);
+            return next(err);
+        });
+});
+
+/**
+ * @apiName Containers reload history
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/reloadHistory Reload history
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * @apiPermission clerk
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            [
+                {
+                    "containerList": [
+                        36
+                    ],
+                    "status": "reload",
+                    "action": [
+                        {
+                            "boxStatus": "Archived",
+                            "timestamps": "2019-04-26T08:50:07.072Z"
+                        }
+                    ],
+                    "orderContent": [
+                        {
+                            "containerType": "12oz 玻璃杯",
+                            "amount": 1
+                        }
+                    ]
+                }
+            ]
+        }
+ *
+ */
+
+router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
+    var dbUser = req._user;
+    var dbKey = req._key;
+    var typeDict = DataCacheFactory.get('containerType');
+    var queryCond;
+    var queryDays;
+    if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
+    else queryDays = historyDays;
+    if (dbKey.roleType === UserRole.CLERK)
+        queryCond = {
+            '$or': [{
+                'tradeType.action': 'ReadyToClean',
+                'oriUser.storeID': dbUser.roles.clerk.storeID
+            }, {
+                'tradeType.action': 'UndoReadyToClean'
+            }],
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - queryDays)
+            }
+        };
+    else
+        queryCond = {
+            'tradeType.action': {
+                '$in': ['ReadyToClean', 'UndoReadyToClean']
+            },
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - queryDays)
+            }
+        };
+    Trade.find(queryCond, function (err, list) {
+        if (err) return next(err);
+        if (list.length === 0) return res.json([]);
+        list.sort((a, b) => a.tradeTime - b.tradeTime);
+        cleanUndoTrade('ReadyToClean', list);
+
+        var tradeTimeDict = {};
+        list.forEach(aTrade => {
+            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
+            tradeTimeDict[aTrade.tradeTime].push(aTrade);
+        });
+
+        var boxDict = {};
+        var boxDictKey;
+        var thisTypeName;
+        let typeList = [];
+        for (var aTradeTime in tradeTimeDict) {
+            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
+            tradeTimeDict[aTradeTime].forEach(theTrade => {
+                thisTypeName = typeDict[theTrade.container.typeCode].name;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                if (!boxDict[boxDictKey])
+                    boxDict[boxDictKey] = {
+                        containerList: [],
+                        status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
+                        action: [{
+                            boxStatus: BoxStatus.Archived,
+                            phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
+                            timestamps: theTrade.tradeTime
+                        }],
+                        storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
+                    };
+                if (typeList.indexOf(thisTypeName) === -1) {
+                    typeList.push(thisTypeName);
+                    boxDict[boxDictKey].containerList = [];
+                }
+                boxDict[boxDictKey].containerList.push(theTrade.container.id);
+            });
+        }
+
+        var boxArr = Object.values(boxDict);
+        boxArr.sort((a, b) => b.boxTime - a.boxTime);
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].orderContent = [];
+            for (var j = 0; j < typeList.length; j++) {
+                boxArr[i].orderContent.push({
+                    containerType: typeList[j],
+                    amount: boxArr[i].containerList.length
+                });
+            }
+        }
+
+        res.json(boxArr);
+    });
+});
+
+/**
+ * @apiName DeliveryList Get delivery list overview
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/overview Specific clean station's overview
+ * @apiPermission admin
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        
+            {
+                Boxing: Number,
+                Delivering: Number,
+                Stocked: Number
+            }
+        
+ */
+router.get(
+    '/overview',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let storeID = parseInt(req._user.roles.admin.stationID);
+        let result = {
+            Boxing: 0,
+            Delivering: 0,
+            Stocked: 0
+        };
+
+        Box.find({
+            'storeID': storeID,
+        }, (err, boxes) => {
+            if (err) return next(err);
+            for (let box of boxes) {
+                if (box.status === BoxStatus.Boxing) result.Boxing += 1;
+                if (box.status === BoxStatus.Delivering) result.Delivering += 1;
+                if (box.status === BoxStatus.Stocked) result.Stocked += 1;
+            }
+
+            return res.status(200).json(result);
+        });
     }
+);
 
-    if (oldState === BoxStatus.Signed && newState === BoxStatus.Archived) {
-
-    }
-
-}
+module.exports = router;

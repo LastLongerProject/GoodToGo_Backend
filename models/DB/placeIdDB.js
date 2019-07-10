@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     ID: Number,
     name: String,
     placeID: String,
@@ -11,13 +11,14 @@ var userSchema = mongoose.Schema({
     active: Boolean,
     project: String,
     type: String,
-    category: Number
+    category: Number,
+    activity: Array
 }, {
     timestamps: true
 });
 
-userSchema.index({
+schema.index({
     "ID": 1
 });
 
-module.exports = mongoose.model('PlaceID', userSchema);
+module.exports = mongoose.model('PlaceID', schema);

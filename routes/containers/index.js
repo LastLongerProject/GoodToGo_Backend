@@ -6,29 +6,28 @@ const redis = require("../../models/redis");
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
-
 const Container = require('../../models/DB/containerDB');
-const getGlobalUsedAmount = require('../../models/variables/globalUsedAmount');
+const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
+
+const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const validateStateChanging = require('@lastlongerproject/toolkit')
-    .validateStateChanging;
+const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
+const NotificationEvent = require('../../helpers/notifications/enums/events');
+const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
+const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
-const validateRequest = require('../../middlewares/validation/validateRequest')
-    .JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest')
-    .regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest')
-    .regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest')
-    .regAsAdmin;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest')
-    .regAsAdminManager;
+const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
+const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
+const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
+const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
 
 const status = [
     'delivering',
@@ -82,7 +81,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
     res,
     next
 ) {
-    var dbAdmin = req._user;
     var boxID = req.params.id;
     Box.findOne({
             boxID: boxID,
@@ -114,7 +112,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
  * @api {post} /containers/delivery/:id/:store Delivery box id to store
  * @apiPermission admin
  * @apiUse JWT
- * 
+ * @apiParam {string} activity only pass if deliver to specific activity 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -132,6 +130,8 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
     var dbAdmin = req._user;
     var boxID = req.params.id;
     var storeID = req.params.store;
+    let activity = req.params.activity || null;
+
     process.nextTick(() => {
         Box.findOne({
                 boxID: boxID,
@@ -158,6 +158,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                     }, {
                         boxID,
                         storeID,
+                        activity
                     },
                     (err, tradeSuccess, reply) => {
                         if (err) return next(err);
@@ -173,14 +174,15 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
                             User.find({
                                 'roles.clerk.storeID': Number(storeID)
                             }, function (err, userList) {
-                                if (err) return debug(err);
-                                userList.forEach(aClerk => NotificationCenter.emit("container_delivery", {
-                                    clerk: aClerk
-                                }, {
-                                    boxID
-                                }));
+                                if (err) return debug.error(err);
+                                userList.forEach(aClerk =>
+                                    NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
+                                        clerk: aClerk
+                                    }, {
+                                        boxID
+                                    })
+                                );
                             });
-
                         });
                     }
                 );
@@ -278,8 +280,9 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
     next
 ) {
     var dbUser = req._user;
-    var boxID = req.params.id;
     var reqByAdmin = req._key.roleType === 'admin';
+    var boxID = req.params.id;
+
     Box.findOne({
             boxID: boxID,
         },
@@ -304,19 +307,17 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
                     newState: 1
                 }, {
                     boxID,
-                    storeID: reqByAdmin ? aDelivery.storeID : undefined
+                    storeID: reqByAdmin ? aDelivery.storeID : undefined,
                 },
                 (err, tradeSuccess, reply) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
                     Box.remove({
-                            boxID: boxID,
-                        },
-                        function (err) {
-                            if (err) return next(err);
-                            return res.json(reply);
-                        }
-                    );
+                        boxID: boxID,
+                    }, (err) => {
+                        if (err) return next(err);
+                        return res.json(reply);
+                    });
                 }
             );
         }
@@ -349,15 +350,12 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
         }
  * @apiUse RentError
  * @apiUse ChangeStateError
+ * @apiUse RentalQualificationError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var dbStore = req._user;
-    var key = req.headers.userapikey;
-    if (typeof key === 'undefined' || typeof key === null || key.length === 0)
+router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
+    const dbStore = req._user;
+    const key = req.headers.userapikey;
+    if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
             code: 'F009',
             type: 'borrowContainerMessage',
@@ -377,25 +375,56 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
                 type: 'borrowContainerMessage',
                 message: 'Rent Request Expired'
             });
-        var container = req.params.id;
-        if (container === "list") container = req.body.containers;
-        changeContainersState(container, dbStore, {
-            action: "Rent",
-            newState: 2
-        }, {
-            rentToUser: userPhone,
-            orderTime: res._payload.orderTime
-        }, (err, tradeSuccess, reply, tradeDetail) => {
-            if (err) return next(err);
-            if (!tradeSuccess) return res.status(403).json(reply);
-            res.json(reply);
-            if (tradeDetail) {
-                NotificationCenter.emit("container_rent", {
-                    customer: tradeDetail[0].newUser
-                }, {
-                    containerList: reply.containerList
+        let container = req.params.id;
+        let containerAmount = 1;
+        if (container === "list") {
+            container = req.body.containers;
+            containerAmount = req.body.containers.length;
+        }
+        User.findOne({
+            "user.phone": userPhone
+        }, (err, theCustomer) => {
+            if (err)
+                return next(err);
+            if (!theCustomer)
+                return res.status(403).json({
+                    code: 'F004',
+                    type: 'RentMessage',
+                    message: 'No user found'
                 });
-            }
+            userIsAvailableForRentContainer(theCustomer, containerAmount, false, (err, isAvailable, detail) => {
+                if (err) return next(err);
+                if (!isAvailable) {
+                    if (detail.rentalQualification === RentalQualification.BANNED)
+                        return res.status(403).json({
+                            code: 'F005',
+                            type: 'userSearchingError',
+                            message: 'User is banned'
+                        });
+                    else if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                        return res.status(403).json({
+                            code: 'F015',
+                            type: 'userSearchingError',
+                            message: 'Container amount is over limitation'
+                        });
+                    else
+                        return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+                }
+                changeContainersState(container, dbStore, {
+                    action: "Rent",
+                    newState: 2
+                }, {
+                    rentToUser: theCustomer,
+                    orderTime: res._payload.orderTime,
+                    activity: "沒活動",
+                    inLineSystem: true
+                }, (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    tradeCallback.rent(tradeDetail, dbStore.roles.clerk.storeID);
+                    return res.json(reply);
+                });
+            });
         });
     });
 });
@@ -410,7 +439,6 @@ router.post('/rent/:id', regAsStore, validateRequest, function (
  * @apiPermission admin
  * 
  * @apiUse JWT_orderTime
- * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -443,28 +471,27 @@ router.post(
                 type: 'returnContainerMessage',
                 message: 'Missing Order Time'
             });
-        var container = req.params.id;
+        let container = req.params.id;
+        const storeID = req.body.storeId;
         if (container === 'list') container = req.body.containers;
+        else container = [container];
         changeContainersState(
             container,
             dbStore, {
                 action: 'Return',
                 newState: 3
             }, {
-                storeID: req.body.storeId,
+                storeID,
                 orderTime: res._payload.orderTime,
+                activity: "沒活動"
             },
             (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
-                if (tradeDetail) {
-                    NotificationCenter.emit("container_return", {
-                        customer: tradeDetail[0].oriUser
-                    }, {
-                        containerList: reply.containerList
-                    });
-                }
+                tradeCallback.return(tradeDetail, {
+                    storeID
+                });
             }
         );
     }
@@ -731,7 +758,7 @@ router.post(
  */
 var actionCanUndo = {
     Return: 3,
-    ReadyToClean: 4,
+    ReadyToClean: 4
 };
 router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
     req,
@@ -778,7 +805,7 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
                             ) >= 0 ?
                             theTrade.oriUser.storeID :
                             undefined;
-                        newTrade = new Trade();
+                        let newTrade = new Trade();
                         newTrade.tradeTime = Date.now();
                         newTrade.tradeType = {
                             action: 'Undo' + action,
@@ -930,68 +957,78 @@ router.get(
     }
 );
 
-/**
- * @apiName Containers add container
- * @apiGroup Containers
- *
- * @api {post} /containers/add/:id/:type Add container with id and type
- * @apiPrivate
- * 
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "addContainerMessage",
-            message: "Add succeeded"
+router.post('/triggerTradeCallback/return/all', regAsAdminManager, validateRequest, function (req, res, next) {
+    tasks.solveUnusualUserOrder((err, results) => {
+        if (err) return next(err);
+        res.json({
+            success: true,
+            msg: "Try To Fix Following User Order",
+            results
+        });
+    });
+});
+
+router.post('/triggerTradeCallback/return/:container/:userPhone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const containerID = req.params.container;
+    const userPhone = req.params.userPhone;
+    Trade.findOne({
+        "container.id": containerID,
+        "oriUser.phone": userPhone,
+        "tradeType.action": "Return"
+    }, {}, {
+        sort: {
+            tradeTime: -1
         }
- * @apiError 403 type: addContainerMessage, message: That ID is already exist.
- */
-router.post('/add/:id/:type', function (req, res, next) {
-    var id = req.params.id;
-    var typeCode = req.params.type;
-    process.nextTick(function () {
-        Container.findOne({
-                ID: id,
-            },
-            function (err, container) {
+    }, function (err, theTrade) {
+        if (err) return next(err);
+        if (!theTrade)
+            return res.status(403).json({
+                success: false,
+                msg: "Can't find that trade"
+            });
+        User.findOne({
+            "user.phone": theTrade.oriUser.phone
+        }, (err, oriUser) => {
+            if (err) return next(err);
+            if (!oriUser)
+                return res.status(403).json({
+                    success: false,
+                    msg: "Can't find oriUser"
+                });
+            User.findOne({
+                "user.phone": theTrade.newUser.phone
+            }, (err, newUser) => {
                 if (err) return next(err);
-                if (container) {
+                if (!newUser)
                     return res.status(403).json({
-                        type: 'addContainerMessage',
-                        message: 'That ID is already exist.'
+                        success: false,
+                        msg: "Can't find newUser"
                     });
-                } else {
-                    var newContainer = new Container();
-                    newContainer.ID = id;
-                    newContainer.typeCode = typeCode;
-                    newContainer.statusCode = 4;
-                    newContainer.conbineTo = '0900000000';
-                    newContainer.save(function (err) {
-                        // save the container
-                        if (err) return next(err);
-                        res.status(200).json({
-                            type: 'addContainerMessage',
-                            message: 'Add succeeded'
+                Container.findOne({
+                    "ID": theTrade.container.id
+                }, (err, theContainer) => {
+                    if (err) return next(err);
+                    if (!theContainer)
+                        return res.status(403).json({
+                            success: false,
+                            msg: "Can't find theContainer"
                         });
+                    const tradeDetail = {
+                        oriUser,
+                        newUser,
+                        container: theContainer
+                    };
+                    tradeCallback.return([tradeDetail], {
+                        storeID: theTrade.newUser.storeID
                     });
-                }
-            }
-        );
+                    res.json({
+                        success: true,
+                        msg: "Doing task"
+                    });
+                });
+            });
+        });
     });
 });
 
 module.exports = router;
-
-function uniqArr(array, keyGenerator, dataExtractor) {
-    let seen = {};
-    array.forEach(ele => {
-        let thisKey = keyGenerator(ele);
-        let thisData = dataExtractor(ele);
-        if (seen.hasOwnProperty(thisKey)) seen[thisKey].data.push(thisData);
-        else seen[thisKey] = {
-            key: thisKey,
-            data: [thisData]
-        };
-    });
-    return Object.values(seen);
-}

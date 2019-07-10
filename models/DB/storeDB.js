@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 // define the schema for our user model
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     id: Number,
     name: String,
     address: String,
@@ -38,14 +38,15 @@ var userSchema = mongoose.Schema({
         type: Boolean,
         default: true
     },
-    category: Number
+    category: Number,
+    activity: Array
 }, {
     timestamps: true
 });
 
-userSchema.index({
+schema.index({
     "id": 1
 });
 
 // create the model for users and expose it to our app
-module.exports = mongoose.model('Store', userSchema);
+module.exports = mongoose.model('Store', schema);

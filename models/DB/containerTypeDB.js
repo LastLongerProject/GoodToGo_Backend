@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 
-var userSchema = mongoose.Schema({
+var schema = mongoose.Schema({
     typeCode: Number,
     name: String,
     version: { type: Number, default: 0 }
@@ -8,6 +8,6 @@ var userSchema = mongoose.Schema({
     timestamps: true
 });
 
-userSchema.index({ "typeCode": 1 });
+schema.index({ "typeCode": 1 });
 
-module.exports = mongoose.model('ContainerType', userSchema);
+module.exports = mongoose.model('ContainerType', schema);
