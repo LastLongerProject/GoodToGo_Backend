@@ -6,6 +6,7 @@ const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
 const Coupon = require('../models/DB/couponDB');
 const PlaceID = require('../models/DB/placeIdDB');
+const PointLog = require("../models/DB/pointLogDB");
 const Activity = require('../models/DB/activityDB');
 const Container = require('../models/DB/containerDB');
 const UserOrder = require('../models/DB/userOrderDB');
@@ -329,6 +330,31 @@ module.exports = {
                     });
                 })
                 .catch(cb)
+        });
+    },
+    checkUserPoint: function (cb) {
+        User.find((err, lineUsers) => {
+            if (err) return cb(err);
+            const userDict = {};
+            lineUsers.forEach(aUser => {
+                userDict[aUser._id] = {};
+                userDict[aUser._id].dbUser = aUser;
+                userDict[aUser._id].computedPoint = 0;
+            });
+            PointLog.find((err, logList) => {
+                if (err) return cb(err);
+                logList.forEach(aLog => {
+                    if (userDict[aLog.user]) {
+                        userDict[aLog.user].computedPoint += aLog.quantityChange;
+                    } else {
+                        debug.error(`[CheckUserPoint] Ghost PointLog: ${aLog}`);
+                    }
+                });
+                for (let userID in userDict) {
+                    if (userDict[userID].dbUser.point !== userDict[userID].computedPoint)
+                        userTrade.fixPoint(userDict[userID].dbUser, userDict[userID].computedPoint);
+                }
+            });
         });
     }
 }

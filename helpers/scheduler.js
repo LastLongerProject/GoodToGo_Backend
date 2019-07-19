@@ -9,7 +9,7 @@ const ROOT_DIR = require('../config/config').rootDir;
 const crypto = require('crypto');
 const debug = require('./debugger')('scheduler');
 
-function cb(err) {
+function generalCb(err) {
     if (err) return debug.error(err);
 }
 
@@ -51,8 +51,8 @@ module.exports = function () {
         setTimeout(function timeSensitiveTask() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Time-Sensitive] start');
-                tasks.checkCouponIsExpired(cb);
-                tasks.refreshAllUserUsingStatus(false, cb);
+                tasks.checkCouponIsExpired(generalCb);
+                tasks.refreshAllUserUsingStatus(false, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
@@ -61,10 +61,10 @@ module.exports = function () {
         setTimeout(function noneTimeSensitiveTask() {
             let taskList = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
-                setTimeout(tasks.refreshContainer, 0, bot, cb);
-                setTimeout(tasks.refreshStore, 1000 * 60 * 5, cb);
-                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, cb);
-                setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, cb);
+                setTimeout(tasks.refreshContainer, 0, bot, generalCb);
+                setTimeout(tasks.refreshStore, 1000 * 60 * 5, generalCb);
+                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, generalCb);
+                setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, generalCb);
                 setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
                 setTimeout(tasks.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
@@ -98,6 +98,7 @@ module.exports = function () {
                     results.failMsg.forEach(debug.error);
                     results.successMsg.forEach(debug.log);
                 });
+                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
@@ -106,7 +107,7 @@ module.exports = function () {
         setTimeout(function taskToDoAtTenInTheMorning() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Ten In The Morning] start');
-                tasks.refreshAllUserUsingStatus(true, cb);
+                tasks.refreshAllUserUsingStatus(true, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);

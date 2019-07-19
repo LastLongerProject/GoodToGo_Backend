@@ -4,6 +4,7 @@ const debug = require('../helpers/debugger')('users');
 
 const userQuery = require('../controllers/userQuery');
 const userTrade = require('../controllers/userTrade');
+const pointTrade = require('../controllers/pointTrade');
 const couponTrade = require('../controllers/couponTrade');
 
 const validateLine = require('../middlewares/validation/validateLine');
@@ -32,6 +33,8 @@ const getGlobalUsedAmount = require('../models/computed/containerStatistic').glo
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 const NotificationCenter = require('../helpers/notifications/center');
+
+const setDefaultPassword = require('../config/keys').setDefaultPassword;
 
 router.post(['/signup', '/signup/*'], function (req, res, next) {
     req._options = {};
@@ -150,6 +153,7 @@ router.post(
             needVerified: false,
             passVerify: true
         });
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -199,6 +203,7 @@ router.post(
             passVerify: true
         });
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -341,6 +346,7 @@ router.post(
             needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
             passVerify: true
         });
+        setDefaultPassword(req);
         userQuery.signup(req, function (err, user, info) {
             if (err) {
                 return next(err);
@@ -984,20 +990,20 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     }, function (err, tradeList) {
         if (err) return next(err);
 
+        const rentHistory = {};
         const intergratedTrade = {};
         tradeList.forEach(aTrade => {
             const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
             if (aTrade.tradeType.action === "Rent") {
-                intergratedTrade[tradeKey] = {
+                rentHistory[tradeKey] = {
                     containerID: `#${aTrade.container.id}`,
                     containerType: ContainerTypeDict[aTrade.container.typeCode].name,
                     rentTime: aTrade.tradeTime,
-                    rentStore: StoreDict[aTrade.oriUser.storeID].name,
-
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name
                 };
             } else if (aTrade.tradeType.action === "Return") {
-                if (!intergratedTrade[tradeKey]) return;
-                Object.assign(intergratedTrade[tradeKey], {
+                if (!rentHistory[tradeKey]) return;
+                intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
                     returnTime: aTrade.tradeTime,
                     returnStore: StoreDict[aTrade.newUser.storeID].name
                 });
@@ -1009,6 +1015,52 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         });
     });
 });
+
+router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+    const userToAddPoint = req.params.phone;
+
+    const pointMultiplier = parseInt(req.body.pointMultiplier);
+    const toStore = parseInt(req.body.toStore);
+    const containerIdList = req.body.containerIdList;
+    const bonusPointActivity = req.body.bonusPointActivity;
+
+    if (isNaN(pointMultiplier) || isNaN(toStore) || !Array.isArray(containerIdList) || (bonusPointActivity !== null && typeof bonusPointActivity.txt === "undefined"))
+        return res.status(403).json({
+            success: false,
+            msg: "Para not complete"
+        });
+
+    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const quantity = containerIdList.length;
+    const point = quantity * pointMultiplier;
+
+    if (quantity === 0) return res.status(403).json({
+        success: false,
+        msg: "No container"
+    });
+
+    User.findOne({
+        "user.phone": userToAddPoint
+    }, (err, theUser) => {
+        if (err) return next(err);
+        if (!theUser) return res.status(403).json({
+            success: false,
+            msg: "Can't find the User"
+        });
+        pointTrade.sendPoint(point, theUser, {
+            title: `歸還了${quantity}個容器`,
+            body: `${containerIdList.join(", ")}` +
+                ` @ ${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
+        });
+        res.json({
+            success: true,
+            phone: userToAddPoint,
+            newPoint: theUser.point,
+            msg: "Done"
+        });
+    });
+});
+
 
 router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
