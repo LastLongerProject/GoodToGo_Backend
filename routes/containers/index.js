@@ -506,6 +506,7 @@ router.post(
  *
  * @api {post} /containers/readyToClean/:id Ready to clean specific container
  * @apiPermission admin
+ * @apiPermission bot
  * 
  * @apiUse JWT_orderTime
  * 
@@ -527,7 +528,7 @@ router.post(
  * @apiUse ReadyToCleanError
  * @apiUse ChangeStateError
  */
-router.post('/readyToClean/:id', regAsAdmin, validateRequest, function (
+router.post('/readyToClean/:id', regAsBot, regAsAdmin, validateRequest, function (
     req,
     res,
     next

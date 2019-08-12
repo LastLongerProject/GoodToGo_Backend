@@ -12,9 +12,7 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
-const Exception = require('../models/DB/exceptionDB.js');
 
-let containerStateCache = {};
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
 
@@ -64,15 +62,7 @@ function changeContainersState(containers, reqUser, stateChanging, options, done
             let allSucceed = taskResults.every(aResult => aResult.succeed);
             if (allSucceed) {
                 Promise
-                    .all(dataSavers.map(aDataSaver => new Promise((oriResolve, oriReject) => {
-                        const cleanStateCache = () => {
-                            delete containerStateCache[aDataSaver.containerID];
-                        };
-
-                        const resolve = bindFunction(cleanStateCache, oriResolve);
-                        const reject = bindFunction(cleanStateCache, oriReject);
-                        aDataSaver.saver(resolve, reject);
-                    })))
+                    .all(dataSavers.map(aDataSaver => new Promise(aDataSaver.saver)))
                     .then(containerList => {
                         return done(null, true, {
                             type: messageType,
@@ -157,9 +147,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             data: aContainerId
                         });
                     const newState = stateChanging.newState;
-                    const oriState = typeof containerStateCache[aContainerId] !== "undefined" ?
-                        containerStateCache[aContainerId] :
-                        theContainer.statusCode;
+                    const oriState = theContainer.statusCode;
 
                     if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
                         return reject({
@@ -269,7 +257,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                     activity
                                 });
 
-                                containerStateCache[aContainerId] = newState;
                                 resolve({
                                     ID: aContainerId,
                                     oriUser: oriUser.user.phone,
