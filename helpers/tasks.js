@@ -123,18 +123,19 @@ module.exports = {
                             });
                         });
                     })))
-                    .then((returnData) => {
-                        cb(succeed, {
-                            type: 'refreshStoreImg',
-                            message: 'refresh succeed',
-                            data: storeIdList
+                    .then(() => {
+                        storeListGenerator(err => {
+                            if (err) debug.error(err);
+                            cb(succeed, {
+                                type: 'refreshStoreImg',
+                                message: 'refresh succeed',
+                                data: storeIdList
+                            });
                         });
                     })
-                    .catch((err) => {
-                        if (err) {
-                            debug.error(storeIdList);
-                            return cb(false, err);
-                        }
+                    .catch(err => {
+                        debug.error(storeIdList);
+                        return cb(false, err);
                     });
             } else {
                 debug.error(storeIdList);
@@ -380,14 +381,22 @@ function storeListGenerator(cb) {
         sort: {
             ID: 1
         }
-    }, (err, stores) => {
+    }, (err, places) => {
         if (err) return cb(err);
-        var storeDict = {};
-        stores.forEach((aStore) => {
-            storeDict[aStore.ID] = aStore;
+        Store.find({}, {}, {
+            sort: {
+                ID: 1
+            }
+        }, (err, stores) => {
+            if (err) return cb(err);
+            var storeDict = {};
+            places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
+            stores.forEach(aStore => {
+                if (storeDict[aStore.id]) storeDict[aStore.id].img_info = aStore.img_info;
+            });
+            DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
+            cb();
         });
-        DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
-        cb();
     });
 }
 
