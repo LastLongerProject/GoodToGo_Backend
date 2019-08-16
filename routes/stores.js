@@ -380,31 +380,29 @@ router.get('/dict', regAsStore, regAsAdmin, validateRequest, function (req, res,
  * 
  */
 router.get('/list.js', function (req, res, next) {
-    var tmpArr = [];
-    process.nextTick(function () {
-        Place.find({
-            "project": {
-                "$in": ["正興杯杯", "咖啡店連線", "器喝茶"]
-            },
-            "active": true
-        }, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            for (var i = 0; i < storeList.length; i++) {
-                tmpArr.push({
-                    placeid: storeList[i].placeID,
-                    name: storeList[i].name,
-                    borrow: storeList[i].contract.borrowable,
-                    return: storeList[i].contract.returnable,
-                    type: storeList[i].type
-                });
-            }
-            res.type('application/javascript');
-            res.end("var placeid_json = " + JSON.stringify(tmpArr));
-        });
+    let tmpArr = [];
+    Place.find({
+        "project": {
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+        },
+        "active": true
+    }, {}, {
+        sort: {
+            id: 1
+        }
+    }, function (err, storeList) {
+        if (err) return next(err);
+        for (let i = 0; i < storeList.length; i++) {
+            tmpArr.push({
+                placeid: storeList[i].placeID,
+                name: storeList[i].name,
+                borrow: storeList[i].contract.borrowable,
+                return: storeList[i].contract.returnable,
+                type: storeList[i].type
+            });
+        }
+        res.type('application/javascript');
+        res.end("var placeid_json = " + JSON.stringify(tmpArr));
     });
 });
 

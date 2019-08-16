@@ -1930,10 +1930,11 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
  * 
  */
 router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshStore(function (err) {
+    refreshStore(function (err, data) {
         if (err) return next(err);
         res.json({
-            "success": true
+            "success": true,
+            "updatedStoresAmount": data.length
         });
     });
 });
