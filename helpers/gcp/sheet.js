@@ -169,7 +169,7 @@ module.exports = {
             }, function (err, response) {
                 if (err) return debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                 const rowsFromSheet = response.data.values;
-                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length > 11));
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length >= 11));
                 Promise
                     .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({
@@ -258,7 +258,7 @@ module.exports = {
                                                     'name': aPlace.name,
                                                     'contract': {
                                                         returnable: aPlace.contract.returnable,
-                                                        borrowable: aPlace.contract.returnable,
+                                                        borrowable: aPlace.contract.borrowable,
                                                         status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
                                                     },
                                                     'type': formattedType,
