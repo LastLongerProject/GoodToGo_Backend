@@ -17,6 +17,11 @@ let fullDateStringWithoutYear = function (date) {
     return monthFormatted + "/" + dayFormatted;
 }
 
+function createBoxID(date, sequence, stationID) {
+    let dateString = fullDateStringWithoutYear(date).replace(/\//g, '');
+    return dateString + String(stationID) + intReLength(sequence, 3);
+}
+
 function fetchBoxCreation(req, res, next) {
     let date = new Date();
     let beginDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -66,7 +71,7 @@ function validateCreateApiContent(req, res, next) {
                 stationID: dbUser.roles.admin.stationID
             });
 
-            let boxID = parseInt(listID + String(index));
+            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
@@ -126,7 +131,7 @@ function validateStockApiContent(req, res, next) {
                 stationID: dbUser.roles.admin.stationID
             });
             
-            let boxID = parseInt(listID + String(index));
+            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
