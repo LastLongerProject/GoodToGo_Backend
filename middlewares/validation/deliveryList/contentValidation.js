@@ -3,6 +3,7 @@ const dayFormatter = require('@lastlongerproject/toolkit').dayFormatter;
 const monthFormatter = require('@lastlongerproject/toolkit').monthFormatter;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
+const BoxCreation = require('../../../models/DB/boxCreationDB');
 const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
 const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
@@ -16,17 +17,33 @@ let fullDateStringWithoutYear = function (date) {
     return monthFormatted + "/" + dayFormatted;
 }
 
+function fetchBoxCreation(req, res, next) {
+    let date = new Date();
+    let beginDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    let endDate = new Date(beginDate.getTime() + 86400000);
+
+    BoxCreation.find({
+        "createdAt": {
+            "$gte": beginDate, 
+            "$lt": endDate
+        }
+    }, async (err, creations) => {
+        if (err) throw err;
+        req._sequence = creations.length;
+        next();
+    });
+}
+
 function validateCreateApiContent(req, res, next) {
     let boxArray = [];
     let boxIDs = [];
     let boxList = req.body.boxList;
+    let dbUser = req._user;
     let date = new Date();
 
-    let listID =
-        fullDateStringWithoutYear(date).replace(/\//g, '') +
-        '' +
-        timeFormatter(date).replace(/\:/g, '');
-    let index = 0;
+    let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
+
+    let index = req._sequence || 1;
 
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
@@ -34,7 +51,6 @@ function validateCreateApiContent(req, res, next) {
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
-        index++;
 
         let pass = validateBoxListContent(element, BoxContentType.order, [
             'boxName',
@@ -45,6 +61,11 @@ function validateCreateApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
+            req._creation = new BoxCreation({
+                createdAt: Date.now(),
+                stationID: dbUser.roles.admin.stationID
+            });
+
             let boxID = parseInt(listID + String(index));
             let box = new Box({
                 boxID: boxID,
@@ -64,6 +85,8 @@ function validateCreateApiContent(req, res, next) {
             });
             boxArray.push(box);
             boxIDs.push(boxID);
+
+            index++;
         }
     }
     req._listID = listID;
@@ -78,13 +101,11 @@ function validateStockApiContent(req, res, next) {
     let boxIDs = [];
     let boxList = req.body.boxList;
     let date = new Date();
+    let dbUser = req._user;
 
-    let listID =
-        fullDateStringWithoutYear(date).replace(/\//g, '') +
-        '' +
-        timeFormatter(date).replace(/\:/g, '');
+    let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
 
-    let index = 0;
+    let index = req._sequence || 1;
 
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
@@ -92,7 +113,6 @@ function validateStockApiContent(req, res, next) {
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
-        index++;
         let pass = validateBoxListContent(element, null, [
             'boxName',
             'containerList'
@@ -100,6 +120,12 @@ function validateStockApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
+        
+            req._creation = new BoxCreation({
+                createdAt: Date.now(),
+                stationID: dbUser.roles.admin.stationID
+            });
+            
             let boxID = parseInt(listID + String(index));
             let box = new Box({
                 boxID: boxID,
@@ -121,6 +147,7 @@ function validateStockApiContent(req, res, next) {
             element.boxID = boxID;
             boxArray.push(box);
             boxIDs.push(boxID);
+            index++;
         }
     }
     req._boxArray = boxArray;
@@ -232,7 +259,8 @@ module.exports = {
     validateStockApiContent,
     validateChangeStateApiContent,
     validateSignApiContent,
-    validateModifyApiContent
+    validateModifyApiContent,
+    fetchBoxCreation
 };
 
 let BoxContentType = Object.freeze({

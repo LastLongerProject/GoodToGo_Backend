@@ -9,17 +9,16 @@ const regAsStore = require('../middlewares/validation/validateRequest')
     .regAsStore;
 const regAsAdmin = require('../middlewares/validation/validateRequest')
     .regAsAdmin;
-const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateCreateApiContent;
-const validateBoxingApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateBoxingApiContent;
-const validateStockApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateStockApiContent;
-const validateChangeStateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateChangeStateApiContent;
-const validateSignApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateSignApiContent;
-const validateModifyApiContent = require('../middlewares/validation/deliveryList/contentValidation.js').validateModifyApiContent;
+const {
+    validateCreateApiContent, 
+    validateBoxingApiContent, 
+    validateStockApiContent,
+    validateChangeStateApiContent,
+    validateSignApiContent,
+    validateModifyApiContent,
+    fetchBoxCreation,
+} = require('../middlewares/validation/deliveryList/contentValidation.js');
+
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
@@ -73,11 +72,17 @@ router.post(
     '/create/:storeID',
     regAsAdmin,
     validateRequest,
+    fetchBoxCreation,
     validateCreateApiContent,
     function (req, res, next) {
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
+        const creation = req._creation;
 
+        if (creation !== undefined) {
+            creation.save();
+        }
+        
         Promise.all(req._boxArray.map(box => box.save()))
             .then(() => {
                 let list = new DeliveryList({
@@ -227,10 +232,16 @@ router.post(
     '/stock',
     regAsAdmin,
     validateRequest,
+    fetchBoxCreation,
     validateStockApiContent,
     function (req, res, next) {
         const dbAdmin = req._user;
         const boxList = req.body.boxList;
+        const creation = req._creation;
+
+        if (creation !== undefined) {
+            creation.save();
+        }
 
         for (let element of boxList) {
             const containerList = element.containerList;
