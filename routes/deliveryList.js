@@ -77,11 +77,6 @@ router.post(
     function (req, res, next) {
         let creator = req.body.phone;
         let storeID = parseInt(req.params.storeID);
-        const creation = req._creation;
-
-        if (creation !== undefined) {
-            creation.save();
-        }
         
         Promise.all(req._boxArray.map(box => box.save()))
             .then(() => {
@@ -237,12 +232,7 @@ router.post(
     function (req, res, next) {
         const dbAdmin = req._user;
         const boxList = req.body.boxList;
-        const creation = req._creation;
-
-        if (creation !== undefined) {
-            creation.save();
-        }
-
+        
         for (let element of boxList) {
             const containerList = element.containerList;
             const boxID = element.boxID;

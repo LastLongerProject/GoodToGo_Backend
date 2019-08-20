@@ -3,7 +3,6 @@ const dayFormatter = require('@lastlongerproject/toolkit').dayFormatter;
 const monthFormatter = require('@lastlongerproject/toolkit').monthFormatter;
 const intReLength = require('@lastlongerproject/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
-const BoxCreation = require('../../../models/DB/boxCreationDB');
 const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
 const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
@@ -84,11 +83,6 @@ function validateCreateApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-            req._creation = new BoxCreation({
-                createdAt: Date.now(),
-                stationID: dbUser.roles.admin.stationID
-            });
-
             let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
@@ -143,12 +137,6 @@ function validateStockApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-        
-            req._creation = new BoxCreation({
-                createdAt: Date.now(),
-                stationID: dbUser.roles.admin.stationID
-            });
-            
             let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
