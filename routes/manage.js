@@ -29,8 +29,7 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const validateCreateApiContent = require('../middlewares/validation/deliveryList/contentValidation.js')
-    .validateCreateApiContent;
+const { validateCreateApiContent, fetchBoxCreation } = require('../middlewares/validation/deliveryList/contentValidation.js')
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
@@ -1780,6 +1779,7 @@ router.post(
     '/create/:storeID',
     regAsAdminManager,
     validateRequest,
+    fetchBoxCreation,
     validateCreateApiContent,
     function (req, res, next) {
         let creator = req.body.phone;

@@ -8,6 +8,12 @@ const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
+const redis = require("../../../models/redis");
+
+const queue = require('queue')({
+    concurrency: 1,
+    autostart: true
+});
 
 let fullDateStringWithoutYear = function (date) {
     dayFormatted = intReLength(dayFormatter(date), 2);
@@ -16,17 +22,50 @@ let fullDateStringWithoutYear = function (date) {
     return monthFormatted + "/" + dayFormatted;
 }
 
+function isSameDay(d1, d2) {    
+    if (!(d1 instanceof Date && d2 instanceof Date)) return false;
+    if (d1.getFullYear() !== d2.getFullYear()) return false;
+    if (d1.getMonth() !== d2.getMonth()) return false;
+    if (d1.getDate() !== d2.getDate()) return false;
+
+    return true
+}
+
+function createBoxID(date, sequence, stationID) {
+    let dateString = fullDateStringWithoutYear(date).replace(/\//g, '');
+    return dateString + String(stationID) + intReLength(sequence, 3);
+}
+
+function fetchBoxCreation(req, res, next) {
+    queue.push((cb)=>{
+        redis.get("delivery_box_creation_amount", (error, string) => {
+            let dict = JSON.parse(string || "{}");
+            let now = new Date();
+            
+            let sequence = dict.sequence;
+            let _sequence = isSameDay(now, new Date(dict.date)) ? Number(sequence) + 1 : 1;
+            
+            dict.sequence = _sequence;
+            dict.date = now;
+
+            req._sequence = _sequence;
+            redis.set("delivery_box_creation_amount", JSON.stringify(dict));
+            next();
+            cb();
+        })
+    })
+}
+
 function validateCreateApiContent(req, res, next) {
     let boxArray = [];
     let boxIDs = [];
     let boxList = req.body.boxList;
+    let dbUser = req._user;
     let date = new Date();
 
-    let listID =
-        fullDateStringWithoutYear(date).replace(/\//g, '') +
-        '' +
-        timeFormatter(date).replace(/\:/g, '');
-    let index = 0;
+    let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
+
+    let index = req._sequence || 1;
 
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
@@ -34,7 +73,6 @@ function validateCreateApiContent(req, res, next) {
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
-        index++;
 
         let pass = validateBoxListContent(element, BoxContentType.order, [
             'boxName',
@@ -45,7 +83,7 @@ function validateCreateApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-            let boxID = parseInt(listID + String(index));
+            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
@@ -64,6 +102,8 @@ function validateCreateApiContent(req, res, next) {
             });
             boxArray.push(box);
             boxIDs.push(boxID);
+
+            index++;
         }
     }
     req._listID = listID;
@@ -78,13 +118,11 @@ function validateStockApiContent(req, res, next) {
     let boxIDs = [];
     let boxList = req.body.boxList;
     let date = new Date();
+    let dbUser = req._user;
 
-    let listID =
-        fullDateStringWithoutYear(date).replace(/\//g, '') +
-        '' +
-        timeFormatter(date).replace(/\:/g, '');
+    let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
 
-    let index = 0;
+    let index = req._sequence || 1;
 
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
@@ -92,7 +130,6 @@ function validateStockApiContent(req, res, next) {
         return res.status(403).json(ErrorResponse.H001_2);
 
     for (let element of boxList) {
-        index++;
         let pass = validateBoxListContent(element, null, [
             'boxName',
             'containerList'
@@ -100,7 +137,7 @@ function validateStockApiContent(req, res, next) {
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
-            let boxID = parseInt(listID + String(index));
+            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
@@ -121,6 +158,7 @@ function validateStockApiContent(req, res, next) {
             element.boxID = boxID;
             boxArray.push(box);
             boxIDs.push(boxID);
+            index++;
         }
     }
     req._boxArray = boxArray;
@@ -232,7 +270,8 @@ module.exports = {
     validateStockApiContent,
     validateChangeStateApiContent,
     validateSignApiContent,
-    validateModifyApiContent
+    validateModifyApiContent,
+    fetchBoxCreation
 };
 
 let BoxContentType = Object.freeze({
