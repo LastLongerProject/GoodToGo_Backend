@@ -9,6 +9,12 @@ const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
+const redis = require("../../../models/redis");
+
+const queue = require('queue')({
+    concurrency: 1,
+    autostart: true
+});
 
 let fullDateStringWithoutYear = function (date) {
     dayFormatted = intReLength(dayFormatter(date), 2);
@@ -17,26 +23,38 @@ let fullDateStringWithoutYear = function (date) {
     return monthFormatted + "/" + dayFormatted;
 }
 
+function isSameDay(d1, d2) {    
+    if (!(d1 instanceof Date && d2 instanceof Date)) return false;
+    if (d1.getFullYear() !== d2.getFullYear()) return false;
+    if (d1.getMonth() !== d2.getMonth()) return false;
+    if (d1.getDate() !== d2.getDate()) return false;
+
+    return true
+}
+
 function createBoxID(date, sequence, stationID) {
     let dateString = fullDateStringWithoutYear(date).replace(/\//g, '');
     return dateString + String(stationID) + intReLength(sequence, 3);
 }
 
 function fetchBoxCreation(req, res, next) {
-    let date = new Date();
-    let beginDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    let endDate = new Date(beginDate.getTime() + 86400000);
+    queue.push((cb)=>{
+        redis.get("delivery_box_creation_amount", (error, string) => {
+            let dict = JSON.parse(string || "{}");
+            let now = new Date();
+            
+            let sequence = dict.sequence;
+            let _sequence = isSameDay(now, new Date(dict.date)) ? Number(sequence) + 1 : 1;
+            
+            dict.sequence = _sequence;
+            dict.date = now;
 
-    BoxCreation.find({
-        "createdAt": {
-            "$gte": beginDate, 
-            "$lt": endDate
-        }
-    }, async (err, creations) => {
-        if (err) throw err;
-        req._sequence = creations.length;
-        next();
-    });
+            req._sequence = _sequence;
+            redis.set("delivery_box_creation_amount", JSON.stringify(dict));
+            next();
+            cb();
+        })
+    })
 }
 
 function validateCreateApiContent(req, res, next) {
