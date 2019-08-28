@@ -454,11 +454,13 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
             if (err) return next(err);
             dbClerks.sort((a, b) => (a.roles[TYPE_CODE].manager === b.roles[TYPE_CODE].manager) ? 0 : a.roles[TYPE_CODE].manager ? -1 : 1);
             res.json({
-                clerkList: dbClerks.map(aClerk => ({
-                    phone: aClerk.user.phone,
-                    name: aClerk.user.name,
-                    isManager: aClerk.roles[TYPE_CODE].manager
-                }))
+                clerkList: dbClerks
+                    .filter(aClerk => aClerk.user.phone !== undefined)
+                    .map(aClerk => ({
+                        phone: aClerk.user.phone,
+                        name: aClerk.user.name,
+                        isManager: aClerk.roles[TYPE_CODE].manager
+                    }))
             });
         });
     });
