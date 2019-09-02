@@ -13,10 +13,10 @@ const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
-const wetag = require('@lastlongerproject/toolkit').wetag;
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
+const wetag = require('../../helpers/toolkit').wetag;
+const intReLength = require('../../helpers/toolkit').intReLength;
+const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
+const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
 const UserRole = require('../../models/enums/userEnum').UserRole;
 

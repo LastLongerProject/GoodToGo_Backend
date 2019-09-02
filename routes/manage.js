@@ -16,10 +16,10 @@ const refreshActivity = require('../helpers/tasks').refreshActivity;
 const refreshCoupon = require('../helpers/tasks').refreshCoupon;
 const refreshCouponImage = require('../helpers/tasks').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/tasks').refreshContainerIcon;
-const cleanUndo = require('@lastlongerproject/toolkit').cleanUndoTrade;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
-const getWeekCheckpoint = require('@lastlongerproject/toolkit').getWeekCheckpoint;
+const cleanUndo = require('../helpers/toolkit').cleanUndoTrade;
+const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
+const fullDateString = require('../helpers/toolkit').fullDateString;
+const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
 
 const Box = require('../models/DB/boxDB');

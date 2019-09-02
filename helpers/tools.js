@@ -1,4 +1,4 @@
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const getDateCheckpoint = require('./toolkit').getDateCheckpoint;
 
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;

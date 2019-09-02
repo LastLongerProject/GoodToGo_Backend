@@ -3,7 +3,7 @@ var router = express.Router();
 var fs = require('fs');
 
 const ROOT_DIR = require("../config/config").staticFileDir;
-var intReLength = require('@lastlongerproject/toolkit').intReLength;
+var intReLength = require('../helpers/toolkit').intReLength;
 var CouponType = require('../models/DB/couponTypeDB');
 
 router.get('/store/:id', function (req, res, next) {
