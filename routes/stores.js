@@ -6,12 +6,12 @@ const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
 const baseUrl = require('../config/config.js').serverBaseUrl;
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const timeFormatter = require('@lastlongerproject/toolkit').timeFormatter;
-const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const fullDateString = require('@lastlongerproject/toolkit').fullDateString;
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const intReLength = require('../helpers/toolkit').intReLength;
+const timeFormatter = require('../helpers/toolkit').timeFormatter;
+const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
+const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
+const fullDateString = require('../helpers/toolkit').fullDateString;
+const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 
 const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;

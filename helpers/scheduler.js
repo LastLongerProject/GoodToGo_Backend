@@ -2,7 +2,7 @@ const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 
 const tasks = require('./tasks');
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
+const dateCheckpoint = require('./toolkit').dateCheckpoint;
 
 const fs = require('fs');
 const ROOT_DIR = require('../config/config').rootDir;

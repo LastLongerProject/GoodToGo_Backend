@@ -5,7 +5,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const Container = require('../models/DB/containerDB');
-const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+const validateStateChanging = require('../helpers/toolkit').validateStateChanging;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];

@@ -5,8 +5,8 @@ const queue = require('queue')({
 
 const debug = require('../helpers/debugger')('containerTrade');
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
-const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
-const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
+const validateStateChanging = require('../helpers/toolkit').validateStateChanging;
+const bindFunction = require('../helpers/toolkit').bindFunction;
 const DataCacheFactory = require("../models/dataCacheFactory");
 const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');

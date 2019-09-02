@@ -12,9 +12,10 @@ const RentalQualification = require('../../models/enums/userEnum').RentalQualifi
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const validateStateChanging = require('@lastlongerproject/toolkit').validateStateChanging;
+const intReLength = require('../../helpers/toolkit').intReLength;
+const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
+const validateStateChanging = require('../../helpers/toolkit').validateStateChanging;
+
 const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
 const NotificationEvent = require('../../helpers/notifications/enums/events');

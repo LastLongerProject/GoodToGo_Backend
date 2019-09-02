@@ -15,8 +15,8 @@ const regAsStore = require('../middlewares/validation/validateRequest').regAsSto
 const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
 const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
 
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const cleanUndoTrade = require('@lastlongerproject/toolkit').cleanUndoTrade;
+const intReLength = require('../helpers/toolkit').intReLength;
+const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
 const NotificationEvent = require('../helpers/notifications/enums/events');

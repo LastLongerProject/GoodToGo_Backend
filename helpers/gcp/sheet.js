@@ -5,9 +5,9 @@ const {
 const sheets = google.sheets('v4');
 const debug = require('../debugger')('google_sheet');
 
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
-const dateCheckpoint = require('@lastlongerproject/toolkit').dateCheckpoint;
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const intReLength = require('../toolkit').intReLength;
+const dateCheckpoint = require('../toolkit').dateCheckpoint;
+const getDateCheckpoint = require('../toolkit').getDateCheckpoint;
 
 const User = require('../../models/DB/userDB');
 const Store = require('../../models/DB/storeDB');

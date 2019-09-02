@@ -5,7 +5,7 @@ const queue = require('queue')({
 });
 
 const sendCode = require("../helpers/aws/SNS").sms_now;
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const intReLength = require('../helpers/toolkit').intReLength;
 const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
