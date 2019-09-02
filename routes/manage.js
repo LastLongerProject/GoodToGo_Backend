@@ -1653,7 +1653,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
                 let rentFromStoreID = unusedContainer[containerKey].storeID;
                 let returnFromStoreID = aTrade.newUser.storeID;
                 let storeDiff = rentFromStoreID !== returnFromStoreID;
-                if (storesTmpData[rentFromStoreID] && storesTmpData[rentFromStoreID]) {
+                if (storesTmpData[rentFromStoreID] && storesTmpData[returnFromStoreID]) {
                     storesTmpData[rentFromStoreID].push({
                         tradeType: "Rent",
                         time: unusedContainer[containerKey].time,
