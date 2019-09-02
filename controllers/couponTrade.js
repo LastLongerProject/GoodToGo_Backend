@@ -10,7 +10,7 @@ const PointLog = require('../models/DB/pointLogDB');
 const MyCoupon = require('../models/variable/coupon').myCoupon;
 
 const generateUUID = require('../helpers/tools').generateUUID;
-const bindFunction = require('@lastlongerproject/toolkit').bindFunction;
+const bindFunction = require('../helpers/toolkit').bindFunction;
 
 module.exports = {
     purchaseCoupon: function (couponTypeID, dbUser, oriDone) {

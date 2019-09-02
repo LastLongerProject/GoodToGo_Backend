@@ -8,7 +8,7 @@ const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
 const changeContainersState = require('../controllers/containerTrade');
 
-const intReLength = require('@lastlongerproject/toolkit').intReLength;
+const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;

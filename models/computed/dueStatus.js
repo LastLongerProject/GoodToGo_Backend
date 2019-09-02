@@ -1,4 +1,4 @@
-const getDateCheckpoint = require('@lastlongerproject/toolkit').getDateCheckpoint;
+const getDateCheckpoint = require('../../helpers/toolkit').getDateCheckpoint;
 
 const DueDays = require('../enums/userEnum').DueDays;
 const LastCallDays = require('../enums/userEnum').LastCallDays;
