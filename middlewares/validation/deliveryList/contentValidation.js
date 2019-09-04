@@ -24,6 +24,7 @@ let fullDateStringWithoutYear = function (date) {
 
 function isSameDay(d1, d2) {    
     if (!(d1 instanceof Date && d2 instanceof Date)) return false;
+    d1.toLocaleString
     if (d1.getFullYear() !== d2.getFullYear()) return false;
     if (d1.getMonth() !== d2.getMonth()) return false;
     if (d1.getDate() !== d2.getDate()) return false;
@@ -41,7 +42,7 @@ function fetchBoxCreation(req, res, next) {
         redis.get("delivery_box_creation_amount", (error, string) => {
             let dict = JSON.parse(string || "{}");
             let now = new Date();
-            
+            now.setDate(now.getDate()+8);
             let sequence = dict.sequence;
             let _sequence = isSameDay(now, new Date(dict.date)) ? Number(sequence) + 1 : 1;
             
