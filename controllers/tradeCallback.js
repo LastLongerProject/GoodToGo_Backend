@@ -111,7 +111,8 @@ module.exports = {
                                     bonusPointActivity: bonusPointActivity === null ? null : bonusPointActivity.name,
                                     overdueAmount,
                                     bannedTimes: dbCustomer.bannedTimes,
-                                    overdueReturnInThisTrade: overdueReturn
+                                    overdueReturnInThisTrade: overdueReturn,
+                                    purchaseStatus: dbCustomer.getPurchaseStatus(),
                                 }
                             });
                         });
