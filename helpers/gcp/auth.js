@@ -11,7 +11,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.goo
 // Load client secrets from a local file.
 const credentials = require("../../config/config").google.credentials;
 const ROOT_DIR = require("../../config/config").rootDir;
-const TOKEN_PATH = `./config/google_sheet_token.json`;
+const TOKEN_PATH = `${ROOT_DIR}/config/google_token.json`;
 
 
 /**

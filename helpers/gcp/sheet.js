@@ -463,8 +463,8 @@ module.exports = {
                 majorDimension:"COLUMNS"
             },(err,res)=>{
                 if (err) next(err)
+                res.data.values[0]=res.data.values[0].map(x=>Number(x))
                 req.ArrayOfStoreID=res.data.values[0]
-                console.log(res.data)
                 next()
             })
         })
