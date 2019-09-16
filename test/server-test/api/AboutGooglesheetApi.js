@@ -9,6 +9,7 @@ const mocksHttp=require('node-mocks-http');
 const googleMiddleware=require("../../../helpers/gcp/sheet");
 const TradeController=require('../../../controllers/tradeController');
 const UserOrderController=require('../../../controllers/userOrderController')
+const ContainerController=require('../../../controllers/containerController')
 
 /*
 describe('Test',(done)=>{
@@ -104,6 +105,8 @@ describe('Get data from Google Sheet.',(done)=>{
         })
     }).timeout(15000);
 
+
+
     it("Get null count from UserDB.",(done)=>{
         let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
         let res=mocksHttp.createResponse()
@@ -112,5 +115,17 @@ describe('Get data from Google Sheet.',(done)=>{
             expect(req.StoreData[61].nullCount).to.be.a('number')
             done()
         })
-    })
+    }).timeout(15000);
+
+
+    it("Get available count from ContainerDB.",(done)=>{
+        let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
+        let res=mocksHttp.createResponse()
+        ContainerController.getAvailableContainerCountByStoreID(req,res,(err)=>{
+            if(err) done(err)
+            expect(req.StoreData[61].availableCount[8]).to.be.a('number')
+            expect(req.StoreData[61].availableCount[9]).to.be.a('number')
+            done()
+        })
+    }).timeout(15000);
 })
