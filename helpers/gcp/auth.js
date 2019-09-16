@@ -11,7 +11,8 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.goo
 // Load client secrets from a local file.
 const credentials = require("../../config/config").google.credentials;
 const ROOT_DIR = require("../../config/config").rootDir;
-const TOKEN_PATH = `${ROOT_DIR}/config/google_token.json`;
+const TOKEN_PATH = `./config/google_sheet_token.json`;
+
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
@@ -29,6 +30,7 @@ function authorize(callback) {
 
     // Check if we have previously stored a token.
     fs.readFile(TOKEN_PATH, (err, token) => {
+        console.log(err)
         if (err) return getNewToken(oAuth2Client, callback);
         oAuth2Client.setCredentials(JSON.parse(token));
         callback(oAuth2Client);

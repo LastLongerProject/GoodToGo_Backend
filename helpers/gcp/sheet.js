@@ -452,6 +452,22 @@ module.exports = {
                 });
             });
         });
+    },
+
+    getStoreID:(req,res,next)=>{
+        googleAuth((auth)=>{
+            sheets.spreadsheets.values.get({
+                auth,
+                spreadsheetId:configs.storeID_sheet_for_Huiqun,
+                range:'A1:A1000',
+                majorDimension:"COLUMNS"
+            },(err,res)=>{
+                if (err) next(err)
+                req.ArrayOfStoreID=res.data.values[0]
+                console.log(res.data)
+                next()
+            })
+        })
     }
 };
 
