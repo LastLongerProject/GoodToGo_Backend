@@ -3,12 +3,12 @@ module.exports={
     getAvailableContainerCountByStoreID:(req,res,next)=>{
         if (!req.StoreData){
             let StoreData={};
-            req.ArrayOfStoreID.forEach(element => {
+            req.body.ArrayOfStoreID.forEach(element => {
                 StoreData[element]={};
             });
             req.StoreData=StoreData;
         }//if dataset is null , then init req.dataset.
-        req.ArrayOfStoreID.forEach(element => {
+        req.body.ArrayOfStoreID.forEach(element => {
             if (!req.StoreData[element]['availableCount']){
                 req.StoreData[element]['availableCount']={
                     '8':0,
@@ -17,7 +17,7 @@ module.exports={
             }
         });
         Container.find({
-            'storeID':{'$in':req.ArrayOfStoreID},
+            'storeID':{'$in':req.body.ArrayOfStoreID},
             'typeCode':{'$in':[8,9]},
             'statusCode':1
         },(err,docs)=>{

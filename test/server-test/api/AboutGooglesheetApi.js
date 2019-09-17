@@ -33,13 +33,14 @@ describe('Test',(done)=>{
 */
 describe('Get data from Google Sheet.',(done)=>{
 
+
     it("Get storeID that can be read by Store Manager.",(done)=>{
         let req=mocksHttp.createRequest({sheetIDtoGetStoreID:config.google.storeID_sheet_for_Huiqun});
         let res=mocksHttp.createResponse();
         googleMiddleware.getStoreID(req,res,(err)=>{
             if (err) done(err);
-            expect(req).to.have.property('ArrayOfStoreID')
-            expect(req.ArrayOfStoreID).to.eql(
+            expect(req.body).to.have.property('ArrayOfStoreID')
+            expect(req.body.ArrayOfStoreID).to.eql(
                 [
                     61,
                     62,
@@ -65,62 +66,51 @@ describe('Get data from Google Sheet.',(done)=>{
                         ])
             done()
         })
-    }).timeout(50000);
+    }).timeout(15000);
 
 
-    it("Get sign count from TradeDB.",(done)=>{
-        let req=mocksHttp.createRequest({ArrayOfStoreID:[62]})
-        let res=mocksHttp.createResponse()
+    it("Get total sign count from TradeDB.",(done)=>{
+        let req=mocksHttp.createRequest();
+        let res=mocksHttp.createResponse();
+        req.body.ArrayOfStoreID=[61];
         TradeController.getSignCountByStoreID(req,res,(err)=>{
             if (err) done(err)
-            expect(req.StoreData[62].Sign[8]).to.be.a('number')
-            expect(req.StoreData[62].Sign[9]).to.be.a('number')
+            expect(req.StoreData[61].Sign[8]).to.be.a('number')
+            expect(req.StoreData[61].Sign[9]).to.be.a('number')
             done()
         })
     }).timeout(15000);
 
 
 
-    it("Get rent count from TradeDB.",(done)=>{
-        let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
-        let res=mocksHttp.createResponse()
+    it("Get total rent count from TradeDB.",(done)=>{
+        let req=mocksHttp.createRequest();
+        let res=mocksHttp.createResponse();
+        req.body.ArrayOfStoreID=[61];
         TradeController.getRentCountByStoreID(req,res,(err)=>{
-            if (err) done(err)
-            expect(req.StoreData[61].Rent[8]).to.be.a('number')
-            expect(req.StoreData[61].Rent[9]).to.be.a('number')
-            done()
+            if (err) done(err);
+            expect(req.StoreData[61].Rent[8]).to.be.a('number');
+            expect(req.StoreData[61].Rent[9]).to.be.a('number');
+            done();
         })
     }).timeout(15000);
 
-
-
-    it("Get return count from TradeDB.",(done)=>{
-        let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
+    it("Get everyweek null count from UserDB.",(done)=>{
+        let req=mocksHttp.createRequest()
         let res=mocksHttp.createResponse()
-        TradeController.getReturnCountByStoreID(req,res,(err)=>{
-            if (err) done(err)
-            expect(req.StoreData[61].Return[8]).to.be.a('number')
-            expect(req.StoreData[61].Return[9]).to.be.a('number')
-            done()
-        })
-    }).timeout(15000);
-
-
-
-    it("Get null count from UserDB.",(done)=>{
-        let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
-        let res=mocksHttp.createResponse()
+        req.body.ArrayOfStoreID=[61]
         UserOrderController.getNullCountByStoreID(req,res,(err)=>{
             if(err) done(err)
-            expect(req.StoreData[61].nullCount).to.be.a('number')
+            expect(req.StoreData[61]['2019 M09 2']['nullCount']).to.be.a('number')
             done()
         })
     }).timeout(15000);
 
 
     it("Get available count from ContainerDB.",(done)=>{
-        let req=mocksHttp.createRequest({ArrayOfStoreID:[61,62]})
+        let req=mocksHttp.createRequest()
         let res=mocksHttp.createResponse()
+        req.body.ArrayOfStoreID=[61]
         ContainerController.getAvailableContainerCountByStoreID(req,res,(err)=>{
             if(err) done(err)
             expect(req.StoreData[61].availableCount[8]).to.be.a('number')
@@ -128,4 +118,48 @@ describe('Get data from Google Sheet.',(done)=>{
             done()
         })
     }).timeout(15000);
+
+
+    it("Get any type count you want to get from TradeDB",(done)=>{
+        let req=mocksHttp.createRequest();
+        let res=mocksHttp.createResponse();
+        req.body.typeYouWantToGet=['Sign','Rent','Return'];
+        req.body.ArrayOfStoreID=[61,62,63]
+        TradeController.getEveryWeekCountByStoreID(req,res,err=>{
+            if(err) {
+                console.log(err)
+                done(err)
+            }
+            expect(req).to.have.property('StoreData');
+            expect(req.StoreData).to.have.property('61');
+            expect(req.StoreData).to.have.property('62');
+            expect(req.StoreData).to.have.property('63');
+            expect(req.StoreData[61]).to.have.property('2019 M09 2');
+            expect(req.StoreData[61]['2019 M09 2']).to.have.property('Sign');
+            expect(req.StoreData[61]['2019 M09 2']).to.have.property('Rent');
+            expect(req.StoreData[61]['2019 M09 2']).to.have.property('Return');
+            expect(req.StoreData[61]['2019 M09 2']['Sign']).to.have.property('8');
+            expect(req.StoreData[61]['2019 M09 2']['Rent']).to.have.property('8');
+            expect(req.StoreData[61]['2019 M09 2']['Return']).to.have.property('8');
+            expect(req.StoreData[61]['2019 M09 2']['Sign']).to.have.property('9');
+            expect(req.StoreData[61]['2019 M09 2']['Rent']).to.have.property('9');
+            expect(req.StoreData[61]['2019 M09 2']['Return']).to.have.property('9');
+            expect(req.StoreData[61]['2019 M09 2']['Sign']['8']).to.be.a('number');
+            expect(req.StoreData[61]['2019 M09 2']['Rent']['8']).to.be.a('number');
+            expect(req.StoreData[61]['2019 M09 2']['Return']['8']).to.be.a('number');
+            expect(req.StoreData[61]['2019 M09 2']['Sign']['9']).to.be.a('number');
+            expect(req.StoreData[61]['2019 M09 2']['Rent']['9']).to.be.a('number');
+            expect(req.StoreData[61]['2019 M09 2']['Return']['9']).to.be.a('number');
+            done()
+        })
+    }).timeout(15000);
+
+
+    it("Integrate data to the form Google Sheet API can use, and run this API.",(done)=>{
+        let req=mocksHttp.createRequest();
+        let res=mocksHttp.createResponse();
+        googleMiddleware.setStoreDataToGoogleSheet(req,res,(err)=>{
+            
+        })
+    })
 })

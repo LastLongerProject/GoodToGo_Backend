@@ -464,10 +464,15 @@ module.exports = {
             },(err,res)=>{
                 if (err) next(err)
                 res.data.values[0]=res.data.values[0].map(x=>Number(x))
-                req.ArrayOfStoreID=res.data.values[0]
+                req.body.ArrayOfStoreID=res.data.values[0]
+                console.log(req.body.ArrayOfStoreID)
                 next()
             })
         })
+    },
+
+    setStoreDataToGoogleSheet:(req,res,next)=>{
+
     }
 };
 
