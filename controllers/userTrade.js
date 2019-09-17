@@ -69,7 +69,7 @@ const thisModule = module.exports = {
                         if (hasAlmostOverdueContainer && sendNotice) {
                             thisModule.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
                         }
-                        if (dbUser.bannedTimes <= 1) {
+                        if (dbUser.bannedTimes <= 3) {
                             thisModule.unbanUser(dbUser, false);
                         }
                     }
