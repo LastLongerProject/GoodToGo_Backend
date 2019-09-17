@@ -129,15 +129,16 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
                 message: `Can't find that Coupon.\nCouponID: ${CouponID}`,
                 txt: "系統維修中>< 請稍後再試！"
             });
-        if (!dbUser.hasPurchase && !theCoupon.availableForFreeUser)
+        const theCouponType = CouponTypeDict[theCoupon.couponType];
+        if (!dbUser.hasPurchase && !theCouponType.availableForFreeUser)
             return res.status(403).json({
                 code: 'L008',
                 type: 'couponTradeMessage',
                 message: `Please Purchase First`,
                 txt: "需成為鐵粉會員才可使用"
             });
-        if (CouponTypeDict[theCoupon.couponType].expirationDate < Date.now()) {
-            theCoupon.expired = true
+        if (theCouponType.expirationDate < Date.now()) {
+            theCoupon.expired = true;
             theCoupon.save((err) => {
                 if (err) return next(err);
                 res.status(403).json({
@@ -148,7 +149,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
                 });
             });
         } else {
-            theCoupon.used = true
+            theCoupon.used = true;
             theCoupon.save((err) => {
                 if (err) return next(err);
                 res.json({
