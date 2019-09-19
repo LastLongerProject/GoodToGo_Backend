@@ -603,12 +603,12 @@ Array of array of weekly data =[
                     "data":CompleteDataSet
                 }
             }
-            sheets.spreadsheets.values.batchUpdate(request,(err,res)=>{
+            sheets.spreadsheets.values.batchUpdate(request,(err,response)=>{
                 if(err) {
-                    //console.error(err);
+                    console.error(err);
                     next(err);
                 }else {
-                    console.log(res.data);
+                    res.responseFromGoogleSheet=response;
                     next();
                 }
             })

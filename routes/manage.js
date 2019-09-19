@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const config=require('../config/config');
 const debug = require('../helpers/debugger')('manager');
 const redis = require("../models/redis");
 
@@ -21,6 +22,13 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const googlesheetHelper=require("../helpers/gcp/sheet");
+
+
+const TradeController=require("../controllers/tradeController");
+const UserOrderController=require("../controllers/userOrderController");
+const ContainerController=require("../controllers/containerController");
+
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -1913,6 +1921,28 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
             return next(err);
         });
 });
+
+router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
+    req.sheetIDtoGetStoreID=config.google.storeID_sheet_for_Huiqun;
+    req.body.typeYouWantToGet=['Sign','Rent','Return'];
+    next()
+    },
+    googlesheetHelper.getStoreID,
+    ContainerController.getAvailableContainerCountByStoreID,
+    TradeController.getSignCountByStoreID,
+    TradeController.getRentCountByStoreID,
+    TradeController.getEveryWeekCountByStoreID,
+    UserOrderController.getEveryWeekNullCountByStoreID,
+    googlesheetHelper.integrateStoreDataToGoogleSheet,
+    googlesheetHelper.sendCompleteDataToGoogleSheet,
+    (req,res,next)=>{
+        if (res.responseFromGoogleSheet.status===200){
+            res.json({
+                "Success":"true"
+            })
+        }else next(err)
+    }
+)
 
 /**
  * @apiName Manage refresh store
