@@ -39,7 +39,6 @@ describe('Test',(done)=>{
 
 describe('Get data from Google Sheet.',(done)=>{
 
-/*
     it("Get storeID that can be read by Store Manager.",(done)=>{
         let req=mocksHttp.createRequest({sheetIDtoGetStoreID:config.google.storeID_sheet_for_Huiqun});
         let res=mocksHttp.createResponse();
@@ -275,7 +274,7 @@ describe('Get data from Google Sheet.',(done)=>{
 
         })
     }).timeout(15000);
-*/
+
     it('Connect all function to set complete data to google sheet',(done)=>{
         let req=mocksHttp.createRequest({sheetIDtoGetStoreID:config.google.storeID_sheet_for_Huiqun});
         let res=mocksHttp.createResponse();
@@ -288,7 +287,6 @@ describe('Get data from Google Sheet.',(done)=>{
                             ContainerController.getAvailableContainerCountByStoreID(req,res,err=>{
                                 googleMiddleware.integrateStoreDataToGoogleSheet(req,res,err=>{
                                     googleMiddleware.sendCompleteDataToGoogleSheet(req,res,err=>{
-                                        console.error(err)
                                         expect(res.statusCode).to.equal(200);
                                         done()
                                     })
