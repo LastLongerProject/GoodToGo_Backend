@@ -1,16 +1,16 @@
 const Container=require("../models/DB/containerDB")
 module.exports={
     getAvailableContainerCountByStoreID:(req,res,next)=>{
-        if (!req.StoreData){
-            let StoreData={};
+        if (!req.StoreTotalData){
+            let StoreTotalData={};
             req.body.ArrayOfStoreID.forEach(element => {
-                StoreData[element]={};
+                StoreTotalData[element]={};
             });
-            req.StoreData=StoreData;
+            req.StoreTotalData=StoreTotalData;
         }//if dataset is null , then init req.dataset.
         req.body.ArrayOfStoreID.forEach(element => {
-            if (!req.StoreData[element]['availableCount']){
-                req.StoreData[element]['availableCount']={
+            if (!req.StoreTotalData[element]['availableCount']){
+                req.StoreTotalData[element]['availableCount']={
                     '8':0,
                     '9':0
                 };
@@ -21,11 +21,11 @@ module.exports={
             'typeCode':{'$in':[8,9]},
             'statusCode':1
         },(err,docs)=>{
+            if (err) next(err);
             docs.forEach(doc=>{
                 let data=doc._doc;
-                req.StoreData[data.storeID]['availableCount'][data.typeCode]++
+                req.StoreTotalData[data.storeID]['availableCount'][data.typeCode]++
             })
-            console.log(req.StoreData)
             next()
         })
     }

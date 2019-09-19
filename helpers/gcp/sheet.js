@@ -458,21 +458,161 @@ module.exports = {
         googleAuth((auth)=>{
             sheets.spreadsheets.values.get({
                 auth,
-                spreadsheetId:configs.storeID_sheet_for_Huiqun,
+                spreadsheetId:req.sheetIDtoGetStoreID,
                 range:'A1:A1000',
                 majorDimension:"COLUMNS"
             },(err,res)=>{
                 if (err) next(err)
                 res.data.values[0]=res.data.values[0].map(x=>Number(x))
                 req.body.ArrayOfStoreID=res.data.values[0]
-                console.log(req.body.ArrayOfStoreID)
                 next()
             })
         })
     },
 
-    setStoreDataToGoogleSheet:(req,res,next)=>{
 
+
+
+
+
+
+
+
+/*
+request={
+    auth,
+    spreadsheetId:String,
+    resources:{
+        "valueInputOption":String,
+        "data":Array
+    }
+}
+
+data Array=[
+    {
+        "majorDimension":String,
+        "range":String,
+        "values":Array of array,
+    }
+]
+
+Array of array of total data =[
+    [
+        Store name,
+        Container type,
+        Sign Count,
+        Rent Count,
+        Availible Count
+    ]
+]
+
+Array of array of weekly data =[
+    [
+        日期,
+        Sign 大器,
+        Sign 小器,
+        Rent 大器,
+        Rent 小器,
+        Return 大器,
+        Return 小器,
+        登記借出未登記ID
+    ]
+]
+
+
+*/
+    integrateStoreDataToGoogleSheet:(req,res,next)=>{
+            let datasetOfTotalData=[];
+            let valuesOfTotalDataset=[];
+            let datasetOfWeeklyData=[];
+            let storeNames={};
+            let storeIDkeysOfTotalData=Object.keys(req.StoreTotalData);
+            let storeIDkeysOfWeeklyData=Object.keys(req.StoreWeeklyData);
+            Store.find({
+                'id':{'$in':storeIDkeysOfTotalData}
+            },(err,stores)=>{
+                if (err) next(err)
+                stores.forEach(store=>{
+                    storeNames[store._doc.id]=store._doc.name;
+                })
+                storeIDkeysOfTotalData.forEach(storeIDkey=>{
+                    let ArrayOfContainerType=Object.keys(req.StoreTotalData[storeIDkey]['Sign']);
+                    ArrayOfContainerType.forEach(containerType=>{
+                        let valueBePushTotaluesOfTotalDataset=[];
+                        valueBePushTotaluesOfTotalDataset.push(storeNames[storeIDkey])
+                        if (containerType==='8') valueBePushTotaluesOfTotalDataset.push('小器');
+                        else if (containerType==='9') valueBePushTotaluesOfTotalDataset.push('大器');
+                        else console.error('Container type is not in expectance(\'8\' or \'9\')');
+                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Sign'][containerType]);
+                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Rent'][containerType]);
+                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['availableCount'][containerType]);
+                        valuesOfTotalDataset.push(valueBePushTotaluesOfTotalDataset);
+                    })
+                })
+                datasetOfTotalData.push({
+                    "range":"SUMMARY!B1:5",
+                    "majorDimension":"COLUMNS",
+                    "values":valuesOfTotalDataset,
+                })
+                req.datasetOfTotalData=datasetOfTotalData;
+                
+
+
+                storeIDkeysOfWeeklyData.forEach(storeIDkey=>{
+                    let valuesOfWeeklyDataset=[];
+                    let dataItem={}
+                    dataItem["range"]=""+"'"+`${storeIDkey}`+'_'+`${storeNames[storeIDkey]}`+"'"+"!A3:H"
+                    dataItem["majorDimension"]="ROWS"
+                    Object.keys(req.StoreWeeklyData[storeIDkey]).forEach(date=>{
+                        let valueOfWeeklyData=[];
+                        valueOfWeeklyData.push(date)
+                        Object.keys(req.StoreWeeklyData[storeIDkey][date]).forEach(actionType=>{
+                            if(actionType==="nullCount") valueOfWeeklyData.push(req.StoreWeeklyData[storeIDkey][date][actionType])
+                            else {
+                                Object.keys(req.StoreWeeklyData[storeIDkey][date][actionType]).forEach(containerType=>{
+                                    valueOfWeeklyData.push(req.StoreWeeklyData[storeIDkey][date][actionType][containerType])
+                                })
+                            }
+                        })
+                        valuesOfWeeklyDataset.push(valueOfWeeklyData);
+                    })
+                    dataItem["values"]=valuesOfWeeklyDataset;
+                    datasetOfWeeklyData.push(dataItem)
+                })
+                req.datasetOfWeeklyData=datasetOfWeeklyData;
+                console.log(req.datasetOfWeeklyData[0]);
+                next()
+            })   
+    },
+
+    sendCompleteDataToGoogleSheet:(req,res,next)=>{
+        let CompleteDataSet=[];
+        req.datasetOfTotalData.forEach(dataItem=>{
+            CompleteDataSet.push(dataItem);
+        })
+        req.datasetOfWeeklyData.forEach(dataItem=>{
+            CompleteDataSet.push(dataItem);
+        })
+        console.log(CompleteDataSet);
+        googleAuth(auth=>{
+            let request={
+                auth,
+                spreadsheetId:"1vzzxR0JJL093zzEs-Pve9UmBLuoaGN7jIhVl5dOPPJI",
+                resource:{
+                    "valueInputOption":"RAW",
+                    "data":CompleteDataSet
+                }
+            }
+            sheets.spreadsheets.values.batchUpdate(request,(err,res)=>{
+                if(err) {
+                    //console.error(err);
+                    next(err);
+                }else {
+                    console.log(res.data);
+                    next();
+                }
+            })
+        })
     }
 };
 

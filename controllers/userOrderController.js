@@ -5,13 +5,13 @@ const Minute=60*1000;
 const Second=1000;
 
 module.exports={
-    getNullCountByStoreID:(req,res,next)=>{
-        if (!req.StoreData){
-            let StoreData={};
+    getEveryWeekNullCountByStoreID:(req,res,next)=>{
+        if (!req.StoreWeeklyData){
+            let StoreWeeklyData={};
             req.body.ArrayOfStoreID.forEach(element => {
-                StoreData[element]={};
+                StoreWeeklyData[element]={};
             });
-            req.StoreData=StoreData;
+            req.StoreWeeklyData=StoreWeeklyData;
         }//if dataset is null , then init req.dataset.
         const today=new Date();
         let thisMonday;
@@ -19,16 +19,16 @@ module.exports={
              thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
         }else  thisMonday=new Date(today-7*Day);
 
-        for(let i=thisMonday;i>=new Date('2017-11-01');i=i-7*Day){
+        for(let i=thisMonday;i>=new Date('2019-7-01');i=i-7*Day){
             i=new Date(i)
             req.body.ArrayOfStoreID.forEach((storeID)=>{
-                if(!req.StoreData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]){
-                    req.StoreData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]={
+                if(!req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]){
+                    req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]={
                         'nullCount':0
                     }
                 }
             else{
-                req.StoreData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']=0
+                req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']=0
             }
             })
         }
@@ -43,7 +43,7 @@ module.exports={
                 let data=doc._doc;
                 let OrderTime=data.orderTime
                 let OrderTimeTemp=new Date(OrderTime-(OrderTime.getDay()-1)*Day)
-                req.StoreData[data.storeID][OrderTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']++
+                req.StoreWeeklyData[data.storeID][OrderTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']++
             })
             next()
         })
