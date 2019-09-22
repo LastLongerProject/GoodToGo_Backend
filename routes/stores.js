@@ -837,10 +837,6 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
     };
     process.nextTick(function () {
         Trade.find({
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - historyDays),
-                '$lt': dateCheckpoint(1)
-            },
             'tradeType.action': "Rent",
             'oriUser.storeID': dbStore.roles.clerk.storeID
         }, function (err, rentedList) {
