@@ -45,6 +45,7 @@
         "ejs": "~2.5.7",
         "express": "^4.16.4",
         "express-status-monitor": "^1.0.1",
+        "google-spreadsheet": "^2.0.8",
         "googleapis": "^32.0.0",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.6",

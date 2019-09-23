@@ -313,6 +313,7 @@ module.exports={
                     {'tradeType.action':'Rent','oriUser.storeID':{'$in':req.body.ArrayOfStoreID}}
                     ],
             'container.typeCode':{'$in':[8,9]},
+            'tradeTime':{'$gte':new Date('2019-7-01')}
         },(err,docs)=>{
             if(err) next(err);
             docs.forEach(doc=>{

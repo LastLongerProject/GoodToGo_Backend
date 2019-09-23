@@ -523,11 +523,12 @@ Array of array of weekly data =[
 */
     integrateStoreDataToGoogleSheet:(req,res,next)=>{
             let datasetOfTotalData=[];
-            let valuesOfTotalDataset=[];
+            let ValuesOfTotalDataset=[];
             let datasetOfWeeklyData=[];
             let storeNames={};
             let storeIDkeysOfTotalData=Object.keys(req.StoreTotalData);
             let storeIDkeysOfWeeklyData=Object.keys(req.StoreWeeklyData);
+
             Store.find({
                 'id':{'$in':storeIDkeysOfTotalData}
             },(err,stores)=>{
@@ -538,21 +539,21 @@ Array of array of weekly data =[
                 storeIDkeysOfTotalData.forEach(storeIDkey=>{
                     let ArrayOfContainerType=Object.keys(req.StoreTotalData[storeIDkey]['Sign']);
                     ArrayOfContainerType.forEach(containerType=>{
-                        let valueBePushTotaluesOfTotalDataset=[];
-                        valueBePushTotaluesOfTotalDataset.push(storeNames[storeIDkey])
-                        if (containerType==='8') valueBePushTotaluesOfTotalDataset.push('小器');
-                        else if (containerType==='9') valueBePushTotaluesOfTotalDataset.push('大器');
+                        let ValueBePushTotalValuesOfTotalDataset=[];
+                        ValueBePushTotalValuesOfTotalDataset.push(storeNames[storeIDkey])
+                        if (containerType==='8') ValueBePushTotalValuesOfTotalDataset.push('小器');
+                        else if (containerType==='9') ValueBePushTotalValuesOfTotalDataset.push('大器');
                         else console.error('Container type is not in expectance(\'8\' or \'9\')');
-                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Sign'][containerType]);
-                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Rent'][containerType]);
-                        valueBePushTotaluesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['availableCount'][containerType]);
-                        valuesOfTotalDataset.push(valueBePushTotaluesOfTotalDataset);
+                        ValueBePushTotalValuesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Sign'][containerType]);
+                        ValueBePushTotalValuesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['Rent'][containerType]);
+                        ValueBePushTotalValuesOfTotalDataset.push(req.StoreTotalData[storeIDkey]['availableCount'][containerType]);
+                        ValuesOfTotalDataset.push(ValueBePushTotalValuesOfTotalDataset);
                     })
                 })
                 datasetOfTotalData.push({
-                    "range":"SUMMARY!B1:5",
+                    "range":"'SUMMARY'!B1:5",
                     "majorDimension":"COLUMNS",
-                    "values":valuesOfTotalDataset,
+                    "values":ValuesOfTotalDataset,
                 })
                 req.datasetOfTotalData=datasetOfTotalData;
                 
@@ -593,27 +594,30 @@ Array of array of weekly data =[
         req.datasetOfWeeklyData.forEach(dataItem=>{
             CompleteDataSet.push(dataItem);
         })
-        console.log(CompleteDataSet);
-        googleAuth(auth=>{
-            let request={
-                auth,
-                spreadsheetId:"1vzzxR0JJL093zzEs-Pve9UmBLuoaGN7jIhVl5dOPPJI",
-                resource:{
-                    "valueInputOption":"RAW",
-                    "data":CompleteDataSet
+        let spreadsheetId=req.sheetIDofSummary;
+        req.CompleteDataSet=CompleteDataSet;
+        detectTitleAndUpdateSheets(req,res,addSheetsInID,()=>{
+            googleAuth(auth=>{
+                let request={
+                    auth,
+                    spreadsheetId:spreadsheetId,
+                    resource:{
+                        "valueInputOption":"RAW",
+                        "data":CompleteDataSet
+                    }
                 }
-            }
-            sheets.spreadsheets.values.batchUpdate(request,(err,response)=>{
-                if(err) {
-                    console.error(err);
-                    next(err);
-                }else {
-                    res.responseFromGoogleSheet=response;
-                    next();
-                }
+                sheets.spreadsheets.values.batchUpdate(request,(err,response)=>{
+                    if(err) {
+                        console.error(err);
+                        next(err);
+                    }else {
+                        res.responseFromGoogleSheet=response;
+                        next();
+                    }
+                })
             })
         })
-    }
+    },
 };
 
 function deleteExpiredActivityId(activityName) {
@@ -636,4 +640,60 @@ function deleteAtivityKey(activityName) {
             roleType: `clerk_${activityName}`
         })
         .exec();
+}
+
+function detectTitleAndUpdateSheets(req,res,...next){
+    let newSheetsCount=0;
+    googleAuth(auth=>{
+        let request={
+            auth,
+            spreadsheetId:req.sheetIDofSummary
+        };
+
+        sheets.spreadsheets.get(request,(err,res)=>{
+            if (err) {
+                console.error(err);
+                return err
+            }
+            console.log(req.CompleteDataSet);
+
+            let ArrayOfNewSheetTitle=[];
+
+            req.CompleteDataSet.forEach((dataItem)=>{
+                let sheetNameYouWantToUpdate=dataItem.range.split("'")[1];
+                let ExistSheetTitles=res.data.sheets.map(sheet=>sheet.properties.title);
+                console.log(ExistSheetTitles)
+                console.log(sheetNameYouWantToUpdate)
+                if (ExistSheetTitles.indexOf(sheetNameYouWantToUpdate)===-1){
+                    newSheetsCount++
+                    ArrayOfNewSheetTitle.push(sheetNameYouWantToUpdate);
+                }
+            })
+            req.newSheetsCount=newSheetsCount;
+            req.ArrayOfNewSheetTitle=ArrayOfNewSheetTitle;
+            next[0](req,res,next[1])
+        })
+    })
+}
+function addSheetsInID(req,res,...next){
+    console.log("New Sheet Count : "+req.newSheetsCount)
+    console.log("Spreadsheet ID : "+req.sheetIDofSummary)
+    googleAuth(auth=>{
+        let requests=[];
+        req.ArrayOfNewSheetTitle.forEach(title=>{
+            requests.push({
+                
+            })
+        })
+        let request={
+            spreadsheetId:req.sheetIDofSummary,
+            auth,
+            resource:{
+                requests:[]
+            }
+        };
+        sheets.spreadsheets.batchUpdate(request,(err,res)=>{
+            
+        })
+    })
 }

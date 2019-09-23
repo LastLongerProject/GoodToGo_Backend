@@ -1923,7 +1923,8 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
 });
 
 router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
-    req.sheetIDtoGetStoreID=config.google.storeID_sheet_for_Huiqun;
+    req.sheetIDtoGetStoreID="1vp_70AFc871W3ny_8kOyfJE33MTMj2Ah6PLL3R8RUw0";
+    req.sheetIDofSummary="1vzzxR0JJL093zzEs-Pve9UmBLuoaGN7jIhVl5dOPPJI";
     req.body.typeYouWantToGet=['Sign','Rent','Return'];
     next()
     },
@@ -1935,7 +1936,7 @@ router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(re
     UserOrderController.getEveryWeekNullCountByStoreID,
     googlesheetHelper.integrateStoreDataToGoogleSheet,
     googlesheetHelper.sendCompleteDataToGoogleSheet,
-    (req,res,next)=>{
+    (err,res,next)=>{
         if (res.responseFromGoogleSheet.status===200){
             res.json({
                 "Success":"true"
