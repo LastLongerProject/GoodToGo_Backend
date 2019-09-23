@@ -268,7 +268,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                                 doneSave({
                                                     id: theContainer.ID,
                                                     typeCode: theContainer.typeCode,
-                                                    typeName: containerTypeDict[theContainer.typeCode].name
+                                                    typeName: (containerTypeDict[theContainer.typeCode] && containerTypeDict[theContainer.typeCode].name) || '未知的容器'
                                                 });
                                             });
                                         });
