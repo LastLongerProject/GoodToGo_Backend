@@ -462,7 +462,7 @@ module.exports = {
                 range:'A1:A1000',
                 majorDimension:"COLUMNS"
             },(err,res)=>{
-                if (err) next(err)
+                if (err) next(err);
                 res.data.values[0]=res.data.values[0].map(x=>Number(x))
                 req.body.ArrayOfStoreID=res.data.values[0]
                 next()
@@ -581,7 +581,6 @@ Array of array of weekly data =[
                     datasetOfWeeklyData.push(dataItem)
                 })
                 req.datasetOfWeeklyData=datasetOfWeeklyData;
-                console.log(req.datasetOfWeeklyData[0]);
                 next()
             })   
     },
@@ -596,7 +595,6 @@ Array of array of weekly data =[
         })
         let spreadsheetId=req.sheetIDofSummary;
         req.CompleteDataSet=CompleteDataSet;
-        detectTitleAndUpdateSheets(req,res,addSheetsInID,()=>{
             googleAuth(auth=>{
                 let request={
                     auth,
@@ -616,7 +614,6 @@ Array of array of weekly data =[
                     }
                 })
             })
-        })
     },
 };
 
@@ -678,6 +675,8 @@ function detectTitleAndUpdateSheets(req,res,...next){
 function addSheetsInID(req,res,...next){
     console.log("New Sheet Count : "+req.newSheetsCount)
     console.log("Spreadsheet ID : "+req.sheetIDofSummary)
+    next[0]();
+    /*
     googleAuth(auth=>{
         let requests=[];
         req.ArrayOfNewSheetTitle.forEach(title=>{
@@ -696,4 +695,5 @@ function addSheetsInID(req,res,...next){
             
         })
     })
+    */
 }
