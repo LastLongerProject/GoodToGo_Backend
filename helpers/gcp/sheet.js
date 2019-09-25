@@ -570,15 +570,15 @@ Array of array of weekly data =[
         req.datasetOfWeeklyData.forEach(dataItem=>{
             CompleteDataSet.push(dataItem);
         })
-        let spreadsheetId=req.sheetIDofSummary;
         req.CompleteDataSet=CompleteDataSet;
+        detectTitleAndUpdateSheets(req,res,addSummarySheetsInSpreadsheetID,()=>{
             googleAuth(auth=>{
                 let request={
                     auth,
-                    spreadsheetId:spreadsheetId,
+                    spreadsheetId:req.sheetIDofSummary,
                     resource:{
                         "valueInputOption":"RAW",
-                        "data":CompleteDataSet
+                        "data":req.CompleteDataSet
                     }
                 }
                 sheets.spreadsheets.values.batchUpdate(request,(err,response)=>{
@@ -591,6 +591,7 @@ Array of array of weekly data =[
                     }
                 })
             })
+        })
     },
 };
 
@@ -629,14 +630,10 @@ function detectTitleAndUpdateSheets(req,res,...next){
                 console.error(err);
                 return err
             }
-            console.log(req.CompleteDataSet);
-
             let ArrayOfNewSheetTitle=[];
             req.CompleteDataSet.forEach((dataItem)=>{
                 let sheetNameYouWantToUpdate=dataItem.range.split("'")[1];
                 let ExistSheetTitles=res.data.sheets.map(sheet=>sheet.properties.title);
-                console.log(ExistSheetTitles)
-                console.log(sheetNameYouWantToUpdate)
                 if (ExistSheetTitles.indexOf(sheetNameYouWantToUpdate)===-1){
                     newSheetsCount++
                     ArrayOfNewSheetTitle.push(sheetNameYouWantToUpdate);
@@ -644,33 +641,55 @@ function detectTitleAndUpdateSheets(req,res,...next){
             })
             req.newSheetsCount=newSheetsCount;
             req.ArrayOfNewSheetTitle=ArrayOfNewSheetTitle;
-            next[0](req,res,next[1])
+            if (!(next instanceof Array)){
+                next();
+            }else if (newSheetsCount===0){
+                next[1](req,res)
+            }else{
+                next[0](req,res,next[1])
+            }
         })
     })
 }
-function addSheetsInID(req,res,...next){
-    console.log("New Sheet Count : "+req.newSheetsCount)
-    console.log("Spreadsheet ID : "+req.sheetIDofSummary)
+function addSummarySheetsInSpreadsheetID(req,res,...next){
     req.body.ArrayOfStoreID.sort((a,b)=>{
         return a-b
+    })
+    req.ArrayOfNewSheetTitle.sort((a,b)=>{
+        let storeID_of_a=Number(a.split("_")[0]);
+        let storeID_of_b=Number(b.split("_")[0]);
+        return storeID_of_a-storeID_of_b
     })
     googleAuth(auth=>{
         let requests=[];
         req.ArrayOfNewSheetTitle.forEach(title=>{
+            let storeID=Number(title.split("_")[0]);
+            let index=req.body.ArrayOfStoreID.indexOf(storeID)+1;
+            if(index>=req.body.ArrayOfStoreID.length){
+                index=req.body.ArrayOfStoreID.length+1
+            }
             requests.push({
-                sourceSheetId:configs.summary_sheet_ID_for_Huiqun,
-                
+                "duplicateSheet":{
+                    sourceSheetId:0,
+                    newSheetName:title,
+                    insertSheetIndex:index
+                }
             })
         })
         let request={
             spreadsheetId:req.sheetIDofSummary,
             auth,
             resource:{
-                requests:[]
+                requests:requests
             }
         };
         sheets.spreadsheets.batchUpdate(request,(err,res)=>{
-            
+            if (err) console.log(err);
+            if(next instanceof Array){
+                next[0]()
+            }else{
+                next()
+            }
         })
     })
 }
