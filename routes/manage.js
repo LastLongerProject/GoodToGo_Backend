@@ -1923,12 +1923,11 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
 });
 
 router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
-    req.sheetIDtoGetStoreID=config.google.storeID_sheet_for_Huiqun;
     req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
+    req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
     req.body.typeYouWantToGet=['Sign','Rent','Return'];
     next()
     },
-    googlesheetHelper.getStoreID,
     ContainerController.getAvailableContainerCountByStoreID,
     TradeController.getSignCountByStoreID,
     TradeController.getRentCountByStoreID,

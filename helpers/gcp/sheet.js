@@ -454,29 +454,6 @@ module.exports = {
         });
     },
 
-    getStoreID:(req,res,next)=>{
-        googleAuth((auth)=>{
-            sheets.spreadsheets.values.get({
-                auth,
-                spreadsheetId:req.sheetIDtoGetStoreID,
-                range:'A1:A1000',
-                majorDimension:"COLUMNS"
-            },(err,res)=>{
-                if (err) next(err);
-                res.data.values[0]=res.data.values[0].map(x=>Number(x))
-                req.body.ArrayOfStoreID=res.data.values[0]
-                next()
-            })
-        })
-    },
-
-
-
-
-
-
-
-
 
 /*
 request={
@@ -655,7 +632,6 @@ function detectTitleAndUpdateSheets(req,res,...next){
             console.log(req.CompleteDataSet);
 
             let ArrayOfNewSheetTitle=[];
-
             req.CompleteDataSet.forEach((dataItem)=>{
                 let sheetNameYouWantToUpdate=dataItem.range.split("'")[1];
                 let ExistSheetTitles=res.data.sheets.map(sheet=>sheet.properties.title);
@@ -675,12 +651,14 @@ function detectTitleAndUpdateSheets(req,res,...next){
 function addSheetsInID(req,res,...next){
     console.log("New Sheet Count : "+req.newSheetsCount)
     console.log("Spreadsheet ID : "+req.sheetIDofSummary)
-    next[0]();
-    /*
+    req.body.ArrayOfStoreID.sort((a,b)=>{
+        return a-b
+    })
     googleAuth(auth=>{
         let requests=[];
         req.ArrayOfNewSheetTitle.forEach(title=>{
             requests.push({
+                sourceSheetId:configs.summary_sheet_ID_for_Huiqun,
                 
             })
         })
@@ -695,5 +673,4 @@ function addSheetsInID(req,res,...next){
             
         })
     })
-    */
 }
