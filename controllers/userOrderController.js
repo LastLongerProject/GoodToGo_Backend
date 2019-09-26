@@ -4,6 +4,18 @@ const Hour=60*60*1000;
 const Minute=60*1000;
 const Second=1000;
 
+/*Data formate for weekly=
+{
+    storeID:{
+        date:{
+            tradeType:{
+                containerType:Number
+            }
+        }
+    }
+}
+*/
+
 module.exports={
     getEveryWeekNullCountByStoreID:(req,res,next)=>{
         if (!req.StoreWeeklyData){
@@ -32,7 +44,33 @@ module.exports={
             }
             })
         }
-
+        //This time, the req.StoreTotalData is like follow example.
+        /*
+        req.StoreTotalData=
+        {
+            "61":{
+                "2019 M09 16":{
+                    nullCount:{
+                        "8":0,
+                        "9":0
+                    },
+                    ...
+                }
+                ...
+            },
+            "62":{
+                "2019 M09 16":{
+                    nullCount:{
+                        "8":0,
+                        "9":0
+                    },
+                    ...
+                }
+                ...
+            },
+            ...
+        }
+        */
 
         UserOrder.find({
             'storeID':{'$in':req.body.ArrayOfStoreID},

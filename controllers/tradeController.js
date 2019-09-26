@@ -17,7 +17,26 @@ const TypeOfAction=[
                     "UndoReturn"
                     ]
             
-
+/*Data formate for total=
+{
+    storeID:{
+        tradeType:{
+            containerType:Number
+        }
+    }
+}
+*/
+/*Data formate for weekly=
+{
+    storeID:{
+        date:{
+            tradeType:{
+                containerType:Number
+            }
+        }
+    }
+}
+*/
 module.exports={
     getSignCountByStoreID:(req,res,next)=>{
         if (!req.StoreTotalData){
@@ -35,19 +54,38 @@ module.exports={
                 }
             }
         });
+        //This time, the req.StoreTotalData is like follow example.
+        /*
+        req.StoreTotalData=
+        {
+            "61":{
+                ...
+                Sign:{
+                    "8":0,
+                    "9":0
+                }
+                ...
+            },
+            "62":{
+                ...
+                Sign:{
+                    "8":0,
+                    "9":0
+                }
+                ...
+            },
+            ...
+        }
+        */
         Trade.find({
-            '$or':[
-                    {'tradeType.action':'Sign','newUser.storeID':{'$in':req.body.ArrayOfStoreID}},
-                    ],
+            'tradeType.action':'Sign',
+            'newUser.storeID':{'$in':req.body.ArrayOfStoreID},
             'container.typeCode':{'$in':[8,9]},
         },(err,docs)=>{
             if(err) console.log(err)
             docs.forEach(doc=>{
-                let data=doc._doc;
-                if(!req.StoreTotalData[data.newUser.storeID][data.tradeType.action])  req.StoreTotalData[data.newUser.storeID][data.tradeType.action]={}
-                if(!req.StoreTotalData[data.newUser.storeID][data.tradeType.action][data.container.typeCode]) 
-                    req.StoreTotalData[data.newUser.storeID][data.tradeType.action][data.container.typeCode]=1;
-                else req.StoreTotalData[data.newUser.storeID][data.tradeType.action][data.container.typeCode]++
+                let data=doc._doc;//The data we want to get is in response._doc from mongoDB.
+                req.StoreTotalData[data.newUser.storeID][data.tradeType.action][data.container.typeCode]++
             })
             next()
         })
@@ -64,24 +102,152 @@ module.exports={
         req.body.ArrayOfStoreID.forEach(element => {
             if (!req.StoreTotalData[element].Rent){
                 req.StoreTotalData[element]['Rent']={
-                    '8':0,
-                    '9':0
+                    '8':0,//小器
+                    '9':0//大器
                 }
             }
         });
+        //This time, the req.StoreTotalData is like follow example.
+        /*
+        req.StoreTotalData=
+        {
+            "61":{
+                ...
+                Sign:{
+                    "8":0,
+                    "9":0
+                }
+                ...
+            },
+            "62":{
+                ...
+                Sign:{
+                    "8":0,
+                    "9":0
+                }
+                ...
+            },
+            ...
+        }
+        */
         Trade.find({
-            '$or':[
-                    {'tradeType.action':'Rent','oriUser.storeID':{'$in':req.body.ArrayOfStoreID}},
-                    ],
+            'tradeType.action':'Rent',
+            'oriUser.storeID':{'$in':req.body.ArrayOfStoreID},
             'container.typeCode':{'$in':[8,9]},
         },(err,docs)=>{
             if(err) console.log(err)
             docs.forEach(doc=>{
+                let data=doc._doc;//The data we want to get is in response._doc from mongoDB.
+                req.StoreTotalData[data.oriUser.storeID][data.tradeType.action][data.container.typeCode]++
+            })
+            next()
+        })
+    },
+
+
+    getEveryWeekCountByStoreID:(req,res,next)=>{
+        if(!req.StoreWeeklyData) req.StoreWeeklyData={};
+        req.body.ArrayOfStoreID.forEach(storeID=>{
+            if(!req.StoreWeeklyData[storeID]) req.StoreWeeklyData[storeID]={};
+        })
+
+
+        const today=new Date();
+        let thisMonday;
+        if(today.getDay()!==0){
+             thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
+        }else  thisMonday=new Date(today-7*Day);
+        //cacuulate this week Monday date
+
+        for(let i=thisMonday;i>=new Date('2019-7-01');i=i-7*Day){
+            i=new Date(i)
+            let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
+            req.body.ArrayOfStoreID.forEach(storeID=>{
+                if(!req.StoreWeeklyData[storeID][DateString]){
+                    req.StoreWeeklyData[storeID][DateString]={}
+                    req.body.typeYouWantToGet.forEach(actionType=>{
+                        req.StoreWeeklyData[storeID][DateString][actionType]={
+                            '8':0,
+                            '9':0
+                        }
+                    })
+                }else{
+                    req.body.typeYouWantToGet.forEach(actionType=>{
+                        if(!req.StoreWeeklyData[storeID][DateString][actionType]){
+                            req.StoreWeeklyData[storeID][DateString][actionType]={
+                                '8':0,
+                                '9':0
+                            }
+                        }else if(!req.StoreWeeklyData[storeID][DateString][actionType]['8']){
+                            req.StoreWeeklyData[storeID][DateString][actionType]['8']=0;
+                        }else if(!req.StoreWeeklyData[storeID][DateString][actionType]['8']){
+                            req.StoreWeeklyData[storeID][DateString][actionType]['9']=0;
+                        }
+                    })
+                }
+            })
+        }
+        //This time, the req.StoreTotalData is like follow example.
+        /*
+        req.StoreTotalData=
+        {
+            "61":{
+                ...
+                "2019 M09 16":{
+                    Sign:{
+                        "8":0,
+                        "9":0
+                    },
+                    Rent:{
+                        "8":0,
+                        "9":0
+                    },
+                    Return:{
+                        "8":0,
+                        "9":0
+                    }
+                }
+                ...
+            },
+            "62":{
+                ...
+                "2019 M09 16":{
+                    Sign:{
+                        "8":0,
+                        "9":0
+                    },
+                    Rent:{
+                        "8":0,
+                        "9":0
+                    },
+                    Return:{
+                        "8":0,
+                        "9":0
+                    }
+                }
+                ...
+            },
+            ...
+        }
+        */
+        Trade.find({
+            '$or':[{'tradeType.action':{'$in':req.body.typeYouWantToGet},'newUser.storeID':{'$in':req.body.ArrayOfStoreID}},
+                    {'tradeType.action':'Rent','oriUser.storeID':{'$in':req.body.ArrayOfStoreID}}
+                    ],
+            'container.typeCode':{'$in':[8,9]},
+            'tradeTime':{'$gte':new Date('2019-7-01')}
+        },(err,docs)=>{
+            if(err) next(err);
+            docs.forEach(doc=>{
                 let data=doc._doc;
-                if(!req.StoreTotalData[data.oriUser.storeID][data.tradeType.action])  req.StoreTotalData[data.oriUser.storeID][data.tradeType.action]={}
-                if(!req.StoreTotalData[data.oriUser.storeID][data.tradeType.action][data.container.typeCode]) 
-                    req.StoreTotalData[data.oriUser.storeID][data.tradeType.action][data.container.typeCode]=1;
-                else req.StoreTotalData[data.oriUser.storeID][data.tradeType.action][data.container.typeCode]++
+                let TradeTime=data.tradeTime;
+                let TradeTimeTemp=new Date(TradeTime-(TradeTime.getDay()-1)*Day);
+                let TradeTimeTempString=TradeTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
+                if(data.tradeType.action==='Rent'){
+                    req.StoreWeeklyData[data.oriUser.storeID][TradeTimeTempString][data.tradeType.action][data.container.typeCode]++
+                }else{
+                    req.StoreWeeklyData[data.newUser.storeID][TradeTimeTempString][data.tradeType.action][data.container.typeCode]++
+                }
             })
             next()
         })
@@ -262,72 +428,4 @@ module.exports={
     },
 
 */
-
-
-    getEveryWeekCountByStoreID:(req,res,next)=>{
-        if(!req.StoreWeeklyData) req.StoreWeeklyData={};
-        req.body.ArrayOfStoreID.forEach(storeID=>{
-            if(!req.StoreWeeklyData[storeID]) req.StoreWeeklyData[storeID]={};
-        })
-
-
-        const today=new Date();
-        let thisMonday;
-        if(today.getDay()!==0){
-             thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
-        }else  thisMonday=new Date(today-7*Day);
-        //cacuulate this week Monday date
-
-
-        for(let i=thisMonday;i>=new Date('2019-7-01');i=i-7*Day){
-            i=new Date(i)
-            let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
-            req.body.ArrayOfStoreID.forEach(storeID=>{
-                if(!req.StoreWeeklyData[storeID][DateString]){
-                    req.StoreWeeklyData[storeID][DateString]={}
-                    req.body.typeYouWantToGet.forEach(actionType=>{
-                        req.StoreWeeklyData[storeID][DateString][actionType]={
-                            '8':0,
-                            '9':0
-                        }
-                    })
-                }else{
-                    req.body.typeYouWantToGet.forEach(actionType=>{
-                        if(!req.StoreWeeklyData[storeID][DateString][actionType]){
-                            req.StoreWeeklyData[storeID][DateString][actionType]={
-                                '8':0,
-                                '9':0
-                            }
-                        }else if(!req.StoreWeeklyData[storeID][DateString][actionType]['8']){
-                            req.StoreWeeklyData[storeID][DateString][actionType]['8']=0;
-                        }else if(!req.StoreWeeklyData[storeID][DateString][actionType]['8']){
-                            req.StoreWeeklyData[storeID][DateString][actionType]['9']=0;
-                        }
-                    })
-                }
-            })
-        }
-
-        Trade.find({
-            '$or':[{'tradeType.action':{'$in':req.body.typeYouWantToGet},'newUser.storeID':{'$in':req.body.ArrayOfStoreID}},
-                    {'tradeType.action':'Rent','oriUser.storeID':{'$in':req.body.ArrayOfStoreID}}
-                    ],
-            'container.typeCode':{'$in':[8,9]},
-            'tradeTime':{'$gte':new Date('2019-7-01')}
-        },(err,docs)=>{
-            if(err) next(err);
-            docs.forEach(doc=>{
-                let data=doc._doc;
-                let TradeTime=data.tradeTime;
-                let TradeTimeTemp=new Date(TradeTime-(TradeTime.getDay()-1)*Day);
-                let TradeTimeTempString=TradeTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
-                if(data.tradeType.action==='Rent'){
-                    req.StoreWeeklyData[data.oriUser.storeID][TradeTimeTempString][data.tradeType.action][data.container.typeCode]++
-                }else{
-                    req.StoreWeeklyData[data.newUser.storeID][TradeTimeTempString][data.tradeType.action][data.container.typeCode]++
-                }
-            })
-            next()
-        })
-    }
 }

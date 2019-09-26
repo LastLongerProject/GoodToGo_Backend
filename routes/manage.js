@@ -1922,7 +1922,23 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
         });
 });
 
-router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
+
+/**
+ * @apiName Manage refresh summary sheets for Huiqun
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/GoogleSheetForHuiqun
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true
+        }
+ * 
+ */
+router.patch('/refresh/GoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
     req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
     req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
     req.body.typeYouWantToGet=['Sign','Rent','Return'];
@@ -1938,7 +1954,7 @@ router.post('/refreshGoogleSheetForHuiqun',regAsAdminManager,validateRequest,(re
     (err,res,next)=>{
         if (res.responseFromGoogleSheet.status===200){
             res.json({
-                "Success":"true"
+                "success":"true"
             })
         }else next(err)
     }

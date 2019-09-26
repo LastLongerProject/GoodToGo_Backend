@@ -455,7 +455,9 @@ module.exports = {
     },
 
 
-/*
+/*  The request formate for google sheet api , sheets.spreadsheets.values.batchUpdate.
+    You can realize detial in https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/batchUpdate
+    
 request={
     auth,
     spreadsheetId:String,
@@ -465,7 +467,7 @@ request={
     }
 }
 
-data Array=[
+data =[
     {
         "majorDimension":String,
         "range":String,
@@ -473,7 +475,7 @@ data Array=[
     }
 ]
 
-Array of array of total data =[
+"values" of total data =[
     [
         Store name,
         Container type,
@@ -483,7 +485,7 @@ Array of array of total data =[
     ]
 ]
 
-Array of array of weekly data =[
+"values" of weekly data =[
     [
         日期,
         Sign 大器,

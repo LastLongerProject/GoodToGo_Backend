@@ -39,41 +39,6 @@ describe('Test',(done)=>{
 
 describe('Get data from Google Sheet.',(done)=>{
 
-    it("Get storeID that can be read by Store Manager.",(done)=>{
-        let req=mocksHttp.createRequest({sheetIDtoGetStoreID:config.google.storeID_sheet_for_Huiqun});
-        let res=mocksHttp.createResponse();
-        googleMiddleware.getStoreID(req,res,(err)=>{
-            if (err) done(err);
-            expect(req.body).to.have.property('ArrayOfStoreID')
-            expect(req.body.ArrayOfStoreID).to.eql(
-                [
-                    61,
-                    62,
-                    63,
-                    64,
-                    65,
-                    66,
-                    68,
-                    69,
-                    70,
-                    75,
-                    76,
-                    84,
-                    85,
-                    86,
-                    88,
-                    89,
-                    93,
-                    94,
-                    96,
-                    97,
-                    98
-                        ])
-            done()
-        })
-    }).timeout(15000);
-
-
     it("Get total sign count from TradeDB.",(done)=>{
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
@@ -85,7 +50,6 @@ describe('Get data from Google Sheet.',(done)=>{
             done()
         })
     }).timeout(15000);
-
 
 
     it("Get total rent count from TradeDB.",(done)=>{
@@ -128,9 +92,6 @@ describe('Get data from Google Sheet.',(done)=>{
     }).timeout(15000);
 
 
-
-
-
     it("Get any type count you want to get from TradeDB",(done)=>{
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
@@ -164,8 +125,6 @@ describe('Get data from Google Sheet.',(done)=>{
             done()
         })
     }).timeout(15000);
-
-
 
 
     it('Try to get complete data.',(done)=>{
