@@ -835,53 +835,43 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
     var resJson = {
         data: []
     };
-    process.nextTick(function () {
+    Trade.find({
+        'tradeType.action': "Rent",
+        'oriUser.storeID': dbStore.roles.clerk.storeID
+    }, function (err, rentedList) {
+        if (err) return next(err);
+        rentedList.sort(function (a, b) {
+            return b.tradeTime - a.tradeTime;
+        });
+        for (var i in rentedList)
+            rentedIdList.push(rentedList[i].container.id);
         Trade.find({
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - historyDays),
-                '$lt': dateCheckpoint(1)
-            },
-            'tradeType.action': "Rent",
-            'oriUser.storeID': dbStore.roles.clerk.storeID
-        }, function (err, rentedList) {
+            'tradeType.action': "Return",
+            'container.id': {
+                '$in': rentedIdList
+            }
+        }, function (err, returnedList) {
             if (err) return next(err);
-            rentedList.sort(function (a, b) {
+            returnedList.sort(function (a, b) {
                 return b.tradeTime - a.tradeTime;
             });
-            for (var i in rentedList)
-                rentedIdList.push(rentedList[i].container.id);
-            Trade.find({
-                'tradeTime': {
-                    '$gte': dateCheckpoint(1 - historyDays),
-                    '$lt': dateCheckpoint(1)
-                },
-                'tradeType.action': "Return",
-                'container.id': {
-                    '$in': rentedIdList
-                }
-            }, function (err, returnedList) {
-                if (err) return next(err);
-                returnedList.sort(function (a, b) {
-                    return b.tradeTime - a.tradeTime;
+            for (var i in returnedList) {
+                var index = rentedList.findIndex(function (ele) {
+                    return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
                 });
-                for (var i in returnedList) {
-                    var index = rentedList.findIndex(function (ele) {
-                        return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
-                    });
-                    if (index !== -1) {
-                        rentedList.splice(index, 1);
-                    }
+                if (index !== -1) {
+                    rentedList.splice(index, 1);
                 }
-                for (var i in rentedList) {
-                    resJson.data.push({
-                        id: rentedList[i].container.id,
-                        phone: rentedList[i].newUser.phone,
-                        by: rentedList[i].oriUser.phone,
-                        rentedTime: rentedList[i].tradeTime.getTime()
-                    });
-                }
-                res.json(resJson);
-            });
+            }
+            for (var i in rentedList) {
+                resJson.data.push({
+                    id: rentedList[i].container.id,
+                    phone: rentedList[i].newUser.phone,
+                    by: rentedList[i].oriUser.phone,
+                    rentedTime: rentedList[i].tradeTime.getTime()
+                });
+            }
+            res.json(resJson);
         });
     });
 });
@@ -1625,7 +1615,7 @@ function parseHistory(data, dataType, type, callback) {
             lastPhone = lastHistory.oriUser.phone;
         }
         if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
-            phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
+            phoneFormatted = (dataType === 'Return') ? '' : lastPhone;
             byOrderArr.push({
                 time: lastHistory.tradeTime,
                 phone: phoneFormatted,
