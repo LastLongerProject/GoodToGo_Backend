@@ -5,6 +5,7 @@ module.exports = {
         Delivering: "Delivering",
         Signed: "Signed",
         Stocked: "Stocked",
-        Archived: "Archived"
+        Archived: "Archived",
+        Assigned: "Assigned"
     })
 };

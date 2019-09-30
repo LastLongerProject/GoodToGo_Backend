@@ -95,7 +95,7 @@ function validateCreateApiContent(req, res, next) {
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Created,
                     timestamps: Date.now(),
-                }, ],
+                } ],
                 user: {
                     box: req.body.phone,
                 },
