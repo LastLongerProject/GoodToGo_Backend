@@ -677,7 +677,7 @@ router.get(
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
-            'createdAt': {
+            'updatedAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
             },
@@ -780,7 +780,21 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                     }
                 );
             } else {
-                await box.update(req.body).exec();
+                let info = {...req.body};
+                if (info.storeID !== undefined) {
+                    info = {
+                        ...info,
+                        $push: {
+                            action: {
+                                phone: dbAdmin.user.phone,
+                                destinationStoreId: info.storeID,
+                                boxStatus: BoxStatus.Assigned,
+                                timestamps: Date.now()
+                            }
+                        }
+                    }
+                }
+                await box.update(info).exec();
                 return res.status(200).json({
                     type: "ModifyMessage",
                     message: "Modify successfully"
