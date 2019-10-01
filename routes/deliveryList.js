@@ -569,8 +569,8 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.query.boxStatus;
-        let storeID = req.query.storeID
-        let offset = req.query.offset || 0
+        let storeID = parseInt(req.query.storeID);
+        let offset = parseInt(req.query.offset) || 0;
         
         if (boxStatus === undefined || storeID === undefined) {
             return res.status(400).json({code: "F014", type: "missing parameters", message: "missing storeID or boxStatus"})
