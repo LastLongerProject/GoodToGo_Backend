@@ -161,6 +161,15 @@ module.exports = {
             if (argToAssign && typeof arguments[0] !== "undefined") Object.assign(arguments[0], argToAssign);
             then.apply(this, arguments);
         };
+    },
+    isSameDay: function (d1, d2) {    
+        if (!(d1 instanceof Date && d2 instanceof Date)) return false;
+        d1.toLocaleString
+        if (d1.getFullYear() !== d2.getFullYear()) return false;
+        if (d1.getMonth() !== d2.getMonth()) return false;
+        if (d1.getDate() !== d2.getDate()) return false;
+    
+        return true
     }
 };
 
