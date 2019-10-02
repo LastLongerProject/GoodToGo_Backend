@@ -4,10 +4,12 @@ const monthFormatter = require('../../../helpers/toolkit').monthFormatter;
 const intReLength = require('../../../helpers/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
 const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
+const BoxAction = require('../../../models/enums/boxEnum').BoxAction;
 const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
+const isSameDay = require('../../../helpers/toolkit').isSameDay;
 const redis = require("../../../models/redis");
 
 const queue = require('queue')({
@@ -20,16 +22,6 @@ let fullDateStringWithoutYear = function (date) {
     monthFormatted = intReLength(monthFormatter(date), 2);
 
     return monthFormatted + "/" + dayFormatted;
-}
-
-function isSameDay(d1, d2) {    
-    if (!(d1 instanceof Date && d2 instanceof Date)) return false;
-    d1.toLocaleString
-    if (d1.getFullYear() !== d2.getFullYear()) return false;
-    if (d1.getMonth() !== d2.getMonth()) return false;
-    if (d1.getDate() !== d2.getDate()) return false;
-
-    return true
 }
 
 function createBoxID(date, sequence, stationID) {
@@ -94,6 +86,7 @@ function validateCreateApiContent(req, res, next) {
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Created,
+                    boxAction: BoxAction.Create,
                     timestamps: Date.now(),
                 } ],
                 user: {
@@ -147,7 +140,13 @@ function validateStockApiContent(req, res, next) {
                 containerList: element.containerList,
                 action: [{
                     phone: req.body.phone,
+                    boxStatus: BoxStatus.Created,
+                    boxAction: BoxAction.Create,
+                    timestamps: Date.now()
+                }, {
+                    phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
+                    boxAction: BoxAction.Pack,
                     timestamps: Date.now(),
                 }],
                 user: {
