@@ -366,8 +366,8 @@ module.exports = {
     refreshHuiqunGoogleSheet:function(cb){
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
-        req.sheetIDtoGetStoreID=config.google.storeID_for_Huiqun;
         req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
+        req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
         req.body.typeYouWantToGet=['Sign','Rent','Return'];
         TradeController.getSignCountByStoreID(req,res,err=>{
             TradeController.getRentCountByStoreID(req,res,err=>{

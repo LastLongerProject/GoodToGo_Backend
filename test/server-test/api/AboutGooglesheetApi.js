@@ -8,8 +8,9 @@ const {expect}=require('chai');
 const mocksHttp=require('node-mocks-http');
 const googleMiddleware=require("../../../helpers/gcp/sheet");
 const TradeController=require('../../../controllers/tradeController');
-const UserOrderController=require('../../../controllers/userOrderController')
-const ContainerController=require('../../../controllers/containerController')
+const UserOrderController=require('../../../controllers/userOrderController');
+const ContainerController=require('../../../controllers/containerController');
+const Tasks=require("../../../helpers/tasks");
 
 /*
 describe('Test',(done)=>{
@@ -176,6 +177,7 @@ describe('Get data from Google Sheet.',(done)=>{
     it("Integrate data to the form Google Sheet API can use",(done)=>{
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
+        req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
         req.body.ArrayOfStoreID=[61];
         req.body.typeYouWantToGet=['Sign','Rent','Return'];
         req.StoreTotalData={
@@ -235,10 +237,9 @@ describe('Get data from Google Sheet.',(done)=>{
     it('Connect all function to set complete data to google sheet',(done)=>{
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
-        req.sheetIDtoGetStoreID=config.google.storeID_for_Huiqun;
         req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
+        req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
         req.body.typeYouWantToGet=['Sign','Rent','Return'];
-        googleMiddleware.getStoreID(req,res,err=>{
             TradeController.getSignCountByStoreID(req,res,err=>{
                 TradeController.getRentCountByStoreID(req,res,err=>{
                     TradeController.getEveryWeekCountByStoreID(req,res,err=>{
@@ -255,8 +256,13 @@ describe('Get data from Google Sheet.',(done)=>{
                     })
                 })
             })
-        })
     }).timeout(50000);
 
+    it('try the new task "refreshHuiqunGoogleSheet" in task.js',(done)=>{
+        Tasks.refreshHuiqunGoogleSheet(res=>{
+            expect(res.statusCode).to.equal(200);
+            done()
+        })
+    }).timeout(50000);
 
 })
