@@ -887,7 +887,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                 );
             } else {
                 let info = {...req.body};
-                console.log(req.body)
+
                 if (info.storeID !== undefined || info.dueDate !== undefined) {
                     let assignAction = info.storeID && box.storeID !== info.storeID && {
                         phone: dbAdmin.user.phone,
