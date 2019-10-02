@@ -1,4 +1,5 @@
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const BoxSaveType = require('../models/enums/programEnum').BoxSaveType;
 const changeContainersState = require('./containerTrade');
@@ -40,6 +41,14 @@ let changeStateProcess = async function (element, box, phone) {
         let info = {
             status: BoxStatus.Stocked,
             storeID: 99999,
+            $push: {
+                action: {
+                    phone: phone,
+                    boxStatus: BoxStatus.Stocked,
+                    boxAction: BoxAction.SendBack,
+                    timestamps: Date.now()
+                }
+            }
         }
 
         // if (res) {
@@ -72,6 +81,7 @@ let changeStateProcess = async function (element, box, phone) {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Delivering,
+                    boxAction: BoxAction.Arrival,
                     timestamps: Date.now()
                 }
             }
@@ -100,9 +110,12 @@ let changeStateProcess = async function (element, box, phone) {
 
         let info = {
             status: BoxStatus.Boxing,
-            $pull: {
+            $push: {
                 action: {
-                    boxStatus: BoxStatus.Delivering
+                    phone: phone,
+                    boxStatus: BoxStatus.Boxing,
+                    boxAction: BoxAction.CancelArrival,
+                    timestamps: Date.now()
                 }
             }
         }
@@ -141,15 +154,12 @@ let changeStateProcess = async function (element, box, phone) {
             status: BoxStatus.Stocked,
             storeID: 99999,
             dueDate: Date.now(),
-            $pull: {
+            $push: {
                 action: {
-                    $or: [{
-                        boxStatus: BoxStatus.Delivering
-                    },
-                    {
-                        boxStatus: BoxStatus.Signed
-                    }
-                    ]
+                    phone: phone,
+                    boxStatus: BoxStatus.Stocked,
+                    boxAction: BoxAction.SendBack,
+                    timestamps: Date.now()
                 }
             }
         }
@@ -173,7 +183,15 @@ let changeStateProcess = async function (element, box, phone) {
 
         let info = {
             status: BoxStatus.Boxing,
-            storeID: element.destinationStoreId
+            storeID: element.destinationStoreId,
+            $push: {
+                action: {
+                    phone: phone,
+                    boxStatus: BoxStatus.Boxing,
+                    boxAction: BoxAction.Deliver,
+                    timestamps: Date.now()
+                }
+            }
         }
         // if (res) {
         //     return Promise.resolve({
@@ -220,6 +238,7 @@ let changeStateProcess = async function (element, box, phone) {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Signed,
+                    boxAction: BoxAction.Sign,
                     timestamps: Date.now()
                 }
             }

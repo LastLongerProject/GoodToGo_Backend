@@ -27,10 +27,12 @@ const Trade = require('../models/DB/tradeDB');
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const UserRole = require('../models/enums/userEnum').UserRole;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
+const isSameDay = require('../helpers/toolkit').isSameDay;
 
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
@@ -174,6 +176,7 @@ router.post(
                                     action: {
                                         phone: phone,
                                         boxStatus: BoxStatus.Boxing,
+                                        boxAction: BoxAction.Pack,
                                         timestamps: Date.now(),
                                     }
                                 },
@@ -860,7 +863,20 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
-                                await box.update(req.body).exec();
+
+                                let info = {
+                                    ...req.body,
+                                    $push: {
+                                        action: {
+                                            phone: dbAdmin.user.phone,
+                                            boxStatus: box.status,
+                                            boxAction: BoxAction.Pack,
+                                            timestamps: Date.now()
+                                        }
+                                    }
+                                }
+
+                                await box.update(info).exec();
                                 return res.status(200).json({
                                     type: "ModifyMessage",
                                     message: "Modify successfully"
@@ -871,19 +887,33 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                 );
             } else {
                 let info = {...req.body};
-                if (info.storeID !== undefined) {
+
+                if (info.storeID !== undefined || info.dueDate !== undefined) {
+                    let assignAction = info.storeID && box.storeID !== info.storeID && {
+                        phone: dbAdmin.user.phone,
+                        destinationStoreId: info.storeID,
+                        boxStatus: box.status,
+                        boxAction: BoxAction.Assign,
+                        timestamps: Date.now()
+                    }
+    
+                    let modifyDateAction = info.dueDate && !isSameDay(info.dueDate, box.dueDate) && {
+                        phone: dbAdmin.user.phone,
+                        boxStatus: box.status,
+                        boxAction: BoxAction.ModifyDueDate,
+                        timestamps: Date.now()
+                    }
+
                     info = {
                         ...info,
                         $push: {
                             action: {
-                                phone: dbAdmin.user.phone,
-                                destinationStoreId: info.storeID,
-                                boxStatus: BoxStatus.Assigned,
-                                timestamps: Date.now()
+                                $each: [modifyDateAction, assignAction].filter(e=>e)
                             }
                         }
                     }
                 }
+
                 await box.update(info).exec();
                 return res.status(200).json({
                     type: "ModifyMessage",
@@ -1039,6 +1069,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                         status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
                         action: [{
                             boxStatus: BoxStatus.Archived,
+                            boxAction: BoxAction.Archive,
                             phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
                             timestamps: theTrade.tradeTime
                         }],

@@ -14,6 +14,7 @@ var schema = mongoose.Schema({
     action: [{
         phone: String,
         boxStatus: String,
+        boxAction: String,
         destinationStoreId: Number,
         timestamps: Date
     }],
