@@ -388,7 +388,6 @@ router.post(
  *     
  * @apiUse LoginError
  */
-
 router.post('/login', validateDefault, function (req, res, next) {
     userQuery.login(req, function (err, user, info) {
         if (err) {

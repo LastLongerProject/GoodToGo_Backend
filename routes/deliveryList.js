@@ -224,7 +224,7 @@ router.post(
  * @apiUse CreateError
  */
 router.post(
-    '/stock',
+    '/stock/:storeID?',
     regAsAdmin,
     validateRequest,
     fetchBoxCreation,
@@ -519,6 +519,96 @@ router.get(
 );
 
 /**
+ * @apiName DeliveryList Get stocked boxes in the specific warehouse
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list/Stocked?storeID=:id&offset=:offset Specific status box list
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiParam {storeID} warehouse id
+ * @apiParam {offset} offset of the updated date
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+router.get(
+    '/box/list/query',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let boxStatus = req.query.boxStatus;
+        let storeID = parseInt(req.query.storeID);
+        let offset = parseInt(req.query.offset) || 0;
+        
+        if (boxStatus === undefined || storeID === undefined) {
+            return res.status(400).json({code: "F014", type: "missing parameters", message: "missing storeID or boxStatus"})
+        }
+
+        let result = [{
+            storeID: Number(storeID),
+            boxObjs: []
+        }];
+
+        Box.find({
+            'storeID': storeID,
+            'status': boxStatus,
+            'updatedAt': {
+                '$lte': dateCheckpoint(offset + 1),
+                '$gt': dateCheckpoint(offset - 14)
+            },
+        }, (err, boxes) => {
+            if (err) return next(err);
+            let boxObjs = boxes.map(box=>({
+                ID: box.boxID,
+                boxName: box.boxName || "",
+                dueDate: box.dueDate || "",
+                status: box.status || "",
+                action: box.action || [],
+                deliverContent: getDeliverContent(box.containerList),
+                orderContent: box.boxOrderContent || [],
+                containerList: box.containerList,
+                user: box.user,
+                comment: box.comment || ""
+            }))
+            result[0].boxObjs = boxObjs
+            return res.status(200).json(result);
+        });
+    }
+);
+
+/**
  * @apiName DeliveryList Get specific status list
  * @apiGroup DeliveryList
  *
@@ -677,7 +767,7 @@ router.get(
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
-            'createdAt': {
+            'updatedAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
             },
@@ -780,7 +870,21 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                     }
                 );
             } else {
-                await box.update(req.body).exec();
+                let info = {...req.body};
+                if (info.storeID !== undefined) {
+                    info = {
+                        ...info,
+                        $push: {
+                            action: {
+                                phone: dbAdmin.user.phone,
+                                destinationStoreId: info.storeID,
+                                boxStatus: BoxStatus.Assigned,
+                                timestamps: Date.now()
+                            }
+                        }
+                    }
+                }
+                await box.update(info).exec();
                 return res.status(200).json({
                     type: "ModifyMessage",
                     message: "Modify successfully"

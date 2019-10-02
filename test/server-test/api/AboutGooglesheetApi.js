@@ -164,8 +164,6 @@ describe('Get data from Google Sheet.',(done)=>{
                             expect(req.StoreWeeklyData[61]['2019 M09 2']['Rent']['8']).to.be.a('number');
                             expect(req.StoreWeeklyData[61]['2019 M09 2']['Return']['8']).to.be.a('number');
                             expect(req.StoreWeeklyData[61]['2019 M09 2']['nullCount']).to.be.a('number');
-                            console.log(req.StoreTotalData[61]);
-                            console.log(req.StoreWeeklyData[61]);
                             done();
                         })
                     })
@@ -235,8 +233,10 @@ describe('Get data from Google Sheet.',(done)=>{
     }).timeout(15000);
 
     it('Connect all function to set complete data to google sheet',(done)=>{
-        let req=mocksHttp.createRequest({sheetIDtoGetStoreID:config.google.storeID_sheet_for_Huiqun});
+        let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
+        req.sheetIDtoGetStoreID=config.google.storeID_for_Huiqun;
+        req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
         req.body.typeYouWantToGet=['Sign','Rent','Return'];
         googleMiddleware.getStoreID(req,res,err=>{
             TradeController.getSignCountByStoreID(req,res,err=>{

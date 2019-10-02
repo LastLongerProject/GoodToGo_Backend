@@ -1,5 +1,7 @@
 const debug = require('./debugger')('tasks');
 const DataCacheFactory = require("../models/dataCacheFactory");
+const mocksHttp=require('node-mocks-http');
+const config=require("../config/config");
 
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
@@ -13,6 +15,9 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
+const ContainerController=require("../controllers/containerController");
+const UserOrderController=require("../controllers/userOrderController");
+const TradeController=require("../controllers/tradeController");
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
 
@@ -357,6 +362,28 @@ module.exports = {
                 }
             });
         });
+    },
+    refreshHuiqunGoogleSheet:function(cb){
+        let req=mocksHttp.createRequest();
+        let res=mocksHttp.createResponse();
+        req.sheetIDtoGetStoreID=config.google.storeID_for_Huiqun;
+        req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
+        req.body.typeYouWantToGet=['Sign','Rent','Return'];
+        TradeController.getSignCountByStoreID(req,res,err=>{
+            TradeController.getRentCountByStoreID(req,res,err=>{
+                TradeController.getEveryWeekCountByStoreID(req,res,err=>{
+                    UserOrderController.getEveryWeekNullCountByStoreID(req,res,err=>{
+                        ContainerController.getAvailableContainerCountByStoreID(req,res,err=>{
+                            sheet.integrateStoreDataToGoogleSheet(req,res,err=>{
+                                sheet.sendCompleteDataToGoogleSheet(req,res,err=>{
+                                    return cb(res);
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        })
     }
 }
 

@@ -68,6 +68,7 @@ module.exports = function () {
                 setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
                 setTimeout(tasks.refreshCouponImage, 1000 * 60 * 17, false, driveCb);
+                setTimeout(tasks.refreshHuiqunGoogleSheet, 1000*60*60,generalCb);
                 setTimeout(function () {
                     UserKeys.remove({
                         'updatedAt': {

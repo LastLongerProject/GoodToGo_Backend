@@ -95,7 +95,7 @@ function validateCreateApiContent(req, res, next) {
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Created,
                     timestamps: Date.now(),
-                }, ],
+                } ],
                 user: {
                     box: req.body.phone,
                 },
@@ -120,8 +120,7 @@ function validateStockApiContent(req, res, next) {
     let boxList = req.body.boxList;
     let date = new Date();
     let dbUser = req._user;
-
-    let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
+    let storeID = req.params.storeID || 99999
 
     let index = req._sequence || 1;
 
@@ -143,7 +142,7 @@ function validateStockApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 dueDate: Date.now(),
-                storeID: 99999,
+                storeID: storeID,
                 boxOrderContent: getDeliverContent(element.containerList),
                 containerList: element.containerList,
                 action: [{
