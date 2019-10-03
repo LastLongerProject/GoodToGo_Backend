@@ -586,11 +586,7 @@ router.get(
 
         Box.find({
             'storeID': storeID,
-            'status': boxStatus,
-            'updatedAt': {
-                '$lte': dateCheckpoint(offset + 1),
-                '$gt': dateCheckpoint(offset - 14)
-            },
+            'status': boxStatus
         }, (err, boxes) => {
             if (err) return next(err);
             let boxObjs = boxes.map(box=>({
