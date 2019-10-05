@@ -140,14 +140,14 @@ function validateStockApiContent(req, res, next) {
                 containerList: element.containerList,
                 action: [{
                     phone: req.body.phone,
-                    boxStatus: BoxStatus.Created,
-                    boxAction: BoxAction.Create,
-                    timestamps: Date.now()
-                }, {
-                    phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
                     boxAction: BoxAction.Pack,
                     timestamps: Date.now(),
+                }, {
+                    phone: req.body.phone,
+                    boxStatus: BoxStatus.Stocked,
+                    boxAction: BoxAction.Stock,
+                    timestamps: Date.now()
                 }],
                 user: {
                     box: req.body.phone,

@@ -522,6 +522,80 @@ router.get(
 );
 
 /**
+ * @apiName DeliveryList Get Box
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/:boxID
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            }
+ */
+router.get(
+    '/box/:boxID', 
+    regAsAdmin, 
+    validateRequest,
+    async (req, res, next) => {
+        const boxID = req.params.boxID
+        let box = await Box.findOne({
+            boxID
+        })
+        
+        if (box) {
+            res.status(200).json({
+                ID: box.boxID,
+                storeID: box.storeID,
+                boxName: box.boxName || "",
+                dueDate: box.dueDate || "",
+                status: box.status || "",
+                action: box.action || [],
+                deliverContent: getDeliverContent(box.containerList),
+                orderContent: box.boxOrderContent || [],
+                containerList: box.containerList,
+                user: box.user,
+                comment: box.comment || ""
+            })
+        } else {
+            res.status(403).json({
+                code: 'F012',
+                type: 'BoxingMessage',
+                message: 'Box is not exist',
+            })
+        }
+    }
+);
+
+/**
  * @apiName DeliveryList Get stocked boxes in the specific warehouse
  * @apiGroup DeliveryList
  *
