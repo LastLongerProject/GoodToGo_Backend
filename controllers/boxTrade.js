@@ -45,7 +45,7 @@ let changeStateProcess = async function (element, box, phone) {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
-                    boxAction: BoxAction.SendBack,
+                    boxAction: BoxAction.Stock,
                     timestamps: Date.now()
                 }
             }
@@ -158,7 +158,7 @@ let changeStateProcess = async function (element, box, phone) {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
-                    boxAction: BoxAction.SendBack,
+                    boxAction: BoxAction.Stock,
                     timestamps: Date.now()
                 }
             }

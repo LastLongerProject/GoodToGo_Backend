@@ -522,14 +522,90 @@ router.get(
 );
 
 /**
+ * @apiName DeliveryList Get Box
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/:boxID
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            }
+ */
+router.get(
+    '/box/:boxID', 
+    regAsAdmin, 
+    validateRequest,
+    async (req, res, next) => {
+        const boxID = req.params.boxID
+        let box = await Box.findOne({
+            boxID
+        })
+        
+        if (box) {
+            res.status(200).json({
+                ID: box.boxID,
+                storeID: box.storeID,
+                boxName: box.boxName || "",
+                dueDate: box.dueDate || "",
+                status: box.status || "",
+                action: box.action || [],
+                deliverContent: getDeliverContent(box.containerList),
+                orderContent: box.boxOrderContent || [],
+                containerList: box.containerList,
+                user: box.user,
+                comment: box.comment || ""
+            })
+        } else {
+            res.status(403).json({
+                code: 'F012',
+                type: 'BoxingMessage',
+                message: 'Box is not exist',
+            })
+        }
+    }
+);
+
+/**
  * @apiName DeliveryList Get stocked boxes in the specific warehouse
  * @apiGroup DeliveryList
  *
- * @api {get} /deliveryList/box/list/Stocked?storeID=:id&offset=:offset Specific status box list
+ * @api {get} /deliveryList/box/list/query Universal DeliveryList Box Query
  * @apiPermission admin
  * @apiUse JWT
  * @apiParam {storeID} warehouse id
  * @apiParam {offset} offset of the updated date
+ * @apiParam {boxStatus[]} desired box status
+ * @apiParam {batch} batch size
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -572,42 +648,39 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.query.boxStatus;
-        let storeID = parseInt(req.query.storeID);
+        let storeID = req.query.storeID && parseInt(req.query.storeID);
         let offset = parseInt(req.query.offset) || 0;
-        
-        if (boxStatus === undefined || storeID === undefined) {
-            return res.status(400).json({code: "F014", type: "missing parameters", message: "missing storeID or boxStatus"})
+        let batch = parseInt(req.query.batch) || 0;
+        let query = {
+            storeID,
+            'status': boxStatus
         }
 
-        let result = [{
-            storeID: Number(storeID),
-            boxObjs: []
-        }];
+        Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
 
-        Box.find({
-            'storeID': storeID,
-            'status': boxStatus,
-            'updatedAt': {
-                '$lte': dateCheckpoint(offset + 1),
-                '$gt': dateCheckpoint(offset - 14)
-            },
-        }, (err, boxes) => {
-            if (err) return next(err);
-            let boxObjs = boxes.map(box=>({
-                ID: box.boxID,
-                boxName: box.boxName || "",
-                dueDate: box.dueDate || "",
-                status: box.status || "",
-                action: box.action || [],
-                deliverContent: getDeliverContent(box.containerList),
-                orderContent: box.boxOrderContent || [],
-                containerList: box.containerList,
-                user: box.user,
-                comment: box.comment || ""
-            }))
-            result[0].boxObjs = boxObjs
-            return res.status(200).json(result);
-        });
+        if (!Object.keys(query).length) 
+            return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
+
+        Box.find(query)
+            .skip(offset)
+            .limit(batch)
+            .exec((err, boxes) => {
+                if (err) return next(err);
+                let boxObjs = boxes.map(box=>({
+                    ID: box.boxID,
+                    storeID: box.storeID,
+                    boxName: box.boxName || "",
+                    dueDate: box.dueDate || "",
+                    status: box.status || "",
+                    action: box.action || [],
+                    deliverContent: getDeliverContent(box.containerList),
+                    orderContent: box.boxOrderContent || [],
+                    containerList: box.containerList,
+                    user: box.user,
+                    comment: box.comment || ""
+                }))
+                return res.status(200).json(boxObjs);
+            })
     }
 );
 

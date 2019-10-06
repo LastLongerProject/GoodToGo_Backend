@@ -13,7 +13,7 @@ module.exports = {
         Deliver: "Deliver",
         Arrival: "Arrival",
         Sign: "Sign",
-        SendBack: "SendBack",
+        Stock: "Stock",
         CancelArrival: "CancelArrival",
         ModifyDueDate: "ModifyDueDate",
         Archive: "Archive",
