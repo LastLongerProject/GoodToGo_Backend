@@ -1089,87 +1089,81 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
-    var typeDict = DataCacheFactory.get('containerType');
-    var queryCond;
-    var queryDays;
-    if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
-    else queryDays = historyDays;
-    if (dbKey.roleType === UserRole.CLERK)
-        queryCond = {
+    const batch = parseInt(req.query.batch) || 0
+    const offset = parseInt(req.query.offset) || 0
+    var queryCond = (dbKey.roleType === UserRole.CLERK) ?
+        {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
                 'oriUser.storeID': dbUser.roles.clerk.storeID
             }, {
                 'tradeType.action': 'UndoReadyToClean'
-            }],
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - queryDays)
-            }
-        };
-    else
-        queryCond = {
+            }]
+        } :
+        {
             'tradeType.action': {
                 '$in': ['ReadyToClean', 'UndoReadyToClean']
-            },
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - queryDays)
             }
         };
-    Trade.find(queryCond, function (err, list) {
-        if (err) return next(err);
-        if (list.length === 0) return res.json([]);
-        list.sort((a, b) => a.tradeTime - b.tradeTime);
-        cleanUndoTrade('ReadyToClean', list);
 
-        var tradeTimeDict = {};
-        list.forEach(aTrade => {
-            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
-            tradeTimeDict[aTrade.tradeTime].push(aTrade);
-        });
+    let aggregate = Trade.aggregate({
+        $match: queryCond
+    }, {
+        $group: { 
+            _id: {timestamp: "$tradeTime", state: "$tradeType.oriState"}, 
+            containerList: {$addToSet: "$container.id"}, 
+            newUser: {$first: "$newUser"},
+            oriUser: {$first: "$oriUser"}
+        }
+    }, {
+        $project: {
+            status: {
+                $cond: {
+                    if: {
+                      $eq: ['$_id.state', 1]
+                    },
+                    then: "cleanReload",
+                    else: "reload",
+                  }
+            },
+            dueDate: "$_id.timestamp",
+            containerList: "$containerList",
+            storeID: "$oriUser.storeID",
+            action: [{
+                boxStatus: BoxStatus.Archived,
+                boxAction: BoxAction.Archive,
+                phone: {
+                    $cond: {
+                        if: {
+                            $eq: [dbKey.roleType, UserRole.CLERK]
+                        },
+                        then: undefined,
+                        else: "$newUser.phone"
+                    }
+                },
+                timestamps: "$_id.timestamp"
+            }]
+        }
+    })
 
-        var boxDict = {};
-        var boxDictKey;
-        var thisTypeName;
-        let typeList = [];
-        for (var aTradeTime in tradeTimeDict) {
-            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
-            tradeTimeDict[aTradeTime].forEach(theTrade => {
-                thisTypeName = typeDict[theTrade.container.typeCode].name;
-                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
-                if (!boxDict[boxDictKey])
-                    boxDict[boxDictKey] = {
-                        containerList: [],
-                        status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
-                        action: [{
-                            boxStatus: BoxStatus.Archived,
-                            boxAction: BoxAction.Archive,
-                            phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
-                            timestamps: theTrade.tradeTime
-                        }],
-                        storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
-                    };
-                if (typeList.indexOf(thisTypeName) === -1) {
-                    typeList.push(thisTypeName);
-                    boxDict[boxDictKey].containerList = [];
-                }
-                boxDict[boxDictKey].containerList.push(theTrade.container.id);
+    if (batch) {
+        aggregate = aggregate.limit(batch)
+    }
+    
+    aggregate
+        .skip(offset)
+        .sort({dueDate: -1})
+        .exec((err, list) => {
+            if (err) return next(err);
+            list.forEach (box => {
+                const content = getDeliverContent(box.containerList)
+                box.orderContent = content
+                box.deliverContent = content
+                box._id = undefined
             });
-        }
-
-        var boxArr = Object.values(boxDict);
-        boxArr.sort((a, b) => b.boxTime - a.boxTime);
-        for (var i = 0; i < boxArr.length; i++) {
-            boxArr[i].orderContent = [];
-            for (var j = 0; j < typeList.length; j++) {
-                boxArr[i].orderContent.push({
-                    containerType: typeList[j],
-                    amount: boxArr[i].containerList.length
-                });
-            }
-        }
-
-        res.json(boxArr);
-    });
+            
+            res.status(200).json(list);
+        })
 });
 
 /**
