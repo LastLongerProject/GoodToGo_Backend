@@ -604,6 +604,8 @@ router.get(
  * @apiUse JWT
  * @apiParam {storeID} warehouse id
  * @apiParam {offset} offset of the updated date
+ * @apiParam {boxStatus[]} desired box status
+ * @apiParam {batch} batch size
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
