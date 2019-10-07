@@ -651,6 +651,8 @@ router.get(
         let storeID = req.query.storeID && parseInt(req.query.storeID);
         let offset = parseInt(req.query.offset) || 0;
         let batch = parseInt(req.query.batch) || 0;
+        let ascend = req.query.ascent !== 'false'
+
         let query = {
             storeID,
             'status': boxStatus
@@ -661,8 +663,16 @@ router.get(
         if (!Object.keys(query).length) 
             return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
 
-        Box.find(query)
-            .skip(offset)
+        const sorter = {"_id": ascend ? 1 : -1}
+        const offsetBoxes = await Box.find().sort(sorter).limit(offset + 1).exec()
+        const theBox = offsetBoxes.slice(-1).pop()
+        const idSorter = ascend ? {'$gte': theBox._id} : {'$lte': theBox._id}
+
+        Box.find( {
+            ...query,
+            '_id': idSorter
+        })
+            .sort(sorter)
             .limit(batch)
             .exec((err, boxes) => {
                 if (err) return next(err);
