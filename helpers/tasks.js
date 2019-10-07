@@ -24,6 +24,11 @@ const userTrade = require("../controllers/userTrade");
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
 
+const Day=24*60*60*1000;
+const Hour=60*60*1000;
+const Minute=60*1000;
+const Second=1000;
+
 module.exports = {
     storeListInit: function (cb) {
         storeListGenerator(err => {
@@ -366,6 +371,13 @@ module.exports = {
     refreshHuiqunGoogleSheet:function(cb){
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
+        const today=new Date();
+        let thisMonday;
+        if(today.getDay()!==0){
+             thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
+        }else  thisMonday=new Date(today-7*Day);
+    
+        req.thisMonday=thisMonday;
         req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
         req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
         req.body.typeYouWantToGet=['Sign','Rent','Return'];
@@ -373,6 +385,7 @@ module.exports = {
             TradeController.getRentCountByStoreID(req,res,err=>{
                 TradeController.getEveryWeekCountByStoreID(req,res,err=>{
                     UserOrderController.getEveryWeekNullCountByStoreID(req,res,err=>{
+                        console.log(req.StoreWeeklyData['61']);
                         ContainerController.getAvailableContainerCountByStoreID(req,res,err=>{
                             sheet.integrateStoreDataToGoogleSheet(req,res,err=>{
                                 sheet.sendCompleteDataToGoogleSheet(req,res,err=>{

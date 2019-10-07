@@ -39,7 +39,7 @@ describe('Test',(done)=>{
 
 
 describe('Get data from Google Sheet.',(done)=>{
-
+/*
     it("Get total sign count from TradeDB.",(done)=>{
         let req=mocksHttp.createRequest();
         let res=mocksHttp.createResponse();
@@ -257,7 +257,7 @@ describe('Get data from Google Sheet.',(done)=>{
                 })
             })
     }).timeout(50000);
-
+*/
     it('try the new task "refreshHuiqunGoogleSheet" in task.js',(done)=>{
         Tasks.refreshHuiqunGoogleSheet(res=>{
             expect(res.statusCode).to.equal(200);

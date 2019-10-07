@@ -150,16 +150,9 @@ module.exports={
         req.body.ArrayOfStoreID.forEach(storeID=>{
             if(!req.StoreWeeklyData[storeID]) req.StoreWeeklyData[storeID]={};
         })
-
-
-        const today=new Date();
-        let thisMonday;
-        if(today.getDay()!==0){
-             thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
-        }else  thisMonday=new Date(today-7*Day);
-        //cacuulate this week Monday date
-
-        for(let i=thisMonday;i>=new Date('2019-7-01');i=i-7*Day){
+        let thisMonday=req.thisMonday;
+        let StartTime=new Date('2019-6-31');
+        for(let i=thisMonday;i>=StartTime;i=i-7*Day){
             i=new Date(i)
             let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
             req.body.ArrayOfStoreID.forEach(storeID=>{
@@ -235,7 +228,7 @@ module.exports={
                     {'tradeType.action':'Rent','oriUser.storeID':{'$in':req.body.ArrayOfStoreID}}
                     ],
             'container.typeCode':{'$in':[8,9]},
-            'tradeTime':{'$gte':new Date('2019-7-01')}
+            'tradeTime':{'$gte':StartTime}
         },(err,docs)=>{
             if(err) next(err);
             docs.forEach(doc=>{

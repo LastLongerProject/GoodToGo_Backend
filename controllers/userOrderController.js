@@ -3,7 +3,6 @@ const Day=24*60*60*1000;
 const Hour=60*60*1000;
 const Minute=60*1000;
 const Second=1000;
-
 /*Data formate for weekly=
 {
     storeID:{
@@ -25,20 +24,16 @@ module.exports={
             });
             req.StoreWeeklyData=StoreWeeklyData;
         }//if dataset is null , then init req.dataset.
-        const today=new Date();
-        let thisMonday;
-        if(today.getDay()!==0){
-             thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
-        }else  thisMonday=new Date(today-7*Day);
-
-        for(let i=thisMonday;i>=new Date('2019-7-01');i=i-7*Day){
+        let thisMonday=req.thisMonday;
+        let StartTime=new Date('2019-06-31')
+        for(let i=thisMonday;i>=StartTime;i=i-7*Day){
             i=new Date(i)
             req.body.ArrayOfStoreID.forEach((storeID)=>{
-                if(!req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]){
-                    req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]={
-                        'nullCount':0
-                    }
+            if(!req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]){
+                req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]={
+                    'nullCount':0
                 }
+            }
             else{
                 req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']=0
             }
@@ -74,7 +69,8 @@ module.exports={
 
         UserOrder.find({
             'storeID':{'$in':req.body.ArrayOfStoreID},
-            'containerID':null
+            'containerID':null,
+            'orderTime':{'$gte':StartTime}
         },(err,docs)=>{
             if(err) next(err)
             docs.forEach(doc=>{

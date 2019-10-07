@@ -52,6 +52,11 @@ const CACHE = {
     user: "manage_cache:user"
 };
 
+const Day=24*60*60*1000;
+const Hour=60*60*1000;
+const Minute=60*1000;
+const Second=1000;
+
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
 const baseUrl = require("../config/config").serverBaseUrl + "/manager";
 
@@ -1941,7 +1946,15 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
 router.patch('/refresh/GoogleSheetForHuiqun',regAsAdminManager,validateRequest,(req,res,next)=>{
     req.sheetIDofSummary=config.google.summary_sheet_ID_for_Huiqun;
     req.body.ArrayOfStoreID=config.google.storeID_for_Huiqun;
-    req.body.typeYouWantToGet=['Sign','Rent','Return'];
+    req.body.typeYouWantToGet['Sign','Rent','Return'];
+
+    const today=new Date();
+    let thisMonday;
+    if(today.getDay()!==0){
+         thisMonday=new Date(today-(today.getDay()-1)*Day-today.getHours()*Hour-today.getMinutes()*Minute-today.getSeconds()*Second-today.getMilliseconds());
+    }else  thisMonday=new Date(today-7*Day);
+
+    req.thisMonday=thisMonday;
     next()
     },
     ContainerController.getAvailableContainerCountByStoreID,
