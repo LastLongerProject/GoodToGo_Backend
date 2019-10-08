@@ -154,7 +154,7 @@ module.exports={
         let StartTime=new Date('2019-6-31');
         for(let i=thisMonday;i>=StartTime;i=i-7*Day){
             i=new Date(i)
-            let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
+            let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit' });
             req.body.ArrayOfStoreID.forEach(storeID=>{
                 if(!req.StoreWeeklyData[storeID][DateString]){
                     req.StoreWeeklyData[storeID][DateString]={}
@@ -235,7 +235,7 @@ module.exports={
                 let data=doc._doc;
                 let TradeTime=data.tradeTime;
                 let TradeTimeTemp=new Date(TradeTime-(TradeTime.getDay()-1)*Day);
-                let TradeTimeTempString=TradeTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' });
+                let TradeTimeTempString=TradeTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit' });
                 if(data.tradeType.action==='Rent'){
                     req.StoreWeeklyData[data.oriUser.storeID][TradeTimeTempString][data.tradeType.action][data.container.typeCode]++
                 }else{

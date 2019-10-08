@@ -28,14 +28,15 @@ module.exports={
         let StartTime=new Date('2019-06-31')
         for(let i=thisMonday;i>=StartTime;i=i-7*Day){
             i=new Date(i)
+            let DateString=i.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit' });
             req.body.ArrayOfStoreID.forEach((storeID)=>{
-            if(!req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]){
-                req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]={
+            if(!req.StoreWeeklyData[storeID][DateString]){
+                req.StoreWeeklyData[storeID][DateString]={
                     'nullCount':0
                 }
             }
             else{
-                req.StoreWeeklyData[storeID][i.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']=0
+                req.StoreWeeklyData[storeID][DateString]['nullCount']=0
             }
             })
         }
@@ -77,7 +78,7 @@ module.exports={
                 let data=doc._doc;
                 let OrderTime=data.orderTime
                 let OrderTimeTemp=new Date(OrderTime-(OrderTime.getDay()-1)*Day)
-                req.StoreWeeklyData[data.storeID][OrderTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: 'long', day: 'numeric' })]['nullCount']++
+                req.StoreWeeklyData[data.storeID][OrderTimeTemp.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit' })]['nullCount']++
             })
             next()
         })
