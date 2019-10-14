@@ -3,6 +3,9 @@ const {
     google
 } = require('googleapis');
 const sheets = google.sheets('v4');
+const googleMapsClient = require('@google/maps').createClient({
+    key: 'your API key here'
+});
 const debug = require('../debugger')('google_sheet');
 
 const intReLength = require('../toolkit').intReLength;
