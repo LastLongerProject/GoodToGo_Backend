@@ -128,6 +128,7 @@ module.exports = {
                         return socket.emitWithLog('reply', {
                             id: containerID,
                             succeed: true,
+                            requestID: requestID,
                             message: "Can be " + action,
                             originalState: theContainer.statusCode,
                             newState: newState
