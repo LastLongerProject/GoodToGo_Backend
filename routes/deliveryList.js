@@ -1104,10 +1104,16 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
     var queryCond = (dbKey.roleType === UserRole.CLERK) ?
         {
             'tradeType.action': 'ReadyToClean',
-            'oriUser.storeID': dbUser.roles.clerk.storeID
+            'oriUser.storeID': dbUser.roles.clerk.storeID,
+            'tradeTime': {
+                "gte": dateCheckpoint(1-historyDays)
+            }
         } :
         {
-            'tradeType.action': 'ReadyToClean'
+            'tradeType.action': 'ReadyToClean',
+            'tradeTime': {
+                "gte": dateCheckpoint(1-historyDays)
+            }
         };
 
     let aggregate = Trade.aggregate({
