@@ -1120,10 +1120,9 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         $match: queryCond
     }, {
         $group: { 
-            _id: {timestamp: "$tradeTime", state: "$tradeType.oriState"}, 
+            _id: {timestamp: "$tradeTime", state: "$tradeType.oriState", oriStore: "$oriUser.storeID"}, 
             containerList: {$addToSet: "$container.id"}, 
             newUser: {$first: "$newUser"},
-            oriUser: {$first: "$oriUser"}
         }
     }, {
         $project: {
@@ -1138,7 +1137,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
             },
             dueDate: "$_id.timestamp",
             containerList: "$containerList",
-            storeID: "$oriUser.storeID",
+            storeID: "$_id.oriStore",
             action: [{
                 boxStatus: BoxStatus.Archived,
                 boxAction: BoxAction.Archive,
