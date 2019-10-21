@@ -1103,17 +1103,11 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
     const offset = parseInt(req.query.offset) || 0
     var queryCond = (dbKey.roleType === UserRole.CLERK) ?
         {
-            '$or': [{
-                'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbUser.roles.clerk.storeID
-            }, {
-                'tradeType.action': 'UndoReadyToClean'
-            }]
+            'tradeType.action': 'ReadyToClean',
+            'oriUser.storeID': dbUser.roles.clerk.storeID
         } :
         {
-            'tradeType.action': {
-                '$in': ['ReadyToClean', 'UndoReadyToClean']
-            }
+            'tradeType.action': 'ReadyToClean'
         };
 
     let aggregate = Trade.aggregate({
