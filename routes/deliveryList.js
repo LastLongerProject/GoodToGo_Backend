@@ -1106,13 +1106,13 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
             'tradeType.action': 'ReadyToClean',
             'oriUser.storeID': dbUser.roles.clerk.storeID,
             'tradeTime': {
-                "gte": dateCheckpoint(1-historyDays)
+                '$gte': dateCheckpoint(1 - queryDays)
             }
         } :
         {
             'tradeType.action': 'ReadyToClean',
             'tradeTime': {
-                "gte": dateCheckpoint(1-historyDays)
+                '$gte': dateCheckpoint(1 - queryDays)
             }
         };
 
