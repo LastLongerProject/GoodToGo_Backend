@@ -1101,6 +1101,8 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
     var dbKey = req._key;
     const batch = parseInt(req.query.batch) || 0
     const offset = parseInt(req.query.offset) || 0
+    const isCleanReload = req.query.cleanReload === 'true'
+    const needBoth = req.query.cleanReload === undefined
     var queryCond = (dbKey.roleType === UserRole.CLERK) ?
         {
             'tradeType.action': 'ReadyToClean',
@@ -1115,6 +1117,12 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 '$gte': dateCheckpoint(1 - historyDays)
             }
         };
+
+    if (!needBoth) {
+        queryCond = isCleanReload ? 
+            { ...queryCond, "tradeType.oriState": 1} :
+            { ...queryCond, "tradeType.oriState": {"$ne": 1}}
+    }
 
     let aggregate = Trade.aggregate({
         $match: queryCond
