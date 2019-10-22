@@ -1,11 +1,7 @@
-const request = require('request');
 const {
     google
 } = require('googleapis');
 const sheets = google.sheets('v4');
-const googleMapsClient = require('@google/maps').createClient({
-    key: 'your API key here'
-});
 const debug = require('../debugger')('google_sheet');
 
 const intReLength = require('../toolkit').intReLength;
@@ -25,6 +21,10 @@ const googleAuth = require("./auth");
 const configs = require("../../config/config").google;
 const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
+
+const googleMapsClient = require('@google/maps').createClient({
+    key: placeApiKey
+});
 
 const isNum = /^\d+$/;
 const ignorePlaceTypes = ["point_of_interest", "establishment"];
@@ -152,14 +152,9 @@ module.exports = {
                             }
                         }, {
                             'active': false
-                        }, (err) => {
-                            if (err) return debug.error(err);
-                            cb();
-                        });
+                        }, cb);
                     })
-                    .catch((err) => {
-                        if (err) return debug.error(err);
-                    });
+                    .catch(cb);
             });
         });
     },
@@ -202,129 +197,127 @@ module.exports = {
                             if (err) return debug.error(err);
                             Promise
                                 .all(placeList.map(aPlace => new Promise((resolve, reject) => {
-                                    const bufferArray = [];
-                                    request
-                                        .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
-                                            '&language=zh-TW&region=tw&key=' + placeApiKey +
-                                            '&fields=formatted_address,opening_hours,geometry,types')
-                                        .on('response', function (response) {
-                                            if (response.statusCode !== 200) {
-                                                debug.error('[Place API ERR (1)] StatusCode: ' + response.statusCode);
-                                                return reject(aPlace.ID);
+                                    googleMapsClient.place({
+                                        placeid: aPlace.placeID,
+                                        language: "zh-TW",
+                                        fields: ["formatted_address", "opening_hours", "geometry", "type"]
+                                    }, (err, response) => {
+                                        if (err) {
+                                            if (err === 'timeout') {
+                                                return reject(`[Place API ERR (timeout)]: ${aPlace.placeID}`);
+                                            } else if (err.json) {
+                                                return reject(`[Place API ERR (status)]: ${aPlace.placeID} - ${err.status}`);
+                                            } else {
+                                                let errDetail = err;
+                                                if (typeof errDetail === "object") errDetail = JSON.stringify(errDetail);
+                                                return reject(`[Place API ERR (unknown)]: ${aPlace.placeID} - ${errDetail}`);
                                             }
-                                        })
-                                        .on('error', function (err) {
-                                            debug.error('[Place API ERR (2)] Message: ' + err);
-                                            return reject(aPlace.ID);
-                                        })
-                                        .on('data', function (data) {
-                                            bufferArray.push(data);
-                                        })
-                                        .on('end', function () {
-                                            const dataBuffer = Buffer.concat(bufferArray);
-                                            const dataObject = JSON.parse(dataBuffer.toString());
-                                            const dataFromApi = dataObject.result;
-                                            try {
-                                                let formattedType = [];
-                                                if (aPlace && aPlace.type !== "") {
-                                                    formattedType = aPlace.type.replace(" ", "").split(",");
-                                                } else {
-                                                    dataFromApi.types.forEach(aType => {
-                                                        const translated = dictionary[aType];
-                                                        if (translated)
-                                                            formattedType.push(translated);
-                                                        else if (ignorePlaceTypes.indexOf(aType) === -1)
-                                                            debug.error(`[Sheet] New Word To Translate: ${aType}`);
-                                                    });
-                                                }
-                                                let opening_hours;
-                                                let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
-                                                if (theOriStore && theOriStore.opening_default) {
-                                                    opening_hours = theOriStore.opening_hours;
-                                                } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
-                                                    opening_hours = dataFromApi.opening_hours.periods;
-                                                    for (let j = 0; j < opening_hours.length; j++) {
-                                                        if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
-                                                            opening_hours = defaultPeriods;
-                                                            break;
-                                                        } else {
-                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
-                                                        }
-                                                    }
-                                                } else {
-                                                    opening_hours = defaultPeriods;
-                                                }
-                                                Store.findOneAndUpdate({
-                                                    'id': aPlace.ID
-                                                }, {
-                                                    'name': aPlace.name,
-                                                    'contract': {
-                                                        returnable: aPlace.contract.returnable,
-                                                        borrowable: aPlace.contract.borrowable,
-                                                        status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
-                                                    },
-                                                    'type': formattedType,
-                                                    'project': aPlace.project,
-                                                    'address': dataFromApi.formatted_address
-                                                        .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
-                                                    'opening_hours': opening_hours,
-                                                    'location': dataFromApi.geometry.location,
-                                                    'active': aPlace.active,
-                                                    'category': aPlace.category,
-                                                    'activity': aPlace.activity,
-                                                    '$setOnInsert': {
-                                                        'img_info': {
-                                                            img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
-                                                            img_version: 0
-                                                        }
-                                                    }
-                                                }, {
-                                                    upsert: true,
-                                                    setDefaultsOnInsert: true,
-                                                    new: true
-                                                }, (err, res) => {
-                                                    if (err) return reject(err);
-                                                    if (aPlace.activity) {
-                                                        Promise
-                                                            .all(aPlace.activity.map(activity => User
-                                                                .updateMany({
-                                                                    'roles.clerk.storeID': aPlace.ID,
-                                                                    'roles.typeList': {
-                                                                        $nin: [`clerk_${activity}`]
-                                                                    }
-                                                                }, {
-                                                                    $push: {
-                                                                        'roles.typeList': `clerk_${activity}`
-                                                                    }
-                                                                }, {
-                                                                    upsert: true,
-                                                                    new: true,
-                                                                    setDefaultsOnInsert: true
-                                                                })
-                                                                .exec()
-                                                            ))
-                                                            .then(resolve)
-                                                            .catch(err => {
-                                                                debug.error(err);
-                                                                reject(err);
-                                                            });
-                                                    }
-                                                    resolve(res);
+                                        }
+                                        const dataFromApi = response.json;
+                                        try {
+                                            let formattedType = [];
+                                            if (aPlace && aPlace.type !== "") {
+                                                formattedType = aPlace.type.replace(" ", "").split(",");
+                                            } else {
+                                                dataFromApi.types.forEach(aType => {
+                                                    const translated = dictionary[aType];
+                                                    if (translated)
+                                                        formattedType.push(translated);
+                                                    else if (ignorePlaceTypes.indexOf(aType) === -1)
+                                                        debug.error(`[Sheet] New Word To Translate: ${aType}`);
                                                 });
-                                            } catch (error) {
-                                                debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
-                                                reject(error);
                                             }
-                                        });
+                                            let opening_hours;
+                                            let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
+                                            if (theOriStore && theOriStore.opening_default) {
+                                                opening_hours = theOriStore.opening_hours;
+                                            } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
+                                                opening_hours = dataFromApi.opening_hours.periods;
+                                                for (let j = 0; j < opening_hours.length; j++) {
+                                                    if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
+                                                        opening_hours = defaultPeriods;
+                                                        break;
+                                                    } else {
+                                                        opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                        opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
+                                                    }
+                                                }
+                                            } else {
+                                                opening_hours = defaultPeriods;
+                                            }
+                                            Store.findOneAndUpdate({
+                                                'id': aPlace.ID
+                                            }, {
+                                                'name': aPlace.name,
+                                                'contract': {
+                                                    returnable: aPlace.contract.returnable,
+                                                    borrowable: aPlace.contract.borrowable,
+                                                    status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
+                                                },
+                                                'type': formattedType,
+                                                'project': aPlace.project,
+                                                'address': dataFromApi.formatted_address
+                                                    .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
+                                                'opening_hours': opening_hours,
+                                                'location': dataFromApi.geometry.location,
+                                                'active': aPlace.active,
+                                                'category': aPlace.category,
+                                                'activity': aPlace.activity,
+                                                '$setOnInsert': {
+                                                    'img_info': {
+                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
+                                                        img_version: 0
+                                                    }
+                                                }
+                                            }, {
+                                                upsert: true,
+                                                setDefaultsOnInsert: true,
+                                                new: true
+                                            }, (err, res) => {
+                                                if (err) return reject(err);
+                                                if (aPlace.activity) {
+                                                    Promise
+                                                        .all(aPlace.activity.map(activity => User
+                                                            .updateMany({
+                                                                'roles.clerk.storeID': aPlace.ID,
+                                                                'roles.typeList': {
+                                                                    $nin: [`clerk_${activity}`]
+                                                                }
+                                                            }, {
+                                                                $push: {
+                                                                    'roles.typeList': `clerk_${activity}`
+                                                                }
+                                                            }, {
+                                                                upsert: true,
+                                                                new: true,
+                                                                setDefaultsOnInsert: true
+                                                            })
+                                                            .exec()
+                                                        ))
+                                                        .then(resolve)
+                                                        .catch(reject);
+                                                }
+                                                resolve(res);
+                                            });
+                                        } catch (error) {
+                                            reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
+                                        }
+                                    });
                                 })))
                                 .then((data) => {
-                                    return cb(data);
+                                    return cb(null, data);
                                 })
-                                .catch(debug.error);
+                                .catch(err => {
+                                    debug.error(err);
+                                    if (typeof err === "string") err = {
+                                        status: 500,
+                                        message: err
+                                    };
+                                    return cb(err);
+                                });
                         });
                     })
-                    .catch(debug.error);
+                    .catch(cb);
             });
         });
     },
