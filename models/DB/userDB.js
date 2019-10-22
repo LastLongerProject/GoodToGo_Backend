@@ -72,9 +72,6 @@ var schema = mongoose.Schema({
 schema.index({
     "user.phone": 1
 });
-schema.index({
-    "user.apiKey": 1
-});
 
 schema.methods.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
