@@ -18,6 +18,7 @@ const CouponType = require('../../models/DB/couponTypeDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
 
 const googleAuth = require("./auth");
+const downloadPhotos = require("./placePhotoDownloader").downloadImg;
 const configs = require("../../config/config").google;
 const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
@@ -195,12 +196,13 @@ module.exports = {
                     .then(placeList => {
                         Store.find((err, oriStoreList) => {
                             if (err) return debug.error(err);
+                            let photosList = [];
                             Promise
                                 .all(placeList.map(aPlace => new Promise((resolve, reject) => {
                                     googleMapsClient.place({
                                         placeid: aPlace.placeID,
                                         language: "zh-TW",
-                                        fields: ["formatted_address", "opening_hours", "geometry", "type"]
+                                        fields: ["formatted_address", "opening_hours", "geometry", "type", "photo", "url"]
                                     }, (err, response) => {
                                         if (err) {
                                             if (err === 'timeout') {
@@ -254,6 +256,9 @@ module.exports = {
                                                 } else {
                                                     opening_hours = defaultPeriods;
                                                 }
+                                                let photos_fromGoogle = null;
+                                                if (dataFromApi.photos && dataFromApi.photos.length >= 1 && typeof dataFromApi.photos[0].photo_reference === "string")
+                                                    photos_fromGoogle = dataFromApi.photos[0].photo_reference;
                                                 Store.findOneAndUpdate({
                                                     'id': aPlace.ID
                                                 }, {
@@ -272,6 +277,8 @@ module.exports = {
                                                     'active': aPlace.active,
                                                     'category': aPlace.category,
                                                     'activity': aPlace.activity,
+                                                    'photos_fromGoogle': photos_fromGoogle,
+                                                    'url_fromGoogle': dataFromApi.url,
                                                     '$setOnInsert': {
                                                         'img_info': {
                                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
@@ -306,6 +313,11 @@ module.exports = {
                                                             .then(resolve)
                                                             .catch(reject);
                                                     }
+                                                    if (photos_fromGoogle !== null)
+                                                        photosList.push({
+                                                            storeID: aPlace.ID,
+                                                            ref: photos_fromGoogle
+                                                        });
                                                     resolve(res);
                                                 });
                                             } catch (error) {
@@ -315,6 +327,7 @@ module.exports = {
                                     });
                                 })))
                                 .then((data) => {
+                                    downloadPhotos(photosList);
                                     return cb(null, data);
                                 })
                                 .catch(err => {

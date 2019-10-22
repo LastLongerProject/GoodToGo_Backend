@@ -131,6 +131,58 @@ router.get('/list', validateDefault, function (req, res, next) {
 });
 
 /**
+ * @apiName Store list JSON
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/list.js Get store list with JSON format
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+
+        var placeid_json = [{"placeid":"ChIJ8c8g8WR2bjQRsgin1zcdMsk","name":"正興咖啡館","borrow":true,"return":true,"type":"咖啡, 生活小物, 旅宿"},...]
+ * 
+ * 
+ * 
+ */
+router.get('/list/forOfficialPage', function (req, res, next) {
+    Place.find({
+        "project": {
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+        },
+        "active": true
+    }, ["ID"], {
+        sort: {
+            id: 1
+        }
+    }, function (err, placeList) {
+        if (err) return next(err);
+        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+        res.json({
+            storeList: placeList.map(aPlace => {
+                let aStore = storeDict[aPlace.ID];
+                let photo = null;
+                if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
+                else if (aStore.photos_fromGoogle !== null) photo = `${baseUrl}/images/store/${aStore.ID}?ref=${aStore.photos_fromGoogle}`;
+                return {
+                    placeid: aStore.placeID,
+                    name: aStore.name,
+                    photo,
+                    url: aStore.url_fromGoogle,
+                    address: aStore.address,
+                    opening_hours: {
+                        periods: aStore.opening_hours
+                    },
+                    geometry_location: aStore.location,
+                    borrow: aStore.contract.borrowable,
+                    return: aStore.contract.returnable,
+                    type: aStore.type
+                };
+            })
+        });
+    });
+});
+
+/**
  * @apiName Store list
  * @apiGroup Stores
  *
@@ -205,51 +257,6 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
             testing: (store.project === '正興杯杯') ? false : true,
             activity: store.activity
         });
-    });
-});
-
-/**
- * @apiName Store list JSON
- * @apiGroup Stores
- *
- * @api {get} /stores/list.js Get store list with JSON format
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-
-        var placeid_json = [{"placeid":"ChIJ8c8g8WR2bjQRsgin1zcdMsk","name":"正興咖啡館","borrow":true,"return":true,"type":"咖啡, 生活小物, 旅宿"},...]
- * 
- * 
- * 
- */
-router.get('/list.js', function (req, res, next) {
-    Place.find({
-        "project": {
-            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
-        },
-        "active": true
-    }, ["ID"], {
-        sort: {
-            id: 1
-        }
-    }, function (err, placeList) {
-        if (err) return next(err);
-        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        let tmpArr = placeList.map(aPlace => {
-            let aStore = storeDict[aPlace.ID];
-            let photo = null;
-            if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
-            return {
-                placeid: aStore.placeID,
-                name: aStore.name,
-                photo,
-                borrow: aStore.contract.borrowable,
-                return: aStore.contract.returnable,
-                type: aStore.type
-            };
-        });
-        res.type('application/javascript');
-        res.end("var placeid_json = " + JSON.stringify(tmpArr));
     });
 });
 

@@ -174,6 +174,6 @@ function downloadFile(aFile, type, resolve, reject) {
             });
         });
     } else {
-        setImmediate(downloadFile, aFile, type, resolve, reject);
+        setTimeout(downloadFile, 1000, aFile, type, resolve, reject);
     }
 }
