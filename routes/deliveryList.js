@@ -694,6 +694,95 @@ router.get(
     }
 );
 
+const Sorter = {
+    CONTAINER:              1 << 2,
+    STORE:                  1 << 3,
+    DESCEND_ARRIVAL:        1 << 4,
+    ASCEND_ARRIVAL:         1 << 5,
+    DESCEND_CREATED_DATE:   1 << 6,
+    ASCEND_CREATED_DATE:    1 << 7
+}
+
+router.get(
+    '/box/list/query/:sorter',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let boxStatus = req.query.boxStatus;
+        let storeID = req.query.storeID && parseInt(req.query.storeID);
+        let offset = parseInt(req.query.offset) || 0;
+        let batch = parseInt(req.query.batch) || 0;
+        let sorterRawValue = parseInt(req.params.sorter) || 1 << 6
+
+        let query = {
+            storeID,
+            'status': boxStatus
+        }
+
+        Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
+
+        if (!Object.keys(query).length) 
+            return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
+
+        const sorter = (() => {
+            switch (sorterRawValue) {
+            case Sorter.CONTAINER:
+                return { "boxOrderContent": 1}
+            case Sorter.STORE:
+                return { "storeID": 1 }
+            case Sorter.DESCEND_ARRIVAL:
+                return { "dueDate": 1 }
+            case Sorter.ASCEND_ARRIVAL:
+                return { "dueDate": -1 }
+            case Sorter.DESCEND_CREATED_DATE:
+                return { "_id": -1 }
+            default:
+                return { "_id": 1 }
+            }
+        })()
+        const str = '1003'
+        const regex = { $regex: str, $options: 'i'}
+        console.log('up')
+        Box.find( {
+            ...query,
+            $or: [
+                {
+                    boxName: regex
+                },
+                {
+                    $expr: {
+                        $regexMatch: {
+                            input: { $toString: "$boxID"},
+                            $regex: str
+                        }
+                    }
+                }
+            ]
+        })
+            .sort(sorter)
+            .skip(offset)
+            .limit(batch)
+            .exec((err, boxes) => {
+                console.log(err)
+                if (err) return next(err);
+                let boxObjs = boxes.map(box=>({
+                    ID: box.boxID,
+                    storeID: box.storeID,
+                    boxName: box.boxName || "",
+                    dueDate: box.dueDate || "",
+                    status: box.status || "",
+                    action: box.action || [],
+                    deliverContent: getDeliverContent(box.containerList),
+                    orderContent: box.boxOrderContent || [],
+                    containerList: box.containerList,
+                    user: box.user,
+                    comment: box.comment || ""
+                }))
+                return res.status(200).json(boxObjs);
+            })
+    }
+);
+
 /**
  * @apiName DeliveryList Get specific status list
  * @apiGroup DeliveryList
