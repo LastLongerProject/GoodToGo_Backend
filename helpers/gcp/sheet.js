@@ -206,102 +206,112 @@ module.exports = {
                                             if (err === 'timeout') {
                                                 return reject(`[Place API ERR (timeout)]: ${aPlace.placeID}`);
                                             } else if (err.json) {
-                                                return reject(`[Place API ERR (status)]: ${aPlace.placeID} - ${err.status}`);
+                                                return reject(`[Place API ERR (status_1)]: ${aPlace.placeID} - ${err.status}`);
                                             } else {
                                                 let errDetail = err;
                                                 if (typeof errDetail === "object") errDetail = JSON.stringify(errDetail);
                                                 return reject(`[Place API ERR (unknown)]: ${aPlace.placeID} - ${errDetail}`);
                                             }
                                         }
-                                        const dataFromApi = response.json;
-                                        try {
-                                            let formattedType = [];
-                                            if (aPlace && aPlace.type !== "") {
-                                                formattedType = aPlace.type.replace(" ", "").split(",");
+                                        let TIMEOUT = 0;
+                                        if (response.json.status !== "OK") {
+                                            if (response.json.status === "OVER_QUERY_LIMIT") {
+                                                TIMEOUT = 1000;
                                             } else {
-                                                dataFromApi.types.forEach(aType => {
-                                                    const translated = dictionary[aType];
-                                                    if (translated)
-                                                        formattedType.push(translated);
-                                                    else if (ignorePlaceTypes.indexOf(aType) === -1)
-                                                        debug.error(`[Sheet] New Word To Translate: ${aType}`);
-                                                });
+                                                return reject(`[Place API ERR (status_2)]: ${aPlace.placeID} - ${response.json.status}`);
                                             }
-                                            let opening_hours;
-                                            let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
-                                            if (theOriStore && theOriStore.opening_default) {
-                                                opening_hours = theOriStore.opening_hours;
-                                            } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
-                                                opening_hours = dataFromApi.opening_hours.periods;
-                                                for (let j = 0; j < opening_hours.length; j++) {
-                                                    if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
-                                                        opening_hours = defaultPeriods;
-                                                        break;
-                                                    } else {
-                                                        opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                        opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
-                                                    }
-                                                }
-                                            } else {
-                                                opening_hours = defaultPeriods;
-                                            }
-                                            Store.findOneAndUpdate({
-                                                'id': aPlace.ID
-                                            }, {
-                                                'name': aPlace.name,
-                                                'contract': {
-                                                    returnable: aPlace.contract.returnable,
-                                                    borrowable: aPlace.contract.borrowable,
-                                                    status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
-                                                },
-                                                'type': formattedType,
-                                                'project': aPlace.project,
-                                                'address': dataFromApi.formatted_address
-                                                    .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
-                                                'opening_hours': opening_hours,
-                                                'location': dataFromApi.geometry.location,
-                                                'active': aPlace.active,
-                                                'category': aPlace.category,
-                                                'activity': aPlace.activity,
-                                                '$setOnInsert': {
-                                                    'img_info': {
-                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
-                                                        img_version: 0
-                                                    }
-                                                }
-                                            }, {
-                                                upsert: true,
-                                                setDefaultsOnInsert: true,
-                                                new: true
-                                            }, (err, res) => {
-                                                if (err) return reject(err);
-                                                if (aPlace.activity) {
-                                                    Promise
-                                                        .all(aPlace.activity.map(activity => User
-                                                            .updateMany({
-                                                                'roles.clerk.storeID': aPlace.ID,
-                                                                'roles.typeList': {
-                                                                    $nin: [`clerk_${activity}`]
-                                                                }
-                                                            }, {
-                                                                $push: {
-                                                                    'roles.typeList': `clerk_${activity}`
-                                                                }
-                                                            }, {
-                                                                upsert: true,
-                                                                new: true,
-                                                                setDefaultsOnInsert: true
-                                                            })
-                                                            .exec()
-                                                        ))
-                                                        .then(resolve)
-                                                        .catch(reject);
-                                                }
-                                                resolve(res);
-                                            });
-                                        } catch (error) {
-                                            reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
                                         }
+                                        setTimeout(() => {
+                                            const dataFromApi = response.json.result;
+                                            try {
+                                                let formattedType = [];
+                                                if (aPlace && aPlace.type !== "") {
+                                                    formattedType = aPlace.type.replace(" ", "").split(",");
+                                                } else {
+                                                    dataFromApi.types.forEach(aType => {
+                                                        const translated = dictionary[aType];
+                                                        if (translated)
+                                                            formattedType.push(translated);
+                                                        else if (ignorePlaceTypes.indexOf(aType) === -1)
+                                                            debug.error(`[Sheet] New Word To Translate: ${aType}`);
+                                                    });
+                                                }
+                                                let opening_hours;
+                                                let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
+                                                if (theOriStore && theOriStore.opening_default) {
+                                                    opening_hours = theOriStore.opening_hours;
+                                                } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
+                                                    opening_hours = dataFromApi.opening_hours.periods;
+                                                    for (let j = 0; j < opening_hours.length; j++) {
+                                                        if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
+                                                            opening_hours = defaultPeriods;
+                                                            break;
+                                                        } else {
+                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
+                                                        }
+                                                    }
+                                                } else {
+                                                    opening_hours = defaultPeriods;
+                                                }
+                                                Store.findOneAndUpdate({
+                                                    'id': aPlace.ID
+                                                }, {
+                                                    'name': aPlace.name,
+                                                    'contract': {
+                                                        returnable: aPlace.contract.returnable,
+                                                        borrowable: aPlace.contract.borrowable,
+                                                        status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
+                                                    },
+                                                    'type': formattedType,
+                                                    'project': aPlace.project,
+                                                    'address': dataFromApi.formatted_address
+                                                        .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
+                                                    'opening_hours': opening_hours,
+                                                    'location': dataFromApi.geometry.location,
+                                                    'active': aPlace.active,
+                                                    'category': aPlace.category,
+                                                    'activity': aPlace.activity,
+                                                    '$setOnInsert': {
+                                                        'img_info': {
+                                                            img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
+                                                            img_version: 0
+                                                        }
+                                                    }
+                                                }, {
+                                                    upsert: true,
+                                                    setDefaultsOnInsert: true,
+                                                    new: true
+                                                }, (err, res) => {
+                                                    if (err) return reject(err);
+                                                    if (aPlace.activity) {
+                                                        Promise
+                                                            .all(aPlace.activity.map(activity => User
+                                                                .updateMany({
+                                                                    'roles.clerk.storeID': aPlace.ID,
+                                                                    'roles.typeList': {
+                                                                        $nin: [`clerk_${activity}`]
+                                                                    }
+                                                                }, {
+                                                                    $push: {
+                                                                        'roles.typeList': `clerk_${activity}`
+                                                                    }
+                                                                }, {
+                                                                    upsert: true,
+                                                                    new: true,
+                                                                    setDefaultsOnInsert: true
+                                                                })
+                                                                .exec()
+                                                            ))
+                                                            .then(resolve)
+                                                            .catch(reject);
+                                                    }
+                                                    resolve(res);
+                                                });
+                                            } catch (error) {
+                                                reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
+                                            }
+                                        }, TIMEOUT);
                                     });
                                 })))
                                 .then((data) => {
