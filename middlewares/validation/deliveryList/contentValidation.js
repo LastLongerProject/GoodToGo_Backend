@@ -263,6 +263,21 @@ function validateModifyApiContent(req, res, next) {
     }
     next();
 }
+
+function validateBoxStatus(req, res, next) {
+    let boxStatus = req.params.boxStatus || req.query.boxStatus
+
+    if (boxStatus === undefined) {
+        return res.status(422).json(ErrorResponse.F016_1)
+    } 
+
+    if (!Object.values(BoxStatus).includes(req.params.boxStatus)) {
+        return res.status(422).json(ErrorResponse.F016_2)
+    }
+
+    next()
+}
+
 module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
@@ -270,6 +285,7 @@ module.exports = {
     validateChangeStateApiContent,
     validateSignApiContent,
     validateModifyApiContent,
+    validateBoxStatus,
     fetchBoxCreation
 };
 

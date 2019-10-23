@@ -17,6 +17,7 @@ const {
     validateSignApiContent,
     validateModifyApiContent,
     fetchBoxCreation,
+    validateBoxStatus
 } = require('../middlewares/validation/deliveryList/contentValidation.js');
 
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
@@ -24,6 +25,7 @@ const containerStateFactory = require('../controllers/boxTrade.js').containerSta
 const Box = require('../models/DB/boxDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
+const Container = require('../models/DB/containerDB');
 
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
@@ -1316,29 +1318,61 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         
  */
 router.get(
-    '/overview',
+    '/overview/:boxStatus',
     regAsAdmin,
     validateRequest,
+    validateBoxStatus,
     async function (req, res, next) {
-        let storeID = parseInt(req._user.roles.admin.stationID);
-        let result = {
-            Boxing: 0,
-            Delivering: 0,
-            Stocked: 0
-        };
+        let status = req.params.boxStatus
+        let storeID = parseInt(req.query.storeID) || -1
+        let query = Object.assign({status}, storeID !== -1 ? {storeID} : {})
 
-        Box.find({
-            'storeID': storeID,
-        }, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (box.status === BoxStatus.Boxing) result.Boxing += 1;
-                if (box.status === BoxStatus.Delivering) result.Delivering += 1;
-                if (box.status === BoxStatus.Stocked) result.Stocked += 1;
+        let overview = await Box.aggregate({
+            $match: query
+        }, {
+            $group: {
+                _id: null,
+                containerIDs: { $push: '$containerList'},
+                storeIDs: { $addToSet: '$storeID' },
+                total: { $sum: 1 }
             }
+        }, {
+            $project: {
+                _id: 0,
+                containers: { $reduce: {
+                    input: '$containerIDs',
+                    initialValue: [],
+                    in: { $concatArrays: ['$$value', '$$this']}
+                }},
+                storeAmount: { $size: '$storeIDs' },
+                total: '$total'
+            }
+        })
+            .exec((err, overviews) => {
+                if (err) return next(err)
+                let overview = overviews[0]
 
-            return res.status(200).json(result);
-        });
+                Container.aggregate({
+                    $match: {
+                        ID: { $in: overview.containers }
+                    }
+                },{
+                    $group: {
+                        _id: '$typeCode',
+                        amount: { $sum: 1 }
+                    }
+                }, {
+                    $project: {
+                        _id: 0,
+                        typeCode: '$_id',
+                        amount: '$amount'
+                    }
+                })
+                    .exec((err, containerTypes) => {
+                        if (err) return next(err)
+                        res.status(200).json({...overview, containers: containerTypes})
+                    })
+            })
     }
 );
 
