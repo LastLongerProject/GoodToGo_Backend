@@ -23,6 +23,7 @@ const changeStateProcess = require('../controllers/boxTrade.js').changeStateProc
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
 const Trade = require('../models/DB/tradeDB');
+const Store = require('../models/DB/storeDB');
 
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
@@ -703,6 +704,61 @@ const Sorter = {
     ASCEND_CREATED_DATE:    1 << 7
 }
 
+async function createTextSearchQuery(keyword) {
+    const regex = { $regex: keyword, $options: 'i'}
+
+    let keywordNumber = parseInt(keyword)
+    let storeIDs = []
+    
+    if (isNaN(keywordNumber)) {
+        let stores = await Store.find({ name: regex }).exec()
+        storeIDs = (stores && stores.map(aStore=>aStore.id)) || []
+    }
+
+    let storeIDQuery = {
+        storeID: { $in: storeIDs }
+    }
+    
+    let searchQuery = !isNaN(keywordNumber) ? {
+        $or: [
+            {
+                boxName: regex
+            },
+            {
+                $where: `this.boxID.toString().match(/${keyword}/)`
+            },
+            {
+                containerList: keywordNumber
+            }
+        ]
+    } : {
+        $or: [
+            {
+                boxName: regex
+            }
+        ].concat(storeIDs.length === 0 ? [] : [storeIDQuery])
+    }
+
+    return searchQuery
+}
+
+function parseSorter(rawValue) {
+    switch (rawValue) {
+    case Sorter.CONTAINER:
+        return { "boxOrderContent": 1}
+    case Sorter.STORE:
+        return { "storeID": 1 }
+    case Sorter.DESCEND_ARRIVAL:
+        return { "dueDate": 1 }
+    case Sorter.ASCEND_ARRIVAL:
+        return { "dueDate": -1 }
+    case Sorter.DESCEND_CREATED_DATE:
+        return { "_id": -1 }
+    default:
+        return { "_id": 1 }
+    }
+}
+
 router.get(
     '/box/list/query/:sorter',
     regAsAdmin,
@@ -713,6 +769,8 @@ router.get(
         let offset = parseInt(req.query.offset) || 0;
         let batch = parseInt(req.query.batch) || 0;
         let sorterRawValue = parseInt(req.params.sorter) || 1 << 6
+        let keyword = req.query.keyword || ''
+        const sorter = parseSorter(sorterRawValue)
 
         let query = {
             storeID,
@@ -724,46 +782,13 @@ router.get(
         if (!Object.keys(query).length) 
             return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
 
-        const sorter = (() => {
-            switch (sorterRawValue) {
-            case Sorter.CONTAINER:
-                return { "boxOrderContent": 1}
-            case Sorter.STORE:
-                return { "storeID": 1 }
-            case Sorter.DESCEND_ARRIVAL:
-                return { "dueDate": 1 }
-            case Sorter.ASCEND_ARRIVAL:
-                return { "dueDate": -1 }
-            case Sorter.DESCEND_CREATED_DATE:
-                return { "_id": -1 }
-            default:
-                return { "_id": 1 }
-            }
-        })()
-        const str = '1003'
-        const regex = { $regex: str, $options: 'i'}
-        console.log('up')
-        Box.find( {
-            ...query,
-            $or: [
-                {
-                    boxName: regex
-                },
-                {
-                    $expr: {
-                        $regexMatch: {
-                            input: { $toString: "$boxID"},
-                            $regex: str
-                        }
-                    }
-                }
-            ]
-        })
+        Object.assign(query, keyword !== '' ? await createTextSearchQuery(keyword) : {})
+
+        Box.find(query)
             .sort(sorter)
             .skip(offset)
             .limit(batch)
             .exec((err, boxes) => {
-                console.log(err)
                 if (err) return next(err);
                 let boxObjs = boxes.map(box=>({
                     ID: box.boxID,
