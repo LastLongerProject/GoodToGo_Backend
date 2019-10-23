@@ -43,6 +43,15 @@ const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
 
+function getStoreImgSrc(aStore, notNull) {
+    let photo = null;
+    const ID = notNull ? "id" : "ID";
+    if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore[ID]}?ver=${aStore.img_info.img_version}`;
+    else if (aStore.photos_fromGoogle !== null) photo = `${baseUrl}/images/store/${aStore[ID]}?ref=${aStore.photos_fromGoogle}`;
+    if (photo === null && notNull) photo = `${baseUrl}/images/store/${aStore[ID]}?ref=null`;
+    return photo;
+}
+
 /**
  * @apiName Store list
  * @apiGroup Stores
@@ -104,7 +113,7 @@ router.get('/list', validateDefault, function (req, res, next) {
 
             for (var i = 0; i < storeList.length; i++) {
                 var tmpOpening = [];
-                storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
+                storeList[i].img_info.img_src = getStoreImgSrc(storeList[i], true);
                 for (var j = 0; j < storeList[i].opening_hours.length; j++)
                     tmpOpening.push({
                         close: storeList[i].opening_hours[j].close,
@@ -160,9 +169,7 @@ router.get('/list/forOfficialPage', function (req, res, next) {
         res.json({
             storeList: placeList.map(aPlace => {
                 let aStore = storeDict[aPlace.ID];
-                let photo = null;
-                if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
-                else if (aStore.photos_fromGoogle !== null) photo = `${baseUrl}/images/store/${aStore.ID}?ref=${aStore.photos_fromGoogle}`;
+                let photo = getStoreImgSrc(aStore, false);
                 return {
                     placeid: aStore.placeID,
                     name: aStore.name,
@@ -234,7 +241,7 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
         }
 
         var tmpOpening = [];
-        store.img_info.img_src = `${baseUrl}/images/store/${store.id}?ver=${store.img_info.img_version}`;
+        store.img_info.img_src = getStoreImgSrc(store, true);
         for (var i = 0; i < store.opening_hours.length; i++)
             tmpOpening.push({
                 close: store.opening_hours[i].close,
