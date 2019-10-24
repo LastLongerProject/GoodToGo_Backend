@@ -39,7 +39,12 @@ var schema = mongoose.Schema({
         default: true
     },
     category: Number,
-    activity: Array
+    activity: Array,
+    photos_fromGoogle: {
+        type: String,
+        default: null
+    },
+    url_fromGoogle: String
 }, {
     timestamps: true
 });

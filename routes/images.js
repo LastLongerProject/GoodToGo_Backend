@@ -9,22 +9,27 @@ var CouponType = require('../models/DB/couponTypeDB');
 router.get('/store/:id', function (req, res, next) {
     var id = intReLength(parseInt(req.params.id), 5);
     var s = fs.createReadStream(ROOT_DIR + '/assets/images/shop/' + id + '.jpg');
+    res.set('Content-Type', 'image/jpeg');
     s.on('open', function () {
-        res.set('Content-Type', 'image/jpeg');
         s.pipe(res);
     });
     s.on('error', function (err) {
-        var s2 = fs.createReadStream(ROOT_DIR + '/assets/images/shop/99999.jpg');
+        var s2 = fs.createReadStream(ROOT_DIR + '/assets/images/shop/' + id + '_google.jpg');
         s2.on('open', function () {
-            res.set('Content-Type', 'image/jpeg');
             s2.pipe(res);
         });
         s2.on('error', function (err) {
-            res.status(500).json({
-                code: 'G001',
-                type: 'readImgERR',
-                message: 'No Image found',
-                data: err
+            var s3 = fs.createReadStream(ROOT_DIR + '/assets/images/shop/99999.jpg');
+            s3.on('open', function () {
+                s3.pipe(res);
+            });
+            s3.on('error', function (err) {
+                res.status(500).json({
+                    code: 'G001',
+                    type: 'readImgERR',
+                    message: 'No Image found',
+                    data: err
+                });
             });
         });
     });
