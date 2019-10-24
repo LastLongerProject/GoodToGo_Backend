@@ -751,9 +751,9 @@ function parseSorter(rawValue) {
     case Sorter.STORE:
         return { "storeID": 1 }
     case Sorter.DESCEND_ARRIVAL:
-        return { "dueDate": 1 }
-    case Sorter.ASCEND_ARRIVAL:
         return { "dueDate": -1 }
+    case Sorter.ASCEND_ARRIVAL:
+        return { "dueDate": 1 }
     case Sorter.DESCEND_CREATED_DATE:
         return { "_id": -1 }
     default:
