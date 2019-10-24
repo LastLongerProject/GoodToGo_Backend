@@ -17,12 +17,15 @@ const {
     validateSignApiContent,
     validateModifyApiContent,
     fetchBoxCreation,
+    validateBoxStatus
 } = require('../middlewares/validation/deliveryList/contentValidation.js');
 
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
 const Box = require('../models/DB/boxDB');
 const Trade = require('../models/DB/tradeDB');
+const Store = require('../models/DB/storeDB');
+const Container = require('../models/DB/containerDB');
 
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
@@ -651,6 +654,8 @@ router.get(
         let storeID = req.query.storeID && parseInt(req.query.storeID);
         let offset = parseInt(req.query.offset) || 0;
         let batch = parseInt(req.query.batch) || 0;
+        let ascend = req.query.ascent !== 'false'
+
         let query = {
             storeID,
             'status': boxStatus
@@ -661,7 +666,128 @@ router.get(
         if (!Object.keys(query).length) 
             return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
 
+        const sorter = {"_id": ascend ? 1 : -1}
+        const offsetBoxes = await Box.find().sort(sorter).limit(offset + 1).exec()
+        const theBox = offsetBoxes.slice(-1).pop()
+        const idSorter = ascend ? {'$gte': theBox._id} : {'$lte': theBox._id}
+
+        Box.find( {
+            ...query,
+            '_id': idSorter
+        })
+            .sort(sorter)
+            .limit(batch)
+            .exec((err, boxes) => {
+                if (err) return next(err);
+                let boxObjs = boxes.map(box=>({
+                    ID: box.boxID,
+                    storeID: box.storeID,
+                    boxName: box.boxName || "",
+                    dueDate: box.dueDate || "",
+                    status: box.status || "",
+                    action: box.action || [],
+                    deliverContent: getDeliverContent(box.containerList),
+                    orderContent: box.boxOrderContent || [],
+                    containerList: box.containerList,
+                    user: box.user,
+                    comment: box.comment || ""
+                }))
+                return res.status(200).json(boxObjs);
+            })
+    }
+);
+
+const Sorter = {
+    CONTAINER:              1 << 2,
+    STORE:                  1 << 3,
+    DESCEND_ARRIVAL:        1 << 4,
+    ASCEND_ARRIVAL:         1 << 5,
+    DESCEND_CREATED_DATE:   1 << 6,
+    ASCEND_CREATED_DATE:    1 << 7
+}
+
+async function createTextSearchQuery(keyword) {
+    const regex = { $regex: keyword, $options: 'i'}
+
+    let keywordNumber = parseInt(keyword)
+    let storeIDs = []
+    
+    if (isNaN(keywordNumber)) {
+        let stores = await Store.find({ name: regex }).exec()
+        storeIDs = (stores && stores.map(aStore=>aStore.id)) || []
+    }
+
+    let storeIDQuery = {
+        storeID: { $in: storeIDs }
+    }
+    
+    let searchQuery = !isNaN(keywordNumber) ? {
+        $or: [
+            {
+                boxName: regex
+            },
+            {
+                $where: `this.boxID.toString().match(/${keyword}/)`
+            },
+            {
+                containerList: keywordNumber
+            }
+        ]
+    } : {
+        $or: [
+            {
+                boxName: regex
+            }
+        ].concat(storeIDs.length === 0 ? [] : [storeIDQuery])
+    }
+
+    return searchQuery
+}
+
+function parseSorter(rawValue) {
+    switch (rawValue) {
+    case Sorter.CONTAINER:
+        return { "boxOrderContent": 1}
+    case Sorter.STORE:
+        return { "storeID": 1 }
+    case Sorter.DESCEND_ARRIVAL:
+        return { "dueDate": 1 }
+    case Sorter.ASCEND_ARRIVAL:
+        return { "dueDate": -1 }
+    case Sorter.DESCEND_CREATED_DATE:
+        return { "_id": -1 }
+    default:
+        return { "_id": 1 }
+    }
+}
+
+router.get(
+    '/box/list/query/:sorter',
+    regAsAdmin,
+    validateRequest,
+    async function (req, res, next) {
+        let boxStatus = req.query.boxStatus;
+        let storeID = req.query.storeID && parseInt(req.query.storeID);
+        let offset = parseInt(req.query.offset) || 0;
+        let batch = parseInt(req.query.batch) || 0;
+        let sorterRawValue = parseInt(req.params.sorter) || 1 << 6
+        let keyword = req.query.keyword || ''
+        const sorter = parseSorter(sorterRawValue)
+
+        let query = {
+            storeID,
+            'status': boxStatus
+        }
+
+        Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
+
+        if (!Object.keys(query).length) 
+            return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
+
+        Object.assign(query, keyword !== '' ? await createTextSearchQuery(keyword) : {})
+
         Box.find(query)
+            .sort(sorter)
             .skip(offset)
             .limit(batch)
             .exec((err, boxes) => {
@@ -1089,87 +1215,88 @@ router.delete('/deleteBox/:boxID', regAsAdmin, validateRequest, function (req, r
 router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
-    var typeDict = DataCacheFactory.get('containerType');
-    var queryCond;
-    var queryDays;
-    if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
-    else queryDays = historyDays;
-    if (dbKey.roleType === UserRole.CLERK)
-        queryCond = {
-            '$or': [{
-                'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbUser.roles.clerk.storeID
-            }, {
-                'tradeType.action': 'UndoReadyToClean'
-            }],
+    const batch = parseInt(req.query.batch) || 0
+    const offset = parseInt(req.query.offset) || 0
+    const isCleanReload = req.query.cleanReload === 'true'
+    const needBoth = req.query.cleanReload === undefined
+    var queryCond = (dbKey.roleType === UserRole.CLERK) ?
+        {
+            'tradeType.action': 'ReadyToClean',
+            'oriUser.storeID': dbUser.roles.clerk.storeID,
             'tradeTime': {
-                '$gte': dateCheckpoint(1 - queryDays)
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        } :
+        {
+            'tradeType.action': 'ReadyToClean',
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
             }
         };
-    else
-        queryCond = {
-            'tradeType.action': {
-                '$in': ['ReadyToClean', 'UndoReadyToClean']
+
+    if (!needBoth) {
+        queryCond = isCleanReload ? 
+            { ...queryCond, "tradeType.oriState": 1} :
+            { ...queryCond, "tradeType.oriState": {"$ne": 1}}
+    }
+
+    let aggregate = Trade.aggregate({
+        $match: queryCond
+    }, {
+        $group: { 
+            _id: {timestamp: "$tradeTime", state: "$tradeType.oriState", oriStore: "$oriUser.storeID"}, 
+            containerList: {$addToSet: "$container.id"}, 
+            newUser: {$first: "$newUser"},
+        }
+    }, {
+        $project: {
+            status: {
+                $cond: {
+                    if: {
+                      $eq: ['$_id.state', 1]
+                    },
+                    then: "cleanReload",
+                    else: "reload",
+                  }
             },
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - queryDays)
-            }
-        };
-    Trade.find(queryCond, function (err, list) {
-        if (err) return next(err);
-        if (list.length === 0) return res.json([]);
-        list.sort((a, b) => a.tradeTime - b.tradeTime);
-        cleanUndoTrade('ReadyToClean', list);
+            dueDate: "$_id.timestamp",
+            containerList: "$containerList",
+            storeID: "$_id.oriStore",
+            action: [{
+                boxStatus: BoxStatus.Archived,
+                boxAction: BoxAction.Archive,
+                phone: {
+                    $cond: {
+                        if: {
+                            $eq: [dbKey.roleType, UserRole.CLERK]
+                        },
+                        then: undefined,
+                        else: "$newUser.phone"
+                    }
+                },
+                timestamps: "$_id.timestamp"
+            }]
+        }
+    })
 
-        var tradeTimeDict = {};
-        list.forEach(aTrade => {
-            if (!tradeTimeDict[aTrade.tradeTime]) tradeTimeDict[aTrade.tradeTime] = [];
-            tradeTimeDict[aTrade.tradeTime].push(aTrade);
-        });
-
-        var boxDict = {};
-        var boxDictKey;
-        var thisTypeName;
-        let typeList = [];
-        for (var aTradeTime in tradeTimeDict) {
-            tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
-            tradeTimeDict[aTradeTime].forEach(theTrade => {
-                thisTypeName = typeDict[theTrade.container.typeCode].name;
-                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
-                if (!boxDict[boxDictKey])
-                    boxDict[boxDictKey] = {
-                        containerList: [],
-                        status: (theTrade.tradeType.oriState === 1) ? 'cleanReload' : 'reload',
-                        action: [{
-                            boxStatus: BoxStatus.Archived,
-                            boxAction: BoxAction.Archive,
-                            phone: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.newUser.phone,
-                            timestamps: theTrade.tradeTime
-                        }],
-                        storeID: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
-                    };
-                if (typeList.indexOf(thisTypeName) === -1) {
-                    typeList.push(thisTypeName);
-                    boxDict[boxDictKey].containerList = [];
-                }
-                boxDict[boxDictKey].containerList.push(theTrade.container.id);
+    if (batch) {
+        aggregate = aggregate.limit(batch)
+    }
+    
+    aggregate
+        .skip(offset)
+        .sort({dueDate: -1})
+        .exec((err, list) => {
+            if (err) return next(err);
+            list.forEach (box => {
+                const content = getDeliverContent(box.containerList)
+                box.orderContent = content
+                box.deliverContent = content
+                box._id = undefined
             });
-        }
-
-        var boxArr = Object.values(boxDict);
-        boxArr.sort((a, b) => b.boxTime - a.boxTime);
-        for (var i = 0; i < boxArr.length; i++) {
-            boxArr[i].orderContent = [];
-            for (var j = 0; j < typeList.length; j++) {
-                boxArr[i].orderContent.push({
-                    containerType: typeList[j],
-                    amount: boxArr[i].containerList.length
-                });
-            }
-        }
-
-        res.json(boxArr);
-    });
+            
+            res.status(200).json(list);
+        })
 });
 
 /**
@@ -1191,29 +1318,61 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         
  */
 router.get(
-    '/overview',
+    '/overview/:boxStatus',
     regAsAdmin,
     validateRequest,
+    validateBoxStatus,
     async function (req, res, next) {
-        let storeID = parseInt(req._user.roles.admin.stationID);
-        let result = {
-            Boxing: 0,
-            Delivering: 0,
-            Stocked: 0
-        };
+        let status = req.params.boxStatus
+        let storeID = parseInt(req.query.storeID) || -1
+        let query = Object.assign({status}, storeID !== -1 ? {storeID} : {})
 
-        Box.find({
-            'storeID': storeID,
-        }, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (box.status === BoxStatus.Boxing) result.Boxing += 1;
-                if (box.status === BoxStatus.Delivering) result.Delivering += 1;
-                if (box.status === BoxStatus.Stocked) result.Stocked += 1;
+        let overview = await Box.aggregate({
+            $match: query
+        }, {
+            $group: {
+                _id: null,
+                containerIDs: { $push: '$containerList'},
+                storeIDs: { $addToSet: '$storeID' },
+                total: { $sum: 1 }
             }
+        }, {
+            $project: {
+                _id: 0,
+                containers: { $reduce: {
+                    input: '$containerIDs',
+                    initialValue: [],
+                    in: { $concatArrays: ['$$value', '$$this']}
+                }},
+                storeAmount: { $size: '$storeIDs' },
+                total: '$total'
+            }
+        })
+            .exec((err, overviews) => {
+                if (err) return next(err)
+                let overview = overviews[0]
 
-            return res.status(200).json(result);
-        });
+                Container.aggregate({
+                    $match: {
+                        ID: { $in: overview.containers }
+                    }
+                },{
+                    $group: {
+                        _id: '$typeCode',
+                        amount: { $sum: 1 }
+                    }
+                }, {
+                    $project: {
+                        _id: 0,
+                        typeCode: '$_id',
+                        amount: '$amount'
+                    }
+                })
+                    .exec((err, containerTypes) => {
+                        if (err) return next(err)
+                        res.status(200).json({...overview, containers: containerTypes})
+                    })
+            })
     }
 );
 

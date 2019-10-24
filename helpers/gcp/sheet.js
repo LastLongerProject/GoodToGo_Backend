@@ -1,4 +1,3 @@
-const request = require('request');
 const {
     google
 } = require('googleapis');
@@ -19,9 +18,14 @@ const CouponType = require('../../models/DB/couponTypeDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
 
 const googleAuth = require("./auth");
+const downloadPhotos = require("./placePhotoDownloader").downloadImg;
 const configs = require("../../config/config").google;
 const placeApiKey = configs.apikeys.place;
 const dictionary = configs.translater;
+
+const googleMapsClient = require('@google/maps').createClient({
+    key: placeApiKey
+});
 
 const isNum = /^\d+$/;
 const ignorePlaceTypes = ["point_of_interest", "establishment"];
@@ -149,14 +153,9 @@ module.exports = {
                             }
                         }, {
                             'active': false
-                        }, (err) => {
-                            if (err) return debug.error(err);
-                            cb();
-                        });
+                        }, cb);
                     })
-                    .catch((err) => {
-                        if (err) return debug.error(err);
-                    });
+                    .catch(cb);
             });
         });
     },
@@ -197,30 +196,35 @@ module.exports = {
                     .then(placeList => {
                         Store.find((err, oriStoreList) => {
                             if (err) return debug.error(err);
+                            let photosList = [];
                             Promise
                                 .all(placeList.map(aPlace => new Promise((resolve, reject) => {
-                                    const bufferArray = [];
-                                    request
-                                        .get('https://maps.googleapis.com/maps/api/place/details/json?placeid=' + aPlace.placeID +
-                                            '&language=zh-TW&region=tw&key=' + placeApiKey +
-                                            '&fields=formatted_address,opening_hours,geometry,types')
-                                        .on('response', function (response) {
-                                            if (response.statusCode !== 200) {
-                                                debug.error('[Place API ERR (1)] StatusCode: ' + response.statusCode);
-                                                return reject(aPlace.ID);
+                                    googleMapsClient.place({
+                                        placeid: aPlace.placeID,
+                                        language: "zh-TW",
+                                        fields: ["formatted_address", "opening_hours", "geometry", "type", "photo", "url"]
+                                    }, (err, response) => {
+                                        if (err) {
+                                            if (err === 'timeout') {
+                                                return reject(`[Place API ERR (timeout)]: ${aPlace.placeID}`);
+                                            } else if (err.json) {
+                                                return reject(`[Place API ERR (status_1)]: ${aPlace.placeID} - ${err.status}`);
+                                            } else {
+                                                let errDetail = err;
+                                                if (typeof errDetail === "object") errDetail = JSON.stringify(errDetail);
+                                                return reject(`[Place API ERR (unknown)]: ${aPlace.placeID} - ${errDetail}`);
                                             }
-                                        })
-                                        .on('error', function (err) {
-                                            debug.error('[Place API ERR (2)] Message: ' + err);
-                                            return reject(aPlace.ID);
-                                        })
-                                        .on('data', function (data) {
-                                            bufferArray.push(data);
-                                        })
-                                        .on('end', function () {
-                                            const dataBuffer = Buffer.concat(bufferArray);
-                                            const dataObject = JSON.parse(dataBuffer.toString());
-                                            const dataFromApi = dataObject.result;
+                                        }
+                                        let TIMEOUT = 0;
+                                        if (response.json.status !== "OK") {
+                                            if (response.json.status === "OVER_QUERY_LIMIT") {
+                                                TIMEOUT = 1000;
+                                            } else {
+                                                return reject(`[Place API ERR (status_2)]: ${aPlace.placeID} - ${response.json.status}`);
+                                            }
+                                        }
+                                        setTimeout(() => {
+                                            const dataFromApi = response.json.result;
                                             try {
                                                 let formattedType = [];
                                                 if (aPlace && aPlace.type !== "") {
@@ -252,6 +256,9 @@ module.exports = {
                                                 } else {
                                                     opening_hours = defaultPeriods;
                                                 }
+                                                let photos_fromGoogle = null;
+                                                if (dataFromApi.photos && dataFromApi.photos.length >= 1 && typeof dataFromApi.photos[0].photo_reference === "string")
+                                                    photos_fromGoogle = dataFromApi.photos[0].photo_reference;
                                                 Store.findOneAndUpdate({
                                                     'id': aPlace.ID
                                                 }, {
@@ -270,6 +277,8 @@ module.exports = {
                                                     'active': aPlace.active,
                                                     'category': aPlace.category,
                                                     'activity': aPlace.activity,
+                                                    'photos_fromGoogle': photos_fromGoogle,
+                                                    'url_fromGoogle': dataFromApi.url,
                                                     '$setOnInsert': {
                                                         'img_info': {
                                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
@@ -302,26 +311,36 @@ module.exports = {
                                                                 .exec()
                                                             ))
                                                             .then(resolve)
-                                                            .catch(err => {
-                                                                debug.error(err);
-                                                                reject(err);
-                                                            });
+                                                            .catch(reject);
                                                     }
+                                                    if (photos_fromGoogle !== null)
+                                                        photosList.push({
+                                                            storeID: aPlace.ID,
+                                                            ref: photos_fromGoogle
+                                                        });
                                                     resolve(res);
                                                 });
                                             } catch (error) {
-                                                debug.error(`[Place API ERR (3)] DataBuffer : ${dataBuffer.toString()}`)
-                                                reject(error);
+                                                reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
                                             }
-                                        });
+                                        }, TIMEOUT);
+                                    });
                                 })))
                                 .then((data) => {
-                                    return cb(data);
+                                    downloadPhotos(photosList);
+                                    return cb(null, data);
                                 })
-                                .catch(debug.error);
+                                .catch(err => {
+                                    debug.error(err);
+                                    if (typeof err === "string") err = {
+                                        status: 500,
+                                        message: err
+                                    };
+                                    return cb(err);
+                                });
                         });
                     })
-                    .catch(debug.error);
+                    .catch(cb);
             });
         });
     },

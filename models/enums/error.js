@@ -88,6 +88,16 @@ let ErrorResponse = Object.freeze({
         code: "H011",
         type: "ModifyMessage",
         message: "ContainerList and boxDeliverContent need to be modified at the same time, and should correspond to each other"
+    }, 
+    F016_1: {
+        code: "F016",
+        type: "Missing parameters",
+        message: "BoxStatus required"
+    },
+    F016_2: {
+        code: "F016",
+        type: "Missing parameters",
+        message: "BoxStatus invalid"
     }
 });
 
