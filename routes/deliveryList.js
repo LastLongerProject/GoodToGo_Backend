@@ -1327,7 +1327,7 @@ router.get(
         let storeID = parseInt(req.query.storeID) || -1
         let query = Object.assign({status}, storeID !== -1 ? {storeID} : {})
 
-        let overview = await Box.aggregate({
+        Box.aggregate({
             $match: query
         }, {
             $group: {
