@@ -143,14 +143,39 @@ router.get('/list', validateDefault, function (req, res, next) {
  * @apiName Store list JSON
  * @apiGroup Stores
  *
- * @api {get} /stores/list.js Get store list with JSON format
+ * @api {get} /stores/forOfficialPage Get store list for Official Page
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
-
-        var placeid_json = [{"placeid":"ChIJ8c8g8WR2bjQRsgin1zcdMsk","name":"正興咖啡館","borrow":true,"return":true,"type":"咖啡, 生活小物, 旅宿"},...]
- * 
- * 
+        {
+            storeList : [{"placeid": "ChIJ_6XE3YR2bjQRRRlO77NBeqE",
+                "name": "方糖咖啡",
+                "photo": "http://localhost:3030/images/store/12?ver=1",
+                "url": "https://maps.google.com/?cid=11635684828334922053",
+                "address": "台灣台南市東區府連路437號",
+                "opening_hours": {
+                    "periods": [
+                        {
+                            "_id": "5daf3b8c5ce627524c2e9c22",
+                            "close": {
+                                "time": "17:00",
+                                "day": 0
+                            },
+                            "open": {
+                                "time": "06:30",
+                                "day": 0
+                            }
+                        },...
+                    ]
+                },
+                "geometry_location": {
+                    "lat": 22.9864553,
+                    "lng": 120.2171809
+                },
+                "borrow": true,
+                "return": true,
+                "type": "咖啡"},...]
+        }
  * 
  */
 router.get('/list/forOfficialPage', function (req, res, next) {
@@ -186,6 +211,51 @@ router.get('/list/forOfficialPage', function (req, res, next) {
                 };
             })
         });
+    });
+});
+
+/**
+ * @apiName Store list JSON
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/list.js Get store list with JSON format
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+
+        var placeid_json = [{"placeid":"ChIJ8c8g8WR2bjQRsgin1zcdMsk","name":"正興咖啡館","borrow":true,"return":true,"type":"咖啡, 生活小物, 旅宿"},...]
+ * 
+ * 
+ * 
+ */
+router.get('/list.js', function (req, res, next) {
+    Place.find({
+        "project": {
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+        },
+        "active": true
+    }, ["ID"], {
+        sort: {
+            id: 1
+        }
+    }, function (err, placeList) {
+        if (err) return next(err);
+        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+        let tmpArr = placeList.map(aPlace => {
+            let aStore = storeDict[aPlace.ID];
+            let photo = null;
+            if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
+            return {
+                placeid: aStore.placeID,
+                name: aStore.name,
+                photo,
+                borrow: aStore.contract.borrowable,
+                return: aStore.contract.returnable,
+                type: aStore.type
+            };
+        });
+        res.type('application/javascript');
+        res.end("var placeid_json = " + JSON.stringify(tmpArr));
     });
 });
 
