@@ -270,8 +270,10 @@ function validateBoxStatus(req, res, next) {
     if (boxStatus === undefined) {
         return res.status(422).json(ErrorResponse.F016_1)
     } 
-
-    if (!Object.values(BoxStatus).includes(req.params.boxStatus)) {
+    
+    const isArray = Array.isArray(boxStatus)
+    if ((isArray && boxStatus.includes(status => !Object.values(BoxStatus).includes(status))) || 
+        (!isArray && !Object.values(BoxStatus).includes(boxStatus))) {
         return res.status(422).json(ErrorResponse.F016_2)
     }
 

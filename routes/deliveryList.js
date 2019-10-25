@@ -1318,14 +1318,18 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         
  */
 router.get(
-    '/overview/:boxStatus',
+    '/overview',
     regAsAdmin,
     validateRequest,
     validateBoxStatus,
     async function (req, res, next) {
-        let status = req.params.boxStatus
+        let status = req.query.boxStatus
         let storeID = parseInt(req.query.storeID) || -1
-        let query = Object.assign({status}, storeID !== -1 ? {storeID} : {})
+        let query = Array.isArray(status) ?
+         { status: { $in: status } } :
+         { status }
+
+        Object.assign(query, storeID !== -1 ? {storeID} : {})
 
         Box.aggregate({
             $match: query
@@ -1351,6 +1355,14 @@ router.get(
             .exec((err, overviews) => {
                 if (err) return next(err)
                 let overview = overviews[0]
+
+                if (!overview) {
+                    return res.status(200).json({ 
+                        containers: [],
+                        storeAmount: 0,
+                        total: 0
+                    })
+                }
 
                 Container.aggregate({
                     $match: {
