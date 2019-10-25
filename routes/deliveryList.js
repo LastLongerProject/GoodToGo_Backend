@@ -689,7 +689,8 @@ router.get(
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
                     user: box.user,
-                    comment: box.comment || ""
+                    comment: box.comment || "",
+                    deliveringDate: box.deliveringDate
                 }))
                 return res.status(200).json(boxObjs);
             })
@@ -803,7 +804,8 @@ router.get(
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
                     user: box.user,
-                    comment: box.comment || ""
+                    comment: box.comment || "",
+                    deliveringDate: box.deliveringDate
                 }))
                 return res.status(200).json(boxObjs);
             })
