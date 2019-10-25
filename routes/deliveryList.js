@@ -566,7 +566,6 @@ router.get(
  */
 router.get(
     '/box/:boxID', 
-    regAsAdmin, 
     validateRequest,
     async (req, res, next) => {
         const boxID = req.params.boxID
@@ -785,6 +784,7 @@ router.get(
             return res.status(400).json({code: "F014", type: "missing parameters", message: "At least one query parameter required"})
 
         Object.assign(query, keyword !== '' ? await createTextSearchQuery(keyword) : {})
+
 
         Box.find(query)
             .sort(sorter)
