@@ -18,6 +18,7 @@ var schema = mongoose.Schema({
         destinationStoreId: Number,
         timestamps: Date
     }],
+    deliveringDate: Date,
     user: {
         box: String
     },
@@ -47,6 +48,9 @@ schema.index({
 schema.index({
     "boxID": 1
 });
+schema.index({
+    "deliveringDate": -1
+})
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Box', schema);

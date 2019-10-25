@@ -750,9 +750,9 @@ function parseSorter(rawValue) {
     case Sorter.STORE:
         return { "storeID": 1 }
     case Sorter.DESCEND_ARRIVAL:
-        return { "dueDate": -1 }
+        return { "deliveringDate": -1 }
     case Sorter.ASCEND_ARRIVAL:
-        return { "dueDate": 1 }
+        return { "deliveringDate": 1 }
     case Sorter.DESCEND_CREATED_DATE:
         return { "_id": -1 }
     default:
@@ -1105,6 +1105,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 
                     info = {
                         ...info,
+                        deliveringDate: info.storeID && box.storeID !== info.storeID && Date.now(),
                         $push: {
                             action: {
                                 $each: [modifyDateAction, assignAction].filter(e=>e)
