@@ -29,7 +29,8 @@ function migrateDeliveryListBox() {
                     let content = getDeliveryContent(box.containerList)
                     box.containerHash = hash(content)
                 } else {
-                    box.containerHash = hash(box.boxOrderContent, { excludeKeys: (key) => '_id' === key, unorderedArrays: true, ignoreUnknown: true})
+                    const object = box.boxOrderContent.map(content=>({amount: content.amount, containerType: content.containerType}))
+                    box.containerHash = hash(object, { excludeKeys: (key) => '_id' === key, unorderedArrays: true, ignoreUnknown: true})
                 }
 
                 box.save()
