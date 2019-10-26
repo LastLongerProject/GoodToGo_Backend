@@ -734,11 +734,10 @@ async function createTextSearchQuery(keyword) {
             },
             {
                 $where: `this.boxID.toString().match(/${keyword}/)`
-            },
-            {
-                containerList: keywordNumber
             }
-        ]
+        ].concat(String(keywordNumber) === keyword ? [{
+            containerList: keywordNumber
+        }] : [])
     } : {
         $or: [
             {
