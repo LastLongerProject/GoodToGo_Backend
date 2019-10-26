@@ -1379,26 +1379,7 @@ router.get(
                     })
                 }
 
-                Container.aggregate({
-                    $match: {
-                        ID: { $in: overview.containers }
-                    }
-                },{
-                    $group: {
-                        _id: '$typeCode',
-                        amount: { $sum: 1 }
-                    }
-                }, {
-                    $project: {
-                        _id: 0,
-                        typeCode: '$_id',
-                        amount: '$amount'
-                    }
-                })
-                    .exec((err, containerTypes) => {
-                        if (err) return next(err)
-                        res.status(200).json({...overview, containers: containerTypes})
-                    })
+                res.status(200).json({...overview, containers: getDeliverContent(overview.containers)})
             })
     }
 );
