@@ -40,6 +40,7 @@ const isSameDay = require('../helpers/toolkit').isSameDay;
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const historyDays = 14;
+const hash = require('object-hash');
 
 /**
  * @apiName DeliveryList create delivery list
@@ -172,8 +173,10 @@ router.post(
                                 return next(err);
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
+                            let content = getDeliverContent(containerList)
                             aBox.update({
                                 containerList: containerList,
+                                containerHash: hash(content, { excludeKeys: '_id'}),
                                 comment: comment,
                                 $push: {
                                     action: {
@@ -510,6 +513,7 @@ router.get(
                             deliverContent: getDeliverContent(box.containerList),
                             orderContent: box.boxOrderContent || [],
                             containerList: box.containerList,
+                            containerHash: box.containerHash,
                             user: box.user,
                             comment: box.comment || ""
                         });
@@ -584,6 +588,7 @@ router.get(
                 deliverContent: getDeliverContent(box.containerList),
                 orderContent: box.boxOrderContent || [],
                 containerList: box.containerList,
+                containerHash: box.containerHash,
                 user: box.user,
                 comment: box.comment || ""
             })
@@ -688,6 +693,7 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
                     comment: box.comment || "",
                     deliveringDate: box.deliveringDate
@@ -747,7 +753,7 @@ async function createTextSearchQuery(keyword) {
 function parseSorter(rawValue) {
     switch (rawValue) {
     case Sorter.CONTAINER:
-        return { "boxOrderContent": 1}
+        return { "containerHash": 1}
     case Sorter.STORE:
         return { "storeID": 1 }
     case Sorter.DESCEND_ARRIVAL:
@@ -803,6 +809,7 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
                     comment: box.comment || "",
                     deliveringDate: box.deliveringDate
@@ -894,6 +901,7 @@ router.get(
                             deliverContent: getDeliverContent(box.containerList),
                             orderContent: box.boxOrderContent || [],
                             containerList: box.containerList,
+                            containerHash: box.containerHash,
                             user: box.user,
                             comment: box.comment || ""
                         });
@@ -987,6 +995,7 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
                     comment: box.comment || ""
                 });
@@ -1064,9 +1073,11 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
-
+                                
+                                let content = getDeliverContent(containerList)
                                 let info = {
                                     ...req.body,
+                                    containerHash: hash(content, { excludeKeys: '_id'}),
                                     $push: {
                                         action: {
                                             phone: dbAdmin.user.phone,
@@ -1295,6 +1306,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 const content = getDeliverContent(box.containerList)
                 box.orderContent = content
                 box.deliverContent = content
+                box.containerHash = hash(content)
                 box._id = undefined
             });
             

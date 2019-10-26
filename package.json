@@ -50,6 +50,7 @@
         "jwt-simple": "^0.5.6",
         "mongoose": "^4.13.17",
         "morgan": "^1.9.1",
+        "object-hash": "^2.0.0",
         "on-finished": "^2.3.0",
         "on-headers": "^1.0.1",
         "queue": "^4.5.0",

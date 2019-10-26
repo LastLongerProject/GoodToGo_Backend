@@ -23,6 +23,7 @@ var schema = mongoose.Schema({
         box: String
     },
     containerList: [Number],
+    containerHash: String,
     delivering: {
         type: Boolean,
         default: false
@@ -50,6 +51,9 @@ schema.index({
 });
 schema.index({
     "deliveringDate": -1
+})
+schema.index({
+    'containerHash': 1
 })
 
 // create the model for users and expose it to our app

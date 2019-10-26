@@ -11,6 +11,7 @@ const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
 const isSameDay = require('../../../helpers/toolkit').isSameDay;
 const redis = require("../../../models/redis");
+const hash = require('object-hash');
 
 const queue = require('queue')({
     concurrency: 1,
@@ -81,6 +82,7 @@ function validateCreateApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 boxOrderContent: element.boxOrderContent,
+                containerHash: hash.sha1(element.boxOrderContent),
                 dueDate: element.dueDate,
                 storeID: parseInt(req.params.storeID),
                 action: [{
@@ -131,13 +133,15 @@ function validateStockApiContent(req, res, next) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
             let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
+            let orderContent = getDeliverContent(element.containerList);
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
                 dueDate: Date.now(),
                 storeID: storeID,
-                boxOrderContent: getDeliverContent(element.containerList),
+                boxOrderContent: orderContent,
                 containerList: element.containerList,
+                containerHash: hash.sha1(orderContent),
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
