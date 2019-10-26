@@ -25,14 +25,11 @@ function migrateDeliveryListBox() {
                     box.deliveringDate = date
                 }
 
-                if (box.containerHash === undefined) {
-
-                    if (box.containerList.length) {
-                        let content = getDeliveryContent(box.containerList)
-                        box.containerHash = hash(content)
-                    } else {
-                        box.containerHash = hash(box.boxOrderContent, { excludeKeys: (key) => '_id' === key })
-                    }
+                if (box.containerList.length) {
+                    let content = getDeliveryContent(box.containerList)
+                    box.containerHash = hash(content)
+                } else {
+                    box.containerHash = hash(box.boxOrderContent, { excludeKeys: (key) => '_id' === key, unorderedArrays: true, ignoreUnknown: true})
                 }
 
                 box.save()
