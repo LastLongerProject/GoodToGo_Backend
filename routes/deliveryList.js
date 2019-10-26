@@ -176,7 +176,7 @@ router.post(
                             let content = getDeliverContent(containerList)
                             aBox.update({
                                 containerList: containerList,
-                                containerHash: hash(content, { excludeKeys: (key) => '_id' === key, unorderedArrays: true }),
+                                containerHash: hash(content, { unorderedArrays: true }),
                                 comment: comment,
                                 $push: {
                                     action: {
@@ -1077,7 +1077,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                                 let content = getDeliverContent(containerList)
                                 let info = {
                                     ...req.body,
-                                    containerHash: hash(content, { excludeKeys: (key) => '_id' === key, unorderedArrays: true }),
+                                    containerHash: hash(content, { unorderedArrays: true }),
                                     $push: {
                                         action: {
                                             phone: dbAdmin.user.phone,
@@ -1306,7 +1306,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 const content = getDeliverContent(box.containerList)
                 box.orderContent = content
                 box.deliverContent = content
-                box.containerHash = hash(content)
+                box.containerHash = hash(content, { unorderedArrays: true })
                 box._id = undefined
             });
             
