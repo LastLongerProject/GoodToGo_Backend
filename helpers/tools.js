@@ -24,10 +24,18 @@ exports.getDeliverContent = function (containerList) {
     });
 };
 
-exports.getContainerHash = function (containerList) {
-    const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
-    const contaienrTypes  =containerList.map(container => containerDict[container])
-    return hash(new Set(contaienrTypes), {unorderedSets: true})
+exports.getContainerHash = function (containerList, isOverview = false) {
+    let hashValue
+
+    if (!isOverview) {
+        const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
+        const contaienrTypes  =containerList.map(container => containerDict[container])
+        hashValue = hash(new Set(contaienrTypes), {unorderedSets: true})
+    } else {
+        hashValue = hash(new Set(containerList.map(content=>content.containerType)), {unorderedSets: true})
+    }
+
+    return String(hashValue.length) + hashValue
 }
 
 exports.generateUUID = function () {

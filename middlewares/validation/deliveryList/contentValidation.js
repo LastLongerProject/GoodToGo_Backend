@@ -83,7 +83,7 @@ function validateCreateApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 boxOrderContent: element.boxOrderContent,
-                containerHash: hash(new Set(element.boxOrderContent.map(content=>content.containerType)), {unorderedSets: true}),
+                containerHash: getContainerHash(element.boxOrderContent, true),
                 dueDate: element.dueDate,
                 storeID: parseInt(req.params.storeID),
                 action: [{

@@ -30,8 +30,7 @@ function migrateDeliveryListBox() {
                     if (box.containerList.length) {
                         box.containerHash = getContainerHash(box.containerList)
                     } else {
-                        const object = box.boxOrderContent.map(content=>content.containerType)
-                        box.containerHash = hash(new Set(object), { unorderedSets: true })
+                        box.containerHash = getContainerHash(box.boxOrderContent, true)
                     }
                 }
 
