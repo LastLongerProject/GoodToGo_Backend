@@ -4,6 +4,7 @@ const DataCacheFactory = require("../models/dataCacheFactory.js");
 const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
 const RentalQualification = require("../models/enums/userEnum").RentalQualification;
 const HoldingQuantityLimitation = require("../models/enums/userEnum").HoldingQuantityLimitation;
+const hash = require('object-hash');
 
 exports.getDeliverContent = function (containerList) {
     let container = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
@@ -22,6 +23,12 @@ exports.getDeliverContent = function (containerList) {
         }
     });
 };
+
+exports.getContainerHash = function (containerList) {
+    const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
+    const contaienrTypes  =containerList.map(container => containerDict[container])
+    return hash(new Set(contaienrTypes), {unorderedSets: true})
+}
 
 exports.generateUUID = function () {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

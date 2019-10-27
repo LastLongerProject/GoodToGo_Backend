@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
 const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
+const getContainerHash = require('../helpers/tools').getContainerHash;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
@@ -173,10 +174,9 @@ router.post(
                                 return next(err);
                             }
                             if (!tradeSuccess) return res.status(403).json(reply);
-                            let content = getDeliverContent(containerList)
                             aBox.update({
                                 containerList: containerList,
-                                containerHash: hash(content, { unorderedArrays: true }),
+                                containerHash: getContainerHash(containerList),
                                 comment: comment,
                                 $push: {
                                     action: {
@@ -1073,10 +1073,9 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
                                 
-                                let content = getDeliverContent(containerList)
                                 let info = {
                                     ...req.body,
-                                    containerHash: hash(content, { unorderedArrays: true }),
+                                    containerHash: getContainerHash(containerList),
                                     $push: {
                                         action: {
                                             phone: dbAdmin.user.phone,
@@ -1305,7 +1304,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 const content = getDeliverContent(box.containerList)
                 box.orderContent = content
                 box.deliverContent = content
-                box.containerHash = hash(content, { unorderedArrays: true })
+                box.containerHash = getContainerHash(box.containerList)
                 box._id = undefined
             });
             

@@ -7,7 +7,7 @@ const Box = require('./DB/boxDB');
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const getDeliveryContent = require('../helpers/tools').getDeliverContent;
-const hash = require('object-hash');
+const getContainerHash = require('../helpers/tools').getContainerHash;
 
 function migrateDeliveryListBox() {
     Box.find({})
@@ -27,11 +27,10 @@ function migrateDeliveryListBox() {
 
                 if (box.containerHash === undefined) {
                     if (box.containerList.length) {
-                        let content = getDeliveryContent(box.containerList)
-                        box.containerHash = hash(content, { unorderedArrays: true })
+                        box.containerHash = getContainerHash(box.containerList)
                     } else {
-                        const object = box.boxOrderContent.map(content=>({amount: content.amount, containerType: content.containerType}))
-                        box.containerHash = hash(object, { unorderedArrays: true })
+                        const object = box.boxOrderContent.map(content=>content.containerType)
+                        box.containerHash = hash(new Set(object), { unorderedSets: true })
                     }
                 }
 

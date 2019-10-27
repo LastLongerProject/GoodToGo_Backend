@@ -9,6 +9,7 @@ const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
+const getContainerHash = require('../../../helpers/tools').getContainerHash;
 const isSameDay = require('../../../helpers/toolkit').isSameDay;
 const redis = require("../../../models/redis");
 const hash = require('object-hash');
@@ -82,7 +83,7 @@ function validateCreateApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 boxOrderContent: element.boxOrderContent,
-                containerHash: hash.sha1(element.boxOrderContent),
+                containerHash: hash(new Set(element.boxOrderContent.map(content=>content.containerType)), {unorderedSets: true}),
                 dueDate: element.dueDate,
                 storeID: parseInt(req.params.storeID),
                 action: [{
@@ -141,7 +142,7 @@ function validateStockApiContent(req, res, next) {
                 storeID: storeID,
                 boxOrderContent: orderContent,
                 containerList: element.containerList,
-                containerHash: hash.sha1(orderContent),
+                containerHash: getContainerHash(element.containerList),
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
