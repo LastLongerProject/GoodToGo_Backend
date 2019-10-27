@@ -26,16 +26,18 @@ exports.getDeliverContent = function (containerList) {
 
 exports.getContainerHash = function (containerList, isOverview = false) {
     let hashValue
+    let set
 
     if (!isOverview) {
         const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
-        const contaienrTypes  =containerList.map(container => containerDict[container])
-        hashValue = hash(new Set(contaienrTypes), {unorderedSets: true})
+        set = new Set(containerList.map(container => containerDict[container]))
     } else {
-        hashValue = hash(new Set(containerList.map(content=>content.containerType)), {unorderedSets: true})
+        set = new Set(containerList.map(content=>content.containerType))
     }
 
-    return String(hashValue.length) + hashValue
+    hashValue = hash(set, {unorderedSets: true})
+    
+    return String(set.size) + hashValue
 }
 
 exports.generateUUID = function () {
