@@ -8,6 +8,7 @@ const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const getDeliveryContent = require('../helpers/tools').getDeliverContent;
 const getContainerHash = require('../helpers/tools').getContainerHash;
+const hash = require('object-hash');
 
 function migrateDeliveryListBox() {
     Box.find({})
