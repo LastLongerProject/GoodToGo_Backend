@@ -978,7 +978,7 @@ router.get(
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
-            'updatedAt': {
+            'createdAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
             },
