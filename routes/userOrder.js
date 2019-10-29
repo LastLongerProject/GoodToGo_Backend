@@ -355,6 +355,7 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
     let containers = req.body.containers;
     const bypassCheck = req.body.byCallback === true;
     const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
 
     if (!Array.isArray(containers) || !storeCodeValidater.test(storeCode))
         return res.status(403).json({
@@ -445,7 +446,7 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
                 newState: 2
             }, {
                 rentToUser: dbUser,
-                orderTime: order.orderTime,
+                orderTime: now,
                 activity: "沒活動",
                 inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
@@ -462,7 +463,8 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
                 res.status(200).json({
                     code: '???',
                     type: 'userOrderMessage',
-                    message: 'Register ContainerID of UserOrder Success'
+                    message: 'Create user order with containers successfully',
+                    storeName: StoreDict[storeID].name
                 })
                 
                 return userTrade.refreshUserUsingStatus(false, dbUser, err => {
