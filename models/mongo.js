@@ -42,6 +42,7 @@ function migrateDeliveryListBox() {
 module.exports = function (mongoose, done) {
     mongoose.set('useNewUrlParser',true);
     mongoose.set('useCreateIndex',true);
+    mongoose.set('retryWrites', false);
     mongoose.connect(config.dbUrl, config.dbOptions, function (err) {
         if (err) throw err;
         debug.log('mongoDB connect succeed');
