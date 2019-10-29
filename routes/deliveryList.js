@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
 const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
+const getContainerHash = require('../helpers/tools').getContainerHash;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/validateRequest')
     .JWT;
@@ -40,6 +41,7 @@ const isSameDay = require('../helpers/toolkit').isSameDay;
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const historyDays = 14;
+const hash = require('object-hash');
 
 /**
  * @apiName DeliveryList create delivery list
@@ -174,6 +176,7 @@ router.post(
                             if (!tradeSuccess) return res.status(403).json(reply);
                             aBox.update({
                                 containerList: containerList,
+                                containerHash: getContainerHash(containerList),
                                 comment: comment,
                                 $push: {
                                     action: {
@@ -510,6 +513,7 @@ router.get(
                             deliverContent: getDeliverContent(box.containerList),
                             orderContent: box.boxOrderContent || [],
                             containerList: box.containerList,
+                            containerHash: box.containerHash,
                             user: box.user,
                             comment: box.comment || ""
                         });
@@ -566,7 +570,6 @@ router.get(
  */
 router.get(
     '/box/:boxID', 
-    regAsAdmin, 
     validateRequest,
     async (req, res, next) => {
         const boxID = req.params.boxID
@@ -585,6 +588,7 @@ router.get(
                 deliverContent: getDeliverContent(box.containerList),
                 orderContent: box.boxOrderContent || [],
                 containerList: box.containerList,
+                containerHash: box.containerHash,
                 user: box.user,
                 comment: box.comment || ""
             })
@@ -689,8 +693,10 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
-                    comment: box.comment || ""
+                    comment: box.comment || "",
+                    deliveringDate: box.deliveringDate
                 }))
                 return res.status(200).json(boxObjs);
             })
@@ -728,11 +734,10 @@ async function createTextSearchQuery(keyword) {
             },
             {
                 $where: `this.boxID.toString().match(/${keyword}/)`
-            },
-            {
-                containerList: keywordNumber
             }
-        ]
+        ].concat(String(keywordNumber) === keyword ? [{
+            containerList: keywordNumber
+        }] : [])
     } : {
         $or: [
             {
@@ -747,13 +752,13 @@ async function createTextSearchQuery(keyword) {
 function parseSorter(rawValue) {
     switch (rawValue) {
     case Sorter.CONTAINER:
-        return { "boxOrderContent": 1}
+        return { "containerHash": 1}
     case Sorter.STORE:
         return { "storeID": 1 }
     case Sorter.DESCEND_ARRIVAL:
-        return { "dueDate": 1 }
+        return { "deliveringDate": -1 }
     case Sorter.ASCEND_ARRIVAL:
-        return { "dueDate": -1 }
+        return { "deliveringDate": 1 }
     case Sorter.DESCEND_CREATED_DATE:
         return { "_id": -1 }
     default:
@@ -786,6 +791,7 @@ router.get(
 
         Object.assign(query, keyword !== '' ? await createTextSearchQuery(keyword) : {})
 
+
         Box.find(query)
             .sort(sorter)
             .skip(offset)
@@ -802,8 +808,10 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
-                    comment: box.comment || ""
+                    comment: box.comment || "",
+                    deliveringDate: box.deliveringDate
                 }))
                 return res.status(200).json(boxObjs);
             })
@@ -892,6 +900,7 @@ router.get(
                             deliverContent: getDeliverContent(box.containerList),
                             orderContent: box.boxOrderContent || [],
                             containerList: box.containerList,
+                            containerHash: box.containerHash,
                             user: box.user,
                             comment: box.comment || ""
                         });
@@ -969,7 +978,7 @@ router.get(
         Box.find({
             'status': boxStatus,
             'storeID': storeID,
-            'updatedAt': {
+            'createdAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
             },
@@ -985,6 +994,7 @@ router.get(
                     deliverContent: getDeliverContent(box.containerList),
                     orderContent: box.boxOrderContent || [],
                     containerList: box.containerList,
+                    containerHash: box.containerHash,
                     user: box.user,
                     comment: box.comment || ""
                 });
@@ -1062,9 +1072,10 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
                             async (err, tradeSuccess, reply) => {
                                 if (err) return next(err);
                                 if (!tradeSuccess) return res.status(403).json(reply);
-
+                                
                                 let info = {
                                     ...req.body,
+                                    containerHash: getContainerHash(containerList),
                                     $push: {
                                         action: {
                                             phone: dbAdmin.user.phone,
@@ -1105,6 +1116,7 @@ router.patch('/modifyBoxInfo/:boxID', regAsAdmin, validateRequest, validateModif
 
                     info = {
                         ...info,
+                        deliveringDate: info.storeID && box.storeID !== info.storeID && Date.now(),
                         $push: {
                             action: {
                                 $each: [modifyDateAction, assignAction].filter(e=>e)
@@ -1292,6 +1304,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 const content = getDeliverContent(box.containerList)
                 box.orderContent = content
                 box.deliverContent = content
+                box.containerHash = getContainerHash(box.containerList)
                 box._id = undefined
             });
             
@@ -1318,16 +1331,20 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
         
  */
 router.get(
-    '/overview/:boxStatus',
+    '/overview',
     regAsAdmin,
     validateRequest,
     validateBoxStatus,
     async function (req, res, next) {
-        let status = req.params.boxStatus
+        let status = req.query.boxStatus
         let storeID = parseInt(req.query.storeID) || -1
-        let query = Object.assign({status}, storeID !== -1 ? {storeID} : {})
+        let query = Array.isArray(status) ?
+         { status: { $in: status } } :
+         { status }
 
-        let overview = await Box.aggregate({
+        Object.assign(query, storeID !== -1 ? {storeID} : {})
+
+        Box.aggregate({
             $match: query
         }, {
             $group: {
@@ -1352,26 +1369,15 @@ router.get(
                 if (err) return next(err)
                 let overview = overviews[0]
 
-                Container.aggregate({
-                    $match: {
-                        ID: { $in: overview.containers }
-                    }
-                },{
-                    $group: {
-                        _id: '$typeCode',
-                        amount: { $sum: 1 }
-                    }
-                }, {
-                    $project: {
-                        _id: 0,
-                        typeCode: '$_id',
-                        amount: '$amount'
-                    }
-                })
-                    .exec((err, containerTypes) => {
-                        if (err) return next(err)
-                        res.status(200).json({...overview, containers: containerTypes})
+                if (!overview) {
+                    return res.status(200).json({ 
+                        containers: [],
+                        storeAmount: 0,
+                        total: 0
                     })
+                }
+
+                res.status(200).json({...overview, containers: getDeliverContent(overview.containers)})
             })
     }
 );

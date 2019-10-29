@@ -80,6 +80,7 @@ router.get('/list', validateLine, function (req, res, next) {
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
             const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
+            const storeCode = aUserOrder.storeID.toString().padStart(3, '0') + `${getCheckCode(aUserOrder.storeID)}`
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -89,6 +90,7 @@ router.get('/list', validateLine, function (req, res, next) {
                         containerAmount: 1,
                         orderTime: aUserOrder.orderTime,
                         storeName: StoreDict[aUserOrder.storeID].name,
+                        storeCode,
                         daysToDue
                     };
                     orderListWithoutID[aUserOrder.orderID] = aFormattedUserOrder;
@@ -99,6 +101,7 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
                     storeName: StoreDict[aUserOrder.storeID].name,
+                    storeCode,
                     daysToDue
                 };
                 orderListWithID.push(aFormattedUserOrder);

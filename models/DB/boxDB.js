@@ -18,10 +18,12 @@ var schema = mongoose.Schema({
         destinationStoreId: Number,
         timestamps: Date
     }],
+    deliveringDate: Date,
     user: {
         box: String
     },
     containerList: [Number],
+    containerHash: String,
     delivering: {
         type: Boolean,
         default: false
@@ -47,6 +49,12 @@ schema.index({
 schema.index({
     "boxID": 1
 });
+schema.index({
+    "deliveringDate": -1
+})
+schema.index({
+    'containerHash': 1
+})
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Box', schema);
