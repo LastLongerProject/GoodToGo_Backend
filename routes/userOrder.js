@@ -356,7 +356,7 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
     const bypassCheck = req.body.byCallback === true;
     const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
 
-    if (Array.isArray(containers) || storeCodeValidater.test(storeCode))
+    if (!Array.isArray(containers) || !storeCodeValidater.test(storeCode))
         return res.status(403).json({
             code: 'L005',
             type: 'userOrderMessage',
@@ -366,7 +366,7 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
 
     containers = containers.map(id=>parseInt(id));
 
-    for (let id in containers) {
+    for (let id of containers) {
         if (!ContainerDict[id])
             return res.status(403).json({
                 code: 'L006',
@@ -440,54 +440,51 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
         }
         dbBot.roles.clerk.storeID = storeID;
 
-        UserOrder.create(docs, {session: session}, (err, userOrders) => {
-            if (err) next(err);
+        let userOrders = await UserOrder.create(docs, {session: session})
+        Promise.all(userOrders.map(order => {
+            return new Promise((resolve, reject) => {
+                changeContainersState(order.containerID, dbBot, {
+                    action: "Rent",
+                    newState: 2
+                }, {
+                    rentToUser: dbUser,
+                    orderTime: order.orderTime,
+                    activity: "沒活動",
+                    inLineSystem: true
+                }, (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) return next(err);
+                    return  tradeSuccess ?
+                        resolve(tradeCallback.rent(tradeDetail, null)) :
+                        reject({status: 403, json: Object.assign(reply, {
+                            txt: "容器ID錯誤，請輸入正確容器 ID！"
+                        })})
+                });
+            })
+        }))
+            .then(() => session.commitTransaction())
+            .then(() => {
+                session.endSession()
 
-            Promise.all(userOrders.map(order => {
-                return new Promise((resolve, reject) => {
-                    changeContainersState(order.containerID, dbBot, {
-                        action: "Rent",
-                        newState: 2
-                    }, {
-                        rentToUser: dbUser,
-                        orderTime: order.orderTime,
-                        activity: "沒活動",
-                        inLineSystem: true
-                    }, (err, tradeSuccess, reply, tradeDetail) => {
-                        if (err) return next(err);
-                        return  tradeSuccess ?
-                            resolve(tradeCallback.rent(tradeDetail, null)) :
-                            reject({status: 403, json: Object.assign(reply, {
-                                txt: "容器ID錯誤，請輸入正確容器 ID！"
-                            })})
-                    });
+                res.status(200).json({
+                    code: '???',
+                    type: 'userOrderMessage',
+                    message: 'Register ContainerID of UserOrder Success'
                 })
-            }))
-                .then(() => session.commitTransaction())
-                .then(() => {
-                    session.endSession()
+                
+                return userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                    if (err) return debug.error(err);
+                });
+            })
+            .catch(async err => {
+                if (err.status && err.json) {
+                    res.status(err.status).json(err.json)
+                } else {
+                    next(err)
+                }
 
-                    res.status(200).json({
-                        code: '???',
-                        type: 'userOrderMessage',
-                        message: 'Register ContainerID of UserOrder Success'
-                    })
-                    
-                    return userTrade.refreshUserUsingStatus(false, dbUser, err => {
-                        if (err) return debug.error(err);
-                    });
-                })
-                .catch(async err => {
-                    if (err.status && err.json) {
-                        res.status(err.status).json(err.json)
-                    } else {
-                        next(err)
-                    }
-
-                    await session.abortTransaction()
-                    return session.endSession()
-                })
-        })
+                await session.abortTransaction()
+                return session.endSession()
+            })
     });
 });
 
