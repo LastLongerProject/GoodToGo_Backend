@@ -48,7 +48,7 @@
         "googleapis": "^44.0.0",
         "helmet": "^3.9.0",
         "jwt-simple": "^0.5.6",
-        "mongoose": "^4.13.17",
+        "mongoose": "^5.7.5",
         "morgan": "^1.9.1",
         "object-hash": "^2.0.0",
         "on-finished": "^2.3.0",

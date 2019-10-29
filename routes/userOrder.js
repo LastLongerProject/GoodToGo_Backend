@@ -330,4 +330,155 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
     });
 });
 
+/**
+ * @apiName RegisterContainerID
+ * @apiGroup UserOrder
+ * 
+ * @api {post} /userOrder/addWithContainer Add user order and register container id
+ * @apiUse LINE
+ * 
+ * @apiParam {String} storeCode storeCode.
+ * @apiParam {String[]} containers containerIDs.
+ * @apiParam {Boolean} byCallback byCallback.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          code: '???',
+ *          type: 'userOrderMessage',
+ *          message: 'Add user order with containerID successfully'
+ *      }
+ */
+
+router.post('/addWithContainer', validateLine, async function (req, res, next) {
+    const dbUser = req._user;
+    const storeCode = req.body.storeCode;
+    let containers = req.body.containers;
+    const bypassCheck = req.body.byCallback === true;
+    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+
+    if (!Array.isArray(containers) || !storeCodeValidater.test(storeCode))
+        return res.status(403).json({
+            code: 'L005',
+            type: 'userOrderMessage',
+            message: `Content format incorrect`,
+            txt: "系統維修中>< 請稍後再試！"
+        });
+
+    containers = containers.map(id=>parseInt(id));
+
+    for (let id of containers) {
+        if (!ContainerDict[id])
+            return res.status(403).json({
+                code: 'L006',
+                type: 'userOrderMessage',
+                message: `Can't find the Container. ContainerID: ${id}`,
+                txt: "容器ID錯誤，請輸入正確容器 ID！"
+            });
+    }
+
+    const containerAmount = containers.length;
+
+    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, async (err, isAvailable, detail) => {
+        if (err) return next(err);
+        if (!isAvailable) {
+            if (detail.rentalQualification === RentalQualification.BANNED)
+                return res.status(403).json({
+                    code: 'L001',
+                    type: 'userOrderMessage',
+                    message: `User is Banned.`,
+                    txt: dbUser.getBannedTxt("借用")
+                });
+            if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                return res.status(403).json({
+                    code: 'L004',
+                    type: 'userOrderMessage',
+                    message: `ContainerAmount is Over Quantity Limitation. \n` +
+                        `ContainerAmount: ${containerAmount}, UsingAmount: ${detail.data.usingAmount}`,
+                    txt: `您最多只能借 ${detail.data.holdingQuantityLimitation} 個容器`
+                });
+            else
+                return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+        }
+
+        const storeID = parseInt(storeCode.substring(0, 3));
+        const now = Date.now();
+
+        let dbBot = await User.findOne({
+            "user.phone": "0900000000"
+        }) || await (new User({
+            user: {
+                phone: "0900000000",
+                password: null,
+                name: "GoodToGoBot"
+            },
+            roles: {
+                typeList: ["bot", "clerk"],
+                clerk: {
+                    storeID: 17,
+                    manager: false
+                }
+            }
+        }).save());
+
+        if (!dbBot.roles.clerk) {
+            dbBot.roles.typeList.push("clerk");
+            dbBot.roles.clerk = {
+                storeID: 17,
+                manager: false
+            };
+        }
+        dbBot.roles.clerk.storeID = storeID;
+
+        let userOrders = containers.map(id => 
+            new UserOrder({
+                orderID: generateUUID(),
+                user: dbUser._id,
+                containerID: id,
+                storeID,
+                orderTime: now
+            })
+        );
+
+        new Promise((resolve, reject) => {
+            changeContainersState(containers, dbBot, {
+                action: "Rent",
+                newState: 2
+            }, {
+                rentToUser: dbUser,
+                orderTime: now,
+                activity: "沒活動",
+                inLineSystem: true
+            }, (err, tradeSuccess, reply, tradeDetail) => {
+                if (err) return next(err);
+                return  tradeSuccess ?
+                    resolve(tradeCallback.rent(tradeDetail, null)) :
+                    reject({status: 403, json: Object.assign(reply, {
+                        txt: "容器ID錯誤，請輸入正確容器 ID！"
+                    })})
+            });      
+        })
+            .then(()=> userOrders.map(order=>order.save()))
+            .then(() => {
+                res.status(200).json({
+                    code: '???',
+                    type: 'userOrderMessage',
+                    message: 'Create user order with containers successfully',
+                    storeName: StoreDict[storeID].name
+                })
+                
+                return userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                    if (err) return debug.error(err);
+                });
+            })
+            .catch( err => {
+                if (err.status && err.json) {
+                    res.status(err.status).json(err.json)
+                } else {
+                    next(err)
+                }
+            })
+    });
+});
+
 module.exports = router;
