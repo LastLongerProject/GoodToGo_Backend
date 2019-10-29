@@ -400,19 +400,8 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
                 return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
         }
 
-        const session = await UserOrder.db.startSession();
-        session.startTransaction()
-
         const storeID = parseInt(storeCode.substring(0, 3));
         const now = Date.now();
-        const docs = containers.map(id => ({
-                orderID: generateUUID(),
-                user: dbUser._id,
-                containerID: id,
-                storeID,
-                orderTime: now
-            })
-        );
 
         let dbBot = await User.findOne({
             "user.phone": "0900000000"
@@ -440,31 +429,36 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
         }
         dbBot.roles.clerk.storeID = storeID;
 
-        let userOrders = await UserOrder.create(docs, {session: session})
-        Promise.all(userOrders.map(order => {
-            return new Promise((resolve, reject) => {
-                changeContainersState(order.containerID, dbBot, {
-                    action: "Rent",
-                    newState: 2
-                }, {
-                    rentToUser: dbUser,
-                    orderTime: order.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    return  tradeSuccess ?
-                        resolve(tradeCallback.rent(tradeDetail, null)) :
-                        reject({status: 403, json: Object.assign(reply, {
-                            txt: "容器ID錯誤，請輸入正確容器 ID！"
-                        })})
-                });
+        let userOrders = containers.map(id => 
+            new UserOrder({
+                orderID: generateUUID(),
+                user: dbUser._id,
+                containerID: id,
+                storeID,
+                orderTime: now
             })
-        }))
-            .then(() => session.commitTransaction())
-            .then(() => {
-                session.endSession()
+        );
 
+        new Promise((resolve, reject) => {
+            changeContainersState(containers, dbBot, {
+                action: "Rent",
+                newState: 2
+            }, {
+                rentToUser: dbUser,
+                orderTime: order.orderTime,
+                activity: "沒活動",
+                inLineSystem: true
+            }, (err, tradeSuccess, reply, tradeDetail) => {
+                if (err) return next(err);
+                return  tradeSuccess ?
+                    resolve(tradeCallback.rent(tradeDetail, null)) :
+                    reject({status: 403, json: Object.assign(reply, {
+                        txt: "容器ID錯誤，請輸入正確容器 ID！"
+                    })})
+            });      
+        })
+            .then(()=> userOrders.map(order=>order.save()))
+            .then(() => {
                 res.status(200).json({
                     code: '???',
                     type: 'userOrderMessage',
@@ -475,15 +469,12 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
                     if (err) return debug.error(err);
                 });
             })
-            .catch(async err => {
+            .catch( err => {
                 if (err.status && err.json) {
                     res.status(err.status).json(err.json)
                 } else {
                     next(err)
                 }
-
-                await session.abortTransaction()
-                return session.endSession()
             })
     });
 });
