@@ -68,7 +68,6 @@ router.get('/list', validateLine, function (req, res, next) {
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
             const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
-            const storeCode = aUserOrder.storeID.toString().padStart(3, '0') + `${getCheckCode(aUserOrder.storeID)}`
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
