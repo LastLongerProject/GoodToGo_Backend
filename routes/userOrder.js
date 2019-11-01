@@ -3,6 +3,7 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
 const validateLine = require('../middlewares/validation/validateLine').all;
+const validateStoreCode = require('../middlewares/validation/validateUserOrder').storeCode;
 
 const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
@@ -18,19 +19,6 @@ const UserOrder = require('../models/DB/userOrderDB');
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
-
-const storeCodeValidater = /\d{4}/;
-
-function isValidStoreCode(storeCode) {
-    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-    const storeID = parseInt(storeCode.substring(0, 3));
-    return (getCheckCode(storeID) === parseInt(storeCode.substring(3, 4)) &&
-        StoreDict[storeID]);
-}
-
-function getCheckCode(storeID) {
-    return (parseInt(storeID / 100) % 10 * 1 + parseInt(storeID / 10) % 10 * 2 + parseInt(storeID / 1) % 10 * 3) % 10;
-}
 
 /**
  * @apiName DataForLine
@@ -90,7 +78,6 @@ router.get('/list', validateLine, function (req, res, next) {
                         containerAmount: 1,
                         orderTime: aUserOrder.orderTime,
                         storeName: StoreDict[aUserOrder.storeID].name,
-                        storeCode,
                         daysToDue
                     };
                     orderListWithoutID[aUserOrder.orderID] = aFormattedUserOrder;
@@ -101,7 +88,6 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
                     storeName: StoreDict[aUserOrder.storeID].name,
-                    storeCode,
                     daysToDue
                 };
                 orderListWithID.push(aFormattedUserOrder);
@@ -135,27 +121,20 @@ router.get('/list', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/add', validateLine, function (req, res, next) {
+router.post('/add', validateLine, validateStoreCode, function (req, res, next) {
     const dbUser = req._user;
     const bypassCheck = req.body.byCallback == true;
     const storeCode = req.body.storeCode;
     const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     const containerAmount = parseInt(req.body.containerAmount);
 
-    if (typeof storeCode !== "string" || !storeCodeValidater.test(storeCode) || isNaN(containerAmount) || containerAmount <= 0)
+    if (isNaN(containerAmount) || containerAmount <= 0)
         return res.status(403).json({
             code: 'L002',
             type: 'userOrderMessage',
             message: `Content not in Correct Format.\n` +
                 `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}`,
             txt: "系統維修中>< 請稍後再試！"
-        });
-    if (!isValidStoreCode(storeCode))
-        return res.status(403).json({
-            code: 'L003',
-            type: 'userOrderMessage',
-            message: `StoreCode not Correct`,
-            txt: "店舖代碼錯誤，請輸入正確店舖代碼！"
         });
 
     userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
@@ -181,7 +160,7 @@ router.post('/add', validateLine, function (req, res, next) {
                 return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
         }
 
-        const storeID = parseInt(storeCode.substring(0, 3));
+        const storeID = req._storeID;
         const funcList = [];
         const now = Date.now();
         for (let i = 0; i < containerAmount; i++) {
@@ -331,6 +310,29 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
 });
 
 /**
+ * @apiName Challenge store code
+ * @apiGroup UserOrder
+ * 
+ * @api {post} /userOrder/challenge/storeCode Check is store code valid
+ * @apiUse LINE
+ * 
+ * @apiParam {String} storeCode storeCode.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          code: '???',
+ *          type: 'userOrderMessage',
+ *          message: 'Verified'
+ *      }
+ */
+
+router.post('/challenge/storeCode', validateLine, validateStoreCode, async (req, res, next) => {
+    res.status(200).json({
+        code: '???', type: 'userOrderMessage', message: 'Verified'
+    })
+})
+
+/**
  * @apiName RegisterContainerID
  * @apiGroup UserOrder
  * 
@@ -349,15 +351,14 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/addWithContainer', validateLine, async function (req, res, next) {
+router.post('/addWithContainer', validateLine, validateStoreCode, async function (req, res, next) {
     const dbUser = req._user;
-    const storeCode = req.body.storeCode;
     let containers = req.body.containers;
     const bypassCheck = req.body.byCallback === true;
     const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_ONLY_ACTIVE);
     const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
 
-    if (!Array.isArray(containers) || !storeCodeValidater.test(storeCode))
+    if (!Array.isArray(containers))
         return res.status(403).json({
             code: 'L005',
             type: 'userOrderMessage',
@@ -401,7 +402,7 @@ router.post('/addWithContainer', validateLine, async function (req, res, next) {
                 return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
         }
 
-        const storeID = parseInt(storeCode.substring(0, 3));
+        const storeID = req._storeID
         const now = Date.now();
 
         let dbBot = await User.findOne({
