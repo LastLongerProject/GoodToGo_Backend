@@ -65,7 +65,8 @@ module.exports = {
         });
     },
     refreshStore: function (cb) {
-        sheet.getStore(data => {
+        sheet.getStore((err, data) => {
+            if (err) return cb(err);
             storeListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('storeList refresh');
@@ -74,11 +75,12 @@ module.exports = {
         });
     },
     refreshContainer: function (dbUser, cb) {
-        sheet.getContainer(dbUser, data => {
+        sheet.getContainer(dbUser, err => {
+            if (err) return cb(err);
             containerListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('containerList refresh');
-                cb(null, data);
+                cb(null);
             });
         });
     },
@@ -392,7 +394,14 @@ function storeListGenerator(cb) {
             var storeDict = {};
             places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
             stores.forEach(aStore => {
-                if (storeDict[aStore.id]) storeDict[aStore.id].img_info = aStore.img_info;
+                if (storeDict[aStore.id]) Object.assign(storeDict[aStore.id], {
+                    img_info: aStore.img_info,
+                    photos_fromGoogle: aStore.photos_fromGoogle,
+                    url_fromGoogle: aStore.url_fromGoogle,
+                    address: aStore.address,
+                    opening_hours: aStore.opening_hours,
+                    location: aStore.location
+                })
             });
             DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
             cb();

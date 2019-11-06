@@ -4,11 +4,15 @@ const monthFormatter = require('../../../helpers/toolkit').monthFormatter;
 const intReLength = require('../../../helpers/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
 const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
+const BoxAction = require('../../../models/enums/boxEnum').BoxAction;
 const ErrorResponse = require('../../../models/enums/error')
     .ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
+const getContainerHash = require('../../../helpers/tools').getContainerHash;
+const isSameDay = require('../../../helpers/toolkit').isSameDay;
 const redis = require("../../../models/redis");
+const hash = require('object-hash');
 
 const queue = require('queue')({
     concurrency: 1,
@@ -20,16 +24,6 @@ let fullDateStringWithoutYear = function (date) {
     monthFormatted = intReLength(monthFormatter(date), 2);
 
     return monthFormatted + "/" + dayFormatted;
-}
-
-function isSameDay(d1, d2) {    
-    if (!(d1 instanceof Date && d2 instanceof Date)) return false;
-    d1.toLocaleString
-    if (d1.getFullYear() !== d2.getFullYear()) return false;
-    if (d1.getMonth() !== d2.getMonth()) return false;
-    if (d1.getDate() !== d2.getDate()) return false;
-
-    return true
 }
 
 function createBoxID(date, sequence, stationID) {
@@ -89,11 +83,13 @@ function validateCreateApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 boxOrderContent: element.boxOrderContent,
+                containerHash: getContainerHash(element.boxOrderContent, true),
                 dueDate: element.dueDate,
                 storeID: parseInt(req.params.storeID),
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Created,
+                    boxAction: BoxAction.Create,
                     timestamps: Date.now(),
                 } ],
                 user: {
@@ -138,17 +134,25 @@ function validateStockApiContent(req, res, next) {
             return res.status(403).json(ErrorResponse[pass.code]);
         } else {
             let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
+            let orderContent = getDeliverContent(element.containerList);
             let box = new Box({
                 boxID: boxID,
                 boxName: element.boxName,
                 dueDate: Date.now(),
                 storeID: storeID,
-                boxOrderContent: getDeliverContent(element.containerList),
+                boxOrderContent: orderContent,
                 containerList: element.containerList,
+                containerHash: getContainerHash(element.containerList),
                 action: [{
                     phone: req.body.phone,
                     boxStatus: BoxStatus.Boxing,
+                    boxAction: BoxAction.Pack,
                     timestamps: Date.now(),
+                }, {
+                    phone: req.body.phone,
+                    boxStatus: BoxStatus.Stocked,
+                    boxAction: BoxAction.Stock,
+                    timestamps: Date.now()
                 }],
                 user: {
                     box: req.body.phone,
@@ -264,6 +268,23 @@ function validateModifyApiContent(req, res, next) {
     }
     next();
 }
+
+function validateBoxStatus(req, res, next) {
+    let boxStatus = req.params.boxStatus || req.query.boxStatus
+
+    if (boxStatus === undefined) {
+        return res.status(422).json(ErrorResponse.F016_1)
+    } 
+    
+    const isArray = Array.isArray(boxStatus)
+    if ((isArray && boxStatus.includes(status => !Object.values(BoxStatus).includes(status))) || 
+        (!isArray && !Object.values(BoxStatus).includes(boxStatus))) {
+        return res.status(422).json(ErrorResponse.F016_2)
+    }
+
+    next()
+}
+
 module.exports = {
     validateCreateApiContent,
     validateBoxingApiContent,
@@ -271,6 +292,7 @@ module.exports = {
     validateChangeStateApiContent,
     validateSignApiContent,
     validateModifyApiContent,
+    validateBoxStatus,
     fetchBoxCreation
 };
 
