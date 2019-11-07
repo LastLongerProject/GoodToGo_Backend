@@ -1252,7 +1252,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
             { ...queryCond, "tradeType.oriState": {"$ne": 1}}
     }
 
-    let aggregate = Trade.aggregate({
+    let aggregate = Trade.aggregate([{
         $match: queryCond
     }, {
         $group: { 
@@ -1289,7 +1289,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
                 timestamps: "$_id.timestamp"
             }]
         }
-    })
+    }])
 
     if (batch) {
         aggregate = aggregate.limit(batch)
@@ -1344,7 +1344,7 @@ router.get(
 
         Object.assign(query, storeID !== -1 ? {storeID} : {})
 
-        Box.aggregate({
+        Box.aggregate([{
             $match: query
         }, {
             $group: {
@@ -1364,7 +1364,7 @@ router.get(
                 storeAmount: { $size: '$storeIDs' },
                 total: '$total'
             }
-        })
+        }])
             .exec((err, overviews) => {
                 if (err) return next(err)
                 let overview = overviews[0]
