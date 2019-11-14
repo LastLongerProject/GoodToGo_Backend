@@ -21,8 +21,7 @@ module.exports = {
             return res.status(403).json({
                 code: 'L002',
                 type: 'userOrderMessage',
-                message: `Content not in Correct Format.\n` +
-                    `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}`,
+                message: `Format of the storeCode is incorrect.\n`,
                 txt: "系統維修中>< 請稍後再試！"
             });
 
