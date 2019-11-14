@@ -260,7 +260,8 @@ module.exports = {
                             Trade.findOne({
                                 "container.id": aUserOrder.containerID,
                                 "oriUser.phone": oriUser.user.phone,
-                                "tradeType.action": "Return"
+                                "tradeType.action": "Return",
+                                "tradeTime":{'$gt':aUserOrder.orderTime}
                             }, {}, {
                                 sort: {
                                     tradeTime: -1
