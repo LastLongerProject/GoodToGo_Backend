@@ -179,6 +179,7 @@ router.post('/use/:couponID', validateLine, function (req, res, next) {
  *			    provider : String,
  *			    title : String,
  *			    expirationDate : Date,
+ *			    purchaseDeadline : Date,
  *			    price : Number,
  *			    amount : Number,
  *              notice_struc : [
@@ -244,6 +245,7 @@ router.get('/allCoupons', validateLine, function (req, res, next) {
  *          provider : String,
  *          title : String,
  *          expirationDate : Date,
+ *			purchaseDeadline : Date,
  *          price : Number,
  *          amount : Number,
  *          notice_struc : [
