@@ -33,11 +33,11 @@ module.exports = {
         AVAILABLE: "available"
     }),
     DueDays: Object.freeze({ // Remember to add one
-        free_user: 2,
+        free_user: 3,
         purchased_user: 8
     }),
     HoldingQuantityLimitation: Object.freeze({
-        FREE_USER: 6,
+        FREE_USER: 3,
         PURCHASED_USER: -1
     })
 };
