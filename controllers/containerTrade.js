@@ -16,9 +16,16 @@ const Box = require('../models/DB/boxDB');
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
 
-function changeContainersState(containers, reqUser, stateChanging, options, done) {
-    if (!Array.isArray(containers))
-        containers = [containers];
+function uniArr(oriArr) {
+    return Array.from(new Set(oriArr));
+}
+
+function changeContainersState(reqContainers, reqUser, stateChanging, options, done) {
+    let containers;
+    if (!Array.isArray(reqContainers))
+        containers = [reqContainers];
+    else
+        containers = uniArr(reqContainers);
     if (containers.length < 1)
         return done(null, false, {
             code: 'F002',
