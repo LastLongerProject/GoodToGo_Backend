@@ -145,7 +145,7 @@ router.post(
         let phone = req.body.phone;
 
         for (let element of boxList) {
-            let boxID = element.ID;
+            const boxID = element.ID;
             const containerList = element.containerList;
             const comment = element.comment;
 
@@ -323,7 +323,7 @@ router.post(
 
         for (let element of boxList) {
             const newState = element.newState;
-            var boxID = element.id;
+            const boxID = element.id;
 
             Box.findOne({
                 boxID: boxID,
@@ -399,7 +399,7 @@ router.post(
         var reqByAdmin = req._key.roleType === 'admin';
 
         for (let element of boxList) {
-            var boxID = element.ID;
+            const boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
                 boxID: boxID,
