@@ -61,15 +61,17 @@ function Containers_Not_Return(storeID){
             'tradeType.newState':1
           },(err,Containers_Store_Sign)=>{
               if(err) console.log(err);
-              Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[Container_Store_Sign.container.id,Container_Store_Sign.tradeTime]);
+              Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[Container_Store_Sign.container.id,Container_Store_Sign.tradeTime,Container_Store_Sign.container.typeCode]);
               //console.log(Containers_Store_Sign_And_TimeStamp);
               ContainersID_Store_Sign=Containers_Store_Sign.map(Container_Store_Sign=>Container_Store_Sign.container.id);
               let Containers_State=[];
               let Containers_State_Time=[];
+              let Containers_typeCode=[];
               Containers_Store_Sign_And_TimeStamp.forEach(Container_And_TimeStamp => {
                   if (!Containers_State[Container_And_TimeStamp[0]]){
                       Containers_State[Container_And_TimeStamp[0]]=1;
                       Containers_State_Time[Container_And_TimeStamp[0]]=Container_And_TimeStamp[1];
+                      Containers_typeCode[Container_And_TimeStamp[0]]=Container_And_TimeStamp[2];
                   }else if(Containers_State_Time[Container_And_TimeStamp[0]]<Container_And_TimeStamp[1]){
                       Containers_State_Time[Container_And_TimeStamp[0]]=Container_And_TimeStamp[1]
                   }
@@ -98,7 +100,7 @@ function Containers_Not_Return(storeID){
                   let FinalValue=[];
                   for(i in Containers_State){
                       if (Containers_State[i]){
-                        FinalValue.push([i,Containers_State[i]])
+                        FinalValue.push([i,Containers_State[i],Containers_typeCode[i]])
                       }
                   }
                   let returnValue=[];

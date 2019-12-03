@@ -1,7 +1,7 @@
 const DataClass=require("../summaryData/enums/DataClass");
 const Summary=require("./summary");
 module.exports={
-    handle:function(dataClass,timeInterval,storeID){
+    get:function(dataClass,storeID){
         switch(dataClass){
             case DataClass.Container_Not_Return:
                 let dataObject=Summary.Containers_Not_Return(storeID);
