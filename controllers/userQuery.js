@@ -53,7 +53,7 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (!(typeof phone === 'string' && (isMobilePhone(phone) || isStudentID(phone)))) {
+        } else if (typeof phone !== 'string' || (!options.passPhoneValidation && !(isMobilePhone(phone) || isStudentID(phone)))) {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
