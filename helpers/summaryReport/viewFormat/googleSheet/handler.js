@@ -5,17 +5,10 @@ const DataClassEnums=require('../../../summaryData/enums/DataClass');
 module.exports={
     List_Of_Containers_Not_Return_To_Goodtogo:function(storeID,sheetID){
         const dataClass=DataClassEnums.Containers_Not_Return;
-        let Containers_Not_Return_To_Goodtogo=DataSummary.get(dataClass,storeID);
-        Containers_Not_Return_To_Goodtogo.then(Containers=>{
+        DataSummary.get(dataClass,storeID).then(Containers=>{
             googleSheet_Preprocessor.List_Of_Containers_Not_Return_To_Goodtogo(Containers)
             .then(data_List=>{
-                googleSheet_Sender.List_Of_Containers_Not_Return_To_Goodtogo(data_List,sheetID)
-                .then(success_Messenge=>{
-
-                })
-                .catch(err_Messenge=>{
-                    
-                })
+                console.log(data_List);
             })
         })
     }

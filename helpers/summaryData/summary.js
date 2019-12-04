@@ -14,7 +14,12 @@ module.exports={
                 'tradeType.newState':3
             },(err,trades_Of_Used_Container)=>{
                 if(err)console.log(err)
-                trades_Of_Used_Container=trades_Of_Used_Container.map(trade=>[trade.container.id,trade.container.typeCode,trade.tradeTime])
+                trades_Of_Used_Container=trades_Of_Used_Container.map(trade=>[
+                    trade.container.id,
+                    trade.container.typeCode,
+                    trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' })
+                ])
                 resolve(trades_Of_Used_Container)
             })
         })
@@ -26,7 +31,13 @@ module.exports={
                 'tradeType.action':"Rent"
             },(err,trades_Of_User_Rent)=>{
                 if(err) console.log(err)
-                let returnValue=trades_Of_User_Rent.map(trade=>[trade.newUser.phone,trade.container.id,container.typeCode,tradeTime]);
+                let returnValue=trades_Of_User_Rent.map(trade=>[
+                    trade.newUser.phone,
+                    trade.container.id,
+                    container.typeCode,
+                    trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' })
+                ]);
                 resolve(returnValue)
             })
         })
