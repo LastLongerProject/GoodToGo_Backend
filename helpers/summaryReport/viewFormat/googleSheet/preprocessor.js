@@ -11,8 +11,8 @@ module.exports={
                 data_list[3]=['已歸還但未回收'];
                 data_list[data_list.length]=['Total'];
                 //console.log(dataset);
-                for(j in the_First_Row){
-                    for(i in data_list){
+                for(let j in the_First_Row){
+                    for(let i in data_list){
                         if(!data_list[i][j]){
                             data_list[i][j]=0;
                         }
@@ -34,7 +34,9 @@ module.exports={
     },
     List_Of_Containers_Be_Used:function(dataset){
         return new Promise(function(resolve,reject){
-
+            the_First_Row(dataset).then(the_First_Row=>{
+                
+            })
         })
     },
     List_Of_User_Of_Containers:function(dataset){
