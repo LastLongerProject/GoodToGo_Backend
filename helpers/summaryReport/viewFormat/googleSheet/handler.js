@@ -8,7 +8,7 @@ module.exports={
         DataSummary.get(dataClass,storeID).then(ori_data=>{
             googleSheet_Preprocessor.List_Of_Containers_Not_Return_To_Goodtogo(ori_data)
             .then(data_List=>{
-                //console.log(data_List);
+                console.log(data_List);
                 googleSheet_Sender.List_Of_Containers_Not_Return_To_Goodtogo(data_List,sheetID)
             })
         })

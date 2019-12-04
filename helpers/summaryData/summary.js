@@ -4,8 +4,7 @@ const Summary=this;
 
 module.exports={
     Containers_Not_Return:function(storeID){
-        let returnValue=Containers_Not_Return(storeID);
-        return returnValue
+        return Containers_Not_Return(storeID)
     },
     Containers_Be_Used:function(storeID){
         return new Promise(function(resolve,reject){
@@ -28,15 +27,15 @@ module.exports={
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 'oriUser.storeID':storeID,
-                'tradeType.action':"Rent"
+                'tradeType.action':'Rent'
             },(err,trades_Of_User_Rent)=>{
                 if(err) console.log(err)
                 let returnValue=trades_Of_User_Rent.map(trade=>[
+                    trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
                     trade.newUser.phone,
                     trade.container.id,
-                    container.typeCode,
-                    trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
-                    trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' })
+                    trade.container.typeCode,
                 ]);
                 resolve(returnValue)
             })
@@ -58,7 +57,13 @@ module.exports={
                     'tradeType.newState':2
                 },(err,trades_Of_Not_Return_User)=>{
                     if(err)console.log(err);
-                    trades_Of_Not_Return_User=trades_Of_Not_Return_User.map(trade=>[trade.newUser.phone,trade.container.id,trade.container.typeCode,trade.tradeTime]);
+                    trades_Of_Not_Return_User=trades_Of_Not_Return_User.map(trade=>[
+                        trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                        trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
+                        trade.newUser.phone,
+                        trade.container.id,
+                        trade.container.typeCode
+                    ]);
                     resolve(trades_Of_Not_Return_User)
                 })
             })
@@ -72,7 +77,11 @@ function Containers_Not_Return(storeID){
             'tradeType.newState':1
           },(err,Containers_Store_Sign)=>{
               if(err) console.log(err);
-              Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[Container_Store_Sign.container.id,Container_Store_Sign.tradeTime,Container_Store_Sign.container.typeCode]);
+              Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
+                  Container_Store_Sign.container.id,
+                  Container_Store_Sign.tradeTime,
+                  Container_Store_Sign.container.typeCode
+                ]);
               //console.log(Containers_Store_Sign_And_TimeStamp);
               ContainersID_Store_Sign=Containers_Store_Sign.map(Container_Store_Sign=>Container_Store_Sign.container.id);
               let Containers_State=[];
@@ -92,20 +101,31 @@ function Containers_Not_Return(storeID){
                   '$or':[
                       {'newUser.storeID':storeID,'tradeType.newState':3},
                       {'oriUser.storeID':storeID,'tradeType.newState':2},
-                      {'tradeType.newState':4}
+                      {'tradeType.newState':4},
+                      {'newUser.storeID':87}
                   ],
                   'container.id':{'$in':ContainersID_Store_Sign}
               },(err,trades_Of_Containers)=>{
                   if(err) console.log(err);
-                  ContainerID_TimeStamp_State_Of_trade=trades_Of_Containers.map(trade=>[trade.container.id,trade.tradeTime,trade.tradeType.newState]);
+                  ContainerID_TimeStamp_State_Of_trade=trades_Of_Containers.map(trade=>[
+                      trade.container.id,
+                      trade.tradeTime,
+                      trade.tradeType.newState,
+                      trade.newUser.storeID
+                    ]);
                   //console.log(ContainerID_TimeStamp_State_Of_trade);
                   ContainerID_TimeStamp_State_Of_trade.forEach(ContainerID_TimeStamp_State=>{
                       if(!Containers_State[ContainerID_TimeStamp_State[0]]){
                           Containers_State[ContainerID_TimeStamp_State=ContainerID_TimeStamp_State[2]];
                           Containers_State_Time[ContainerID_TimeStamp_State[0]]=ContainerID_TimeStamp_State[1];
                       }else if(Containers_State_Time[ContainerID_TimeStamp_State[0]]<ContainerID_TimeStamp_State[1]){
-                          Containers_State[ContainerID_TimeStamp_State[0]]=ContainerID_TimeStamp_State[2];
-                          Containers_State_Time[ContainerID_TimeStamp_State[0]=ContainerID_TimeStamp_State[1]];
+                          if(ContainerID_TimeStamp_State[3]===87){
+                            Containers_State[ContainerID_TimeStamp_State[0]]=4;
+                            Containers_State_Time[ContainerID_TimeStamp_State[0]=ContainerID_TimeStamp_State[1]];
+                          }else{
+                            Containers_State[ContainerID_TimeStamp_State[0]]=ContainerID_TimeStamp_State[2];
+                            Containers_State_Time[ContainerID_TimeStamp_State[0]=ContainerID_TimeStamp_State[1]];
+                          }
                       }
                   })
                   let FinalValue=[];
@@ -114,13 +134,7 @@ function Containers_Not_Return(storeID){
                         FinalValue.push([i,Containers_State[i],Containers_typeCode[i]])
                       }
                   }
-                  let returnValue=[];
-                  FinalValue.forEach(data=>{
-                      if(data[1]!==4){
-                          returnValue.push(data)
-                      }
-                  })
-                  resolve(returnValue)
+                  resolve(FinalValue)
               })
           })
     })
