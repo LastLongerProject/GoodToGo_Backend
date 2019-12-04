@@ -10,5 +10,20 @@ module.exports={
         return new Promise(function(resolve,reject){
 
         })
-    }//resolve(成功訊息) reject(失敗訊息)
+    },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_Containers_Be_Used:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_User_Of_Containers:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_Not_Return_Users:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
 }
