@@ -116,25 +116,29 @@ function Zero_Padding(data_list){
 function generate_data_list_for_Date_interval(dataset,the_First_Row){
     return new Promise(function(resolve,reject){
         the_First_Row[0]='日期';
-        let the_First_Day=new Date(dataset[0][2]);
-        let the_Final_Day=the_First_Day;
-        dataset.forEach(data=>{
-            let This_Date=new Date(data[2]);
-            if(This_Date>the_Final_Day){
-                the_Final_Day=This_Date;
+        if(dataset.length){
+            let the_First_Day=new Date(dataset[0][2]);
+            let the_Final_Day=the_First_Day;
+            dataset.forEach(data=>{
+                let This_Date=new Date(data[2]);
+                if(This_Date>the_Final_Day){
+                    the_Final_Day=This_Date;
+                }
+                if(This_Date<the_First_Day){
+                    the_First_Day=This_Date;
+                }
+            })
+            let data_list=[the_First_Row];
+            let TimeStamp=the_First_Day;
+            for(TimeStamp;TimeStamp<=the_Final_Day;TimeStamp=TimeStamp+day){
+                let TimeStamp_date=TimeStamp.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'});
+                data_list.push([TimeStamp_date]);
             }
-            if(This_Date<the_First_Day){
-                the_First_Day=This_Date;
-            }
-        })
-        let data_list=[the_First_Row];
-        let TimeStamp=the_First_Day;
-        for(TimeStamp;TimeStamp<=the_Final_Day;TimeStamp=TimeStamp+day){
-            let TimeStamp_date=TimeStamp.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'});
-            data_list.push([TimeStamp_date]);
+            data_list[data_list.length]=['Total'];
+            //console.log(data_list)
+            resolve(data_list)
+        }else{
+            resolve([the_First_Row])
         }
-        data_list[data_list.length]=['Total'];
-        //console.log(data_list)
-        resolve(data_list)
     })
 }
