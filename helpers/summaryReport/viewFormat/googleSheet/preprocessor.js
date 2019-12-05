@@ -81,7 +81,7 @@ function the_First_Row(dataset){
         containerDB.find({
             'ID':{'$in':dataID_Set}
         },(err,Containers)=>{
-            if(err) console.log(err);
+            if(err) reject(err)
             let container_array=[];
             Containers.forEach(container=>{
                 container_array[container.typeCode]=1;

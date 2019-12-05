@@ -9,10 +9,12 @@ module.exports={
     Containers_Be_Used:function(storeID){
         return new Promise(function(resolve,reject){
             tradeDB.find({
-                'newUser.storeID':storeID,
-                'tradeType.newState':3
+                '$or':[
+                        {'newUser.storeID':storeID,'tradeType.oriState':1,'tradeType.newState':3},
+                        {'oriUser.storeID':storeID,'tradeType.newState':2}
+                    ],
             },(err,trades_Of_Used_Container)=>{
-                if(err)console.log(err)
+                if(err)reject(err)
                 trades_Of_Used_Container=trades_Of_Used_Container.map(trade=>[
                     trade.container.id,
                     trade.container.typeCode,
@@ -29,7 +31,7 @@ module.exports={
                 'oriUser.storeID':storeID,
                 'tradeType.action':'Rent'
             },(err,trades_Of_User_Rent)=>{
-                if(err) console.log(err)
+                if(err) reject(err)
                 let returnValue=trades_Of_User_Rent.map(trade=>[
                     trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
                     trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
@@ -56,7 +58,7 @@ module.exports={
                     'container.id':{'$in':Container_User_Not_Return},
                     'tradeType.newState':2
                 },(err,trades_Of_Not_Return_User)=>{
-                    if(err)console.log(err);
+                    if(err)reject(err)
                     trades_Of_Not_Return_User=trades_Of_Not_Return_User.map(trade=>[
                         trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
                         trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
@@ -76,7 +78,7 @@ function Containers_Not_Return(storeID){
             'newUser.storeID':storeID,
             'tradeType.newState':1
           },(err,Containers_Store_Sign)=>{
-              if(err) console.log(err);
+              if(err) reject(err);
               Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
                   Container_Store_Sign.container.id,
                   Container_Store_Sign.tradeTime,
@@ -106,7 +108,7 @@ function Containers_Not_Return(storeID){
                   ],
                   'container.id':{'$in':ContainersID_Store_Sign}
               },(err,trades_Of_Containers)=>{
-                  if(err) console.log(err);
+                  if(err) reject(err)
                   ContainerID_TimeStamp_State_Of_trade=trades_Of_Containers.map(trade=>[
                       trade.container.id,
                       trade.tradeTime,

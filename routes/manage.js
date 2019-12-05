@@ -21,6 +21,7 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const summaryReport=require('../helpers/summaryReport/viewFormat/googleSheet/handler');
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -2096,5 +2097,14 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
+
+router.get('/summaryData/googlesheet/:storeID/:sheetID,',regAsAdminManager, validateRequest, (req,res,next)=>{
+    let storeID=req.params.storeID;
+    let sheetID=req.params.sheetID;
+    summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID);
+    summaryReport.List_Of_Containers_Be_Used(storeID,sheetID);
+    summaryReport.List_Of_User_Of_Containers(storeID,sheetID);
+    summaryReport.List_Of_Not_Return_Users(storeID,sheetID);
+})
 
 module.exports = router;

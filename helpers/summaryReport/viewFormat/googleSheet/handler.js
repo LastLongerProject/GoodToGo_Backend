@@ -1,3 +1,4 @@
+const debug = require("../debugger")("summaryReport_handler");
 const DataSummary=require('../../../summaryData/center');
 const googleSheet_Preprocessor=require('../googleSheet/preprocessor');
 const googleSheet_Sender=require('../googleSheet/sender');
@@ -10,7 +11,12 @@ module.exports={
             .then(data_List=>{
                 //console.log(data_List);
                 googleSheet_Sender.List_Of_Containers_Not_Return_To_Goodtogo(data_List,sheetID)
+            }).catch(err=>{
+                debug.error('Error Messenge from DataReport.preprocessor: '+err)
             })
+        })
+        .catch(err=>{
+            debug.error('Error Messenge from DataSummary.summary: '+err)
         })
     },
     List_Of_Containers_Be_Used:function(storeID,sheetID){
@@ -21,6 +27,12 @@ module.exports={
                 //console.log(data_List);
                 googleSheet_Sender.List_Of_Containers_Be_Used(data_List,sheetID)
             })
+            .catch(err=>{
+                debug.error('Error Messenge from DataReport.preprocessor: '+err)
+            })
+        })
+        .catch(err=>{
+            debug.error('Error Messenge from DataSummary.summary: '+err)
         })
     },
     List_Of_User_Of_Containers:function(storeID,sheetID){
@@ -31,6 +43,12 @@ module.exports={
                 //console.log(data_List);
                 googleSheet_Sender.List_Of_User_Of_Containers(data_List,sheetID)
             })
+            .catch(err=>{
+                debug.error('Error Messenge from DataReport.preprocessor: '+err)
+            })
+        })
+        .catch(err=>{
+            debug.error('Error Messenge from DataSummary.summary: '+err)
         })
     },
     List_Of_Not_Return_Users:function(storeID,sheetID){
@@ -41,6 +59,12 @@ module.exports={
                 //console.log(data_List);
                 googleSheet_Sender.List_Of_Not_Return_Users(data_List,sheetID)
             })
+            .catch(err=>{
+                debug.error('Error Messenge from DataReport.preprocessor: '+err)
+            })
+        })
+        .catch(err=>{
+            debug.error('Error Messenge from DataSummary.summary: '+err)
         })
     }
 }
