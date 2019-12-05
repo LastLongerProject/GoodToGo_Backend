@@ -2101,10 +2101,27 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
 router.get('/summaryData/googlesheet/:storeID/:sheetID,',regAsAdminManager, validateRequest, (req,res,next)=>{
     let storeID=req.params.storeID;
     let sheetID=req.params.sheetID;
-    summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID);
-    summaryReport.List_Of_Containers_Be_Used(storeID,sheetID);
-    summaryReport.List_Of_User_Of_Containers(storeID,sheetID);
-    summaryReport.List_Of_Not_Return_Users(storeID,sheetID);
+    Promise.all([
+        summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID),
+        summaryReport.List_Of_Containers_Be_Used(storeID,sheetID),
+        summaryReport.List_Of_User_Of_Containers(storeID,sheetID),
+        summaryReport.List_Of_Not_Return_Users(storeID,sheetID)
+    ])
+    .then(()=>{
+        res.status(200).json(
+            {
+                success:true
+            }
+        )
+    })
+    .catch(value=>{
+        res.status(403).json(
+            {
+                success:false,
+                message:'第'+value+"個 function error."
+            }
+        )
+    })
 })
 
 module.exports = router;
