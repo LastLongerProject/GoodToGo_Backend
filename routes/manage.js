@@ -2098,8 +2098,8 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
     });
 });
 
-router.get('/summaryData/googlesheet/:storeID/:sheetID,',regAsAdminManager, validateRequest, (req,res,next)=>{
-    let storeID=req.params.storeID;
+router.get('/summaryData/googlesheet/:storeID/:sheetID',regAsAdminManager, validateRequest, (req,res,next)=>{
+    let storeID=Number(req.params.storeID);
     let sheetID=req.params.sheetID;
     Promise.all([
         summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID),

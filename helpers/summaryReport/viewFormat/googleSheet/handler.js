@@ -1,4 +1,4 @@
-const debug = require("../debugger")("summaryReport_handler");
+const debug = require("../../../debugger")("summaryReport_handler");
 const DataSummary=require('../../../summaryData/center');
 const googleSheet_Preprocessor=require('../googleSheet/preprocessor');
 const googleSheet_Sender=require('../googleSheet/sender');
