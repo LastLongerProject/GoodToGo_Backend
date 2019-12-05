@@ -1,4 +1,4 @@
-module.exports={
+module.exports=Object.freeze({
     typeCode:[
         '12oz 玻璃杯',
         '16oz 玻璃杯',
@@ -15,4 +15,4 @@ module.exports={
         '方形不鏽鋼餐盒',
         '盤碗杯組'
     ]
-}
+})

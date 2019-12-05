@@ -8,7 +8,7 @@ module.exports={
         DataSummary.get(dataClass,storeID).then(ori_data=>{
             googleSheet_Preprocessor.List_Of_Containers_Not_Return_To_Goodtogo(ori_data)
             .then(data_List=>{
-                console.log(data_List);
+                //console.log(data_List);
                 googleSheet_Sender.List_Of_Containers_Not_Return_To_Goodtogo(data_List,sheetID)
             })
         })
@@ -18,7 +18,7 @@ module.exports={
         DataSummary.get(dataClass,storeID).then(ori_data=>{
             googleSheet_Preprocessor.List_Of_Containers_Be_Used(ori_data)
             .then(data_List=>{
-                console.log(data_List);
+                //console.log(data_List);
                 googleSheet_Sender.List_Of_Containers_Be_Used(data_List,sheetID)
             })
         })
@@ -28,7 +28,7 @@ module.exports={
         DataSummary.get(dataClass,storeID).then(ori_data=>{
             googleSheet_Preprocessor.List_Of_User_Of_Containers(ori_data)
             .then(data_List=>{
-                console.log(data_List);
+                //console.log(data_List);
                 googleSheet_Sender.List_Of_User_Of_Containers(data_List,sheetID)
             })
         })
@@ -38,7 +38,7 @@ module.exports={
         DataSummary.get(dataClass,storeID).then(ori_data=>{
             googleSheet_Preprocessor.List_Of_Not_Return_Users(ori_data)
             .then(data_List=>{
-                console.log(data_List);
+                //console.log(data_List);
                 googleSheet_Sender.List_Of_Not_Return_Users(data_List,sheetID)
             })
         })

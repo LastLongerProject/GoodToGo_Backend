@@ -9,7 +9,7 @@ module.exports={
     Containers_Be_Used:function(storeID){
         return new Promise(function(resolve,reject){
             tradeDB.find({
-                'oriUser.storeID':storeID,
+                'newUser.storeID':storeID,
                 'tradeType.newState':3
             },(err,trades_Of_Used_Container)=>{
                 if(err)console.log(err)
