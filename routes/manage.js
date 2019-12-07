@@ -2107,20 +2107,23 @@ router.get('/summaryData/googlesheet/:storeID/:sheetID',regAsAdminManager, valid
         summaryReport.List_Of_User_Of_Containers(storeID,sheetID),
         summaryReport.List_Of_Not_Return_Users(storeID,sheetID)
     ])
-    .then(()=>{
-        res.status(200).json(
-            {
+    .then(messenges=>{
+        let err_messenge=[];
+        for(let index in messenges){
+            if(messenges[index][0]){
+                err_messenge.push({
+                    which_function:index,
+                    error_messenge:messenges[index][0]
+                })
+            }
+        }
+        if(err_messenge.length===0){
+            res.status(200).json({
                 success:true
-            }
-        )
-    })
-    .catch(value=>{
-        res.status(403).json(
-            {
-                success:false,
-                message:'第'+value+"個 function error."
-            }
-        )
+            })
+        }else{
+            next(err_messenge)
+        }
     })
 })
 

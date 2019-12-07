@@ -67,6 +67,7 @@ function Date_Time_Phone_ContainerID_ContainerType(dataset){
         let data_list=[];
         data_list.push(['借出日期','借出時間','使用者手機','容器ID','容器類別']);
         dataset.forEach(data=>{
+            data[2]=data[2].slice(0,4)+'-xxx-'+data[2].slice(7,10);
             let containerTypeCode=data[4];
             data[4]=typeCode[containerTypeCode];
             data_list.push(data);
