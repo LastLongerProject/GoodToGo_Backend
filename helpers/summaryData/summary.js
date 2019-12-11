@@ -79,16 +79,17 @@ function Containers_Not_Return(storeID){
             'tradeType.newState':1
           },(err,Containers_Store_Sign)=>{
               if(err) reject(err);
-              Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
+              let Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
                   Container_Store_Sign.container.id,
                   Container_Store_Sign.tradeTime,
                   Container_Store_Sign.container.typeCode
                 ]);
               //console.log(Containers_Store_Sign_And_TimeStamp);
-              ContainersID_Store_Sign=Containers_Store_Sign.map(Container_Store_Sign=>Container_Store_Sign.container.id);
+              let ContainersID_Store_Sign=Containers_Store_Sign.map(Container_Store_Sign=>Container_Store_Sign.container.id);
               let Containers_State=[];
               let Containers_State_Time=[];
               let Containers_typeCode=[];
+              let the_first_day;
               Containers_Store_Sign_And_TimeStamp.forEach(Container_And_TimeStamp => {
                   if (!Containers_State[Container_And_TimeStamp[0]]){
                       Containers_State[Container_And_TimeStamp[0]]=1;
@@ -98,44 +99,61 @@ function Containers_Not_Return(storeID){
                       Containers_State_Time[Container_And_TimeStamp[0]]=Container_And_TimeStamp[1]
                   }
               });
-              //console.log(Containers_State_Time[2227]);
+              Containers_State_Time.forEach(State_Time=>{
+                if(State_Time){
+                    if(!the_first_day){
+                        the_first_day=State_Time;
+                    }else if(State_Time<the_first_day){
+                        the_first_day=State_Time;
+                    }
+                }
+              })
               tradeDB.find({
                   '$or':[
                       {'newUser.storeID':storeID,'tradeType.newState':3},
                       {'oriUser.storeID':storeID,'tradeType.newState':2},
                       {'tradeType.newState':4},
-                      {'newUser.storeID':87}
+                      {'newUser.storeID':87},
+                      {'tradeType.oriState':1,'tradeType.newState':5}
                   ],
-                  'container.id':{'$in':ContainersID_Store_Sign}
+                  'container.id':{'$in':ContainersID_Store_Sign},
+                  'tradeTime':{'$gt':the_first_day}
               },(err,trades_Of_Containers)=>{
                   if(err) reject(err)
-                  ContainerID_TimeStamp_State_Of_trade=trades_Of_Containers.map(trade=>[
+                  let ContainerID_TimeStamp_State_Of_trade=trades_Of_Containers.map(trade=>[
                       trade.container.id,
                       trade.tradeTime,
                       trade.tradeType.newState,
                       trade.newUser.storeID
                     ]);
-                  //console.log(ContainerID_TimeStamp_State_Of_trade);
                   ContainerID_TimeStamp_State_Of_trade.forEach(ContainerID_TimeStamp_State=>{
-                      if(!Containers_State[ContainerID_TimeStamp_State[0]]){
-                          Containers_State[ContainerID_TimeStamp_State=ContainerID_TimeStamp_State[2]];
-                          Containers_State_Time[ContainerID_TimeStamp_State[0]]=ContainerID_TimeStamp_State[1];
-                      }else if(Containers_State_Time[ContainerID_TimeStamp_State[0]]<ContainerID_TimeStamp_State[1]){
+                      let ContainerID=ContainerID_TimeStamp_State[0];
+                      let tradeTime=ContainerID_TimeStamp_State[1];
+                      let state=ContainerID_TimeStamp_State[2];
+                      if(!Containers_State[ContainerID]){
+                          Containers_State[ContainerID]=state;
+                          Containers_State_Time[ContainerID]=tradeTime;
+                      }else if(Containers_State_Time[ContainerID]<tradeTime){
                           if(ContainerID_TimeStamp_State[3]===87){
-                            Containers_State[ContainerID_TimeStamp_State[0]]=4;
-                            Containers_State_Time[ContainerID_TimeStamp_State[0]=ContainerID_TimeStamp_State[1]];
+                            Containers_State[ContainerID]=4;
+                            Containers_State_Time[ContainerID]=tradeTime;
+                          }else if(state===5){
+                            Containers_State[ContainerID]=4;
+                            Containers_State_Time[ContainerID]=false;
                           }else{
-                            Containers_State[ContainerID_TimeStamp_State[0]]=ContainerID_TimeStamp_State[2];
-                            Containers_State_Time[ContainerID_TimeStamp_State[0]=ContainerID_TimeStamp_State[1]];
+                            Containers_State[ContainerID]=state;
+                            Containers_State_Time[ContainerID]=tradeTime;
                           }
                       }
                   })
                   let FinalValue=[];
-                  for(i in Containers_State){
-                      if (Containers_State[i]){
-                        FinalValue.push([i,Containers_State[i],Containers_typeCode[i]])
+                  for(let i in Containers_State){
+                      let ContainerID=Containers_State[i];
+                      if (ContainerID){
+                        FinalValue.push([i,ContainerID,Containers_typeCode[i]])
                       }
                   }
+                  
                   resolve(FinalValue)
               })
           })

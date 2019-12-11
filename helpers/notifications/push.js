@@ -24,7 +24,7 @@ module.exports = {
             webhookSubmission.client.forEach(aClient => {
                 if ((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||
                     (Array.isArray(aClient.event_listened) && aClient.event_listened.indexOf(event) !== -1)) {
-                    sender(aClient.url);
+                    (aClient.url);
                 }
             });
         });
