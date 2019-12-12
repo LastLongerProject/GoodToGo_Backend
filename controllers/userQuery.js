@@ -77,11 +77,16 @@ module.exports = {
                 return done(err);
             if (dbUser && dbUser.hasVerified) {
                 let modifySomething = false;
+                let rolesToAdd = [];
                 if (dbUser.user.password === null) {
                     dbUser.user.password = dbUser.generateHash(password);
                     modifySomething = true;
                 }
                 if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
+                    rolesToAdd.push({
+                        typeCode: role.typeCode,
+                        options: role
+                    });
                     switch (role.typeCode) {
                         case UserRole.CLERK:
                             dbUser.roles.typeList.push(UserRole.CLERK);
@@ -107,15 +112,26 @@ module.exports = {
                         message: 'That phone is already taken'
                     });
                 }
-                dbUser.save(function (err) {
-                    if (err) return done(err);
-                    return done(null, dbUser, {
-                        body: {
-                            type: 'signupMessage',
-                            message: 'Authentication succeeded'
-                        }
-                    });
-                });
+                Promise
+                    .all(rolesToAdd.map(aRoleToAdd => {
+                        return new Promise((resolve, reject) =>
+                            dbUser.addRole(aRoleToAdd.typeCode, aRoleToAdd.options, err => {
+                                if (err) return reject(err);
+                                resolve();
+                            }));
+                    }))
+                    .then(() => {
+                        dbUser.save(function (err) {
+                            if (err) return done(err);
+                            return done(null, dbUser, {
+                                body: {
+                                    type: 'signupMessage',
+                                    message: 'Authentication succeeded'
+                                }
+                            });
+                        });
+                    })
+                    .catch(done);
             } else {
                 if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     sendVerificationCode(phone, done);
@@ -140,6 +156,7 @@ module.exports = {
                         }
 
                         let userToSave;
+                        let rolesToAdd = [];
                         if (dbUser) { // has NOT verified
                             userToSave = dbUser;
                         } else {
@@ -167,29 +184,51 @@ module.exports = {
                                         };
                                         break;
                                 }
+                                rolesToAdd.push({
+                                    typeCode: role.typeCode,
+                                    options: role
+                                });
                             }
-                            if (newUser.roles.typeList.indexOf(UserRole.CUSTOMER) === -1)
+                            if (newUser.roles.typeList.indexOf(UserRole.CUSTOMER) === -1) {
                                 newUser.roles.typeList.push(UserRole.CUSTOMER);
-                            newUser.roles.customer = {
-                                group: UserGroup.GOODTOGO_MEMBER
-                            };
+                                newUser.roles.customer = {
+                                    group: UserGroup.GOODTOGO_MEMBER
+                                };
+                            }
+                            rolesToAdd.push({
+                                typeCode: UserRole.CUSTOMER,
+                                options: {
+                                    group: UserGroup.GOODTOGO_MEMBER
+                                }
+                            });
                             userToSave = newUser;
                         }
 
                         userToSave.hasVerified = hasVerified;
-                        userToSave.save(function (err) {
-                            if (err) return done(err);
-                            redis.del('user_verifying:' + phone, (err, delReply) => {
-                                if (err && options.passVerify !== true) return done(err);
-                                if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
-                                return done(null, true, {
-                                    body: {
-                                        type: 'signupMessage',
-                                        message: 'Authentication succeeded'
-                                    }
+                        Promise
+                            .all(rolesToAdd.map(aRoleToAdd => {
+                                return new Promise((resolve, reject) =>
+                                    userToSave.addRole(aRoleToAdd.typeCode, aRoleToAdd.options, err => {
+                                        if (err) return reject(err);
+                                        resolve();
+                                    }));
+                            }))
+                            .then(() => {
+                                userToSave.save(function (err) {
+                                    if (err) return done(err);
+                                    redis.del('user_verifying:' + phone, (err, delReply) => {
+                                        if (err && options.passVerify !== true) return done(err);
+                                        if (delReply !== 1 && options.passVerify !== true) return done("delReply: " + delReply);
+                                        return done(null, true, {
+                                            body: {
+                                                type: 'signupMessage',
+                                                message: 'Authentication succeeded'
+                                            }
+                                        });
+                                    });
                                 });
-                            });
-                        });
+                            })
+                            .catch(done);
                     });
                 }
             }

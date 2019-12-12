@@ -8,7 +8,8 @@ var schema = mongoose.Schema({
     secretKey: String,
     userAgent: String,
     roleType: String,
-    user: mongoose.Schema.Types.ObjectId
+    user: mongoose.Schema.Types.ObjectId,
+    role: mongoose.Schema.Types.ObjectId
 }, {
     timestamps: true
 });
