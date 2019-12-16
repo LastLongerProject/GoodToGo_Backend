@@ -56,3 +56,8 @@
  * @apiError {String} D009 status : 401, type : subscribeMessage, msg : Content not Complete
  * @apiError {String} D010 status : 401, type : subscribeMessage, msg : Content invalid - appType or sysyem is wrong
  */
+
+/**
+ * @apiDefine RoleError
+ * @apiError {String} D??? status : 401, type : roleMessage, msg : *
+ */

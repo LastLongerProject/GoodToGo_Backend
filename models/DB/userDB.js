@@ -197,10 +197,10 @@ function roleIsExist(roleList, roleToCheck) {
         if (aOldRole.roleType === roleToCheck.roleType) {
             switch (aOldRole.roleType) {
                 case UserRole.ADMIN:
-                    if (aOldRole.stationID === roleToCheck.stationID) return true;
+                    if (aOldRole.stationID === roleToCheck.stationID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
                 case UserRole.CLERK:
-                    if (aOldRole.storeID === roleToCheck.storeID) return true;
+                    if (aOldRole.storeID === roleToCheck.storeID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
                 case UserRole.BOT:
                     if (aOldRole.group === roleToCheck.group) return true;

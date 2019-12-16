@@ -9,8 +9,8 @@
  */
 
 /**
- * @apiDefine customer Customer access rights needed.
- * Please use customer identity to request this uri.
+ * @apiDefine customer Anyone access rights needed.
+ * Just use JWT to request this uri.
  */
 
 /**

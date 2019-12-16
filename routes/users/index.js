@@ -31,8 +31,10 @@ const getGlobalUsedAmount = require('../../models/variables/containerStatistic')
 const NotificationCenter = require('../../helpers/notifications/center');
 
 const signupRoute = require("./signup");
+const roleRoute = require("./role");
 
 router.use('/signup', signupRoute);
+router.use('/role', roleRoute);
 
 /**
  * @apiName Login

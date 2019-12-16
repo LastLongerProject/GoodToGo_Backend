@@ -9,7 +9,7 @@ var schema = mongoose.Schema({
     userAgent: String,
     roleType: String,
     user: mongoose.Schema.Types.ObjectId,
-    role: mongoose.Schema.Types.ObjectId
+    role: String
 }, {
     timestamps: true
 });
