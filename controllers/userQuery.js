@@ -112,29 +112,22 @@ module.exports = {
                 }
                 dbUser.addRole(role.typeCode, role, (err, modifySomething_new, msg) => {
                     if (err) return done(err);
-                    if (modifySomething_ori || modifySomething_new) {
-                        dbUser.save(function (err) {
-                            if (err) return done(err);
-                            return done(null, dbUser, {
-                                body: {
-                                    type: 'signupMessage',
-                                    message: 'Authentication succeeded'
-                                }
-                            });
-                        });
-                    } else if (!modifySomething_ori) {
+                    if (!modifySomething_ori && !modifySomething_new) {
                         return done(null, false, {
                             code: 'D002',
                             type: 'signupMessage',
                             message: 'That phone is already taken'
                         });
-                    } else if (!modifySomething_new) {
-                        return done(null, false, {
-                            code: 'D002',
-                            type: 'signupMessage',
-                            message: msg
-                        });
                     }
+                    dbUser.save(function (err) {
+                        if (err) return done(err);
+                        return done(null, dbUser, {
+                            body: {
+                                type: 'signupMessage',
+                                message: 'Authentication succeeded'
+                            }
+                        });
+                    });
                 });
             } else {
                 if (options.passVerify !== true && typeof verificationCode === 'undefined') {
