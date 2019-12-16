@@ -6,10 +6,10 @@
     "url": "https://app.goodtogo.tw",
     "header": {
         "title": "Auth",
-        "filename": "/doc/Validation.md"
+        "filename": "/routes/doc/Validation.md"
     },
     "footer": {
         "title": "Error reference",
-        "filename": "/doc/Error.md"
+        "filename": "/routes/doc/Error.md"
     }
 }
