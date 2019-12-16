@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../../helpers/debugger')('containers');
+const debug = require('../../helpers/debugger')('containers/index');
 const redis = require("../../models/redis");
 
 const Box = require('../../models/DB/boxDB');

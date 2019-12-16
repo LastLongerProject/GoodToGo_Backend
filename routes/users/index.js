@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../../helpers/debugger')('users');
+const debug = require('../../helpers/debugger')('users/index');
 
 const userQuery = require('../../controllers/userQuery');
 const userTrade = require('../../controllers/userTrade');
@@ -735,7 +735,6 @@ router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (re
         });
     });
 });
-
 
 router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;

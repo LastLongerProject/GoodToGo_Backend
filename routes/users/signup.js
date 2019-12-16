@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../../helpers/debugger')('users');
+const debug = require('../../helpers/debugger')('users/signup');
 
 const userQuery = require('../../controllers/userQuery');
 const couponTrade = require('../../controllers/couponTrade');
@@ -107,6 +107,10 @@ router.post('/clerk', regAsStoreManager, regAsAdminManager, validateRequest, fun
     // for CLERK
     var dbUser = req._user;
     var dbKey = req._key;
+    req._setSignupVerification({
+        needVerified: false,
+        passVerify: true
+    });
     if (dbKey.roleType === UserRole.CLERK) {
         req.body.role = {
             typeCode: UserRole.CLERK,
@@ -122,10 +126,17 @@ router.post('/clerk', regAsStoreManager, regAsAdminManager, validateRequest, fun
         };
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
     }
-    req._setSignupVerification({
-        needVerified: false,
-        passVerify: true
-    });
+    req._options.preCheck = function () {
+        if (req.body.phone === dbUser.user.phone)
+            return {
+                continue: false,
+                msg: "Can't Hire Yourself"
+            };
+        return {
+            continue: true,
+            msg: "Pass"
+        };
+    };
     setDefaultPassword(req);
     userQuery.signup(req, function (err, user, info) {
         if (err) {

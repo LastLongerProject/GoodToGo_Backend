@@ -114,17 +114,24 @@ schema.methods.addRole = function (roleType, options, cb) {
         if (error instanceof RoleCreationError) return cb(null, false, error.message);
         else throw error;
     }
+    let roleIsModified = false;
     for (let index in this.roleList) {
         const aOldRole = this.roleList[index];
         if (aOldRole.roleType === newRole.roleType) {
             switch (aOldRole.roleType) {
                 case UserRole.ADMIN:
-                    if (aOldRole.stationID === newRole.stationID) aOldRole.manager = newRole.manager;
-                    else return cb(null, false, "The Role Already exist");
+                    if (aOldRole.stationID === newRole.stationID && aOldRole.manager !== newRole.manager) {
+                        aOldRole.manager = newRole.manager;
+                        this.markModified('roleList');
+                        roleIsModified = true;
+                    } else return cb(null, false, "The Role Already exist");
                     break;
                 case UserRole.CLERK:
-                    if (aOldRole.storeID === newRole.storeID) aOldRole.manager = newRole.manager;
-                    else return cb(null, false, "The Role Already exist");
+                    if (aOldRole.storeID === newRole.storeID && aOldRole.manager !== newRole.manager) {
+                        aOldRole.manager = newRole.manager;
+                        this.markModified('roleList');
+                        roleIsModified = true;
+                    } else return cb(null, false, "The Role Already exist");
                     break;
                 case UserRole.CUSTOMER:
                     if (aOldRole.group === newRole.group) return cb(null, false, "The Role Already exist");
@@ -135,8 +142,8 @@ schema.methods.addRole = function (roleType, options, cb) {
             }
         }
     }
-    this.roleList.push(newRole);
-    cb(null, true, this.roleList);
+    if (!roleIsModified) this.roleList.push(newRole);
+    cb(null, true, "Role Added");
 };
 
 schema.methods.removeRole = function (roleType, options, cb) {
@@ -154,10 +161,10 @@ schema.methods.removeRole = function (roleType, options, cb) {
         if (aOldRole.roleType === roleToDelete.roleType) {
             switch (aOldRole.roleType) {
                 case UserRole.ADMIN:
-                    if (aOldRole.stationID === roleToDelete.stationID) indexOfRoleToDelete = index;
+                    if (aOldRole.stationID === roleToDelete.stationID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
                 case UserRole.CLERK:
-                    if (aOldRole.storeID === roleToDelete.storeID) indexOfRoleToDelete = index;
+                    if (aOldRole.storeID === roleToDelete.storeID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
                 case UserRole.BOT:
                     if (aOldRole.group === roleToDelete.group) indexOfRoleToDelete = index;
@@ -170,7 +177,7 @@ schema.methods.removeRole = function (roleType, options, cb) {
     }
     if (indexOfRoleToDelete === -1) return cb(null, false, "Can't Find that Role");
     this.roleList.splice(indexOfRoleToDelete, 1);
-    cb(null, true, this.roleList);
+    cb(null, true, "Role Deleted");
 };
 
 schema.methods.roleIsExist = function (roleType, options, cb) {

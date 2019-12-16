@@ -70,23 +70,28 @@ module.exports = {
                 message: 'Role structure invalid'
             });
         }
+        if (options.preCheck) {
+            const preCheckResult = options.preCheck();
+            if (!preCheckResult.continue) {
+                return done(null, false, {
+                    code: 'D???',
+                    type: 'signupMessage',
+                    message: preCheckResult.msg
+                });
+            }
+        }
         User.findOne({
             'user.phone': phone
         }, function (err, dbUser) {
             if (err)
                 return done(err);
             if (dbUser && dbUser.hasVerified) {
-                let modifySomething = false;
-                let rolesToAdd = [];
+                let modifySomething_ori = false;
                 if (dbUser.user.password === null) {
                     dbUser.user.password = dbUser.generateHash(password);
-                    modifySomething = true;
+                    modifySomething_ori = true;
                 }
                 if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
-                    rolesToAdd.push({
-                        typeCode: role.typeCode,
-                        options: role
-                    });
                     switch (role.typeCode) {
                         case UserRole.CLERK:
                             dbUser.roles.typeList.push(UserRole.CLERK);
@@ -103,23 +108,11 @@ module.exports = {
                             };
                             break;
                     }
-                    modifySomething = true;
+                    modifySomething_ori = true;
                 }
-                if (!modifySomething) {
-                    return done(null, false, {
-                        code: 'D002',
-                        type: 'signupMessage',
-                        message: 'That phone is already taken'
-                    });
-                }
-                Promise
-                    .all(rolesToAdd.map(aRoleToAdd =>
-                        new Promise((resolve, reject) =>
-                            dbUser.addRole(aRoleToAdd.typeCode, aRoleToAdd.options, err => {
-                                if (err) return reject(err);
-                                resolve();
-                            }))))
-                    .then(() => {
+                dbUser.addRole(role.typeCode, role, (err, modifySomething_new, msg) => {
+                    if (err) return done(err);
+                    if (modifySomething_ori || modifySomething_new) {
                         dbUser.save(function (err) {
                             if (err) return done(err);
                             return done(null, dbUser, {
@@ -129,8 +122,20 @@ module.exports = {
                                 }
                             });
                         });
-                    })
-                    .catch(done);
+                    } else if (!modifySomething_ori) {
+                        return done(null, false, {
+                            code: 'D002',
+                            type: 'signupMessage',
+                            message: 'That phone is already taken'
+                        });
+                    } else if (!modifySomething_new) {
+                        return done(null, false, {
+                            code: 'D002',
+                            type: 'signupMessage',
+                            message: msg
+                        });
+                    }
+                });
             } else {
                 if (options.passVerify !== true && typeof verificationCode === 'undefined') {
                     sendVerificationCode(phone, done);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../../helpers/debugger')('containers_get');
+const debug = require('../../helpers/debugger')('containers/get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
