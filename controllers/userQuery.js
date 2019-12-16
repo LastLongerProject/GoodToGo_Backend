@@ -113,13 +113,12 @@ module.exports = {
                     });
                 }
                 Promise
-                    .all(rolesToAdd.map(aRoleToAdd => {
-                        return new Promise((resolve, reject) =>
+                    .all(rolesToAdd.map(aRoleToAdd =>
+                        new Promise((resolve, reject) =>
                             dbUser.addRole(aRoleToAdd.typeCode, aRoleToAdd.options, err => {
                                 if (err) return reject(err);
                                 resolve();
-                            }));
-                    }))
+                            }))))
                     .then(() => {
                         dbUser.save(function (err) {
                             if (err) return done(err);
@@ -206,13 +205,12 @@ module.exports = {
 
                         userToSave.hasVerified = hasVerified;
                         Promise
-                            .all(rolesToAdd.map(aRoleToAdd => {
-                                return new Promise((resolve, reject) =>
+                            .all(rolesToAdd.map(aRoleToAdd =>
+                                new Promise((resolve, reject) =>
                                     userToSave.addRole(aRoleToAdd.typeCode, aRoleToAdd.options, err => {
                                         if (err) return reject(err);
                                         resolve();
-                                    }));
-                            }))
+                                    }))))
                             .then(() => {
                                 userToSave.save(function (err) {
                                     if (err) return done(err);

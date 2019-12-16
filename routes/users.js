@@ -282,6 +282,28 @@ router.post(
     }
 );
 
+/**
+ * @apiName SignUp-LineUser-Root
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ *
+ * @api {post} /users/signup/lineUserRoot Sign up for new line user by admin
+ * @apiUse JWT
+ * 
+ * @apiParam {String} line_liff_userID line_liff_userID of the User.
+ * @apiParam {String} line_channel_userID line_channel_userID of the User.
+ * @apiParam {String} phone phone of the User.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Need Verification Code
+ *     { 
+ *          type: 'signupMessage',
+ *          message: 'Authentication succeeded',
+ *          userPurchaseStatus: String ("free_user" or "purchased_user")
+ *     }
+ * @apiUse SignupError
+ */
+
 router.post(
     '/signup/lineUserRoot',
     regAsAdminManager,
