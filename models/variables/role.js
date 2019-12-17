@@ -2,15 +2,15 @@ const uuid = require('uuid/v4');
 const UserRole = require("../enums/userEnum").UserRole;
 
 class RoleCreationError extends Error {
-    constructor() {
-        super();
+    constructor(msg) {
+        super(msg);
         this.name = 'RoleCreationError';
     }
-    missingArg(roleType, argName) {
-        this.message = `Missing Arg(${argName}) while Role(${roleType}) Creation.`;
+    static missingArg(roleType, argName) {
+        return `Missing Arg(${argName}) while Role(${roleType}) Creation.`;
     }
-    argInvalid(roleType, argName, arg) {
-        this.message = `Arg(${argName}:${arg}) is Invalid while Role(${roleType}) Creation.`;
+    static argInvalid(roleType, argName, arg) {
+        return `Arg(${argName}:${arg}) is Invalid while Role(${roleType}) Creation.`;
     }
 }
 
@@ -27,55 +27,55 @@ module.exports = {
         switch (roleType) {
             case UserRole.ADMIN:
                 if (!options.hasOwnProperty("stationID"))
-                    throw new RoleCreationError().missingArg(UserRole.ADMIN, "stationID");
+                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.ADMIN, "stationID"));
                 else if (!options.hasOwnProperty("manager"))
                     options.manager = false;
                 else if (typeof options.manager !== "boolean") {
                     if (options.manager !== "true" && options.manager !== "false")
-                        throw new RoleCreationError().argInvalid(UserRole.ADMIN, "manager", options.manager);
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.ADMIN, "manager", options.manager));
                     else
                         options.manager = options.manager === "true";
                 }
                 var stationID = parseInt(options.stationID);
                 if (isNaN(stationID))
-                    throw new RoleCreationError().argInvalid(UserRole.ADMIN, "stationID", stationID);
+                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.ADMIN, "stationID", stationID));
                 return Object.assign(theRole, {
                     stationID,
                     manager: options.manager
                 });
             case UserRole.BOT:
                 if (!options.hasOwnProperty("scopeID"))
-                    throw new RoleCreationError().missingArg(UserRole.BOT, "scopeID");
+                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.BOT, "scopeID"));
                 var scopeID = parseInt(options.scopeID);
                 if (isNaN(scopeID))
-                    throw new RoleCreationError().argInvalid(UserRole.BOT, "scopeID", scopeID);
+                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "scopeID", scopeID));
                 return Object.assign(theRole, {
                     scopeID
                 });
             case UserRole.CLERK:
                 if (!options.hasOwnProperty("storeID"))
-                    throw new RoleCreationError().missingArg(UserRole.CLERK, "storeID");
+                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CLERK, "storeID"));
                 else if (!options.hasOwnProperty("manager"))
                     options.manager = false;
                 else if (typeof options.manager !== "boolean") {
                     if (options.manager !== "true" && options.manager !== "false")
-                        throw new RoleCreationError().argInvalid(UserRole.CLERK, "manager", options.manager);
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "manager", options.manager));
                     else
                         options.manager = options.manager === "true";
                 }
                 var storeID = parseInt(options.storeID);
                 if (isNaN(storeID))
-                    throw new RoleCreationError().argInvalid(UserRole.CLERK, "storeID", storeID);
+                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "storeID", storeID));
                 return Object.assign(theRole, {
                     storeID,
                     manager: options.manager
                 });
             case UserRole.CUSTOMER:
                 if (!options.hasOwnProperty("group"))
-                    throw new RoleCreationError().missingArg(UserRole.CUSTOMER, "group");
+                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CUSTOMER, "group"));
                 var group = options.group;
                 if (typeof group !== "string")
-                    throw new RoleCreationError().argInvalid(UserRole.CUSTOMER, "group", group);
+                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CUSTOMER, "group", group));
                 return Object.assign(theRole, {
                     group
                 });
