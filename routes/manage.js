@@ -7,8 +7,8 @@ const SocketNamespace = require('../controllers/socket').namespace;
 const generateSocketToken = require('../controllers/socket').generateToken;
 
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
+const checkRoleIsAdmin = require('../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const checkRoleIsBot = require('../middlewares/validation/validateRequest').checkRoleIsBot;
 const refreshStore = require('../helpers/tasks').refreshStore;
 const refreshStoreImg = require('../helpers/tasks').refreshStoreImg;
 const refreshContainer = require('../helpers/tasks').refreshContainer;
@@ -50,7 +50,9 @@ const CACHE = {
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
 const baseUrl = require("../config/config").serverBaseUrl + "/manager";
 
-router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
+router.get('/socketToken', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
 
 /**
@@ -90,7 +92,9 @@ router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketTok
         }
  * 
  */
-router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/index', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var result = {
         summary: {
             userAmount: 0,
@@ -271,7 +275,9 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
     });
 });
 
-router.get('/search', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/search', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var fields = req.query.fields.split(",");
     var searchTxt = req.query.txt;
     var txtArr = searchTxt.split(" ").filter(ele => ele !== "");
@@ -421,7 +427,9 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
         }
  * 
  */
-router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/shop', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     Store.find({
         active: true
     }, function (err, activeStoreList) {
@@ -618,7 +626,9 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
  * 
  */
 
-router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/shopDetail/byCustomer', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
@@ -772,7 +782,9 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
  * 
  */
 
-router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/shopDetail', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     if (!req.query.id) return next();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
@@ -1086,7 +1098,9 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
         }
  * 
  */
-router.get('/user', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/user', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var result = {
         totalUserAmount: 0,
         totalUsageAmount: 0,
@@ -1254,7 +1268,9 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         }
  * 
  */
-router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/userDetail', checkRoleIsBot(), checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
     var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
@@ -1400,7 +1416,9 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
         }
  * 
  */
-router.get('/container', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/container', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     Container.find({
         'active': true
     }, (err, containerList) => {
@@ -1527,7 +1545,9 @@ const actionTxtDict = {
         }
  * 
  */
-router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/containerDetail', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
     var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
@@ -1584,7 +1604,9 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
         {}
  * 
  */
-router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/console', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     res.json({});
 });
 
@@ -1602,7 +1624,9 @@ router.get('/console', regAsAdminManager, validateRequest, function (req, res, n
         {}
  * 
  */
-router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/shopSummary', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     let storesSummary = {};
     let storesTmpData = {};
@@ -1776,7 +1800,9 @@ function addContent(lastHistory, newHistory) {
 
 router.post(
     '/create/:storeID',
-    regAsAdminManager,
+    checkRoleIsAdmin({
+        "manager": true
+    }),
     validateRequest,
     fetchBoxCreation,
     validateCreateApiContent,
@@ -1809,7 +1835,9 @@ router.post(
 
 router.get(
     '/box/list',
-    regAsAdminManager,
+    checkRoleIsAdmin({
+        "manager": true
+    }),
     validateRequest,
     async function (req, res, next) {
         let result = [];
@@ -1852,7 +1880,9 @@ router.get(
 
 router.get(
     '/box/list/:status',
-    regAsAdminManager,
+    checkRoleIsAdmin({
+        "manager": true
+    }),
     validateRequest,
     async function (req, res, next) {
         let result = [];
@@ -1896,7 +1926,9 @@ router.get(
     }
 );
 
-router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function (req, res, next) {
+router.delete('/deleteBox/:boxID', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
 
@@ -1928,7 +1960,9 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
         }
  * 
  */
-router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/store', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     refreshStore(function (err, data) {
         if (err) return next(err);
         res.json({
@@ -1953,7 +1987,9 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req
         }
  * 
  */
-router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/container', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function (err) {
         if (err) return next(err);
@@ -1978,7 +2014,9 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
         }
  * 
  */
-router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/activity', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
@@ -2002,7 +2040,9 @@ router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (
         }
  * 
  */
-router.patch('/refresh/couponType', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/couponType', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     refreshCoupon((err, data) => {
         if (err) return next(err);
         res.json({
@@ -2033,7 +2073,9 @@ router.patch('/refresh/couponType', regAsAdminManager, validateRequest, function
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/storeImg/:forceRenew', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
     refreshStoreImg(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
@@ -2061,7 +2103,9 @@ router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/containerIcon/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/containerIcon/:forceRenew', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
     refreshContainerIcon(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
@@ -2089,7 +2133,9 @@ router.patch('/refresh/containerIcon/:forceRenew', regAsAdminManager, validateRe
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch('/refresh/couponImage/:forceRenew', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
     refreshCouponImage(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);

@@ -25,10 +25,9 @@ const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
+const checkRoleIsBot = require('../../middlewares/validation/validateRequest').checkRoleIsBot;
+const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const status = [
     'delivering',
@@ -77,7 +76,7 @@ router.get('/globalUsedAmount', function (req, res, next) {
         }
  * @apiUse StockError
  */
-router.post('/stock/:id', regAsAdmin, validateRequest, function (
+router.post('/stock/:id', checkRoleIsAdmin(), validateRequest, function (
     req,
     res,
     next
@@ -123,7 +122,7 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
  * @apiUse DeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
+router.post('/delivery/:id/:store', checkRoleIsAdmin(), validateRequest, function (
     req,
     res,
     next
@@ -209,7 +208,7 @@ router.post('/delivery/:id/:store', regAsAdmin, validateRequest, function (
  * @apiUse CancelDeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (
+router.post('/cancelDelivery/:id', checkRoleIsAdmin(), validateRequest, function (
     req,
     res,
     next
@@ -275,7 +274,7 @@ router.post('/cancelDelivery/:id', regAsAdmin, validateRequest, function (
  * @apiUse ChangeStateError
  */
 
-router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
+router.post('/sign/:id', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (
     req,
     res,
     next
@@ -353,7 +352,7 @@ router.post('/sign/:id', regAsStore, regAsAdmin, validateRequest, function (
  * @apiUse ChangeStateError
  * @apiUse RentalQualificationError
  */
-router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) {
+router.post('/rent/:id', checkRoleIsStore(), validateRequest, function (req, res, next) {
     const dbStore = req._user;
     const key = req.headers.userapikey;
     if (typeof key === 'undefined' || key.length === 0)
@@ -460,9 +459,9 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
  */
 router.post(
     '/return/:id',
-    regAsBot,
-    regAsStore,
-    regAsAdmin,
+    checkRoleIsBot(),
+    checkRoleIsStore(),
+    checkRoleIsAdmin(),
     validateRequest,
     function (req, res, next) {
         var dbStore = req._user;
@@ -526,7 +525,7 @@ router.post(
  * @apiUse ReadyToCleanError
  * @apiUse ChangeStateError
  */
-router.post('/readyToClean/:id', regAsBot, regAsAdmin, validateRequest, function (
+router.post('/readyToClean/:id', checkRoleIsBot(), checkRoleIsAdmin(), validateRequest, function (
     req,
     res,
     next
@@ -579,7 +578,7 @@ router.post('/readyToClean/:id', regAsBot, regAsAdmin, validateRequest, function
  */
 router.post(
     ['/cleanStation/box', '/box'],
-    regAsAdmin,
+    checkRoleIsAdmin(),
     validateRequest,
     function (req, res, next) {
         var dbAdmin = req._user;
@@ -687,7 +686,7 @@ router.post(
  */
 router.post(
     ['/cleanStation/unbox/:id', '/unbox/:id'],
-    regAsAdmin,
+    checkRoleIsAdmin(),
     validateRequest,
     function (req, res, next) {
         var dbAdmin = req._user;
@@ -750,7 +749,9 @@ var actionCanUndo = {
     Return: 3,
     ReadyToClean: 4
 };
-router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
+router.post('/undo/:action/:id', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (
     req,
     res,
     next
@@ -849,9 +850,9 @@ router.post('/undo/:action/:id', regAsAdminManager, validateRequest, function (
  */
 router.get(
     '/challenge/token',
-    regAsBot,
-    regAsStore,
-    regAsAdmin,
+    checkRoleIsBot(),
+    checkRoleIsStore(),
+    checkRoleIsAdmin(),
     validateRequest,
     generateSocketToken(SocketNamespace.CHALLENGE)
 );
@@ -885,8 +886,8 @@ var actionTodo = [
 ];
 router.get(
     '/challenge/:action/:id',
-    regAsStore,
-    regAsAdmin,
+    checkRoleIsStore(),
+    checkRoleIsAdmin(),
     validateRequest,
     function (req, res, next) {
         var action = req.params.action;
@@ -947,7 +948,9 @@ router.get(
     }
 );
 
-router.post('/triggerTradeCallback/return/all', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/triggerTradeCallback/return/all', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     tasks.solveUnusualUserOrder((err, results) => {
         if (err) return next(err);
         res.json({
@@ -958,7 +961,9 @@ router.post('/triggerTradeCallback/return/all', regAsAdminManager, validateReque
     });
 });
 
-router.post('/triggerTradeCallback/return/:container/:userPhone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const containerID = req.params.container;
     const userPhone = req.params.userPhone;
     Trade.findOne({

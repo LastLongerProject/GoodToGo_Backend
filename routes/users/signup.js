@@ -7,9 +7,8 @@ const couponTrade = require('../../controllers/couponTrade');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
-const regAsStoreManager = require('../../middlewares/validation/validateRequest').regAsStoreManager;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
+const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const UserRole = require('../../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../../models/enums/userEnum').RegisterMethod;
@@ -103,7 +102,11 @@ router.post('/', validateDefault, function (req, res, next) {
  * @apiUse SignupError
  */
 
-router.post('/clerk', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/clerk', checkRoleIsStore({
+    "manager": true
+}), checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     // for CLERK
     var dbUser = req._user;
     var dbKey = req._key;
@@ -170,7 +173,9 @@ router.post('/clerk', regAsStoreManager, regAsAdminManager, validateRequest, fun
  * @apiUse SignupError
  */
 
-router.post('/storeManager', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/storeManager', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     // for CLERK
     req.body.role = {
         typeCode: UserRole.CLERK,
@@ -280,7 +285,9 @@ router.post('/lineUser', validateDefault, function (req, res, next) {
  * @apiUse SignupError
  */
 
-router.post('/lineUserRoot', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/lineUserRoot', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     req._options.passVerify = true;
     req._options.agreeTerms = true;
     req._options.registerMethod = RegisterMethod.BY_ADMIN;
@@ -318,7 +325,9 @@ router.post('/lineUserRoot', regAsAdminManager, validateRequest, function (req, 
  *     }
  * @apiUse SignupError
  */
-router.post('/root', regAsStore, regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/root', checkRoleIsStore(), checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     // for ADMIN and CLERK
     var dbKey = req._key;
     if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {

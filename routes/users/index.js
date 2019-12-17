@@ -9,9 +9,9 @@ const pointTrade = require('../../controllers/pointTrade');
 const validateLine = require('../../middlewares/validation/validateLine');
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
+const checkRoleIsBot = require('../../middlewares/validation/validateRequest').checkRoleIsBot;
+const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const intReLength = require('../../helpers/toolkit').intReLength;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
@@ -209,7 +209,9 @@ router.post('/logout', validateRequest, function (req, res, next) {
  *     }
  * @apiUse AddbotError
  */
-router.post('/addbot', regAsAdminManager, validateRequest, function (
+router.post('/addbot', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (
     req,
     res,
     next
@@ -243,7 +245,9 @@ router.post('/addbot', regAsAdminManager, validateRequest, function (
  *          } 
  *     }
  */
-router.post('/createBotKey', regAsAdminManager, validateRequest, function (
+router.post('/createBotKey', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (
     req,
     res,
     next
@@ -345,7 +349,7 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
  *      }
  */
 
-router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
+router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateRequest, function (
     req,
     res,
     next
@@ -693,7 +697,9 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     });
 });
 
-router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/addPoint/:phone', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const userToAddPoint = req.params.phone;
 
     const pointMultiplier = parseInt(req.body.pointMultiplier);
@@ -738,7 +744,9 @@ router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (re
     });
 });
 
-router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/unbindLineUser/:phone', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
     User.updateOne({
         "user.phone": userToUnbind
@@ -756,7 +764,9 @@ router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, functi
     });
 });
 
-router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/addPurchaseUsers', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) =>
         userTrade.purchase(aUser, (err, oriUser) => {
@@ -776,7 +786,9 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
         .catch(next);
 });
 
-router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+router.post("/banUser/:phone", checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
@@ -800,7 +812,9 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
     });
 });
 
-router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+router.post("/unbanUser/:phone", checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({

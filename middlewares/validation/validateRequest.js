@@ -1,6 +1,6 @@
 const jwt = require('jwt-simple');
 const redis = require("../../models/redis");
-const User = require('../../models/DB/userDB'); // load up the user model
+const User = require('../../models/DB/userDB');
 const UserKeys = require('../../models/DB/userKeysDB');
 const UserRole = require('../../models/enums/userEnum').UserRole;
 
@@ -24,7 +24,7 @@ function isAuthorized(conditions, userRoles, thisKeyRole) {
     return false;
 }
 
-function addRoleToCheck(req, theRole, shouldBeManager, cb) {
+function addConditionToRoleCheck(req, theRole, shouldBeManager, cb) {
     if (!req._rolesToCheck) {
         req._rolesToCheck = [];
     }
@@ -135,9 +135,7 @@ module.exports = {
             });
         }
     },
-    regAsStoreManager: (req, res, next) => addRoleToCheck(req, UserRole.CLERK, true, next),
-    regAsStore: (req, res, next) => addRoleToCheck(req, UserRole.CLERK, false, next),
-    regAsAdminManager: (req, res, next) => addRoleToCheck(req, UserRole.ADMIN, true, next),
-    regAsAdmin: (req, res, next) => addRoleToCheck(req, UserRole.ADMIN, false, next),
-    regAsBot: (req, res, next) => addRoleToCheck(req, UserRole.BOT, false, next)
+    checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.CLERK, condition, next),
+    checkRoleIsAdmin: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.ADMIN, condition, next),
+    checkRoleIsBot: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.BOT, condition, next)
 };

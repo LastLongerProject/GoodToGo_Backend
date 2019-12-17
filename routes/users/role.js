@@ -3,7 +3,7 @@ const router = express.Router();
 const debug = require('../../helpers/debugger')('users/role');
 
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsAdminManager = require('../../middlewares/validation/validateRequest').regAsAdminManager;
+const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const User = require('../../models/DB/userDB');
 
@@ -60,7 +60,9 @@ router.get('/checkIsExisted/:roleType', validateRequest, function (req, res, nex
  * @apiUse RoleError
  */
 
-router.get('/checkIsExisted/:phone/:roleType', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const userPhone = req.params.phone;
     const roleTypeToCheck = req.params.roleType;
     const options = req.query;
@@ -108,7 +110,9 @@ router.get('/checkIsExisted/:phone/:roleType', regAsAdminManager, validateReques
  * @apiUse RoleError
  */
 
-router.post('/add/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/add/:phone', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const userPhone = req.params.phone;
     const roleTypeToAdd = req.body.roleType;
     const options = req.body.options;

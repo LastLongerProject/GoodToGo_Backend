@@ -15,11 +15,9 @@ const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 
 const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
-const regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
-const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const checkRoleIsBot = require('../middlewares/validation/validateRequest').checkRoleIsBot;
+const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../middlewares/validation/validateRequest').checkRoleIsAdmin;
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -473,7 +471,7 @@ router.get('/activityList/:storeID', validateDefault, function (req, res, next) 
  * 
  */
 
-router.get('/dict', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
+router.get('/dict', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     process.nextTick(function () {
         Store.find({}, {}, {
             sort: {
@@ -507,7 +505,11 @@ router.get('/dict', regAsStore, regAsAdmin, validateRequest, function (req, res,
         }
  * 
  */
-router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
+router.get('/clerkList', checkRoleIsStore({
+    "manager": true
+}), checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     const dbUser = req._user;
     const dbKey = req._key;
     const TYPE_CODE = dbKey.roleType;
@@ -561,7 +563,9 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
  * @apiUse LayoffError
  */
 
-router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, res, next) {
+router.post('/layoff/:id', checkRoleIsStore({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var toLayoff = req.params.id;
     process.nextTick(function () {
@@ -624,7 +628,7 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, re
         }
  * 
  */
-router.get('/status', regAsStore, validateRequest, function (req, res, next) {
+router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
@@ -763,7 +767,7 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
         }
  * 
  */
-router.get('/openingTime', regAsStore, validateRequest, function (req, res, next) {
+router.get('/openingTime', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
         Store.findOne({
@@ -793,7 +797,7 @@ router.get('/openingTime', regAsStore, validateRequest, function (req, res, next
         { }
  * 
  */
-router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (req, res, next) {
+router.post('/unsetDefaultOpeningTime', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
         Store.findOne({
@@ -830,7 +834,7 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
  * 
  * @apiUse RentalQualificationError
  */
-router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (req, res, next) {
+router.get('/getUser/:phone', checkRoleIsBot(), checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var phone = req.params.phone.replace(/tel:|-/g, "");
     const thisRedisKey = redisKey(dbStore.roles.clerk.storeID); // BOT??
@@ -902,7 +906,7 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
         }
  * 
  */
-router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, next) {
+router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var rentedIdList = [];
     var resJson = {
@@ -984,7 +988,9 @@ const dayFormat = /^[0-6]{1}$/;
         }
  * @apiUse ChangeOpeningTimeError
  */
-router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (req, res, next) {
+router.post('/changeOpeningTime', checkRoleIsStore({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var newData = req.body;
     var days = newData.opening_hours;
@@ -1051,7 +1057,7 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
         }
  * 
  */
-router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
+router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
         var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
@@ -1180,7 +1186,7 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         }
  * 
  */
-router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
+router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     process.nextTick(function () {
         var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
@@ -1242,7 +1248,7 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
         }
  * 
  */
-router.get('/history', regAsStore, validateRequest, function (req, res, next) {
+router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     process.nextTick(function () {
@@ -1306,7 +1312,7 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
         }
  * 
  */
-router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
+router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     req.clearTimeout();
@@ -1491,7 +1497,7 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
         }
  * 
  */
-router.get('/history/byCustomer', regAsStore, validateRequest, function (req, res, next) {
+router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     let tradeQuery = {
         "tradeType.action": "Rent",
@@ -1553,7 +1559,7 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function (req, re
         }
  * 
  */
-router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
+router.get('/performance', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     let orderBy = req.query.by;
 
@@ -1600,7 +1606,7 @@ router.get('/performance', regAsStore, validateRequest, function (req, res, next
     }
  * 
  */
-router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
+router.get('/favorite', checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     const thisRedisKey = redisKey(dbStore.roles.clerk.storeID);
     redis.exists(thisRedisKey, (err, keyIsExists) => {

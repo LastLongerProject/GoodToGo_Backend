@@ -4,8 +4,8 @@ const debug = require('../../helpers/debugger')('containers/get');
 
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const baseUrl = require('../../config/config.js').serverBaseUrl;
 
@@ -119,7 +119,7 @@ router.get('/list', validateDefault, function (req, res, next) {
         }
  *
  */
-router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
+router.get('/toDelivery', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     process.nextTick(function () {
@@ -216,7 +216,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
         }
  *
  */
-router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
+router.get('/deliveryHistory', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
@@ -325,7 +325,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
         }
  *
  */
-router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
+router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateRequest, function (req, res, next) {
     var dbUser = req._user;
     var dbKey = req._key;
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
