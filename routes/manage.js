@@ -29,7 +29,10 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const { validateCreateApiContent, fetchBoxCreation } = require('../middlewares/validation/deliveryList/contentValidation.js')
+const {
+    validateCreateApiContent,
+    fetchBoxCreation
+} = require('../middlewares/validation/deliveryList/contentValidation.js')
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
@@ -1042,14 +1045,10 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                             unusedContainer,
                             history: result.history
                         };
-                        redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
+                        redis.setex(cacheKey, MILLISECONDS_OF_A_WEEK * 2, JSON.stringify(toCache), (err, reply) => {
                             if (err) return debug.error(cacheKey, err);
                             if (reply != "OK") return debug.error(cacheKey, reply);
                             debug.log("[" + cacheKey + "] Cached!");
-                            redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
-                                if (err) return debug.error(err);
-                                if (reply !== 1) return debug.error(reply);
-                            });
                         });
                     }
                 });

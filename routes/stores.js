@@ -872,19 +872,15 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
                 }
 
                 var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                redis.set('user_token:' + token, dbUser.user.phone, (err, reply) => {
+                redis.setex('user_token:' + token, 60 * 30, dbUser.user.phone, (err, reply) => {
                     if (err) return next(err);
                     if (reply !== 'OK') return next(reply);
-                    redis.expire('user_token:' + token, 60 * 30, (err, replyNum) => {
-                        if (err) return next(err);
-                        if (replyNum !== 1) return next(replyNum);
-                        res.status(200).json({
-                            phone: dbUser.user.phone,
-                            apiKey: token,
-                            availableAmount: detail.data.availableAmount
-                        });
-                        redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
+                    res.status(200).json({
+                        phone: dbUser.user.phone,
+                        apiKey: token,
+                        availableAmount: detail.data.availableAmount
                     });
+                    redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
                 });
             });
         });

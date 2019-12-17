@@ -638,26 +638,14 @@ router.post(
                 if (err) return next(err);
                 if (boxCtr == null) boxCtr = 1;
                 else boxCtr++;
-                redis.set('boxCtr', boxCtr, (err, reply) => {
+                redis.setex('boxCtr', Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), boxCtr, (err, reply) => {
                     if (err) return next(err);
                     if (reply !== 'OK') return next(reply);
-                    redis.expire(
-                        'boxCtr',
-                        Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
-                        (err, reply) => {
-                            if (err) return next(err);
-                            if (reply !== 1) return next(reply);
-                            var today = new Date();
-                            boxID =
-                                today.getMonth() +
-                                1 +
-                                intReLength(today.getDate(), 2) +
-                                intReLength(boxCtr, 3);
-                            task(reply => {
-                                res.json(reply);
-                            });
-                        }
-                    );
+                    var today = new Date();
+                    boxID = today.getMonth() + 1 + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
+                    task(reply => {
+                        res.json(reply);
+                    });
                 });
             });
         } else

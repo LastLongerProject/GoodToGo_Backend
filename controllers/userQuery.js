@@ -18,19 +18,15 @@ function sendVerificationCode(phone, done) {
     var newCode = keys.getVerificationCode();
     sendCode('+886' + phone.substr(1, 10), '您的好盒器註冊驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
         if (err) return done(err);
-        redis.set('user_verifying:' + phone, newCode, (err, reply) => {
+        redis.setex('user_verifying:' + phone, 60 * 3, newCode, (err, reply) => {
             if (err) return done(err);
             if (reply !== 'OK') return done(reply);
-            redis.expire('user_verifying:' + phone, 60 * 3, (err, reply) => {
-                if (err) return done(err);
-                if (reply !== 1) return done(reply);
-                done(null, true, {
-                    needVerificationCode: true,
-                    body: {
-                        type: 'signupMessage',
-                        message: 'Send Again With Verification Code'
-                    }
-                });
+            done(null, true, {
+                needVerificationCode: true,
+                body: {
+                    type: 'signupMessage',
+                    message: 'Send Again With Verification Code'
+                }
             });
         });
     });
@@ -481,19 +477,15 @@ module.exports = {
                 var newCode = keys.getVerificationCode();
                 sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                     if (err) return done(err);
-                    redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
+                    redis.setex('newPass_verifying:' + phone, 60 * 3, newCode, (err, reply) => {
                         if (err) return done(err);
                         if (reply !== 'OK') return done(reply);
-                        redis.expire('newPass_verifying:' + phone, 60 * 3, (err, reply) => {
-                            if (err) return done(err);
-                            if (reply !== 1) return done(reply);
-                            done(null, true, {
-                                needVerificationCode: true,
-                                body: {
-                                    type: 'forgotPassMessage',
-                                    message: 'Send Again With Verification Code'
-                                }
-                            });
+                        done(null, true, {
+                            needVerificationCode: true,
+                            body: {
+                                type: 'forgotPassMessage',
+                                message: 'Send Again With Verification Code'
+                            }
                         });
                     });
                 });
