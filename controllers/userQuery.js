@@ -336,8 +336,8 @@ module.exports = {
         });
     },
     login: function (req, done) {
-        var phone = req.body.phone;
-        var password = req.body.password;
+        const phone = req.body.phone;
+        const password = req.body.password;
         if (typeof phone === 'undefined' || typeof password === 'undefined') {
             return done(null, false, {
                 code: 'D004',
@@ -369,15 +369,16 @@ module.exports = {
                     type: 'loginMessage',
                     message: 'Wrong password'
                 });
-            const typeList = dbUser.roles.typeList;
+            const roleList = dbUser.roleList;
             Promise
-                .all(typeList.map(aRoleType => new Promise((resolve, reject) => {
+                .all(roleList.map(aRole => new Promise((resolve, reject) => {
                     keys.keyPair(function (err, returnKeys) {
                         if (err) return reject(err);
                         UserKeys.findOneAndUpdate({
                             'phone': phone,
                             'clientId': req.signedCookies.uid || req._uid,
-                            'roleType': aRoleType
+                            'roleID': aRole.roleID,
+                            'roleType': aRole.roleType
                         }, {
                             'secretKey': returnKeys.secretKey,
                             'userAgent': req.headers['user-agent'],
@@ -415,16 +416,15 @@ module.exports = {
         });
     },
     chanpass: function (req, done) {
-        var oriPassword = req.body.oriPassword;
-        var newPassword = req.body.newPassword;
-        if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined') {
+        const oriPassword = req.body.oriPassword;
+        const newPassword = req.body.newPassword;
+        if (typeof oriPassword === 'undefined' || typeof newPassword === 'undefined')
             return done(null, false, {
                 code: 'D007',
                 type: 'chanPassMessage',
                 message: 'Content not Complete'
             });
-        }
-        var dbUser = req._user;
+        const dbUser = req._user;
         if (!dbUser.validPassword(oriPassword))
             return done(null, false, {
                 code: 'D008',
@@ -448,9 +448,9 @@ module.exports = {
         });
     },
     forgotpass: function (req, done) {
-        var phone = req.body.phone;
-        var code = req.body.verification_code;
-        var newPassword = req.body.new_password;
+        const phone = req.body.phone;
+        const code = req.body.verification_code;
+        const newPassword = req.body.new_password;
         if (typeof phone === 'undefined') {
             return done(null, false, {
                 code: 'D012',
@@ -474,7 +474,7 @@ module.exports = {
                         type: 'forgotPassMessage',
                         message: 'Phone is not valid'
                     });
-                var newCode = keys.getVerificationCode();
+                const newCode = keys.getVerificationCode();
                 sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
                     if (err) return done(err);
                     redis.setex('newPass_verifying:' + phone, 60 * 3, newCode, (err, reply) => {
@@ -525,8 +525,7 @@ module.exports = {
         });
     },
     logout: function (req, done) {
-        var dbKey = req._key;
-        var dbUser = req._user;
+        const dbUser = req._user;
         UserKeys.deleteMany({
             'phone': dbUser.user.phone,
             'clientId': req.signedCookies.uid
@@ -606,44 +605,33 @@ module.exports = {
 };
 
 function isMobilePhone(phone) {
-    var reg = /^09[0-9]{8}$/;
+    const reg = /^09[0-9]{8}$/;
     return reg.test(phone);
 }
 
 function isStudentID(phone) {
-    var reg = /^[0-9]{7}$/;
+    const reg = /^[0-9]{7}$/;
     return reg.test(phone);
 }
 
 function getStoreName(dbUser) {
-    var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
-    var theStore = storeDict[dbUser.roles.clerk.storeID];
+    const theStore = storeDict[dbUser.roles.clerk.storeID];
     if (theStore) return theStore.name;
     else return "找不到店家";
 }
 
-function tokenBuilder(serverSecretKey, userKey, dbUser) {
-    var payload;
-    if (Array.isArray(userKey)) {
-        payload = {
-            roles: {
-                typeList: dbUser.roles.typeList
-            }
-        };
-        for (var aRole in userKey) {
-            payloadBuilder(payload, dbUser, userKey[aRole]);
-        }
-    } else {
-        payload = {
-            roles: {
-                typeList: [userKey.roleType]
-            }
-        };
-        payloadBuilder(payload, dbUser, userKey);
-    }
-    var token = jwt.encode(payload, serverSecretKey);
-    return token;
+function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
+    let payload = {
+        roles: {
+            typeList: dbUser.roles.typeList
+        },
+        roleList: dbUser.roleList
+    };
+    if (!Array.isArray(userKeyPairList)) userKeyPairList = [userKeyPairList];
+    userKeyPairList.forEach(aUserKeyPair => payloadBuilder(payload, dbUser, aUserKeyPair));
+    return jwt.encode(payload, serverSecretKey);
 }
 
 function payloadBuilder(payload, dbUser, userKey) {
@@ -668,6 +656,16 @@ function payloadBuilder(payload, dbUser, userKey) {
             secretKey: userKey.secretKey,
         };
     }
+    const theRole = payload.roleList.find(aRole => aRole.roleID === userKey.roleID);
+    Object.assign(theRole, {
+        apiKey: userKey.apiKey,
+        secretKey: userKey.secretKey
+    });
+    delete theRole.roleID;
+    if (userKey.roleType === UserRole.CLERK)
+        Object.assign(theRole, {
+            storeName: getStoreName(dbUser)
+        });
 }
 
 function createBotKey(theBot, ua, done) {
