@@ -262,53 +262,64 @@ module.exports = {
                     type: 'signupMessage',
                     message: 'That phone is already taken'
                 });
+            }
+            if (options.passVerify !== true && typeof verificationCode === 'undefined') {
+                sendVerificationCode(phone, done);
             } else {
-                if (options.passVerify !== true && typeof verificationCode === 'undefined') {
-                    sendVerificationCode(phone, done);
-                } else {
-                    redis.get('user_verifying:' + phone, (err, reply) => {
-                        if (err) return done(err);
-                        if (options.passVerify !== true) {
-                            if (reply === null) return done(null, false, {
-                                code: 'D010',
-                                type: 'signupMessage',
-                                message: 'Verification Code expired'
-                            });
-                            else if (reply !== verificationCode) return done(null, false, {
-                                code: 'D011',
-                                type: 'signupMessage',
-                                message: "Verification Code isn't correct"
-                            });
-                        }
+                redis.get('user_verifying:' + phone, (err, reply) => {
+                    if (err) return done(err);
+                    if (options.passVerify !== true) {
+                        if (reply === null) return done(null, false, {
+                            code: 'D010',
+                            type: 'signupMessage',
+                            message: 'Verification Code expired'
+                        });
+                        else if (reply !== verificationCode) return done(null, false, {
+                            code: 'D011',
+                            type: 'signupMessage',
+                            message: "Verification Code isn't correct"
+                        });
+                    }
 
-                        let userToSave;
-                        if (dbUser) { // has NOT verified
-                            userToSave = dbUser;
-                        } else {
-                            let newUser = new User();
-                            newUser.user.phone = phone;
-                            newUser.user.password = null;
-                            newUser.registerMethod = options.registerMethod;
-                            newUser.roles.typeList.push(UserRole.CUSTOMER);
-                            userToSave = newUser;
-                        }
+                    let userToSave;
+                    if (dbUser) { // has NOT verified
+                        userToSave = dbUser;
+                    } else {
+                        let newUser = new User();
+                        newUser.user.phone = phone;
+                        newUser.user.password = null;
+                        newUser.registerMethod = options.registerMethod;
+                        newUser.roles.typeList.push(UserRole.CUSTOMER);
+                        userToSave = newUser;
+                    }
 
-                        userToSave.user.line_liff_userID = line_liff_userID;
-                        userToSave.user.line_channel_userID = line_channel_userID;
-                        if (worker_id !== null) {
-                            userToSave.roles.customer = {
-                                group: UserGroup.KUANG_TIEN_STAFF,
+                    userToSave.user.line_liff_userID = line_liff_userID;
+                    userToSave.user.line_channel_userID = line_channel_userID;
+                    let customerRole;
+                    if (worker_id !== null) {
+                        userToSave.roles.customer = {
+                            group: UserGroup.KUANG_TIEN_STAFF,
+                            worker_id
+                        };
+                        customerRole = {
+                            group: UserGroup.KUANG_TIEN_STAFF,
+                            extraArg: {
                                 worker_id
-                            };
-                            userToSave.hasPurchase = true;
-                        } else {
-                            userToSave.roles.customer = {
-                                group: UserGroup.GOODTOGO_MEMBER
-                            };
-                        }
-                        userToSave.user.worker_id = worker_id;
-                        userToSave.hasVerified = true;
-                        userToSave.agreeTerms = true;
+                            }
+                        };
+                        userToSave.hasPurchase = true;
+                    } else {
+                        userToSave.roles.customer = {
+                            group: UserGroup.GOODTOGO_MEMBER
+                        };
+                        customerRole = {
+                            group: UserGroup.GOODTOGO_MEMBER
+                        };
+                    }
+                    userToSave.hasVerified = true;
+                    userToSave.agreeTerms = true;
+                    userToSave.addRole(UserRole.CUSTOMER, customerRole, err => {
+                        if (err) return done(err);
                         userToSave.save(function (err) {
                             if (err) return done(err);
                             redis.del('user_verifying:' + phone, (err, delReply) => {
@@ -324,7 +335,7 @@ module.exports = {
                             });
                         });
                     });
-                }
+                });
             }
         });
     },
@@ -461,33 +472,31 @@ module.exports = {
                 message: 'No User Found'
             });
             if (typeof code === 'undefined' || typeof newPassword === 'undefined') {
-                if (typeof phone === 'string' && isMobilePhone(phone)) {
-                    var newCode = keys.getVerificationCode();
-                    sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
-                        if (err) return done(err);
-                        redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
-                            if (err) return done(err);
-                            if (reply !== 'OK') return done(reply);
-                            redis.expire('newPass_verifying:' + phone, 60 * 3, (err, reply) => {
-                                if (err) return done(err);
-                                if (reply !== 1) return done(reply);
-                                done(null, true, {
-                                    needVerificationCode: true,
-                                    body: {
-                                        type: 'forgotPassMessage',
-                                        message: 'Send Again With Verification Code'
-                                    }
-                                });
-                            });
-                        });
-                    });
-                } else {
-                    done(null, false, {
+                if (!(typeof phone === 'string' && isMobilePhone(phone)))
+                    return done(null, false, {
                         code: 'D009',
                         type: 'forgotPassMessage',
                         message: 'Phone is not valid'
                     });
-                }
+                var newCode = keys.getVerificationCode();
+                sendCode('+886' + phone.substr(1, 10), '您的好盒器更改密碼驗證碼為：' + newCode + '，請於3分鐘內完成驗證。', function (err, snsMsg) {
+                    if (err) return done(err);
+                    redis.set('newPass_verifying:' + phone, newCode, (err, reply) => {
+                        if (err) return done(err);
+                        if (reply !== 'OK') return done(reply);
+                        redis.expire('newPass_verifying:' + phone, 60 * 3, (err, reply) => {
+                            if (err) return done(err);
+                            if (reply !== 1) return done(reply);
+                            done(null, true, {
+                                needVerificationCode: true,
+                                body: {
+                                    type: 'forgotPassMessage',
+                                    message: 'Send Again With Verification Code'
+                                }
+                            });
+                        });
+                    });
+                });
             } else {
                 redis.get('newPass_verifying:' + phone, (err, reply) => {
                     if (reply === null) return done(null, false, {
@@ -551,54 +560,35 @@ module.exports = {
                 message: 'Role structure invalid'
             });
         }
-        var role = {
-            typeCode: 'bot',
+        const role = {
+            typeCode: UserRole.BOT,
             scopeID: req.body.scopeID
         };
-        var botName = req.body.botName;
+        const botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
                 'role.typeCode': UserRole.BOT
             }, function (err, botAmount) {
                 if (err) return done(err);
-                var botID = `bot${intReLength(botAmount + 1, 5)}`;
-                keys.apiKey(function (err, returnKeys) {
-                    if (err) return done(err);
-                    var newUser = new User({
-                        user: {
-                            phone: botID,
-                            name: botName
-                        },
-                        role: role,
-                        roles: {
-                            typeList: [UserRole.BOT],
-                            bot: role
-                        },
-                        active: true
-                    });
-                    var newUserKey = new UserKeys({
+                const botID = `bot${intReLength(botAmount + 1, 5)}`;
+                const newUser = new User({
+                    user: {
                         phone: botID,
-                        apiKey: returnKeys.apiKey,
-                        secretKey: returnKeys.secretKey,
-                        clientId: req.signedCookies.uid,
-                        userAgent: req.headers['user-agent'],
-                        roleType: UserRole.BOT,
-                        user: newUser._id
-                    });
+                        name: botName
+                    },
+                    role: role,
+                    roles: {
+                        typeList: [UserRole.BOT],
+                        bot: role
+                    },
+                    active: true
+                });
+                newUser.addRole(role.typeCode, role, err => {
+                    if (err) return done(err);
                     newUser.save(function (err) {
                         if (err) return done(err);
-                        newUserKey.save(function (err) {
-                            if (err) return done(err);
-                            done(null, true, {
-                                body: {
-                                    type: 'signupMessage',
-                                    message: 'Authentication succeeded',
-                                    keys: {
-                                        apiKey: returnKeys.apiKey,
-                                        secretKey: returnKeys.secretKey
-                                    }
-                                }
-                            });
+                        createBotKey(newUser, req.headers['user-agent'], function () {
+                            done.apply(null, arguments);
                             return doneQtask();
                         });
                     });
@@ -618,36 +608,7 @@ module.exports = {
                     type: 'botMessage',
                     message: 'No Bot Find'
                 });
-            keys.apiKey(function (err, returnKeys) {
-                if (err) return done(err);
-                UserKeys.findOneAndUpdate({
-                    'phone': theBot.user.phone,
-                    'roleType': UserRole.BOT,
-                    'user': theBot._id
-                }, {
-                    'secretKey': returnKeys.secretKey,
-                    'userAgent': req.headers['user-agent'],
-                    '$setOnInsert': {
-                        'apiKey': returnKeys.apiKey
-                    }
-                }, {
-                    new: true,
-                    upsert: true,
-                    setDefaultsOnInsert: true
-                }, (err, keyPair) => {
-                    if (err) return done(err);
-                    done(null, true, {
-                        body: {
-                            type: 'signupMessage',
-                            message: 'Authentication succeeded',
-                            keys: {
-                                apiKey: returnKeys.apiKey,
-                                secretKey: returnKeys.secretKey
-                            }
-                        }
-                    });
-                });
-            });
+            createBotKey(theBot, req.headers['user-agent'], done)
         });
     }
 };
@@ -715,4 +676,37 @@ function payloadBuilder(payload, dbUser, userKey) {
             secretKey: userKey.secretKey,
         };
     }
+}
+
+function createBotKey(theBot, ua, done) {
+    keys.apiKey(function (err, returnKeys) {
+        if (err) return done(err);
+        UserKeys.findOneAndUpdate({
+            'phone': theBot.user.phone,
+            'roleType': UserRole.BOT,
+            'user': theBot._id
+        }, {
+            'secretKey': returnKeys.secretKey,
+            'userAgent': ua,
+            '$setOnInsert': {
+                'apiKey': returnKeys.apiKey
+            }
+        }, {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+        }, (err, keyPair) => {
+            if (err) return done(err);
+            done(null, true, {
+                body: {
+                    type: 'signupMessage',
+                    message: 'Authentication succeeded',
+                    keys: {
+                        apiKey: returnKeys.apiKey,
+                        secretKey: returnKeys.secretKey
+                    }
+                }
+            });
+        });
+    });
 }

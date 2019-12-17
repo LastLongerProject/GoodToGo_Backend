@@ -12,14 +12,14 @@ const User = require('../../models/DB/userDB');
  * @apiGroup Users
  * @apiPermission customer
  * 
- * @api {get} /role/signup Check Is the Role Existed in My RoleList
+ * @api {get} /role/checkIsExisted/:roleType Check Is the Role Existed in My RoleList
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Check Successfully
  *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
+ *          type: 'roleMessage',
+ *          roleIsExisted: Boolean 
  *     }
  * @apiUse RoleError
  */
@@ -48,14 +48,14 @@ router.get('/checkIsExisted/:roleType', validateRequest, function (req, res, nex
  * @apiGroup Users
  * @apiPermission admin_manager
  * 
- * @api {get} /role/signup Check Is the Role Existed in User's RoleList
+ * @api {get} /role/checkIsExisted/:phone/:roleType Check Is the Role Existed in User's RoleList
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Check Successfully
  *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
+ *          type: 'roleMessage',
+ *          roleIsExisted: Boolean 
  *     }
  * @apiUse RoleError
  */

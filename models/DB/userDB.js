@@ -8,7 +8,10 @@ const UserRole = require("../enums/userEnum").UserRole;
 var schema = mongoose.Schema({
     user: {
         phone: String,
-        password: String,
+        password: {
+            type: String,
+            default: null
+        },
         name: {
             type: String,
             default: null
@@ -112,7 +115,7 @@ schema.methods.addRole = function (roleType, options, cb) {
         newRole = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, false, error.message);
-        else throw error;
+        else cb(error);
     }
     let roleIsModified = false;
     for (let index in this.roleList) {
@@ -152,7 +155,7 @@ schema.methods.removeRole = function (roleType, options, cb) {
         roleToDelete = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, false, error.message);
-        else throw error;
+        else cb(error);
     }
     let indexOfRoleToDelete = -1;
     for (let index in this.roleList) {
@@ -186,7 +189,7 @@ schema.methods.roleIsExist = function (roleType, options, cb) {
         roleToCheck = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, false, error.message);
-        else throw error;
+        else cb(error);
     }
     return cb(null, true, roleIsExist(this.roleList, roleToCheck));
 };

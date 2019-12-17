@@ -24,6 +24,7 @@ module.exports = {
             roleID: uuid(),
             roleType
         };
+        if (options.extraArg) Object.assign(theRole, options.extraArg);
         switch (roleType) {
             case UserRole.ADMIN:
                 if (!options.hasOwnProperty("stationID"))
