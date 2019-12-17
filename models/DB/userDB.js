@@ -123,18 +123,24 @@ schema.methods.addRole = function (roleType, options, cb) {
         if (aOldRole.roleType === newRole.roleType) {
             switch (aOldRole.roleType) {
                 case UserRole.ADMIN:
-                    if (aOldRole.stationID === newRole.stationID && aOldRole.manager !== newRole.manager) {
-                        aOldRole.manager = newRole.manager;
-                        this.markModified('roleList');
-                        roleIsModified = true;
-                    } else return cb(null, false, "The Role Already exist");
+                    if (aOldRole.stationID === newRole.stationID) {
+                        if (aOldRole.manager !== newRole.manager) {
+                            aOldRole.manager = newRole.manager;
+                            roleIsModified = true;
+                        } else {
+                            return cb(null, false, "The Role Already exist");
+                        }
+                    }
                     break;
                 case UserRole.CLERK:
-                    if (aOldRole.storeID === newRole.storeID && aOldRole.manager !== newRole.manager) {
-                        aOldRole.manager = newRole.manager;
-                        this.markModified('roleList');
-                        roleIsModified = true;
-                    } else return cb(null, false, "The Role Already exist");
+                    if (aOldRole.storeID === newRole.storeID) {
+                        if (aOldRole.manager !== newRole.manager) {
+                            aOldRole.manager = newRole.manager;
+                            roleIsModified = true;
+                        } else {
+                            return cb(null, false, "The Role Already exist");
+                        }
+                    }
                     break;
                 case UserRole.CUSTOMER:
                     if (aOldRole.group === newRole.group) return cb(null, false, "The Role Already exist");
@@ -146,6 +152,7 @@ schema.methods.addRole = function (roleType, options, cb) {
         }
     }
     if (!roleIsModified) this.roleList.push(newRole);
+    this.markModified('roleList');
     cb(null, true, "Role Added");
 };
 

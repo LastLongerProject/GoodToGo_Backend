@@ -614,10 +614,9 @@ function isStudentID(phone) {
     return reg.test(phone);
 }
 
-function getStoreName(dbUser) {
+function getStoreName(storeID) {
     const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-    if (typeof dbUser.roles.clerk === 'undefined' || typeof dbUser.roles.clerk.storeID === 'undefined') return undefined;
-    const theStore = storeDict[dbUser.roles.clerk.storeID];
+    const theStore = storeDict[storeID];
     if (theStore) return theStore.name;
     else return "找不到店家";
 }
@@ -630,32 +629,11 @@ function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
         roleList: dbUser.roleList
     };
     if (!Array.isArray(userKeyPairList)) userKeyPairList = [userKeyPairList];
-    userKeyPairList.forEach(aUserKeyPair => payloadBuilder(payload, dbUser, aUserKeyPair));
+    userKeyPairList.forEach(aUserKeyPair => payloadBuilder(payload, aUserKeyPair));
     return jwt.encode(payload, serverSecretKey);
 }
 
-function payloadBuilder(payload, dbUser, userKey) {
-    if (userKey.roleType === UserRole.CUSTOMER) {
-        payload.roles.customer = {
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-        };
-    } else if (String(userKey.roleType).startsWith(`${UserRole.CLERK}`)) {
-        payload.roles[userKey.roleType] = {
-            storeID: dbUser.roles.clerk.storeID,
-            manager: dbUser.roles.clerk.manager,
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-            storeName: getStoreName(dbUser),
-        };
-    } else if (userKey.roleType === UserRole.ADMIN) {
-        payload.roles.admin = {
-            stationID: dbUser.roles.admin.stationID,
-            manager: dbUser.roles.admin.manager,
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-        };
-    }
+function payloadBuilder(payload, userKey) {
     const theRole = payload.roleList.find(aRole => aRole.roleID === userKey.roleID);
     Object.assign(theRole, {
         apiKey: userKey.apiKey,
@@ -664,8 +642,30 @@ function payloadBuilder(payload, dbUser, userKey) {
     delete theRole.roleID;
     if (userKey.roleType === UserRole.CLERK)
         Object.assign(theRole, {
-            storeName: getStoreName(dbUser)
+            storeName: getStoreName(theRole.storeID)
         });
+
+    if (userKey.roleType === UserRole.CUSTOMER) {
+        payload.roles.customer = {
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+        };
+    } else if (String(userKey.roleType).startsWith(`${UserRole.CLERK}`)) {
+        payload.roles[userKey.roleType] = {
+            storeID: theRole.storeID,
+            manager: theRole.manager,
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+            storeName: getStoreName(theRole.storeID),
+        };
+    } else if (userKey.roleType === UserRole.ADMIN) {
+        payload.roles.admin = {
+            stationID: theRole.stationID,
+            manager: theRole.manager,
+            apiKey: userKey.apiKey,
+            secretKey: userKey.secretKey,
+        };
+    }
 }
 
 function createBotKey(theBot, ua, done) {
