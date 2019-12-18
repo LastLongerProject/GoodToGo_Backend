@@ -369,50 +369,18 @@ module.exports = {
                     type: 'loginMessage',
                     message: 'Wrong password'
                 });
-            const roleList = dbUser.roleList;
-            Promise
-                .all(roleList.map(aRole => new Promise((resolve, reject) => {
-                    keys.keyPair(function (err, returnKeys) {
-                        if (err) return reject(err);
-                        UserKeys.findOneAndUpdate({
-                            'phone': phone,
-                            'clientId': req.signedCookies.uid || req._uid,
-                            'roleID': aRole.roleID,
-                            'roleType': aRole.roleType
-                        }, {
-                            'secretKey': returnKeys.secretKey,
-                            'userAgent': req.headers['user-agent'],
-                            '$setOnInsert': {
-                                'apiKey': returnKeys.apiKey,
-                                'user': dbUser._id,
-                            }
-                        }, {
-                            new: true,
-                            upsert: true,
-                            setDefaultsOnInsert: true
-                        }, (err, keyPair) => {
-                            if (err) return reject(err);
-                            resolve(keyPair);
-                        });
-                    });
-                })))
-                .then((keyPairList) => {
-                    keys.serverSecretKey((err, serverSecretKey) => {
-                        if (err) return done(err);
-                        return done(null, dbUser, {
-                            headers: {
-                                Authorization: tokenBuilder(serverSecretKey, keyPairList, dbUser)
-                            },
-                            body: {
-                                type: 'loginMessage',
-                                message: 'Authentication succeeded'
-                            }
-                        });
-                    });
-                })
-                .catch((err) => {
-                    if (err) return done(err);
+            fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
+                if (err) return done(err);
+                return done(null, dbUser, {
+                    headers: {
+                        Authorization: results.token
+                    },
+                    body: {
+                        type: 'loginMessage',
+                        message: 'Authentication succeeded'
+                    }
                 });
+            });
         });
     },
     chanpass: function (req, done) {
@@ -578,8 +546,15 @@ module.exports = {
                     if (err) return done(err);
                     newUser.save(function (err) {
                         if (err) return done(err);
-                        createBotKey(newUser, req.headers['user-agent'], function () {
-                            done.apply(null, arguments);
+                        createBotKey(newUser, req.headers['user-agent'], (err, keyPair) => {
+                            if (err) return done(err);
+                            done(null, true, {
+                                body: {
+                                    type: 'signupMessage',
+                                    message: 'Authentication succeeded',
+                                    keys: keyPair
+                                }
+                            });
                             return doneQtask();
                         });
                     });
@@ -599,7 +574,16 @@ module.exports = {
                     type: 'botMessage',
                     message: 'No Bot Find'
                 });
-            createBotKey(theBot, req.headers['user-agent'], done)
+            createBotKey(theBot, req.headers['user-agent'], (err, keyPair) => {
+                if (err) return done(err);
+                done(null, true, {
+                    body: {
+                        type: 'signupMessage',
+                        message: 'Authentication succeeded',
+                        keys: keyPair
+                    }
+                });
+            });
         });
     }
 };
@@ -612,6 +596,73 @@ function isMobilePhone(phone) {
 function isStudentID(phone) {
     const reg = /^[0-9]{7}$/;
     return reg.test(phone);
+}
+
+function createBotKey(theBot, ua, done) {
+    keys.apiKey(function (err, returnKeys) {
+        if (err) return done(err);
+        UserKeys.findOneAndUpdate({
+            'phone': theBot.user.phone,
+            'roleType': UserRole.BOT,
+            'user': theBot._id
+        }, {
+            'secretKey': returnKeys.secretKey,
+            'userAgent': ua,
+            '$setOnInsert': {
+                'apiKey': returnKeys.apiKey
+            }
+        }, {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+        }, (err, keyPair) => {
+            if (err) return done(err);
+            done(null, {
+                apiKey: returnKeys.apiKey,
+                secretKey: returnKeys.secretKey
+            });
+        });
+    });
+}
+
+function fetchUserKeys(dbUser, cid, ua, done) {
+    Promise
+        .all(dbUser.roleList.map(aRole => new Promise((resolve, reject) => {
+            keys.keyPair(function (err, returnKeys) {
+                if (err) return reject(err);
+                UserKeys.findOneAndUpdate({
+                    'phone': dbUser.user.phone,
+                    'clientId': cid,
+                    'roleID': aRole.roleID,
+                    'roleType': aRole.roleType
+                }, {
+                    'secretKey': returnKeys.secretKey,
+                    'userAgent': ua,
+                    '$setOnInsert': {
+                        'apiKey': returnKeys.apiKey,
+                        'user': dbUser._id,
+                    }
+                }, {
+                    new: true,
+                    upsert: true,
+                    setDefaultsOnInsert: true
+                }, (err, keyPair) => {
+                    if (err) return reject(err);
+                    resolve(keyPair);
+                });
+            });
+        })))
+        .then((keyPairList) => {
+            keys.serverSecretKey((err, serverSecretKey) => {
+                if (err) return done(err);
+                return done(null, {
+                    token: tokenBuilder(serverSecretKey, keyPairList, dbUser)
+                });
+            });
+        })
+        .catch((err) => {
+            if (err) return done(err);
+        });
 }
 
 function getStoreName(storeID) {
@@ -645,6 +696,7 @@ function payloadBuilder(payload, userKey) {
             storeName: getStoreName(theRole.storeID)
         });
 
+    // Legacy Role sys
     if (userKey.roleType === UserRole.CUSTOMER) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
@@ -666,37 +718,4 @@ function payloadBuilder(payload, userKey) {
             secretKey: userKey.secretKey,
         };
     }
-}
-
-function createBotKey(theBot, ua, done) {
-    keys.apiKey(function (err, returnKeys) {
-        if (err) return done(err);
-        UserKeys.findOneAndUpdate({
-            'phone': theBot.user.phone,
-            'roleType': UserRole.BOT,
-            'user': theBot._id
-        }, {
-            'secretKey': returnKeys.secretKey,
-            'userAgent': ua,
-            '$setOnInsert': {
-                'apiKey': returnKeys.apiKey
-            }
-        }, {
-            new: true,
-            upsert: true,
-            setDefaultsOnInsert: true
-        }, (err, keyPair) => {
-            if (err) return done(err);
-            done(null, true, {
-                body: {
-                    type: 'signupMessage',
-                    message: 'Authentication succeeded',
-                    keys: {
-                        apiKey: returnKeys.apiKey,
-                        secretKey: returnKeys.secretKey
-                    }
-                }
-            });
-        });
-    });
 }
