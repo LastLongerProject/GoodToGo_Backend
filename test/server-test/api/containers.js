@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const Container = require('../../../models/DB/containerDB');
 const makeHexString = require('../tool.js').makeHexString;
@@ -86,7 +86,7 @@ describe('api-containers', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/containers/stock/:id')
                 .set('Authorization', auth)
@@ -116,7 +116,7 @@ describe('api-containers', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/containers/challenge/token')
                 .set('Authorization', auth)
@@ -201,7 +201,7 @@ describe('api-containers', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/containers/get/toDelivery')
                 .set('Authorization', auth)
@@ -228,7 +228,7 @@ describe('api-containers', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/containers/get/deliveryHistory')
                 .set('Authorization', auth)
@@ -256,7 +256,7 @@ describe('api-containers', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/containers/get/reloadHistory')
                 .set('Authorization', auth)

@@ -1,4 +1,4 @@
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB');
 const UserKeys = require('../../models/DB/userKeysDB');
@@ -67,60 +67,58 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has Banned'
                         });
-                    var decoded;
-                    try {
-                        decoded = jwt.decode(jwtToken, dbKey.secretKey);
-                    } catch (err) {}
-                    if (!decoded)
-                        return res.status(401).json({
-                            code: 'B005',
-                            type: 'validatingUser',
-                            message: 'JWT Invalid or User has login on another device'
-                        });
-                    res._payload = decoded;
-                    decoded.exp = Number(decoded.exp);
-                    decoded.iat = Number(decoded.iat);
-                    if (decoded.orderTime)
-                        decoded.orderTime = Number(decoded.orderTime);
-                    if (!decoded.jti || isNaN(decoded.iat) || isNaN(decoded.exp))
-                        return res.status(401).json({
-                            code: 'B006',
-                            type: 'validatingUser',
-                            message: 'JWT Payload Invalid'
-                        });
-                    if (decoded.exp.toString().length == 10)
-                        decoded.exp *= 1000;
-                    if (decoded.iat.toString().length == 10)
-                        decoded.iat *= 1000;
-                    if (decoded.orderTime && decoded.orderTime.toString().length == 10)
-                        decoded.orderTime *= 1000;
-                    if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1))
-                        return res.status(401).json({
-                            code: 'B007',
-                            type: 'validatingUser',
-                            message: 'JWT Expired'
-                        });
-                    if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
-                        return res.status(401).json({
-                            code: 'B008',
-                            type: 'validatingUser',
-                            message: 'Not Authorized for this URI'
-                        });
-                    redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
-                        if (err) return next(err);
-                        if (reply !== null) {
+                    jwt.verify(jwtToken, dbKey.secretKey, (err, decoded) => {
+                        if (err)
                             return res.status(401).json({
-                                code: 'Z004',
-                                type: 'security',
-                                message: 'Token reply'
+                                code: 'B005',
+                                type: 'validatingUser',
+                                message: 'JWT Invalid or User has login on another device'
                             });
-                        }
-                        redis.setex('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, 0, (err, reply) => {
+                        res._payload = decoded;
+                        decoded.exp = Number(decoded.exp);
+                        decoded.iat = Number(decoded.iat);
+                        if (decoded.orderTime)
+                            decoded.orderTime = Number(decoded.orderTime);
+                        if (!decoded.jti || isNaN(decoded.iat) || isNaN(decoded.exp))
+                            return res.status(401).json({
+                                code: 'B006',
+                                type: 'validatingUser',
+                                message: 'JWT Payload Invalid'
+                            });
+                        if (decoded.exp.toString().length == 10)
+                            decoded.exp *= 1000;
+                        if (decoded.iat.toString().length == 10)
+                            decoded.iat *= 1000;
+                        if (decoded.orderTime && decoded.orderTime.toString().length == 10)
+                            decoded.orderTime *= 1000;
+                        if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1))
+                            return res.status(401).json({
+                                code: 'B007',
+                                type: 'validatingUser',
+                                message: 'JWT Expired'
+                            });
+                        if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
+                            return res.status(401).json({
+                                code: 'B008',
+                                type: 'validatingUser',
+                                message: 'Not Authorized for this URI'
+                            });
+                        redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
                             if (err) return next(err);
-                            if (reply !== 'OK') return next(reply);
-                            req._user = dbUser;
-                            req._key = dbKey;
-                            next();
+                            if (reply !== null) {
+                                return res.status(401).json({
+                                    code: 'Z004',
+                                    type: 'security',
+                                    message: 'Token reply'
+                                });
+                            }
+                            redis.setex('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, 0, (err, reply) => {
+                                if (err) return next(err);
+                                if (reply !== 'OK') return next(reply);
+                                req._user = dbUser;
+                                req._key = dbKey;
+                                next();
+                            });
                         });
                     });
                 });

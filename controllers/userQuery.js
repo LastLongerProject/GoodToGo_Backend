@@ -1,4 +1,4 @@
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const queue = require('queue')({
     concurrency: 1,
     autostart: true
@@ -696,7 +696,7 @@ function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
     };
     if (!Array.isArray(userKeyPairList)) userKeyPairList = [userKeyPairList];
     userKeyPairList.forEach(aUserKeyPair => payloadBuilder(payload, aUserKeyPair));
-    return jwt.encode(payload, serverSecretKey);
+    return jwt.sign(payload, serverSecretKey);
 }
 
 function payloadBuilder(payload, userKey) {

@@ -1,4 +1,4 @@
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const debug = require('../helpers/debugger')('socket');
 const keys = require('../config/keys');
 const User = require('../models/DB/userDB');
@@ -24,7 +24,7 @@ module.exports = {
             keys.serverSecretKey(function (err, serverSecretKey) {
                 if (err) return next(err);
                 var date = new Date();
-                var token = jwt.encode({
+                var token = jwt.sign({
                     'iat': Date.now(),
                     'exp': date.setMinutes(date.getMinutes() + 5),
                     'user': dbUser.user.phone
@@ -50,37 +50,32 @@ module.exports = {
         }, function (err, dbKey) {
             if (err) return debug.error(err);
             keys.serverSecretKey(function (err, serverSecretKey) {
-                var decoded;
-                var thisErr;
-                try {
-                    decoded = jwt.decode(handShakeData._query.token, serverSecretKey);
-                } catch (err) {
-                    thisErr = err;
-                }
-                if (!decoded || !decoded.user || !decoded.exp || !decoded.iat || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
-                    if (thisErr) debug.log(thisErr);
-                    if (!decoded) {
-                        thisErr = "Can't Decode";
-                    } else if (!decoded.user || !decoded.exp || !decoded.iat) {
-                        thisErr = "Token Payload Missing Something";
-                    } else if (decoded.exp < Date.now()) {
-                        thisErr = "Token Expired";
-                    } else if (!dbKey) {
-                        thisErr = "Can't Find User by Apikey";
-                    } else if (decoded.user !== dbKey.phone) {
-                        thisErr = "User & Apikey Mismatch";
+                if (err) return debug.error(err);
+                let thisErr;
+                jwt.verify(handShakeData._query.token, serverSecretKey, (err, decoded) => {
+                    if (err || !decoded || !decoded.user || !decoded.exp || !decoded.iat || decoded.exp < Date.now() || !dbKey || decoded.user !== dbKey.phone) {
+                        if (err || !decoded) {
+                            thisErr = "Can't Decode";
+                        } else if (!decoded.user || !decoded.exp || !decoded.iat) {
+                            thisErr = "Token Payload Missing Something";
+                        } else if (decoded.exp < Date.now()) {
+                            thisErr = "Token Expired";
+                        } else if (!dbKey) {
+                            thisErr = "Can't Find User by Apikey";
+                        } else if (decoded.user !== dbKey.phone) {
+                            thisErr = "User & Apikey Mismatch";
+                        } else {
+                            thisErr = "Unknown Err";
+                        }
+                        debug.log('[SOCKET] EMIT "error": "Authentication error (' + thisErr + ')"');
+                        return next(new Error('Authentication error (' + thisErr + ')'));
                     } else {
-                        thisErr = "Unknown Err";
+                        socket._user = decoded.user;
+                        next();
                     }
-                    debug.log('[SOCKET] EMIT "error": "Authentication error (' + thisErr + ')"');
-                    return next(new Error('Authentication error (' + thisErr + ')'));
-                } else {
-                    socket._user = decoded.user;
-                    next();
-                }
+                });
             });
         });
-
     },
     challenge: function (socket) {
         socket.emitWithLog = addLog(socket);

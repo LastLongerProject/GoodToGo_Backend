@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const Container = require('../../../models/DB/containerDB');
 const makeHexString = require('../tool.js').makeHexString;
@@ -21,12 +21,12 @@ var roles = {
     },
 };
 
-describe('api-cycle', function() {
-    before(function(done) {
+describe('api-cycle', function () {
+    before(function (done) {
         setTimeout(done, 11000);
     });
-    describe('POST /login', function() {
-        it('respond in json with roles', function(done) {
+    describe('POST /login', function () {
+        it('respond in json with roles', function (done) {
             request(app)
                 .post('/users/login')
                 .set('Content-Type', 'application/json')
@@ -37,12 +37,12 @@ describe('api-cycle', function() {
                     password: '',
                 })
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     let decode = jwt.decode(res.header.authorization, secret.text);
                     if (!('customer' || 'admin' || 'clerk' in decode.roles))
                         throw new Error('Missing roles');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -56,17 +56,17 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/box', function() {
+    describe('POST /containers/box', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
 
             request(app)
                 .post('/containers/box')
@@ -78,7 +78,7 @@ describe('api-cycle', function() {
                     boxId: 99999
                 })
                 .expect(200)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -88,17 +88,17 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/delivery/:id/:store', function() {
+    describe('POST /containers/delivery/:id/:store', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
 
             request(app)
                 .post('/containers/delivery/99999/17')
@@ -106,7 +106,7 @@ describe('api-cycle', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkCycleKey)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -116,17 +116,17 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/sign/:id', function() {
+    describe('POST /containers/sign/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
 
             request(app)
                 .post('/containers/sign/99999')
@@ -134,7 +134,7 @@ describe('api-cycle', function() {
                 .set('ApiKey', roles.admin.apiKey)
                 .expect(200)
                 .expect(checkCycleKey)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -144,25 +144,25 @@ describe('api-cycle', function() {
         });
     });
     let rent_apiKey = "";
-    describe('Get /stores/getUser/:id', function() {
-        it('status code should be 200', function(done) {
+    describe('Get /stores/getUser/:id', function () {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: makeHexString(),
                 iat: Date.now(),
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/getUser/0905519292')
                 .set('Authorization', auth)
                 .set('ApiKey', roles.clerk.apiKey)
                 .expect(200)
-                .expect(function(res) {
+                .expect(function (res) {
                     if (!('phone' in res.body)) throw new Error('Missing phone');
                     if (!('apiKey' in res.body)) throw new Error('Missing apiKey');
                 })
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -173,10 +173,10 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/rent/:id', function() {
+    describe('POST /containers/rent/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -184,7 +184,7 @@ describe('api-cycle', function() {
                 orderTime: Date.now()
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
 
             request(app)
                 .post('/containers/rent/99999')
@@ -193,7 +193,7 @@ describe('api-cycle', function() {
                 .set('userapikey', rent_apiKey)
                 .expect(200)
                 .expect(checkCycleKey)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -204,10 +204,10 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/return/:id', function() {
+    describe('POST /containers/return/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -215,7 +215,7 @@ describe('api-cycle', function() {
                 orderTime: Date.now()
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
 
             request(app)
                 .post('/containers/return/99999')
@@ -224,7 +224,7 @@ describe('api-cycle', function() {
                 .set('userapikey', rent_apiKey)
                 .expect(200)
                 .expect(checkCycleKey)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);
@@ -234,10 +234,10 @@ describe('api-cycle', function() {
         });
     });
 
-    describe('POST /containers/readyToClean/:id', function() {
+    describe('POST /containers/readyToClean/:id', function () {
         this.slow(1000);
 
-        it('status code should be 200', function(done) {
+        it('status code should be 200', function (done) {
             let payload = {
                 jti: 'manager',
                 iat: Date.now(),
@@ -245,7 +245,7 @@ describe('api-cycle', function() {
                 orderTime: Date.now()
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
 
             request(app)
                 .post('/containers/readyToClean/99999')
@@ -254,7 +254,7 @@ describe('api-cycle', function() {
                 .set('userapikey', rent_apiKey)
                 .expect(200)
                 .expect(checkCycleKey)
-                .end(function(err, res) {
+                .end(function (err, res) {
                     if (err) {
                         console.log(res.body);
                         return done(err);

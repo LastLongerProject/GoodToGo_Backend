@@ -102,7 +102,6 @@ router.post('/login', validateDefault, function (req, res, next) {
  * @apiSuccessExample {json} Success-Response:
  *      HTTP/1.1 200 Login Successfully (res.header.authorization)
  *      { 
- *          
  *          **Decoded JWT**
  *          payload = {
  *              "roles": {
