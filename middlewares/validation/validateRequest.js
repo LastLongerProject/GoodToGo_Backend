@@ -74,7 +74,7 @@ module.exports = {
                 User.findById(dbKey.user, function (err, dbUser) {
                     if (err)
                         return next(err);
-                    if (!dbUser || (typeof dbKey.roleID !== "undefined" && dbUser.roleIsExistByID(dbKey.roleID)))
+                    if (!dbUser || (typeof dbKey.roleID !== "undefined" && !dbUser.roleIsExistByID(dbKey.roleID)))
                         return res.status(401).json({
                             code: 'B002',
                             type: 'validatingUser',
