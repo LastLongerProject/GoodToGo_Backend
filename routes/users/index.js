@@ -54,13 +54,26 @@ router.use('/role', roleRoute);
  *                  "typeList": [ //the list with ids that you can use
  *                      "admin"
  *                  ],
- *              "admin": {
- *                  "stationID": Number,
- *                  "manager": Boolean,
- *                  "apiKey": String,
- *                  "secretKey": String
- *              } // ids' info will store in its own object
- *          } 
+ *                  "admin": {
+ *                      "stationID": Number,
+ *                      "manager": Boolean,
+ *                      "apiKey": String,
+ *                      "secretKey": String
+ *                  } // ids' info will store in its own object
+ *              },
+ *              "roleList": [
+ *                  {
+ *                      "roleType": String,
+ *                      "apiKey": String,
+ *                      "secretKey": String,
+ *                      "manager": Boolean, // if [roleType] === "clerk" || [roleType] === "admin"
+ *                      "stationID": Number,  // if [roleType] === "admin"
+ *                      "storeID": Number,  // if [roleType] === "clerk"
+ *                      "storeName": String,  // if [roleType] === "clerk"
+ *                      "group": String  // if [roleType] === "customer"
+ *                  }
+ *              ]
+ *          };
  *      }
  *     
  * @apiUse LoginError
@@ -68,6 +81,61 @@ router.use('/role', roleRoute);
 
 router.post('/login', validateDefault, function (req, res, next) {
     userQuery.login(req, function (err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
+/**
+ * @apiName Fetch
+ * @apiGroup Users
+ *
+ * @api {post} /users/fetchRole User Fetch Role List
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *      HTTP/1.1 200 Login Successfully (res.header.authorization)
+ *      { 
+ *          
+ *          **Decoded JWT**
+ *          payload = {
+ *              "roles": {
+ *                  "typeList": [ //the list with ids that you can use
+ *                      "admin"
+ *                  ],
+ *                  "admin": {
+ *                      "stationID": Number,
+ *                      "manager": Boolean,
+ *                      "apiKey": String,
+ *                      "secretKey": String
+ *                  } // ids' info will store in its own object
+ *              },
+ *              "roleList": [
+ *                  {
+ *                      "roleType": String,
+ *                      "apiKey": String,
+ *                      "secretKey": String,
+ *                      "manager": Boolean, // if [roleType] === "clerk" || [roleType] === "admin"
+ *                      "stationID": Number,  // if [roleType] === "admin"
+ *                      "storeID": Number,  // if [roleType] === "clerk"
+ *                      "storeName": String,  // if [roleType] === "clerk"
+ *                      "group": String  // if [roleType] === "customer"
+ *                  }
+ *              ]
+ *          };
+ *      }
+ *     
+ * @apiUse LoginError
+ */
+
+router.post('/fetchRole', validateRequest, function (req, res, next) {
+    userQuery.fetchRole(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {

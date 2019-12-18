@@ -106,9 +106,9 @@ module.exports = {
                     }
                     modifySomething_ori = true;
                 }
-                dbUser.addRole(role.typeCode, role, (err, modifySomething_new, msg) => {
+                dbUser.addRole(role.typeCode, role, (err, roleAdded, msg) => {
                     if (err) return done(err);
-                    if (!modifySomething_ori && !modifySomething_new) {
+                    if (!modifySomething_ori && !roleAdded) {
                         return done(null, false, {
                             code: 'D002',
                             type: 'signupMessage',
@@ -583,6 +583,21 @@ module.exports = {
                         keys: keyPair
                     }
                 });
+            });
+        });
+    },
+    fetchRole: function (req, done) {
+        const dbUser = req._user;
+        fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
+            if (err) return done(err);
+            return done(null, dbUser, {
+                headers: {
+                    Authorization: results.token
+                },
+                body: {
+                    type: 'loginMessage',
+                    message: 'Authentication succeeded'
+                }
             });
         });
     }

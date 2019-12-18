@@ -114,7 +114,7 @@ schema.methods.addRole = function (roleType, options, cb) {
     try {
         newRole = new Role(roleType, options);
     } catch (error) {
-        if (error instanceof RoleCreationError) return cb(null, false, error.message);
+        if (error instanceof RoleCreationError) return cb(null, null, error.message);
         else cb(error);
     }
     let roleIsModified = false;
@@ -128,7 +128,7 @@ schema.methods.addRole = function (roleType, options, cb) {
                             aOldRole.manager = newRole.manager;
                             roleIsModified = true;
                         } else {
-                            return cb(null, false, "The Role Already exist");
+                            return cb(null, null, "The Role Already exist");
                         }
                     }
                     break;
@@ -138,22 +138,22 @@ schema.methods.addRole = function (roleType, options, cb) {
                             aOldRole.manager = newRole.manager;
                             roleIsModified = true;
                         } else {
-                            return cb(null, false, "The Role Already exist");
+                            return cb(null, null, "The Role Already exist");
                         }
                     }
                     break;
                 case UserRole.CUSTOMER:
-                    if (aOldRole.group === newRole.group) return cb(null, false, "The Role Already exist");
+                    if (aOldRole.group === newRole.group) return cb(null, null, "The Role Already exist");
                     break;
                 case UserRole.BOT:
-                    if (aOldRole.scopeID === newRole.scopeID) return cb(null, false, "The Role Already exist");
+                    if (aOldRole.scopeID === newRole.scopeID) return cb(null, null, "The Role Already exist");
                     break;
             }
         }
     }
     if (!roleIsModified) this.roleList.push(newRole);
     this.markModified('roleList');
-    cb(null, true, "Role Added");
+    cb(null, newRole, "Role Added");
 };
 
 schema.methods.removeRole = function (roleType, options, cb) {
@@ -161,7 +161,7 @@ schema.methods.removeRole = function (roleType, options, cb) {
     try {
         roleToDelete = new Role(roleType, options);
     } catch (error) {
-        if (error instanceof RoleCreationError) return cb(null, false, error.message);
+        if (error instanceof RoleCreationError) return cb(null, null, error.message);
         else cb(error);
     }
     let indexOfRoleToDelete = -1;
@@ -185,9 +185,9 @@ schema.methods.removeRole = function (roleType, options, cb) {
             }
         }
     }
-    if (indexOfRoleToDelete === -1) return cb(null, false, "Can't Find that Role");
+    if (indexOfRoleToDelete === -1) return cb(null, null, "Can't Find that Role");
     this.roleList.splice(indexOfRoleToDelete, 1);
-    cb(null, true, "Role Deleted");
+    cb(null, roleToDelete, "Role Deleted");
 };
 
 schema.methods.roleIsExist = function (roleType, options, cb) {
@@ -195,10 +195,10 @@ schema.methods.roleIsExist = function (roleType, options, cb) {
     try {
         roleToCheck = new Role(roleType, options);
     } catch (error) {
-        if (error instanceof RoleCreationError) return cb(null, false, error.message);
+        if (error instanceof RoleCreationError) return cb(null, null, error.message);
         else cb(error);
     }
-    return cb(null, true, roleIsExist(this.roleList, roleToCheck));
+    return cb(null, roleToCheck, roleIsExist(this.roleList, roleToCheck));
 };
 
 function roleIsExist(roleList, roleToCheck) {

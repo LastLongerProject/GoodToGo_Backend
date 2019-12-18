@@ -41,10 +41,8 @@ module.exports = {
         var key = req.headers['apikey'];
 
         if (jwtToken && key) {
-            UserKeys.findOneAndUpdate({
+            UserKeys.findOne({
                 'apiKey': key
-            }, {
-                'updatedAt': Date.now()
             }, function (err, dbKey) {
                 if (err)
                     return next(err);

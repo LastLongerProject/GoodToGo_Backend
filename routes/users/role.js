@@ -127,14 +127,23 @@ router.post('/add/:phone', checkRoleIsAdmin({
                 type: "roleMessage",
                 msg: `Can't Find the User: ${userPhone}`
             });
-        theUser.addRole(roleTypeToAdd, options, (err, validTask, detail) => {
+        theUser.addRole(roleTypeToAdd, options, (err, roleAdded, detail) => {
             if (err) return next(err);
-            if (!validTask)
+            if (!roleAdded)
                 return res.status(403).json({
                     code: "D???",
                     type: "roleMessage",
                     msg: detail
                 });
+
+            if (!theUser.roles[roleTypeToAdd]) { // For Legacy Role System
+                theUser.roles.typeList.push(roleTypeToAdd);
+                const legacyRole = Object.assign({}, roleAdded);
+                delete legacyRole.roleID;
+                delete legacyRole.roleType;
+                theUser.roles[roleTypeToAdd] = legacyRole;
+            }
+
             theUser.save(err => {
                 if (err) return next(err);
                 res.json({
