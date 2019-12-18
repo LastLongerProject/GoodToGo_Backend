@@ -190,6 +190,13 @@ schema.methods.removeRole = function (roleType, options, cb) {
     cb(null, roleToDelete, "Role Deleted");
 };
 
+schema.methods.roleIsExistByID = function (roleID) {
+    for (let roleIndex in this.roleList) {
+        if (this.roleList[roleIndex].roleID === roleID) return true;
+    }
+    return false;
+};
+
 schema.methods.roleIsExist = function (roleType, options, cb) {
     let roleToCheck;
     try {

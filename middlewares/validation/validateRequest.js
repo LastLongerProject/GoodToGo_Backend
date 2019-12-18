@@ -10,29 +10,48 @@ function iatGetDate(int) {
     return tmp.valueOf();
 }
 
-function isAuthorized(conditions, userRoles, thisKeyRole) {
-    if (!Array.isArray(conditions) || conditions.length === 0) return true; // Customer
-    for (let conditionIndex in conditions) {
-        let aCondition = conditions[conditionIndex];
-        if (userRoles[aCondition.role] && String(thisKeyRole).startsWith(aCondition.role)) {
-            if (aCondition.manager) {
-                return userRoles[aCondition.role].manager === true;
+function isAuthorized(req, dbUser, dbKey) {
+    const rolesToCheck = req._rolesToCheck;
+    if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true; // Customer
+    if (typeof dbKey.roleID === "undefined" || typeof dbUser.roleList === "undefined") { // Legacy Role System
+        const userRoles = dbUser.roles;
+        const thisKeyRole = dbKey.roleType;
+        if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true; // Customer
+        for (let conditionIndex in rolesToCheck) {
+            let aCondition = rolesToCheck[conditionIndex];
+            if (userRoles[aCondition.roleType] && String(thisKeyRole).startsWith(aCondition.roleType)) {
+                if (aCondition.condition && aCondition.condition.manager) {
+                    return userRoles[aCondition.roleType].manager === true;
+                }
+                return true;
             }
-            return true;
         }
+        return false;
+    } else {
+        const theKeyRole = dbUser.roleList.find(aRole => aRole.roleID === dbKey.roleID);
+        for (let roleIndex in rolesToCheck) {
+            let aRoleToCheck = rolesToCheck[roleIndex];
+            if (aRoleToCheck.roleType === theKeyRole.roleType) {
+                for (let aConditionKey in aRoleToCheck.condition) {
+                    let aCondition = aRoleToCheck.condition[aConditionKey];
+                    if (theKeyRole[aConditionKey] !== aCondition) return false;
+                }
+                return true;
+            }
+        }
+        return false;
     }
-    return false;
 }
 
-function addConditionToRoleCheck(req, theRole, shouldBeManager, cb) {
+function addConditionToRoleCheck(req, roleType, condition, next) {
     if (!req._rolesToCheck) {
         req._rolesToCheck = [];
     }
     req._rolesToCheck.push({
-        role: theRole,
-        manager: shouldBeManager
+        roleType,
+        condition
     });
-    cb();
+    next();
 }
 
 module.exports = {
@@ -55,7 +74,7 @@ module.exports = {
                 User.findById(dbKey.user, function (err, dbUser) {
                     if (err)
                         return next(err);
-                    if (!dbUser)
+                    if (!dbUser || (typeof dbKey.roleID !== "undefined" && dbUser.roleIsExistByID(dbKey.roleID)))
                         return res.status(401).json({
                             code: 'B002',
                             type: 'validatingUser',
@@ -97,7 +116,7 @@ module.exports = {
                                 type: 'validatingUser',
                                 message: 'JWT Expired'
                             });
-                        if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
+                        if (!isAuthorized(req, dbUser, dbKey))
                             return res.status(401).json({
                                 code: 'B008',
                                 type: 'validatingUser',
