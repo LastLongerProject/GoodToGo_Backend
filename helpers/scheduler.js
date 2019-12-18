@@ -75,7 +75,10 @@ module.exports = function () {
                         },
                         "roleType": {
                             "$ne": "bot"
-                        }
+                        },
+                        "userAgent": {
+                            "$ne": /^PostmanRuntime\/.*$/
+                        },
                     }, (err) => {
                         if (err) return debug.error(err);
                         debug.log('remove expire login');

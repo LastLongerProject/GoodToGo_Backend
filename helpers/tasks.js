@@ -19,6 +19,11 @@ const userTrade = require("../controllers/userTrade");
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
 
+const Box = require('../models/DB/boxDB');
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
+const BoxAction = require('../models/enums/boxEnum').BoxAction;
+const getContainerHash = require('../helpers/tools').getContainerHash;
+
 module.exports = {
     storeListInit: function (cb) {
         storeListGenerator(err => {
@@ -245,7 +250,6 @@ module.exports = {
             }
         }, (err, userOrderList) => {
             if (err) return cb(err);
-
             Promise
                 .all(
                     userOrderList.map(aUserOrder => new Promise((resolve, reject) => {
@@ -261,7 +265,9 @@ module.exports = {
                                 "container.id": aUserOrder.containerID,
                                 "oriUser.phone": oriUser.user.phone,
                                 "tradeType.action": "Return",
-                                "tradeTime":{'$gt':aUserOrder.orderTime}
+                                "tradeTime": {
+                                    '$gt': aUserOrder.orderTime
+                                }
                             }, {}, {
                                 sort: {
                                     tradeTime: -1
@@ -360,6 +366,30 @@ module.exports = {
                 }
             });
         });
+    },
+    migrateDeliveryListBox: function () {
+        Box.find({})
+            .exec((err, boxes) => {
+                if (err) return
+                boxes.forEach(box => {
+                    if (box.deliveringDate === undefined) {
+                        let action = box.action.slice().reverse().find(action => action.boxAction === BoxAction.Deliver)
+                        if (!action) {
+                            action = box.action.slice().reverse().find(action => action.boxStatus === BoxStatus.Delivering)
+                        }
+                        const date = action && action.timestamps
+                        box.deliveringDate = date
+                    }
+                    if (box.containerHash === undefined) {
+                        if (box.containerList.length) {
+                            box.containerHash = getContainerHash(box.containerList)
+                        } else {
+                            box.containerHash = getContainerHash(box.boxOrderContent, true)
+                        }
+                    }
+                    box.save()
+                })
+            })
     }
 }
 
