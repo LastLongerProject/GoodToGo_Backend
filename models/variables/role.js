@@ -50,8 +50,22 @@ module.exports = {
                 var scopeID = parseInt(options.scopeID);
                 if (isNaN(scopeID))
                     throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "scopeID", scopeID));
+                var returnToStoreID;
+                if (options.hasOwnProperty("returnToStoreID")) {
+                    returnToStoreID = parseInt(options.returnToStoreID);
+                    if (isNaN(returnToStoreID))
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "returnToStoreID", returnToStoreID));
+                }
+                var reloadToStationID;
+                if (options.hasOwnProperty("reloadToStationID")) {
+                    reloadToStationID = parseInt(options.reloadToStationID);
+                    if (isNaN(reloadToStationID))
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "reloadToStationID", returnToStoreID));
+                }
                 return Object.assign(theRole, {
-                    scopeID
+                    scopeID,
+                    returnToStoreID,
+                    reloadToStationID
                 });
             case UserRole.CLERK:
                 if (!options.hasOwnProperty("storeID"))

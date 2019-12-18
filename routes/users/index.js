@@ -264,6 +264,8 @@ router.post('/logout', validateRequest, function (req, res, next) {
  * 
  * @apiParam {String} botName bot name.
  * @apiParam {String} scopeID scope id.
+ * @apiParam {String} returnToStoreID set return to storeID.
+ * @apiParam {String} reloadToStationID set reload to stationID.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     { 
@@ -278,11 +280,7 @@ router.post('/logout', validateRequest, function (req, res, next) {
  */
 router.post('/addbot', checkRoleIsAdmin({
     "manager": true
-}), validateRequest, function (
-    req,
-    res,
-    next
-) {
+}), validateRequest, function (req, res, next) {
     userQuery.addBot(req, function (err, user, info) {
         if (err) {
             return next(err);
