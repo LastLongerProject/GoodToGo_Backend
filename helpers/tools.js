@@ -1,7 +1,7 @@
 const getDateCheckpoint = require('./toolkit').getDateCheckpoint;
 
 const DataCacheFactory = require("../models/dataCacheFactory.js");
-const userUsingAmount = require('../models/computed/containerStatistic').line_user_using;
+const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
 const RentalQualification = require("../models/enums/userEnum").RentalQualification;
 const HoldingQuantityLimitation = require("../models/enums/userEnum").HoldingQuantityLimitation;
 const hash = require('object-hash');
@@ -42,6 +42,10 @@ exports.getContainerHash = function (containerList, isOverview = false) {
 
 exports.generateUUID = function () {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+exports.computeDaysOfUsing = function (dateToCompute, now) {
+    return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 };
 
 exports.userIsAvailableForRentContainer = function (dbUser, amountOrdered, byPassCheck, cb) {

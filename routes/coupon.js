@@ -7,8 +7,8 @@ const validateLine = require('../middlewares/validation/validateLine').all;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
-const MyCoupon = require('../models/variable/coupon').myCoupon;
-const CouponDetail = require('../models/variable/coupon').couponDetail;
+const MyCoupon = require('../models/reply/coupon').myCoupon;
+const CouponDetail = require('../models/reply/coupon').couponDetail;
 const CouponState = require('../models/enums/couponEnum').CouponState;
 const DataCacheFactory = require('../models/dataCacheFactory');
 

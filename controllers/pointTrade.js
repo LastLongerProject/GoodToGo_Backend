@@ -1,10 +1,11 @@
 const fs = require("fs");
 const debug = require('../helpers/debugger')('bonusPointActivity');
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
 const config = require("../config/config");
 
 const PointLog = require('../models/DB/pointLogDB');
-const computeDaysOverDue = require('../models/computed/dueStatus').daysOverDue;
+const DueDays = require('../models/enums/userEnum').DueDays;
 
 module.exports = {
     calculatePoint: function (dbUser, userOrders, cb) {
@@ -43,7 +44,7 @@ function scanBonusPointActivity(dbUser, userOrders, cb) {
         const now = Date.now();
         let overdueReturn = 0;
         const totalPoint = userOrders.map(aUserOrder => {
-            const daysOverDue = computeDaysOverDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
+            const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[dbUser.getPurchaseStatus()];
             if (daysOverDue > 0) {
                 overdueReturn++;
                 return 0;

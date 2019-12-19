@@ -28,7 +28,7 @@ const Trade = require('../models/DB/tradeDB');
 const Coupon = require('../models/DB/couponDB');
 const PointLog = require('../models/DB/pointLogDB');
 const DataCacheFactory = require('../models/dataCacheFactory');
-const getGlobalUsedAmount = require('../models/computed/containerStatistic').global_used;
+const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
