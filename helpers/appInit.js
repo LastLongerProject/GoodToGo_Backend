@@ -59,10 +59,6 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
-                }),
-                new Promise((resolve, reject) => {
-                    tasks.migrateDeliveryListBox();
-                    resolve();
                 })
             ])
             .then(() => {
