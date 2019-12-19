@@ -56,8 +56,8 @@ function addConditionToRoleCheck(req, roleType, condition, next) {
 
 module.exports = {
     JWT: function (req, res, next) {
-        var jwtToken = req.headers['authorization'];
-        var key = req.headers['apikey'];
+        const jwtToken = req.headers['authorization'];
+        const key = req.headers['apikey'];
 
         if (jwtToken && key) {
             UserKeys.findOne({
@@ -122,22 +122,19 @@ module.exports = {
                                 type: 'validatingUser',
                                 message: 'Not Authorized for this URI'
                             });
-                        redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
+                        redis.set('reply_check:' + decoded.jti + ':' + decoded.iat, 0, "EX", 60 * 60 * 25, "NX", (err, reply) => {
                             if (err) return next(err);
-                            if (reply !== null) {
+                            if (reply === null) {
                                 return res.status(401).json({
                                     code: 'Z004',
                                     type: 'security',
                                     message: 'Token reply'
                                 });
                             }
-                            redis.setex('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, 0, (err, reply) => {
-                                if (err) return next(err);
-                                if (reply !== 'OK') return next(reply);
-                                req._user = dbUser;
-                                req._key = dbKey;
-                                next();
-                            });
+                            if (reply !== 'OK') return next(reply);
+                            req._user = dbUser;
+                            req._key = dbKey;
+                            next();
                         });
                     });
                 });
