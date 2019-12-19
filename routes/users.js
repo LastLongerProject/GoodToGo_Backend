@@ -39,12 +39,10 @@ const setDefaultPassword = require('../config/keys').setDefaultPassword;
 router.post(['/signup', '/signup/*'], function (req, res, next) {
     req._options = {};
     req._setSignupVerification = function (options) {
-        if (typeof options === "undefined" ||
-            typeof options.passVerify === "undefined" ||
-            typeof options.passVerify === "undefined")
-            return next(new Error("Server Internal Error: Signup"));
-        req._options.passVerify = options.passVerify;
-        req._options.needVerified = options.needVerified;
+        if (typeof options === "undefined") options = {};
+        req._options.passVerify = options.hasOwnProperty("passVerify") ? options.passVerify : false;
+        req._options.needVerified = options.hasOwnProperty("needVerified") ? options.needVerified : true;
+        req._options.passPhoneValidation = options.hasOwnProperty("passPhoneValidation") ? options.passPhoneValidation : false;
     };
     next();
 });
@@ -200,7 +198,8 @@ router.post(
         };
         req._setSignupVerification({
             needVerified: false,
-            passVerify: true
+            passVerify: true,
+            passPhoneValidation: true
         });
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
         setDefaultPassword(req);

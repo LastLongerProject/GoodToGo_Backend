@@ -41,94 +41,88 @@ module.exports = {
         var key = req.headers['apikey'];
 
         if (jwtToken && key) {
-            process.nextTick(function () {
-                UserKeys.findOneAndUpdate({
-                    'apiKey': key
-                }, {
-                    'updatedAt': Date.now()
-                }, function (err, dbKey) {
+            UserKeys.findOneAndUpdate({
+                'apiKey': key
+            }, {
+                'updatedAt': Date.now()
+            }, function (err, dbKey) {
+                if (err)
+                    return next(err);
+                if (!dbKey)
+                    return res.status(401).json({
+                        code: 'B003',
+                        type: 'validatingUser',
+                        message: 'User has logout'
+                    });
+                User.findById(dbKey.user, function (err, dbUser) {
                     if (err)
                         return next(err);
-                    if (!dbKey)
+                    if (!dbUser)
                         return res.status(401).json({
-                            code: 'B003',
+                            code: 'B002',
                             type: 'validatingUser',
-                            message: 'User has logout'
+                            message: 'User not Found'
                         });
-                    User.findById(dbKey.user, function (err, dbUser) {
-                        if (err)
-                            return next(err);
-                        if (!dbUser)
+                    if (!dbUser.active)
+                        return res.status(401).json({
+                            code: 'B004',
+                            type: 'validatingUser',
+                            message: 'User has Banned'
+                        });
+                    var decoded;
+                    try {
+                        decoded = jwt.decode(jwtToken, dbKey.secretKey);
+                    } catch (err) {}
+                    if (!decoded)
+                        return res.status(401).json({
+                            code: 'B005',
+                            type: 'validatingUser',
+                            message: 'JWT Invalid or User has login on another device'
+                        });
+                    res._payload = decoded;
+                    decoded.exp = Number(decoded.exp);
+                    decoded.iat = Number(decoded.iat);
+                    if (decoded.orderTime)
+                        decoded.orderTime = Number(decoded.orderTime);
+                    if (!decoded.jti || isNaN(decoded.iat) || isNaN(decoded.exp))
+                        return res.status(401).json({
+                            code: 'B006',
+                            type: 'validatingUser',
+                            message: 'JWT Payload Invalid'
+                        });
+                    if (decoded.exp.toString().length == 10)
+                        decoded.exp *= 1000;
+                    if (decoded.iat.toString().length == 10)
+                        decoded.iat *= 1000;
+                    if (decoded.orderTime && decoded.orderTime.toString().length == 10)
+                        decoded.orderTime *= 1000;
+                    if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1))
+                        return res.status(401).json({
+                            code: 'B007',
+                            type: 'validatingUser',
+                            message: 'JWT Expired'
+                        });
+                    if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
+                        return res.status(401).json({
+                            code: 'B008',
+                            type: 'validatingUser',
+                            message: 'Not Authorized for this URI'
+                        });
+                    redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
+                        if (err) return next(err);
+                        if (reply !== null) {
                             return res.status(401).json({
-                                code: 'B002',
-                                type: 'validatingUser',
-                                message: 'User not Found'
+                                code: 'Z004',
+                                type: 'security',
+                                message: 'Token reply'
                             });
-                        if (!dbUser.active)
-                            return res.status(401).json({
-                                code: 'B004',
-                                type: 'validatingUser',
-                                message: 'User has Banned'
-                            });
-                        var decoded;
-                        try {
-                            decoded = jwt.decode(jwtToken, dbKey.secretKey);
-                        } catch (err) {}
-                        if (!decoded)
-                            return res.status(401).json({
-                                code: 'B005',
-                                type: 'validatingUser',
-                                message: 'JWT Invalid or User has login on another device'
-                            });
-                        res._payload = decoded;
-                        decoded.exp = Number(decoded.exp);
-                        decoded.iat = Number(decoded.iat);
-                        if (decoded.orderTime)
-                            decoded.orderTime = Number(decoded.orderTime);
-                        if (!decoded.jti || isNaN(decoded.iat) || isNaN(decoded.exp))
-                            return res.status(401).json({
-                                code: 'B006',
-                                type: 'validatingUser',
-                                message: 'JWT Payload Invalid'
-                            });
-                        if (decoded.exp.toString().length == 10)
-                            decoded.exp *= 1000;
-                        if (decoded.iat.toString().length == 10)
-                            decoded.iat *= 1000;
-                        if (decoded.orderTime && decoded.orderTime.toString().length == 10)
-                            decoded.orderTime *= 1000;
-                        if (decoded.exp <= Date.now() || decoded.iat >= iatGetDate(1) || decoded.iat <= iatGetDate(-1))
-                            return res.status(401).json({
-                                code: 'B007',
-                                type: 'validatingUser',
-                                message: 'JWT Expired'
-                            });
-                        if (!isAuthorized(req._rolesToCheck, dbUser.roles, dbKey.roleType))
-                            return res.status(401).json({
-                                code: 'B008',
-                                type: 'validatingUser',
-                                message: 'Not Authorized for this URI'
-                            });
-                        redis.get('reply_check:' + decoded.jti + ':' + decoded.iat, (err, reply) => {
+                        }
+                        redis.setex('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, 0, (err, reply) => {
                             if (err) return next(err);
-                            if (reply !== null) {
-                                return res.status(401).json({
-                                    code: 'Z004',
-                                    type: 'security',
-                                    message: 'Token reply'
-                                });
-                            }
-                            redis.set('reply_check:' + decoded.jti + ':' + decoded.iat, 0, (err, reply) => {
-                                if (err) return next(err);
-                                if (reply !== 'OK') return next(reply);
-                                redis.expire('reply_check:' + decoded.jti + ':' + decoded.iat, 60 * 60 * 25, (err, reply) => {
-                                    if (err) return next(err);
-                                    if (reply !== 1) return next(reply);
-                                    req._user = dbUser;
-                                    req._key = dbKey;
-                                    next();
-                                });
-                            });
+                            if (reply !== 'OK') return next(reply);
+                            req._user = dbUser;
+                            req._key = dbKey;
+                            next();
                         });
                     });
                 });
