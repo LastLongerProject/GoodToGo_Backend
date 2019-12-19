@@ -63,6 +63,10 @@ app.use('/images', (req, res, next) => {
 }, images);
 
 app.use(timeout('10s'));
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    next();
+});
 app.use('/users', users);
 app.use('/stores', stores);
 app.use('/coupon', coupon);
