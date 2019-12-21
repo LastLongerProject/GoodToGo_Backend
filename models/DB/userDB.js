@@ -4,7 +4,6 @@ const Role = require("../variables/role").Role;
 const RoleCreationError = require("../variables/role").RoleCreationError;
 const UserRole = require("../enums/userEnum").UserRole;
 
-// define the schema for our user model
 var schema = mongoose.Schema({
     user: {
         phone: String,
@@ -132,7 +131,7 @@ schema.methods.addRole = function (roleType, options, cb) {
                         }
                     }
                     break;
-                case UserRole.SHOP:
+                case UserRole.STORE:
                     if (aOldRole.storeID === newRole.storeID) {
                         if (aOldRole.manager !== newRole.manager) {
                             aOldRole.manager = newRole.manager;
@@ -175,7 +174,7 @@ schema.methods.removeRole = function (roleType, options, cb) {
                 case UserRole.CLEAN_STATION:
                     if (aOldRole.stationID === roleToDelete.stationID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
-                case UserRole.SHOP:
+                case UserRole.STORE:
                     if (aOldRole.storeID === roleToDelete.storeID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
                 case UserRole.BOT:
@@ -221,7 +220,7 @@ function roleIsExist(roleList, roleToCheck) {
                 case UserRole.CLEAN_STATION:
                     if (aOldRole.stationID === roleToCheck.stationID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
-                case UserRole.SHOP:
+                case UserRole.STORE:
                     if (aOldRole.storeID === roleToCheck.storeID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
                 case UserRole.BOT:
@@ -238,5 +237,4 @@ function roleIsExist(roleList, roleToCheck) {
     return false;
 }
 
-// create the model for users and expose it to our app
 module.exports = mongoose.model('User', schema);

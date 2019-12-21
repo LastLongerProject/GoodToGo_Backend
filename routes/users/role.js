@@ -134,7 +134,7 @@ router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, re
                 });
 
             let legacyRoleTypeToAdd = roleTypeToAdd; // For Legacy Role System
-            if (roleTypeToAdd === UserRole.SHOP) legacyRoleTypeToAdd = UserRole.CLERK;
+            if (roleTypeToAdd === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
             else if (roleTypeToAdd === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
             if (!theUser.roles[legacyRoleTypeToAdd]) { // For Legacy Role System
                 theUser.roles.typeList.push(legacyRoleTypeToAdd);
@@ -197,7 +197,7 @@ router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, 
                 });
 
             let legacyRoleTypeToDelete = roleTypeToDelete; // For Legacy Role System
-            if (roleTypeToDelete === UserRole.SHOP) legacyRoleTypeToDelete = UserRole.CLERK;
+            if (roleTypeToDelete === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
             else if (roleTypeToDelete === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
             if (!theUser.roles[legacyRoleTypeToDelete]) {
                 let indexOfLegacyRoleTypeToDelete = theUser.roles.typeList.indexOf(legacyRoleTypeToDelete)

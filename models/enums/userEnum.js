@@ -4,7 +4,7 @@ module.exports = {
         ADMIN: "admin",
         CUSTOMER: "customer",
         BOT: "bot",
-        SHOP: "shop",
+        STORE: "store",
         CLEAN_STATION: "station"
     }),
     UserGroup: Object.freeze({

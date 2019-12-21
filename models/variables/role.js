@@ -67,7 +67,7 @@ module.exports = {
                     returnToStoreID,
                     reloadToStationID
                 });
-            case UserRole.SHOP:
+            case UserRole.STORE:
                 if (!options.hasOwnProperty("storeID"))
                     throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CLERK, "storeID"));
                 else if (!options.hasOwnProperty("manager"))
@@ -95,7 +95,22 @@ module.exports = {
                     group
                 });
             case UserRole.ADMIN:
-                return Object.assign(theRole);
+                var asStoreID = null;
+                var asStationID = null;
+                if (options.hasOwnProperty("asStoreID") && options.asStoreID !== null) {
+                    asStoreID = parseInt(options.asStoreID);
+                    if (isNaN(asStoreID))
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "asStoreID", asStoreID));
+                }
+                if (options.hasOwnProperty("asStationID") && options.asStationID !== null) {
+                    asStationID = parseInt(options.asStationID);
+                    if (isNaN(asStationID))
+                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "asStationID", asStationID));
+                }
+                return Object.assign(theRole, {
+                    asStoreID,
+                    asStationID
+                });
             default:
                 throw new Error(`Unknown Role Type: ${roleType}`);
         }
