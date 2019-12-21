@@ -49,6 +49,20 @@ var schema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+    usageRight: {
+        hasSuspended: {
+            type: Boolean,
+            default: false
+        },
+        suspendedTimes: {
+            type: Number,
+            default: 0
+        },
+        suspendedNoticeSended: {
+            type: Boolean,
+            default: false
+        }
+    },
     hasBanned: {
         type: Boolean,
         default: false
