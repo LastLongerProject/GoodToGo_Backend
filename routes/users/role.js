@@ -6,6 +6,7 @@ const validateRequest = require('../../middlewares/validation/validateRequest').
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const User = require('../../models/DB/userDB');
+const UserRole = require('../../models/enums/userEnum').UserRole;
 
 /**
  * @apiName CheckRoleExistence
@@ -60,9 +61,7 @@ router.get('/checkIsExisted/:roleType', validateRequest, function (req, res, nex
  * @apiUse RoleError
  */
 
-router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userPhone = req.params.phone;
     const roleTypeToCheck = req.params.roleType;
     const options = req.query;
@@ -98,7 +97,7 @@ router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin({
  * @apiGroup Users
  * @apiPermission admin_manager
  * 
- * @api {post} /role/add/:phone Add a Role in a User's RoleList
+ * @api {put} /role/add/:phone Add a Role to a User's RoleList
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
@@ -110,9 +109,7 @@ router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin({
  * @apiUse RoleError
  */
 
-router.post('/add/:phone', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userPhone = req.params.phone;
     const roleTypeToAdd = req.body.roleType;
     const options = req.body.options;
@@ -136,12 +133,77 @@ router.post('/add/:phone', checkRoleIsAdmin({
                     msg: detail
                 });
 
-            if (!theUser.roles[roleTypeToAdd]) { // For Legacy Role System
-                theUser.roles.typeList.push(roleTypeToAdd);
+            let legacyRoleTypeToAdd = roleTypeToAdd; // For Legacy Role System
+            if (roleTypeToAdd === UserRole.SHOP) legacyRoleTypeToAdd = UserRole.CLERK;
+            else if (roleTypeToAdd === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
+            if (!theUser.roles[legacyRoleTypeToAdd]) { // For Legacy Role System
+                theUser.roles.typeList.push(legacyRoleTypeToAdd);
                 const legacyRole = Object.assign({}, roleAdded);
                 delete legacyRole.roleID;
                 delete legacyRole.roleType;
-                theUser.roles[roleTypeToAdd] = legacyRole;
+                theUser.roles[legacyRoleTypeToAdd] = legacyRole;
+            }
+
+            theUser.save(err => {
+                if (err) return next(err);
+                res.json({
+                    type: 'roleMessage',
+                    roleIsExisted: detail
+                });
+            });
+        });
+    });
+});
+
+/**
+ * @apiName DeleteRoleFromUser
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ * 
+ * @api {put} /role/add/:phone Delete a Role from a User's RoleList
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Check Successfully
+ *     { 
+ *          type: 'roleMessage',
+ *          roleIsExisted: Boolean 
+ *     }
+ * @apiUse RoleError
+ */
+
+router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    const userPhone = req.params.phone;
+    const roleTypeToDelete = req.body.roleType;
+    const options = req.body.options;
+    User.findOne({
+        "user.phone": userPhone
+    }, (err, theUser) => {
+        if (err)
+            return next(err);
+        if (!theUser)
+            return res.status(403).json({
+                code: "D???",
+                type: "roleMessage",
+                msg: `Can't Find the User: ${userPhone}`
+            });
+        theUser.addRole(roleTypeToDelete, options, (err, roleDelete, detail) => {
+            if (err) return next(err);
+            if (!roleDelete)
+                return res.status(403).json({
+                    code: "D???",
+                    type: "roleMessage",
+                    msg: detail
+                });
+
+            let legacyRoleTypeToDelete = roleTypeToDelete; // For Legacy Role System
+            if (roleTypeToDelete === UserRole.SHOP) legacyRoleTypeToDelete = UserRole.CLERK;
+            else if (roleTypeToDelete === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
+            if (!theUser.roles[legacyRoleTypeToDelete]) {
+                let indexOfLegacyRoleTypeToDelete = theUser.roles.typeList.indexOf(legacyRoleTypeToDelete)
+                if (indexOfLegacyRoleTypeToDelete !== -1)
+                    theUser.roles.typeList.splice(indexOfLegacyRoleTypeToDelete, 1);
+                theUser.roles[legacyRoleTypeToDelete] = undefined;
             }
 
             theUser.save(err => {

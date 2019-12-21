@@ -44,6 +44,7 @@ function isAuthorized(req, dbUser, dbKey) {
 }
 
 function addConditionToRoleCheck(req, roleType, condition, next) {
+    if (typeof condition === "undefined") condition = {};
     if (!req._rolesToCheck) {
         req._rolesToCheck = [];
     }
@@ -147,6 +148,7 @@ module.exports = {
             });
         }
     },
+    checkRoleIsCleanStation: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.CLEAN_STATION, condition, next),
     checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.CLERK, condition, next),
     checkRoleIsAdmin: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.ADMIN, condition, next),
     checkRoleIsBot: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.BOT, condition, next)

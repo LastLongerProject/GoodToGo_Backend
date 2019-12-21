@@ -26,7 +26,7 @@ module.exports = {
         };
         if (options.extraArg) Object.assign(theRole, options.extraArg);
         switch (roleType) {
-            case UserRole.ADMIN:
+            case UserRole.CLEAN_STATION:
                 if (!options.hasOwnProperty("stationID"))
                     throw new RoleCreationError(RoleCreationError.missingArg(UserRole.ADMIN, "stationID"));
                 else if (!options.hasOwnProperty("manager"))
@@ -67,7 +67,7 @@ module.exports = {
                     returnToStoreID,
                     reloadToStationID
                 });
-            case UserRole.CLERK:
+            case UserRole.SHOP:
                 if (!options.hasOwnProperty("storeID"))
                     throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CLERK, "storeID"));
                 else if (!options.hasOwnProperty("manager"))
@@ -94,6 +94,8 @@ module.exports = {
                 return Object.assign(theRole, {
                     group
                 });
+            case UserRole.ADMIN:
+                return Object.assign(theRole);
             default:
                 throw new Error(`Unknown Role Type: ${roleType}`);
         }

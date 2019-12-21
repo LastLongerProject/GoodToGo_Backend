@@ -122,7 +122,7 @@ schema.methods.addRole = function (roleType, options, cb) {
         const aOldRole = this.roleList[index];
         if (aOldRole.roleType === newRole.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.ADMIN:
+                case UserRole.CLEAN_STATION:
                     if (aOldRole.stationID === newRole.stationID) {
                         if (aOldRole.manager !== newRole.manager) {
                             aOldRole.manager = newRole.manager;
@@ -132,7 +132,7 @@ schema.methods.addRole = function (roleType, options, cb) {
                         }
                     }
                     break;
-                case UserRole.CLERK:
+                case UserRole.SHOP:
                     if (aOldRole.storeID === newRole.storeID) {
                         if (aOldRole.manager !== newRole.manager) {
                             aOldRole.manager = newRole.manager;
@@ -148,6 +148,8 @@ schema.methods.addRole = function (roleType, options, cb) {
                 case UserRole.BOT:
                     if (aOldRole.scopeID === newRole.scopeID) return cb(null, null, "The Role Already exist");
                     break;
+                case UserRole.ADMIN:
+                    return cb(null, null, "The Role Already exist");
             }
         }
     }
@@ -170,10 +172,10 @@ schema.methods.removeRole = function (roleType, options, cb) {
         if (indexOfRoleToDelete !== -1) break;
         if (aOldRole.roleType === roleToDelete.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.ADMIN:
+                case UserRole.CLEAN_STATION:
                     if (aOldRole.stationID === roleToDelete.stationID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
-                case UserRole.CLERK:
+                case UserRole.SHOP:
                     if (aOldRole.storeID === roleToDelete.storeID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
                 case UserRole.BOT:
@@ -181,6 +183,9 @@ schema.methods.removeRole = function (roleType, options, cb) {
                     break;
                 case UserRole.CUSTOMER:
                     if (aOldRole.scopeID === roleToDelete.scopeID) indexOfRoleToDelete = index;
+                    break;
+                case UserRole.ADMIN:
+                    indexOfRoleToDelete = index;
                     break;
             }
         }
@@ -213,10 +218,10 @@ function roleIsExist(roleList, roleToCheck) {
         const aOldRole = roleList[index];
         if (aOldRole.roleType === roleToCheck.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.ADMIN:
+                case UserRole.CLEAN_STATION:
                     if (aOldRole.stationID === roleToCheck.stationID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
-                case UserRole.CLERK:
+                case UserRole.SHOP:
                     if (aOldRole.storeID === roleToCheck.storeID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
                 case UserRole.BOT:
@@ -225,6 +230,8 @@ function roleIsExist(roleList, roleToCheck) {
                 case UserRole.CUSTOMER:
                     if (aOldRole.scopeID === roleToCheck.scopeID) return true;
                     break;
+                case UserRole.ADMIN:
+                    return true;
             }
         }
     }

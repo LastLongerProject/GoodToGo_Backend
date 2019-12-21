@@ -3,7 +3,9 @@ module.exports = {
         CLERK: "clerk",
         ADMIN: "admin",
         CUSTOMER: "customer",
-        BOT: "bot"
+        BOT: "bot",
+        SHOP: "shop",
+        CLEAN_STATION: "station"
     }),
     UserGroup: Object.freeze({
         GOODTOGO_MEMBER: "GoodToGo_member",
