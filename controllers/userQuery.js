@@ -87,25 +87,6 @@ module.exports = {
                     dbUser.user.password = dbUser.generateHash(password);
                     modifySomething_ori = true;
                 }
-                if ((role.typeCode === UserRole.CLERK || role.typeCode === UserRole.ADMIN) && dbUser.roles.typeList.indexOf(role.typeCode) === -1) {
-                    switch (role.typeCode) {
-                        case UserRole.CLERK:
-                            dbUser.roles.typeList.push(UserRole.CLERK);
-                            dbUser.roles.clerk = {
-                                storeID: role.storeID,
-                                manager: role.manager,
-                            };
-                            break;
-                        case UserRole.ADMIN:
-                            dbUser.roles.typeList.push(UserRole.ADMIN);
-                            dbUser.roles.admin = {
-                                stationID: role.stationID,
-                                manager: role.manager
-                            };
-                            break;
-                    }
-                    modifySomething_ori = true;
-                }
                 dbUser.addRole(role.typeCode, role, (err, roleAdded, msg) => {
                     if (err) return done(err);
                     if (!modifySomething_ori && !roleAdded) {
@@ -153,40 +134,21 @@ module.exports = {
                         if (dbUser) { // has NOT verified
                             userToSave = dbUser;
                         } else {
-                            let newUser = new User();
-                            newUser.user.phone = phone;
-                            newUser.user.password = newUser.generateHash(password);
-                            newUser.registerMethod = options.registerMethod;
+                            let newUser = new User({
+                                user: {
+                                    phone,
+                                    password: newUser.generateHash(password)
+                                },
+                                registerMethod: options.registerMethod
+                            });
 
                             if (typeof roles !== 'undefined') { // v2 api
                                 newUser.roles = roles;
                             } else {
-                                switch (role.typeCode) { // v1 api
-                                    case UserRole.CLERK:
-                                        newUser.roles.typeList.push(UserRole.CLERK);
-                                        newUser.roles.clerk = {
-                                            storeID: role.storeID,
-                                            manager: role.manager || false,
-                                        };
-                                        break;
-                                    case UserRole.ADMIN:
-                                        newUser.roles.typeList.push(UserRole.ADMIN);
-                                        newUser.roles.admin = {
-                                            stationID: role.stationID,
-                                            manager: role.manager || false
-                                        };
-                                        break;
-                                }
                                 rolesToAdd.push({
                                     typeCode: role.typeCode,
                                     options: role
                                 });
-                            }
-                            if (newUser.roles.typeList.indexOf(UserRole.CUSTOMER) === -1) {
-                                newUser.roles.typeList.push(UserRole.CUSTOMER);
-                                newUser.roles.customer = {
-                                    group: UserGroup.GOODTOGO_MEMBER
-                                };
                             }
                             rolesToAdd.push({
                                 typeCode: UserRole.CUSTOMER,
@@ -281,11 +243,13 @@ module.exports = {
                     if (dbUser) { // has NOT verified
                         userToSave = dbUser;
                     } else {
-                        let newUser = new User();
-                        newUser.user.phone = phone;
-                        newUser.user.password = null;
-                        newUser.registerMethod = options.registerMethod;
-                        newUser.roles.typeList.push(UserRole.CUSTOMER);
+                        let newUser = new User({
+                            user: {
+                                phone,
+                                password: null
+                            },
+                            registerMethod: options.registerMethod
+                        });
                         userToSave = newUser;
                     }
 
@@ -293,10 +257,6 @@ module.exports = {
                     userToSave.user.line_channel_userID = line_channel_userID;
                     let customerRole;
                     if (worker_id !== null) {
-                        userToSave.roles.customer = {
-                            group: UserGroup.KUANG_TIEN_STAFF,
-                            worker_id
-                        };
                         customerRole = {
                             group: UserGroup.KUANG_TIEN_STAFF,
                             extraArg: {
@@ -305,9 +265,6 @@ module.exports = {
                         };
                         userToSave.hasPurchase = true;
                     } else {
-                        userToSave.roles.customer = {
-                            group: UserGroup.GOODTOGO_MEMBER
-                        };
                         customerRole = {
                             group: UserGroup.GOODTOGO_MEMBER
                         };

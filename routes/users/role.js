@@ -132,18 +132,6 @@ router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, re
                     type: "roleMessage",
                     msg: detail
                 });
-
-            let legacyRoleTypeToAdd = roleTypeToAdd; // For Legacy Role System
-            if (roleTypeToAdd === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
-            else if (roleTypeToAdd === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
-            if (!theUser.roles[legacyRoleTypeToAdd]) { // For Legacy Role System
-                theUser.roles.typeList.push(legacyRoleTypeToAdd);
-                const legacyRole = Object.assign({}, roleAdded);
-                delete legacyRole.roleID;
-                delete legacyRole.roleType;
-                theUser.roles[legacyRoleTypeToAdd] = legacyRole;
-            }
-
             theUser.save(err => {
                 if (err) return next(err);
                 res.json({
@@ -187,7 +175,7 @@ router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, 
                 type: "roleMessage",
                 msg: `Can't Find the User: ${userPhone}`
             });
-        theUser.addRole(roleTypeToDelete, options, (err, roleDelete, detail) => {
+        theUser.removeRole(roleTypeToDelete, options, (err, roleDelete, detail) => {
             if (err) return next(err);
             if (!roleDelete)
                 return res.status(403).json({
@@ -195,17 +183,6 @@ router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, 
                     type: "roleMessage",
                     msg: detail
                 });
-
-            let legacyRoleTypeToDelete = roleTypeToDelete; // For Legacy Role System
-            if (roleTypeToDelete === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
-            else if (roleTypeToDelete === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
-            if (!theUser.roles[legacyRoleTypeToDelete]) {
-                let indexOfLegacyRoleTypeToDelete = theUser.roles.typeList.indexOf(legacyRoleTypeToDelete)
-                if (indexOfLegacyRoleTypeToDelete !== -1)
-                    theUser.roles.typeList.splice(indexOfLegacyRoleTypeToDelete, 1);
-                theUser.roles[legacyRoleTypeToDelete] = undefined;
-            }
-
             theUser.save(err => {
                 if (err) return next(err);
                 res.json({

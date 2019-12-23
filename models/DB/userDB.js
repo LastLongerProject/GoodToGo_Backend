@@ -101,12 +101,7 @@ schema.methods.getBannedTxt = function (action) {
         `您已被停權，無法${action}！\n欲解除停權，請私訊好盒器粉專。`}`;
 };
 
-schema.methods.checkPermission = function (role_id) {
-    for (let index in this.roleList) {
-        if (this.roleList[index]._id.equals(role_id)) return true;
-    }
-    return false;
-};
+schema.methods.checkPermission = function (role_id) {};
 
 schema.methods.addRole = function (roleType, options, cb) {
     let newRole;
@@ -154,6 +149,18 @@ schema.methods.addRole = function (roleType, options, cb) {
     }
     if (!roleIsModified) this.roleList.push(newRole);
     this.markModified('roleList');
+
+    let legacyRoleTypeToAdd = newRole.roleType; // For Legacy Role System
+    if (newRole.roleType === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
+    else if (newRole.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
+    if (this.roles.typeList.indexOf(legacyRoleTypeToAdd) === -1 && !this.roles[legacyRoleTypeToAdd]) {
+        this.roles.typeList.push(legacyRoleTypeToAdd);
+        const legacyRole = Object.assign({}, newRole);
+        delete legacyRole.roleID;
+        delete legacyRole.roleType;
+        this.roles[legacyRoleTypeToAdd] = legacyRole;
+    }
+
     cb(null, newRole, "Role Added");
 };
 
@@ -191,6 +198,17 @@ schema.methods.removeRole = function (roleType, options, cb) {
     }
     if (indexOfRoleToDelete === -1) return cb(null, null, "Can't Find that Role");
     this.roleList.splice(indexOfRoleToDelete, 1);
+
+    let legacyRoleTypeToDelete = roleToDelete.roleType; // For Legacy Role System
+    if (roleToDelete.roleType === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
+    else if (roleToDelete.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
+    if (!this.roles[legacyRoleTypeToDelete]) {
+        let indexOfLegacyRoleTypeToDelete = this.roles.typeList.indexOf(legacyRoleTypeToDelete)
+        if (indexOfLegacyRoleTypeToDelete !== -1)
+            this.roles.typeList.splice(indexOfLegacyRoleTypeToDelete, 1);
+        this.roles[legacyRoleTypeToDelete] = undefined;
+    }
+
     cb(null, roleToDelete, "Role Deleted");
 };
 
