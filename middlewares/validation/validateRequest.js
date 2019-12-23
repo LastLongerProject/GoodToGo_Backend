@@ -12,11 +12,20 @@ function iatGetDate(int) {
 
 function isAuthorized(req, dbUser, dbKey) {
     const rolesToCheck = req._rolesToCheck;
-    if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true; // Customer
+    // addConditionToRoleCheck(req, UserRole.CUSTOMER) // Default as Customer
     if (typeof dbKey.roleID === "undefined" || typeof dbUser.roleList === "undefined") { // Legacy Role System
         const userRoles = dbUser.roles;
         const thisKeyRole = dbKey.roleType;
-        if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true; // Customer
+        let roleForNewSys = {};
+        let roleTypeForNewSys = thisKeyRole;
+        if (roleTypeForNewSys === UserRole.CLERK) roleTypeForNewSys = UserRole.STORE;
+        else if (roleTypeForNewSys === UserRole.ADMIN) roleTypeForNewSys = UserRole.CLEAN_STATION;
+        Object.assign(roleForNewSys, userRoles);
+        Object.assign(roleForNewSys, {
+            roleType: roleTypeForNewSys
+        });
+        req._thisRole = roleForNewSys;
+        if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true;
         for (let conditionIndex in rolesToCheck) {
             let aCondition = rolesToCheck[conditionIndex];
             if (userRoles[aCondition.roleType] && String(thisKeyRole).startsWith(aCondition.roleType)) {
@@ -29,6 +38,8 @@ function isAuthorized(req, dbUser, dbKey) {
         return false;
     } else {
         const theKeyRole = dbUser.roleList.find(aRole => aRole.roleID === dbKey.roleID);
+        req._thisRole = theKeyRole;
+        if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true;
         for (let roleIndex in rolesToCheck) {
             let aRoleToCheck = rolesToCheck[roleIndex];
             if (aRoleToCheck.roleType === theKeyRole.roleType) {
@@ -52,7 +63,7 @@ function addConditionToRoleCheck(req, roleType, condition, next) {
         roleType,
         condition
     });
-    next();
+    if (next) next();
 }
 
 module.exports = {
