@@ -8,19 +8,19 @@ module.exports = {
         Promise
             .all([
                 new Promise((resolve, reject) => {
-                    tasks.containerListInit(err => {
+                    tasks.containerListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    tasks.storeListInit(err => {
+                    tasks.storeListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    tasks.couponListInit(err => {
+                    tasks.couponListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });

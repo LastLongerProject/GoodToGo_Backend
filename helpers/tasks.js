@@ -19,27 +19,22 @@ const userTrade = require("../controllers/userTrade");
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
 
-const Box = require('../models/DB/boxDB');
-const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
-const BoxAction = require('../models/enums/boxEnum').BoxAction;
-const getContainerHash = require('../helpers/tools').getContainerHash;
-
 module.exports = {
-    storeListInit: function (cb) {
+    storeListCaching: function (cb) {
         storeListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
             debug.log('storeList init');
         });
     },
-    containerListInit: function (cb) {
+    containerListCaching: function (cb) {
         containerListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
             debug.log('containerList init');
         });
     },
-    couponListInit: function (cb) {
+    couponListCaching: function (cb) {
         couponListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
