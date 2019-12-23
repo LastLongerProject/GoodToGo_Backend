@@ -79,7 +79,7 @@ schema.index({
     "user.phone": 1
 });
 
-schema.methods.generateHash = function (password) {
+schema.statics.generateHash = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
@@ -109,7 +109,7 @@ schema.methods.addRole = function (roleType, options, cb) {
         newRole = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, null, error.message);
-        else cb(error);
+        else return cb(error);
     }
     let roleIsModified = false;
     for (let index in this.roleList) {
@@ -150,11 +150,14 @@ schema.methods.addRole = function (roleType, options, cb) {
     if (!roleIsModified) this.roleList.push(newRole);
     this.markModified('roleList');
 
-    let legacyRoleTypeToAdd = newRole.roleType; // For Legacy Role System
-    if (newRole.roleType === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
-    else if (newRole.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
-    if (this.roles.typeList.indexOf(legacyRoleTypeToAdd) === -1 && !this.roles[legacyRoleTypeToAdd]) {
-        this.roles.typeList.push(legacyRoleTypeToAdd);
+
+    if (newRole.roleType !== UserRole.ADMIN) {
+        let legacyRoleTypeToAdd = newRole.roleType; // For Legacy Role System
+        if (newRole.roleType === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
+        else if (newRole.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
+        if (this.roles.typeList.indexOf(legacyRoleTypeToAdd) === -1) {
+            this.roles.typeList.push(legacyRoleTypeToAdd);
+        }
         const legacyRole = Object.assign({}, newRole);
         delete legacyRole.roleID;
         delete legacyRole.roleType;
@@ -170,7 +173,7 @@ schema.methods.removeRole = function (roleType, options, cb) {
         roleToDelete = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, null, error.message);
-        else cb(error);
+        else return cb(error);
     }
     let indexOfRoleToDelete = -1;
     for (let index in this.roleList) {
@@ -199,14 +202,15 @@ schema.methods.removeRole = function (roleType, options, cb) {
     if (indexOfRoleToDelete === -1) return cb(null, null, "Can't Find that Role");
     this.roleList.splice(indexOfRoleToDelete, 1);
 
-    let legacyRoleTypeToDelete = roleToDelete.roleType; // For Legacy Role System
-    if (roleToDelete.roleType === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
-    else if (roleToDelete.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
-    if (!this.roles[legacyRoleTypeToDelete]) {
+    if (roleToDelete.roleType !== UserRole.ADMIN) {
+        let legacyRoleTypeToDelete = roleToDelete.roleType; // For Legacy Role System
+        if (roleToDelete.roleType === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
+        else if (roleToDelete.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
         let indexOfLegacyRoleTypeToDelete = this.roles.typeList.indexOf(legacyRoleTypeToDelete)
         if (indexOfLegacyRoleTypeToDelete !== -1)
             this.roles.typeList.splice(indexOfLegacyRoleTypeToDelete, 1);
-        this.roles[legacyRoleTypeToDelete] = undefined;
+        if (this.roles[legacyRoleTypeToDelete])
+            this.roles[legacyRoleTypeToDelete] = undefined;
     }
 
     cb(null, roleToDelete, "Role Deleted");
@@ -225,7 +229,7 @@ schema.methods.roleIsExist = function (roleType, options, cb) {
         roleToCheck = new Role(roleType, options);
     } catch (error) {
         if (error instanceof RoleCreationError) return cb(null, null, error.message);
-        else cb(error);
+        else return cb(error);
     }
     return cb(null, roleToCheck, roleIsExist(this.roleList, roleToCheck));
 };

@@ -84,7 +84,7 @@ module.exports = {
             if (dbUser && dbUser.hasVerified) {
                 let modifySomething_ori = false;
                 if (dbUser.user.password === null) {
-                    dbUser.user.password = dbUser.generateHash(password);
+                    dbUser.user.password = User.generateHash(password);
                     modifySomething_ori = true;
                 }
                 dbUser.addRole(role.typeCode, role, (err, roleAdded, msg) => {
@@ -137,7 +137,7 @@ module.exports = {
                             let newUser = new User({
                                 user: {
                                     phone,
-                                    password: newUser.generateHash(password)
+                                    password: User.generateHash(password)
                                 },
                                 registerMethod: options.registerMethod
                             });
@@ -356,7 +356,7 @@ module.exports = {
                 type: 'chanPassMessage',
                 message: 'Wrong password'
             });
-        dbUser.user.password = dbUser.generateHash(newPassword);
+        dbUser.user.password = User.generateHash(newPassword);
         dbUser.save(function (err) {
             if (err) return done(err);
             UserKeys.deleteMany({
@@ -430,7 +430,7 @@ module.exports = {
                         'phone': dbUser.user.phone
                     }, (err) => {
                         if (err) return done(err);
-                        dbUser.user.password = dbUser.generateHash(newPassword);
+                        dbUser.user.password = User.generateHash(newPassword);
                         dbUser.save(function (err) {
                             if (err) return done(err);
                             redis.del('newPass_verifying:' + phone, (err, delReply) => {

@@ -6,7 +6,6 @@ const validateRequest = require('../../middlewares/validation/validateRequest').
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const User = require('../../models/DB/userDB');
-const UserRole = require('../../models/enums/userEnum').UserRole;
 
 /**
  * @apiName CheckRoleExistence
@@ -30,7 +29,12 @@ router.get('/checkIsExisted/:roleType', validateRequest, function (req, res, nex
     const roleTypeToCheck = req.params.roleType;
     const options = req.query;
     dbUser.roleIsExist(roleTypeToCheck, options, (err, validTask, detail) => {
-        if (err) return next(err);
+        if (err)
+            return res.status(403).json({
+                code: "D???",
+                type: "roleMessage",
+                msg: err.message
+            });
         if (!validTask)
             return res.status(403).json({
                 code: "D???",
@@ -77,7 +81,12 @@ router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin(), validateReque
                 msg: `Can't Find the User: ${userPhone}`
             });
         theUser.roleIsExist(roleTypeToCheck, options, (err, validTask, detail) => {
-            if (err) return next(err);
+            if (err)
+                return res.status(403).json({
+                    code: "D???",
+                    type: "roleMessage",
+                    msg: err.message
+                });
             if (!validTask)
                 return res.status(403).json({
                     code: "D???",
@@ -104,7 +113,7 @@ router.get('/checkIsExisted/:phone/:roleType', checkRoleIsAdmin(), validateReque
  *     HTTP/1.1 200 Check Successfully
  *     { 
  *          type: 'roleMessage',
- *          roleIsExisted: Boolean 
+ *          result: Boolean 
  *     }
  * @apiUse RoleError
  */
@@ -125,7 +134,12 @@ router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, re
                 msg: `Can't Find the User: ${userPhone}`
             });
         theUser.addRole(roleTypeToAdd, options, (err, roleAdded, detail) => {
-            if (err) return next(err);
+            if (err)
+                return res.status(403).json({
+                    code: "D???",
+                    type: "roleMessage",
+                    msg: err.message
+                });
             if (!roleAdded)
                 return res.status(403).json({
                     code: "D???",
@@ -136,7 +150,7 @@ router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, re
                 if (err) return next(err);
                 res.json({
                     type: 'roleMessage',
-                    roleIsExisted: detail
+                    result: detail
                 });
             });
         });
@@ -148,19 +162,19 @@ router.put('/add/:phone', checkRoleIsAdmin(), validateRequest, function (req, re
  * @apiGroup Users
  * @apiPermission admin_manager
  * 
- * @api {put} /role/add/:phone Delete a Role from a User's RoleList
+ * @api {put} /role/remove/:phone Delete a Role from a User's RoleList
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Check Successfully
  *     { 
  *          type: 'roleMessage',
- *          roleIsExisted: Boolean 
+ *          result: Boolean 
  *     }
  * @apiUse RoleError
  */
 
-router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+router.delete('/remove/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userPhone = req.params.phone;
     const roleTypeToDelete = req.body.roleType;
     const options = req.body.options;
@@ -176,7 +190,12 @@ router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, 
                 msg: `Can't Find the User: ${userPhone}`
             });
         theUser.removeRole(roleTypeToDelete, options, (err, roleDelete, detail) => {
-            if (err) return next(err);
+            if (err)
+                return res.status(403).json({
+                    code: "D???",
+                    type: "roleMessage",
+                    msg: err.message
+                });
             if (!roleDelete)
                 return res.status(403).json({
                     code: "D???",
@@ -187,7 +206,7 @@ router.delete('/deleteByCondition/:phone', checkRoleIsAdmin(), validateRequest, 
                 if (err) return next(err);
                 res.json({
                     type: 'roleMessage',
-                    roleIsExisted: detail
+                    result: detail
                 });
             });
         });

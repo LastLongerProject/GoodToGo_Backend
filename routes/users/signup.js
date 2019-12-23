@@ -176,9 +176,8 @@ router.post('/clerk', checkRoleIsStore({
 router.post('/storeManager', checkRoleIsAdmin({
     "manager": true
 }), validateRequest, function (req, res, next) {
-    // for CLERK
     req.body.role = {
-        typeCode: UserRole.CLERK,
+        typeCode: UserRole.STORE,
         manager: true,
         storeID: req.body.storeID
     };
