@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const JWT = require('jsonwebtoken');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB');
 const UserKeys = require('../../models/DB/userKeysDB');
@@ -86,7 +86,7 @@ module.exports = {
                 User.findById(dbKey.user, function (err, dbUser) {
                     if (err)
                         return next(err);
-                    if (!dbUser || (typeof dbKey.roleID !== "undefined" && !dbUser.roleIsExistByID(dbKey.roleID)))
+                    if (!dbUser)
                         return res.status(401).json({
                             code: 'B002',
                             type: 'validatingUser',
@@ -98,13 +98,25 @@ module.exports = {
                             type: 'validatingUser',
                             message: 'User has Banned'
                         });
-                    jwt.verify(jwtToken, dbKey.secretKey, (err, decoded) => {
-                        if (err)
-                            return res.status(401).json({
-                                code: 'B005',
-                                type: 'validatingUser',
-                                message: 'JWT Invalid or User has login on another device'
-                            });
+                    if (typeof dbKey.roleID !== "undefined" && !dbUser.roleIsExistByID(dbKey.roleID))
+                        return res.status(401).json({
+                            code: 'B003',
+                            type: 'validatingUser',
+                            message: 'User no longer own that role'
+                        });
+                    JWT.verify(jwtToken, dbKey.secretKey, {
+                        ignoreExpiration: true
+                    }, (err, decoded) => {
+                        if (err || !decoded) {
+                            if (err instanceof JWT.JsonWebTokenError)
+                                return res.status(401).json({
+                                    code: 'B005',
+                                    type: 'validatingUser',
+                                    message: `JWTerr: ${err.message}`
+                                });
+                            else
+                                return next(err);
+                        }
                         res._payload = decoded;
                         decoded.exp = Number(decoded.exp);
                         decoded.iat = Number(decoded.iat);
@@ -114,7 +126,7 @@ module.exports = {
                             return res.status(401).json({
                                 code: 'B006',
                                 type: 'validatingUser',
-                                message: 'JWT Payload Invalid'
+                                message: 'Arguments in JWT Payload are Invalid'
                             });
                         if (decoded.exp.toString().length == 10)
                             decoded.exp *= 1000;
@@ -126,7 +138,7 @@ module.exports = {
                             return res.status(401).json({
                                 code: 'B007',
                                 type: 'validatingUser',
-                                message: 'JWT Expired'
+                                message: 'JWT has Expired'
                             });
                         if (!isAuthorized(req, dbUser, dbKey))
                             return res.status(401).json({
