@@ -13,14 +13,14 @@ function iatGetDate(int) {
 function isAuthorized(req, dbUser, dbKey) {
     const rolesToCheck = req._rolesToCheck;
     // addConditionToRoleCheck(req, UserRole.CUSTOMER) // Default as Customer
-    if (typeof dbKey.roleID === "undefined" || typeof dbUser.roleList === "undefined") { // Legacy Role System
+    if (typeof dbKey.roleID === "undefined" || typeof dbUser.roleList === "undefined" || dbUser.roleList.length === 0) { // Legacy Role System
         const userRoles = dbUser.roles;
         const thisKeyRole = dbKey.roleType;
         let roleForNewSys = {};
         let roleTypeForNewSys = thisKeyRole;
         if (roleTypeForNewSys === UserRole.CLERK) roleTypeForNewSys = UserRole.STORE;
         else if (roleTypeForNewSys === UserRole.ADMIN) roleTypeForNewSys = UserRole.CLEAN_STATION;
-        Object.assign(roleForNewSys, userRoles);
+        Object.assign(roleForNewSys, userRoles[thisKeyRole]);
         Object.assign(roleForNewSys, {
             roleType: roleTypeForNewSys
         });

@@ -150,7 +150,6 @@ schema.methods.addRole = function (roleType, options, cb) {
     if (!roleIsModified) this.roleList.push(newRole);
     this.markModified('roleList');
 
-
     if (newRole.roleType !== UserRole.ADMIN) {
         let legacyRoleTypeToAdd = newRole.roleType; // For Legacy Role System
         if (newRole.roleType === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
