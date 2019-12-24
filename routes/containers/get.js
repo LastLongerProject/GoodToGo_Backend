@@ -18,7 +18,7 @@ const intReLength = require('../../helpers/toolkit').intReLength;
 const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
-const UserRole = require('../../models/enums/userEnum').UserRole;
+const RoleType = require('../../models/enums/userEnum').RoleType;
 
 const historyDays = 14;
 
@@ -333,7 +333,7 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === UserRole.CLERK)
+    if (dbKey.roleType === RoleType.CLERK)
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
@@ -382,10 +382,10 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === UserRole.CLERK) ? undefined : {
+                        phone: (dbKey.roleType === RoleType.CLERK) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === RoleType.CLERK) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

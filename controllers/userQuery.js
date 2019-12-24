@@ -11,8 +11,9 @@ const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const UserGroup = require('../models/enums/userEnum').UserGroup;
+const role = require('../models/variables/role');
 
 function sendVerificationCode(phone, done) {
     var newCode = keys.getVerificationCode();
@@ -35,7 +36,7 @@ function sendVerificationCode(phone, done) {
 module.exports = {
     signup: function (req, done) {
         let role = req.body.role || {
-            typeCode: UserRole.CUSTOMER
+            typeCode: RoleType.CUSTOMER
         };
         let roles = req.body.roles;
         const phone = req.body.phone.replace(/tel:|-/g, "");
@@ -57,9 +58,9 @@ module.exports = {
             });
         } else if (
             typeof roles === 'undefined' &&
-            ((role.typeCode === UserRole.CLERK && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === UserRole.ADMIN && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === UserRole.CUSTOMER && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+            ((role.typeCode === RoleType.CLERK && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
+                (role.typeCode === RoleType.ADMIN && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
+                (role.typeCode === RoleType.CUSTOMER && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -151,7 +152,7 @@ module.exports = {
                                 });
                             }
                             rolesToAdd.push({
-                                typeCode: UserRole.CUSTOMER,
+                                typeCode: RoleType.CUSTOMER,
                                 options: {
                                     group: UserGroup.GOODTOGO_MEMBER
                                 }
@@ -271,7 +272,7 @@ module.exports = {
                     }
                     userToSave.hasVerified = true;
                     userToSave.agreeTerms = true;
-                    userToSave.addRole(UserRole.CUSTOMER, customerRole, err => {
+                    userToSave.addRole(RoleType.CUSTOMER, customerRole, err => {
                         if (err) return done(err);
                         userToSave.save(function (err) {
                             if (err) return done(err);
@@ -477,13 +478,13 @@ module.exports = {
             });
         }
         const role = {
-            typeCode: UserRole.BOT,
+            typeCode: RoleType.BOT,
             scopeID: req.body.scopeID
         };
         const botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': UserRole.BOT
+                'role.typeCode': RoleType.BOT
             }, function (err, botAmount) {
                 if (err) return done(err);
                 const botID = `bot${intReLength(botAmount + 1, 5)}`;
@@ -494,7 +495,7 @@ module.exports = {
                     },
                     role: role,
                     roles: {
-                        typeList: [UserRole.BOT],
+                        typeList: [RoleType.BOT],
                         bot: role
                     },
                     active: true
@@ -522,7 +523,7 @@ module.exports = {
     createBotKey: function (req, done) {
         User.findOne({
             'user.name': req.body.bot,
-            'role.typeCode': UserRole.BOT
+            'role.typeCode': RoleType.BOT
         }, function (err, theBot) {
             if (err) return done(err);
             if (!theBot)
@@ -575,7 +576,7 @@ function createBotKey(theBot, ua, done) {
         if (err) return done(err);
         UserKeys.findOneAndUpdate({
             'phone': theBot.user.phone,
-            'roleType': UserRole.BOT,
+            'roleType': RoleType.BOT,
             'user': theBot._id
         }, {
             'secretKey': returnKeys.secretKey,
@@ -637,13 +638,6 @@ function fetchUserKeys(dbUser, cid, ua, done) {
         });
 }
 
-function getStoreName(storeID) {
-    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-    const theStore = storeDict[storeID];
-    if (theStore) return theStore.name;
-    else return "找不到店家";
-}
-
 function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
     let payload = {
         roles: {
@@ -663,26 +657,26 @@ function payloadBuilder(payload, userKey) {
         secretKey: userKey.secretKey
     });
     delete theRole.roleID;
-    if (userKey.roleType === UserRole.CLERK)
+    if (userKey.roleType === RoleType.STORE)
         Object.assign(theRole, {
-            storeName: getStoreName(theRole.storeID)
+            storeName: role.getElement(theRole, role.elements.STORE_NAME)
         });
 
     // Legacy Role sys
-    if (userKey.roleType === UserRole.CUSTOMER) {
+    if (userKey.roleType === RoleType.CUSTOMER) {
         payload.roles.customer = {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (String(userKey.roleType).startsWith(`${UserRole.CLERK}`)) {
+    } else if (String(userKey.roleType).startsWith(`${RoleType.CLERK}`)) {
         payload.roles[userKey.roleType] = {
             storeID: theRole.storeID,
             manager: theRole.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
-            storeName: getStoreName(theRole.storeID),
+            storeName: role.getElement(theRole, role.elements.STORE_NAME)
         };
-    } else if (userKey.roleType === UserRole.ADMIN) {
+    } else if (userKey.roleType === RoleType.ADMIN) {
         payload.roles.admin = {
             stationID: theRole.stationID,
             manager: theRole.manager,

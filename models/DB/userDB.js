@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
 const Role = require("../variables/role").Role;
 const RoleCreationError = require("../variables/role").RoleCreationError;
-const UserRole = require("../enums/userEnum").UserRole;
+const RoleType = require("../enums/userEnum").RoleType;
 
 var schema = mongoose.Schema({
     user: {
@@ -116,7 +116,7 @@ schema.methods.addRole = function (roleType, options, cb) {
         const aOldRole = this.roleList[index];
         if (aOldRole.roleType === newRole.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.CLEAN_STATION:
+                case RoleType.CLEAN_STATION:
                     if (aOldRole.stationID === newRole.stationID) {
                         if (aOldRole.manager !== newRole.manager) {
                             aOldRole.manager = newRole.manager;
@@ -126,7 +126,7 @@ schema.methods.addRole = function (roleType, options, cb) {
                         }
                     }
                     break;
-                case UserRole.STORE:
+                case RoleType.STORE:
                     if (aOldRole.storeID === newRole.storeID) {
                         if (aOldRole.manager !== newRole.manager) {
                             aOldRole.manager = newRole.manager;
@@ -136,13 +136,13 @@ schema.methods.addRole = function (roleType, options, cb) {
                         }
                     }
                     break;
-                case UserRole.CUSTOMER:
+                case RoleType.CUSTOMER:
                     if (aOldRole.group === newRole.group) return cb(null, null, "The Role Already exist");
                     break;
-                case UserRole.BOT:
+                case RoleType.BOT:
                     if (aOldRole.scopeID === newRole.scopeID) return cb(null, null, "The Role Already exist");
                     break;
-                case UserRole.ADMIN:
+                case RoleType.ADMIN:
                     return cb(null, null, "The Role Already exist");
             }
         }
@@ -150,10 +150,10 @@ schema.methods.addRole = function (roleType, options, cb) {
     if (!roleIsModified) this.roleList.push(newRole);
     this.markModified('roleList');
 
-    if (newRole.roleType !== UserRole.ADMIN) {
+    if (newRole.roleType !== RoleType.ADMIN) {
         let legacyRoleTypeToAdd = newRole.roleType; // For Legacy Role System
-        if (newRole.roleType === UserRole.STORE) legacyRoleTypeToAdd = UserRole.CLERK;
-        else if (newRole.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToAdd = UserRole.ADMIN;
+        if (newRole.roleType === RoleType.STORE) legacyRoleTypeToAdd = RoleType.CLERK;
+        else if (newRole.roleType === RoleType.CLEAN_STATION) legacyRoleTypeToAdd = RoleType.ADMIN;
         if (this.roles.typeList.indexOf(legacyRoleTypeToAdd) === -1) {
             this.roles.typeList.push(legacyRoleTypeToAdd);
         }
@@ -180,19 +180,19 @@ schema.methods.removeRole = function (roleType, options, cb) {
         if (indexOfRoleToDelete !== -1) break;
         if (aOldRole.roleType === roleToDelete.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.CLEAN_STATION:
+                case RoleType.CLEAN_STATION:
                     if (aOldRole.stationID === roleToDelete.stationID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
-                case UserRole.STORE:
+                case RoleType.STORE:
                     if (aOldRole.storeID === roleToDelete.storeID && aOldRole.manager === roleToDelete.manager) indexOfRoleToDelete = index;
                     break;
-                case UserRole.BOT:
+                case RoleType.BOT:
                     if (aOldRole.group === roleToDelete.group) indexOfRoleToDelete = index;
                     break;
-                case UserRole.CUSTOMER:
+                case RoleType.CUSTOMER:
                     if (aOldRole.scopeID === roleToDelete.scopeID) indexOfRoleToDelete = index;
                     break;
-                case UserRole.ADMIN:
+                case RoleType.ADMIN:
                     indexOfRoleToDelete = index;
                     break;
             }
@@ -201,10 +201,10 @@ schema.methods.removeRole = function (roleType, options, cb) {
     if (indexOfRoleToDelete === -1) return cb(null, null, "Can't Find that Role");
     this.roleList.splice(indexOfRoleToDelete, 1);
 
-    if (roleToDelete.roleType !== UserRole.ADMIN) {
+    if (roleToDelete.roleType !== RoleType.ADMIN) {
         let legacyRoleTypeToDelete = roleToDelete.roleType; // For Legacy Role System
-        if (roleToDelete.roleType === UserRole.STORE) legacyRoleTypeToDelete = UserRole.CLERK;
-        else if (roleToDelete.roleType === UserRole.CLEAN_STATION) legacyRoleTypeToDelete = UserRole.ADMIN;
+        if (roleToDelete.roleType === RoleType.STORE) legacyRoleTypeToDelete = RoleType.CLERK;
+        else if (roleToDelete.roleType === RoleType.CLEAN_STATION) legacyRoleTypeToDelete = RoleType.ADMIN;
         let indexOfLegacyRoleTypeToDelete = this.roles.typeList.indexOf(legacyRoleTypeToDelete)
         if (indexOfLegacyRoleTypeToDelete !== -1)
             this.roles.typeList.splice(indexOfLegacyRoleTypeToDelete, 1);
@@ -238,19 +238,19 @@ function roleIsExist(roleList, roleToCheck) {
         const aOldRole = roleList[index];
         if (aOldRole.roleType === roleToCheck.roleType) {
             switch (aOldRole.roleType) {
-                case UserRole.CLEAN_STATION:
+                case RoleType.CLEAN_STATION:
                     if (aOldRole.stationID === roleToCheck.stationID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
-                case UserRole.STORE:
+                case RoleType.STORE:
                     if (aOldRole.storeID === roleToCheck.storeID && aOldRole.manager === roleToCheck.manager) return true;
                     break;
-                case UserRole.BOT:
+                case RoleType.BOT:
                     if (aOldRole.group === roleToCheck.group) return true;
                     break;
-                case UserRole.CUSTOMER:
+                case RoleType.CUSTOMER:
                     if (aOldRole.scopeID === roleToCheck.scopeID) return true;
                     break;
-                case UserRole.ADMIN:
+                case RoleType.ADMIN:
                     return true;
             }
         }

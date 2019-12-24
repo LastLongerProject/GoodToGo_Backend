@@ -28,7 +28,7 @@ const Activity = require('../models/DB/activityDB')
 const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
@@ -515,12 +515,12 @@ router.get('/clerkList', checkRoleIsStore({
     const TYPE_CODE = dbKey.roleType;
     let condition;
     switch (TYPE_CODE) {
-        case UserRole.ADMIN:
+        case RoleType.ADMIN:
             condition = {
                 'roles.admin.stationID': dbUser.roles.admin.stationID
             };
             break;
-        case UserRole.CLERK:
+        case RoleType.CLERK:
             condition = {
                 'roles.clerk.storeID': dbUser.roles.clerk.storeID
             };
@@ -587,7 +587,7 @@ router.post('/layoff/:id', checkRoleIsStore({
                     message: "Don't lay off yourself"
                 });
             clerk.roles.clerk = null;
-            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf(UserRole.CLERK), 1);
+            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf(RoleType.CLERK), 1);
             clerk.save(function (err) {
                 if (err) return next(err);
                 res.json({

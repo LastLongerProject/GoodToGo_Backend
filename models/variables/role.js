@@ -1,5 +1,7 @@
 const uuid = require('uuid/v4');
-const UserRole = require("../enums/userEnum").UserRole;
+const RoleType = require("../enums/userEnum").RoleType;
+const RoleElement = require("../enums/userEnum").RoleElement;
+const DataCacheFactory = require("../dataCacheFactory");
 
 class RoleCreationError extends Error {
     constructor(msg) {
@@ -14,6 +16,13 @@ class RoleCreationError extends Error {
     }
 }
 
+class NullButNotNullable extends Error {
+    constructor(eleName, eleValue) {
+        super(`Element(${eleName}) is EleValue(${eleValue}).`);
+        this.name = 'NullButNotNullable';
+    }
+}
+
 module.exports = {
     Role: function (roleType, options) {
         if (typeof options === "undefined")
@@ -21,99 +30,135 @@ module.exports = {
         else if (typeof options !== "object")
             throw new Error(`Wrong Data Type of "options" while Creating Role "${roleType}"`);
         let theRole = {
-            roleID: uuid(),
+            roleID: options.roleID || uuid(),
             roleType
         };
         if (options.extraArg) Object.assign(theRole, options.extraArg);
         switch (roleType) {
-            case UserRole.CLEAN_STATION:
-                if (!options.hasOwnProperty("stationID"))
-                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.ADMIN, "stationID"));
-                else if (!options.hasOwnProperty("manager"))
+            case RoleType.CLEAN_STATION:
+                if (!options.hasOwnProperty(RoleElement.STATION_ID))
+                    throw new RoleCreationError(RoleCreationError.missingArg(RoleType.ADMIN, RoleElement.STATION_ID));
+                else if (!options.hasOwnProperty(RoleElement.MANAGER))
                     options.manager = false;
                 else if (typeof options.manager !== "boolean") {
                     if (options.manager !== "true" && options.manager !== "false")
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.ADMIN, "manager", options.manager));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.ADMIN, RoleElement.MANAGER, options.manager));
                     else
                         options.manager = options.manager === "true";
                 }
                 var stationID = parseInt(options.stationID);
                 if (isNaN(stationID))
-                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.ADMIN, "stationID", stationID));
-                return Object.assign(theRole, {
+                    throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.ADMIN, RoleElement.STATION_ID, stationID));
+                Object.assign(theRole, {
                     stationID,
                     manager: options.manager
                 });
-            case UserRole.BOT:
-                if (!options.hasOwnProperty("scopeID"))
-                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.BOT, "scopeID"));
+                break;
+            case RoleType.BOT:
+                if (!options.hasOwnProperty(RoleElement.SCOPE_ID))
+                    throw new RoleCreationError(RoleCreationError.missingArg(RoleType.BOT, RoleElement.SCOPE_ID));
                 var scopeID = parseInt(options.scopeID);
                 if (isNaN(scopeID))
-                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "scopeID", scopeID));
+                    throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.SCOPE_ID, scopeID));
                 var returnToStoreID;
-                if (options.hasOwnProperty("returnToStoreID")) {
+                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID)) {
                     returnToStoreID = parseInt(options.returnToStoreID);
                     if (isNaN(returnToStoreID))
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "returnToStoreID", returnToStoreID));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RETURN_TO_STORE_ID, returnToStoreID));
                 }
                 var reloadToStationID;
-                if (options.hasOwnProperty("reloadToStationID")) {
+                if (options.hasOwnProperty(RoleElement.RELOAD_TO_STATION_ID)) {
                     reloadToStationID = parseInt(options.reloadToStationID);
                     if (isNaN(reloadToStationID))
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.BOT, "reloadToStationID", returnToStoreID));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RELOAD_TO_STATION_ID, returnToStoreID));
                 }
-                return Object.assign(theRole, {
+                Object.assign(theRole, {
                     scopeID,
                     returnToStoreID,
                     reloadToStationID
                 });
-            case UserRole.STORE:
-                if (!options.hasOwnProperty("storeID"))
-                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CLERK, "storeID"));
-                else if (!options.hasOwnProperty("manager"))
+                break;
+            case RoleType.STORE:
+                if (!options.hasOwnProperty(RoleElement.STORE_ID))
+                    throw new RoleCreationError(RoleCreationError.missingArg(RoleType.CLERK, RoleElement.STORE_ID));
+                else if (!options.hasOwnProperty(RoleElement.MANAGER))
                     options.manager = false;
                 else if (typeof options.manager !== "boolean") {
                     if (options.manager !== "true" && options.manager !== "false")
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "manager", options.manager));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.CLERK, RoleElement.MANAGER, options.manager));
                     else
                         options.manager = options.manager === "true";
                 }
                 var storeID = parseInt(options.storeID);
                 if (isNaN(storeID))
-                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "storeID", storeID));
-                return Object.assign(theRole, {
+                    throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.CLERK, RoleElement.STORE_ID, storeID));
+                Object.assign(theRole, {
                     storeID,
                     manager: options.manager
                 });
-            case UserRole.CUSTOMER:
-                if (!options.hasOwnProperty("group"))
-                    throw new RoleCreationError(RoleCreationError.missingArg(UserRole.CUSTOMER, "group"));
+                break;
+            case RoleType.CUSTOMER:
+                if (!options.hasOwnProperty(RoleElement.CUSTOMER_GROUP))
+                    throw new RoleCreationError(RoleCreationError.missingArg(RoleType.CUSTOMER, RoleElement.CUSTOMER_GROUP));
                 var group = options.group;
                 if (typeof group !== "string")
-                    throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CUSTOMER, "group", group));
-                return Object.assign(theRole, {
+                    throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.CUSTOMER, RoleElement.CUSTOMER_GROUP, group));
+                Object.assign(theRole, {
                     group
                 });
-            case UserRole.ADMIN:
+                break;
+            case RoleType.ADMIN:
                 var asStoreID = null;
                 var asStationID = null;
-                if (options.hasOwnProperty("asStoreID") && options.asStoreID !== null) {
+                if (options.hasOwnProperty(RoleElement.AS_STORE_ID) && options.asStoreID !== null) {
                     asStoreID = parseInt(options.asStoreID);
                     if (isNaN(asStoreID))
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "asStoreID", asStoreID));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.CLERK, RoleElement.AS_STORE_ID, asStoreID));
                 }
-                if (options.hasOwnProperty("asStationID") && options.asStationID !== null) {
+                if (options.hasOwnProperty(RoleElement.AS_STATION_ID) && options.asStationID !== null) {
                     asStationID = parseInt(options.asStationID);
                     if (isNaN(asStationID))
-                        throw new RoleCreationError(RoleCreationError.argInvalid(UserRole.CLERK, "asStationID", asStationID));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.CLERK, RoleElement.AS_STATION_ID, asStationID));
                 }
-                return Object.assign(theRole, {
+                Object.assign(theRole, {
                     asStoreID,
                     asStationID
                 });
+                break;
             default:
                 throw new Error(`Unknown Role Type: ${roleType}`);
         }
+        Object.assign(theRole, {
+            getElement: (eleName, nullable) => getElement(this, eleName, nullable)
+        });
+        Object.assign(this, theRole);
+        return this;
     },
-    RoleCreationError
+    RoleCreationError,
+    getElement,
+    elements: RoleElement
 };
+
+function getElement(theRole, eleName, nullable = true) {
+    const done = result => {
+        if (typeof result === "undefined" || result === null) {
+            if (!nullable) throw new NullButNotNullable(eleName, result);
+            else return null;
+        } else return result;
+    };
+    switch (eleName) {
+        case RoleElement.STORE_ID:
+            if (theRole.roleType !== RoleType.STORE) return done(null);
+            return done(theRole[RoleElement.STORE_ID]);
+        case RoleElement.STATION_ID:
+            if (theRole.roleType !== RoleType.STATION_ID) return done(null);
+            return done(theRole[RoleElement.STATION_ID]);
+        case RoleElement.STORE_NAME:
+            var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+            var theStore = storeDict[theRole[RoleElement.STORE_ID]];
+            if (theStore) return done(theStore.name);
+            else return done("找不到店家");
+        default:
+            return done(null);
+    }
+}

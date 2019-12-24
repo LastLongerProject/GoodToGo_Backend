@@ -1,11 +1,23 @@
 module.exports = {
-    UserRole: Object.freeze({
+    RoleType: Object.freeze({
         CLERK: "clerk",
         ADMIN: "admin",
         CUSTOMER: "customer",
         BOT: "bot",
         STORE: "store",
         CLEAN_STATION: "station"
+    }),
+    RoleElement: Object.freeze({
+        STORE_ID: "storeID",
+        STORE_NAME: "storeName",
+        STATION_ID: "stationID",
+        CUSTOMER_GROUP: "group",
+        MANAGER: "manager",
+        SCOPE_ID: "scopeID",
+        RETURN_TO_STORE_ID: "returnToStoreID",
+        RELOAD_TO_STATION_ID: "reloadToStationID",
+        AS_STORE_ID: "asStoreID",
+        AS_STATION_ID: "asStationID"
     }),
     UserGroup: Object.freeze({
         GOODTOGO_MEMBER: "GoodToGo_member",

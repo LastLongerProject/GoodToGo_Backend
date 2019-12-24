@@ -29,7 +29,7 @@ const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
@@ -1260,7 +1260,7 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
     const offset = parseInt(req.query.offset) || 0
     const isCleanReload = req.query.cleanReload === 'true'
     const needBoth = req.query.cleanReload === undefined
-    var queryCond = (dbKey.roleType === UserRole.CLERK) ? {
+    var queryCond = (dbKey.roleType === RoleType.CLERK) ? {
         'tradeType.action': 'ReadyToClean',
         'oriUser.storeID': dbUser.roles.clerk.storeID,
         'tradeTime': {
@@ -1321,7 +1321,7 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
                 phone: {
                     $cond: {
                         if: {
-                            $eq: [dbKey.roleType, UserRole.CLERK]
+                            $eq: [dbKey.roleType, RoleType.CLERK]
                         },
                         then: undefined,
                         else: "$newUser.phone"

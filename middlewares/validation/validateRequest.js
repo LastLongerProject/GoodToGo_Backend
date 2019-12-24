@@ -2,7 +2,8 @@ const JWT = require('jsonwebtoken');
 const redis = require("../../models/redis");
 const User = require('../../models/DB/userDB');
 const UserKeys = require('../../models/DB/userKeysDB');
-const UserRole = require('../../models/enums/userEnum').UserRole;
+const RoleType = require('../../models/enums/userEnum').RoleType;
+const Role = require('../../models/variables/role').Role;
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -12,25 +13,20 @@ function iatGetDate(int) {
 
 function isAuthorized(req, dbUser, dbKey) {
     const rolesToCheck = req._rolesToCheck;
-    // addConditionToRoleCheck(req, UserRole.CUSTOMER) // Default as Customer
+    // addConditionToRoleCheck(req, RoleType.CUSTOMER) // Default as Customer
     if (typeof dbKey.roleID === "undefined" || typeof dbUser.roleList === "undefined" || dbUser.roleList.length === 0) { // Legacy Role System
-        const userRoles = dbUser.roles;
+        const RoleTypes = dbUser.roles;
         const thisKeyRole = dbKey.roleType;
-        let roleForNewSys = {};
         let roleTypeForNewSys = thisKeyRole;
-        if (roleTypeForNewSys === UserRole.CLERK) roleTypeForNewSys = UserRole.STORE;
-        else if (roleTypeForNewSys === UserRole.ADMIN) roleTypeForNewSys = UserRole.CLEAN_STATION;
-        Object.assign(roleForNewSys, userRoles[thisKeyRole]);
-        Object.assign(roleForNewSys, {
-            roleType: roleTypeForNewSys
-        });
-        req._thisRole = roleForNewSys;
+        if (roleTypeForNewSys === RoleType.CLERK) roleTypeForNewSys = RoleType.STORE;
+        else if (roleTypeForNewSys === RoleType.ADMIN) roleTypeForNewSys = RoleType.CLEAN_STATION;
+        req._thisRole = new Role(roleTypeForNewSys, RoleTypes[thisKeyRole]);
         if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true;
         for (let conditionIndex in rolesToCheck) {
             let aCondition = rolesToCheck[conditionIndex];
-            if (userRoles[aCondition.roleType] && String(thisKeyRole).startsWith(aCondition.roleType)) {
+            if (RoleTypes[aCondition.roleType] && String(thisKeyRole).startsWith(aCondition.roleType)) {
                 if (aCondition.condition && aCondition.condition.manager) {
-                    return userRoles[aCondition.roleType].manager === true;
+                    return RoleTypes[aCondition.roleType].manager === true;
                 }
                 return true;
             }
@@ -38,7 +34,7 @@ function isAuthorized(req, dbUser, dbKey) {
         return false;
     } else {
         const theKeyRole = dbUser.roleList.find(aRole => aRole.roleID === dbKey.roleID);
-        req._thisRole = theKeyRole;
+        req._thisRole = new Role(theKeyRole.roleType, theKeyRole);
         if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true;
         for (let roleIndex in rolesToCheck) {
             let aRoleToCheck = rolesToCheck[roleIndex];
@@ -171,8 +167,8 @@ module.exports = {
             });
         }
     },
-    checkRoleIsCleanStation: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.CLEAN_STATION, condition, next),
-    checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.CLERK, condition, next),
-    checkRoleIsAdmin: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.ADMIN, condition, next),
-    checkRoleIsBot: condition => (req, res, next) => addConditionToRoleCheck(req, UserRole.BOT, condition, next)
+    checkRoleIsCleanStation: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.CLEAN_STATION, condition, next),
+    checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.CLERK, condition, next),
+    checkRoleIsAdmin: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.ADMIN, condition, next),
+    checkRoleIsBot: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.BOT, condition, next)
 };

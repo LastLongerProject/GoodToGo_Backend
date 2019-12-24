@@ -11,7 +11,7 @@ const UserOrder = require('../models/DB/userOrderDB');
 const UserTradeLog = require("../models/DB/userTradeLogDB");
 
 const DueDays = require('../models/enums/userEnum').DueDays;
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const TradeAction = require("../models/enums/userEnum").TradeAction;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
@@ -169,7 +169,7 @@ const thisModule = module.exports = {
                     hasPurchase: true,
                     registerMethod: RegisterMethod.PURCHASE,
                     roles: {
-                        typeList: [UserRole.CUSTOMER]
+                        typeList: [RoleType.CUSTOMER]
                     }
                 });
                 newUser.save(err => {

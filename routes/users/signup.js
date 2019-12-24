@@ -10,7 +10,7 @@ const validateRequest = require('../../middlewares/validation/validateRequest').
 const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
-const UserRole = require('../../models/enums/userEnum').UserRole;
+const RoleType = require('../../models/enums/userEnum').RoleType;
 const RegisterMethod = require('../../models/enums/userEnum').RegisterMethod;
 
 const setDefaultPassword = require('../../config/keys').setDefaultPassword;
@@ -114,16 +114,16 @@ router.post('/clerk', checkRoleIsStore({
         needVerified: false,
         passVerify: true
     });
-    if (dbKey.roleType === UserRole.CLERK) {
+    if (dbKey.roleType === RoleType.CLERK) {
         req.body.role = {
-            typeCode: UserRole.CLERK,
+            typeCode: RoleType.CLERK,
             manager: false,
             storeID: dbUser.roles.clerk.storeID
         };
         req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
-    } else if (dbKey.roleType === UserRole.ADMIN) {
+    } else if (dbKey.roleType === RoleType.ADMIN) {
         req.body.role = {
-            typeCode: UserRole.ADMIN,
+            typeCode: RoleType.ADMIN,
             manager: false,
             stationID: dbUser.roles.admin.stationID,
         };
@@ -177,7 +177,7 @@ router.post('/storeManager', checkRoleIsAdmin({
     "manager": true
 }), validateRequest, function (req, res, next) {
     req.body.role = {
-        typeCode: UserRole.STORE,
+        typeCode: RoleType.STORE,
         manager: true,
         storeID: req.body.storeID
     };
@@ -329,16 +329,16 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin({
 }), validateRequest, function (req, res, next) {
     // for ADMIN and CLERK
     var dbKey = req._key;
-    if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
+    if (String(dbKey.roleType).startsWith(`${RoleType.CLERK}`)) {
         req.body.role = {
-            typeCode: UserRole.CUSTOMER
+            typeCode: RoleType.CUSTOMER
         };
         req._options.registerMethod = RegisterMethod.CLECK_APP;
     } else {
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
     }
     req._setSignupVerification({
-        needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
+        needVerified: String(dbKey.roleType).startsWith(`${RoleType.CLERK}_`),
         passVerify: true
     });
     setDefaultPassword(req);
