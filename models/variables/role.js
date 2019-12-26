@@ -60,6 +60,12 @@ module.exports = {
                 var scopeID = parseInt(options.scopeID);
                 if (isNaN(scopeID))
                     throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.SCOPE_ID, scopeID));
+                var rentFromStoreID = null;
+                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID)) {
+                    rentFromStoreID = parseInt(options.rentFromStoreID);
+                    if (isNaN(rentFromStoreID))
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RENT_FROM_STORE_ID, rentFromStoreID));
+                }
                 var returnToStoreID = null;
                 if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID)) {
                     returnToStoreID = parseInt(options.returnToStoreID);
@@ -74,6 +80,7 @@ module.exports = {
                 }
                 Object.assign(theRole, {
                     scopeID,
+                    rentFromStoreID,
                     returnToStoreID,
                     reloadToStationID
                 });

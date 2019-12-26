@@ -1,7 +1,10 @@
 const getDateCheckpoint = require('./toolkit').getDateCheckpoint;
+const debug = require('../helpers/debugger')('tools');
 
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 const userUsingAmount = require('../models/variables/containerStatistic').line_user_using;
+const User = require("../models/DB/userDB");
+const RoleType = require("../models/enums/userEnum").RoleType;
 const RentalQualification = require("../models/enums/userEnum").RentalQualification;
 const HoldingQuantityLimitation = require("../models/enums/userEnum").HoldingQuantityLimitation;
 const hash = require('object-hash');
@@ -28,15 +31,17 @@ exports.getContainerHash = function (containerList, isOverview = false) {
     let hashValue
     let set
 
-    if (!isOverview) {
+    if(!isOverview) {
         const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
         set = new Set(containerList.map(container => containerDict[container]))
     } else {
-        set = new Set(containerList.map(content=>content.containerType))
+        set = new Set(containerList.map(content => content.containerType))
     }
 
-    hashValue = hash(set, {unorderedSets: true})
-    
+    hashValue = hash(set, {
+        unorderedSets: true
+    })
+
     return String(set.size) + hashValue
 }
 
@@ -102,3 +107,27 @@ exports.userIsAvailableForRentContainer = function (dbUser, amountOrdered, byPas
         });
     });
 };
+
+exports.getSystemBot = function (done) {
+    User.findOne({
+        "user.phone": "0900000000"
+    }, (err, dbBot) => {
+        if (err) return done(err);
+        if (!dbBot) {
+            dbBot = new User({
+                user: {
+                    phone: "0900000000",
+                    password: null,
+                    name: "GoodToGoBot"
+                }
+            });
+            dbBot.addRole(RoleType.BOT, {}, err => {
+                if (err) return debug.error(err);
+                dbBot.save(err => {
+                    if (err) return debug.error(err);
+                });
+            });
+        }
+        done(null, dbBot);
+    });
+}

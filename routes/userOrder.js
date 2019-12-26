@@ -12,13 +12,12 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
-const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
+const getSystemBot = require('../helpers/tools').getSystemBot;
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
+const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
-const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
-const RoleType = require('../models/enums/userEnum').RoleType;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
@@ -248,25 +247,8 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             });
 
         theUserOrder.containerID = containerID;
-        User.findOne({
-            "user.phone": "0900000000"
-        }, (err, dbBot) => {
+        getSystemBot((err, dbBot) => {
             if (err) return next(err);
-            if (!dbBot) {
-                dbBot = new User({
-                    user: {
-                        phone: "0900000000",
-                        password: null,
-                        name: "GoodToGoBot"
-                    }
-                });
-                dbBot.addRole(RoleType.BOT, {}, err => {
-                    if (err) return debug.error(err);
-                    dbBot.save(err => {
-                        if (err) return debug.error(err);
-                    });
-                });
-            }
             changeContainersState(containerID, dbBot, {
                 action: "Rent",
                 newState: 2
@@ -396,26 +378,8 @@ router.post('/addWithContainer', validateLine, validateStoreCode, function (req,
         const storeID = req._storeID
         const now = Date.now();
 
-        User.findOne({
-            "user.phone": "0900000000"
-        }, (err, dbBot) => {
+        getSystemBot((err, dbBot) => {
             if (err) return next(err);
-            if (!dbBot) {
-                dbBot = new User({
-                    user: {
-                        phone: "0900000000",
-                        password: null,
-                        name: "GoodToGoBot"
-                    }
-                });
-                dbBot.addRole(RoleType.BOT, {}, err => {
-                    if (err) return debug.error(err);
-                    dbBot.save(err => {
-                        if (err) return debug.error(err);
-                    });
-                });
-            }
-
             let userOrders = containers.map(id =>
                 new UserOrder({
                     orderID: generateUUID(),

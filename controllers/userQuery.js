@@ -12,6 +12,8 @@ const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const RoleType = require('../models/enums/userEnum').RoleType;
 const UserGroup = require('../models/enums/userEnum').UserGroup;
+const Role = require('../models/variables/role').Role;
+const RoleCreationError = require('../models/variables/role').RoleCreationError;
 const role = require('../models/variables/role');
 
 function sendVerificationCode(phone, done) {
@@ -57,13 +59,14 @@ module.exports = {
             });
         }
         try {
-            new role.Role(role.typeCode, role);
+            new Role(role.typeCode, role);
         } catch (error) {
-            return done(null, false, {
+            if (error instanceof RoleCreationError) return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
-                message: 'Role structure invalid'
+                message: `Role structure invalid:${error.message}`
             });
+            else return done(error);
         }
         if (options.preCheck) {
             const preCheckResult = options.preCheck();
@@ -141,8 +144,11 @@ module.exports = {
                                 registerMethod: options.registerMethod
                             });
 
-                            if (typeof roles !== 'undefined') { // v2 api
-                                newUser.roles = roles;
+                            if (typeof roles !== 'undefined') {
+                                roles.forEach(aRole => rolesToAdd.push({
+                                    typeCode: aRole.typeCode,
+                                    options: aRole
+                                }));
                             } else {
                                 rolesToAdd.push({
                                     typeCode: role.typeCode,
@@ -482,7 +488,11 @@ module.exports = {
         const botName = req.body.botName;
         queue.push(doneQtask => {
             User.count({
-                'role.typeCode': RoleType.BOT
+                roleList: {
+                    $elemMatch: {
+                        typeCode: RoleType.BOT
+                    }
+                }
             }, function (err, botAmount) {
                 if (err) return done(err);
                 const botID = `bot${intReLength(botAmount + 1, 5)}`;
@@ -490,11 +500,6 @@ module.exports = {
                     user: {
                         phone: botID,
                         name: botName
-                    },
-                    role: role,
-                    roles: {
-                        typeList: [RoleType.BOT],
-                        bot: role
                     },
                     active: true
                 });

@@ -15,6 +15,7 @@ const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 
 const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
+const checkRoleIs = require('../middlewares/validation/validateRequest').checkRoleIs;
 const checkRoleIsBot = require('../middlewares/validation/validateRequest').checkRoleIsBot;
 const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../middlewares/validation/validateRequest').checkRoleIsCleanStation;
@@ -504,47 +505,47 @@ router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateReque
         }
  * 
  */
-router.get('/clerkList', checkRoleIsStore({
-    "manager": true
-}), checkRoleIsCleanStation({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.get('/clerkList', checkRoleIs([{
+    roleType: RoleType.STORE,
+    condition: {
+        manager: true
+    }
+}, {
+    roleType: RoleType.CLEAN_STATION,
+    condition: {
+        manager: true
+    }
+}]), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
-    const ROLE_TYPE = dbRole.roleType;
+    const thisRoleType = dbRole.roleType;
     let condition;
-    switch (ROLE_TYPE) {
-        case RoleType.CLEAN_STATION:
-            var stationID;
-            try {
-                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            condition = {
-                roleList: {
-                    $elemMatch: {
-                        stationID
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                var stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                condition = {
+                    roleList: {
+                        $elemMatch: {
+                            stationID
+                        }
                     }
-                }
-            };
-            break;
-        case RoleType.STORE:
-            var storeID;
-            try {
-                storeID = dbRole.getElement(RoleElement.STORE_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            condition = {
-                roleList: {
-                    $elemMatch: {
-                        storeID
+                };
+                break;
+            case RoleType.STORE:
+                var storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                condition = {
+                    roleList: {
+                        $elemMatch: {
+                            storeID
+                        }
                     }
-                }
-            };
-            break;
-        default:
-            next();
+                };
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        return next(error);
     }
     User.find(condition, function (err, dbClerks) {
         if (err) return next(err);
@@ -554,7 +555,7 @@ router.get('/clerkList', checkRoleIsStore({
                     .filter(aClerk => aClerk.user.phone !== undefined)
                     .map(aClerk => {
                         const theRole = aClerk.findRole({
-                            roleType: ROLE_TYPE
+                            roleType: thisRoleType
                         });
                         return {
                             phone: aClerk.user.phone,
@@ -588,34 +589,36 @@ router.get('/clerkList', checkRoleIsStore({
  * @apiUse LayoffError
  */
 
-router.post('/layoff/:id', checkRoleIsStore({
-    "manager": true
-}), checkRoleIsCleanStation({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/layoff/:id', checkRoleIs([{
+    roleType: RoleType.STORE,
+    condition: {
+        manager: true
+    }
+}, {
+    roleType: RoleType.CLEAN_STATION,
+    condition: {
+        manager: true
+    }
+}]), validateRequest, function (req, res, next) {
     const dbStore = req._user;
     const dbRole = req._thisRole;
-    const ROLE_TYPE = dbRole.roleType;
+    const thisRoleType = dbRole.roleType;
     const toLayoff = req.params.id;
     let storeID = null;
     let stationID = null;
-    switch (ROLE_TYPE) {
-        case RoleType.CLEAN_STATION:
-            try {
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
                 stationID = dbRole.getElement(RoleElement.STATION_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            break;
-        case RoleType.STORE:
-            try {
+                break;
+            case RoleType.STORE:
                 storeID = dbRole.getElement(RoleElement.STORE_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            break;
-        default:
-            next();
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        return next(error);
     }
     User.findOne({
         'user.phone': toLayoff
@@ -904,16 +907,30 @@ router.post('/unsetDefaultOpeningTime', checkRoleIsStore(), validateRequest, fun
  * 
  * @apiUse RentalQualificationError
  */
-router.get('/getUser/:phone', checkRoleIsBot(), checkRoleIsStore(), validateRequest, function (req, res, next) {
+router.get('/getUser/:phone', checkRoleIs([{
+    roleType: RoleType.STORE
+}, {
+    roleType: RoleType.BOT
+}]), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
+    const thisRoleType = dbRole.roleType;
     let thisStoreID;
     try {
-        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+        switch (thisRoleType) {
+            case RoleType.BOT:
+                thisStoreID = dbRole.getElement(RoleElement.RENT_FROM_STORE_ID, true);
+                break;
+            case RoleType.STORE:
+                thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                break;
+            default:
+                next();
+        }
     } catch (error) {
-        next(error);
+        return next(error);
     }
-    var phone = req.params.phone.replace(/tel:|-/g, "");
-    const thisRedisKey = redisKey(thisStoreID); // BOT??
+    const phone = req.params.phone.replace(/tel:|-/g, "");
+    const thisRedisKey = thisStoreID === null ? null : redisKey(thisStoreID);
     User.findOne({
         'user.phone': new RegExp(phone.toString() + '$', "i")
     }, function (err, dbUser) {
@@ -959,7 +976,8 @@ router.get('/getUser/:phone', checkRoleIsBot(), checkRoleIsStore(), validateRequ
                     apiKey: token,
                     availableAmount: detail.data.availableAmount
                 });
-                redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
+                if (thisRedisKey !== null)
+                    redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
             });
         });
     });
@@ -1187,9 +1205,9 @@ router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res
                     destinationStore: boxList[i].storeID
                 });
             }
-            for (var i = 0; i < boxArr.length; i++) {
+            for (let i = 0; i < boxArr.length; i++) {
                 boxArr[i].containerOverview = [];
-                for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                for (let j = 0; j < boxArr[i].typeList.length; j++) {
                     boxArr[i].containerOverview.push({
                         containerType: boxArr[i].typeList[j],
                         amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
@@ -1237,9 +1255,9 @@ router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res
                     }
                     thisBoxContainerList[thisType].push(list[i].container.id);
                 }
-                for (var i = 0; i < boxHistoryArr.length; i++) {
+                for (let i = 0; i < boxHistoryArr.length; i++) {
                     boxHistoryArr[i].containerOverview = [];
-                    for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
+                    for (let j = 0; j < boxHistoryArr[i].typeList.length; j++) {
                         boxHistoryArr[i].containerOverview.push({
                             containerType: boxHistoryArr[i].typeList[j],
                             amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length

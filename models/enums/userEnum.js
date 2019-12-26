@@ -14,6 +14,7 @@ module.exports = {
         CUSTOMER_GROUP: "group",
         MANAGER: "manager",
         SCOPE_ID: "scopeID",
+        RENT_FROM_STORE_ID: "rentFromStoreID",
         RETURN_TO_STORE_ID: "returnToStoreID",
         RELOAD_TO_STATION_ID: "reloadToStationID",
         AS_STORE_ID: "asStoreID",
