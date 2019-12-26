@@ -291,6 +291,7 @@ module.exports = {
                                                     new: true
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
+                                                    /*
                                                     if (aPlace.activity) {
                                                         Promise
                                                             .all(aPlace.activity.map(activity => User
@@ -312,7 +313,7 @@ module.exports = {
                                                             ))
                                                             .then(resolve)
                                                             .catch(reject);
-                                                    }
+                                                    }*/
                                                     if (photos_fromGoogle !== null)
                                                         photosList.push({
                                                             storeID: aPlace.ID,

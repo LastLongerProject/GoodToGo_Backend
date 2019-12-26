@@ -10,7 +10,6 @@ const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
-const DataCacheFactory = require("../models/dataCacheFactory");
 const RoleType = require('../models/enums/userEnum').RoleType;
 const UserGroup = require('../models/enums/userEnum').UserGroup;
 const role = require('../models/variables/role');
@@ -56,11 +55,10 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Phone is not valid'
             });
-        } else if (
-            typeof roles === 'undefined' &&
-            ((role.typeCode === RoleType.CLERK && (typeof role.manager === 'undefined' || typeof role.storeID !== 'number' || typeof role.stationID !== 'undefined')) ||
-                (role.typeCode === RoleType.ADMIN && (typeof role.manager === 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'number')) ||
-                (role.typeCode === RoleType.CUSTOMER && (typeof role.manager !== 'undefined' || typeof role.storeID !== 'undefined' || typeof role.stationID !== 'undefined')))) {
+        }
+        try {
+            new role.Role(role.typeCode, role);
+        } catch (error) {
             return done(null, false, {
                 code: 'D003',
                 type: 'signupMessage',
@@ -640,7 +638,7 @@ function fetchUserKeys(dbUser, cid, ua, done) {
 
 function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
     let payload = {
-        roles: {
+        roles: { // Legacy Role sys
             typeList: dbUser.roles.typeList
         },
         roleList: dbUser.roleList

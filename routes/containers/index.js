@@ -3,31 +3,35 @@ const router = express.Router();
 const debug = require('../../helpers/debugger')('containers/index');
 const redis = require("../../models/redis");
 
+const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
+
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
+const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
-
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
-const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
-
-const intReLength = require('../../helpers/toolkit').intReLength;
-const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
-const validateStateChanging = require('../../helpers/toolkit').validateStateChanging;
 
 const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
 const NotificationEvent = require('../../helpers/notifications/enums/events');
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
+const intReLength = require('../../helpers/toolkit').intReLength;
+const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
+const validateStateChanging = require('../../helpers/toolkit').validateStateChanging;
+
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
+
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const checkRoleIsBot = require('../../middlewares/validation/validateRequest').checkRoleIsBot;
 const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 
 const status = [
     'delivering',
@@ -76,12 +80,8 @@ router.get('/globalUsedAmount', function (req, res, next) {
         }
  * @apiUse StockError
  */
-router.post('/stock/:id', checkRoleIsAdmin(), validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var boxID = req.params.id;
+router.post('/stock/:id', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const boxID = req.params.id;
     Box.findOne({
             boxID: boxID,
         },
@@ -122,73 +122,71 @@ router.post('/stock/:id', checkRoleIsAdmin(), validateRequest, function (
  * @apiUse DeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/delivery/:id/:store', checkRoleIsAdmin(), validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var dbAdmin = req._user;
-    var boxID = req.params.id;
-    var storeID = req.params.store;
+router.post('/delivery/:id/:store', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const dbAdmin = req._user;
+    const boxID = req.params.id;
+    const storeID = req.params.store;
     let activity = req.params.activity || null;
 
-    process.nextTick(() => {
-        Box.findOne({
-                boxID: boxID,
-            },
-            function (err, aBox) {
-                if (err) return next(err);
-                if (!aBox)
-                    return res.status(403).json({
-                        code: 'F007',
-                        type: 'DeliveryMessage',
-                        message: "Can't Find The Box",
-                    });
-                if (aBox.delivering)
-                    return res.status(403).json({
-                        code: 'F007',
-                        type: 'DeliveryMessage',
-                        message: 'Box Already Delivering',
-                    });
-                changeContainersState(
-                    aBox.containerList,
-                    dbAdmin, {
-                        action: 'Delivery',
-                        newState: 0,
-                    }, {
-                        boxID,
-                        storeID,
-                        activity
-                    },
-                    (err, tradeSuccess, reply) => {
+    Box.findOne({
+            boxID: boxID,
+        },
+        function (err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F007',
+                    type: 'DeliveryMessage',
+                    message: "Can't Find The Box",
+                });
+            if (aBox.delivering)
+                return res.status(403).json({
+                    code: 'F007',
+                    type: 'DeliveryMessage',
+                    message: 'Box Already Delivering',
+                });
+            changeContainersState(
+                aBox.containerList,
+                dbAdmin, {
+                    action: 'Delivery',
+                    newState: 0,
+                }, {
+                    boxID,
+                    storeID,
+                    activity
+                },
+                (err, tradeSuccess, reply) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    aBox.delivering = true;
+                    aBox.stocking = false;
+                    aBox.storeID = storeID;
+                    aBox.user.delivery = dbAdmin.user.phone;
+                    aBox.save(function (err) {
                         if (err) return next(err);
-                        if (!tradeSuccess) return res.status(403).json(reply);
-                        aBox.delivering = true;
-                        aBox.stocking = false;
-                        aBox.storeID = storeID;
-                        aBox.user.delivery = dbAdmin.user.phone;
-                        aBox.save(function (err) {
-                            if (err) return next(err);
-                            res.json(reply);
-                            //test
-                            User.find({
-                                'roles.clerk.storeID': Number(storeID)
-                            }, function (err, userList) {
-                                if (err) return debug.error(err);
-                                userList.forEach(aClerk =>
-                                    NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
-                                        clerk: aClerk
-                                    }, {
-                                        boxID
-                                    })
-                                );
-                            });
+                        res.json(reply);
+                        //test
+                        User.find({
+                            roleList: {
+                                $elemMatch: {
+                                    storeID: Number(storeID)
+                                }
+                            }
+                        }, function (err, userList) {
+                            if (err) return debug.error(err);
+                            userList.forEach(aClerk =>
+                                NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
+                                    clerk: aClerk
+                                }, {
+                                    boxID
+                                })
+                            );
                         });
-                    }
-                );
-            }
-        );
-    });
+                    });
+                }
+            );
+        }
+    );
 });
 
 /**
@@ -208,11 +206,7 @@ router.post('/delivery/:id/:store', checkRoleIsAdmin(), validateRequest, functio
  * @apiUse CancelDeliveryError
  * @apiUse ChangeStateError
  */
-router.post('/cancelDelivery/:id', checkRoleIsAdmin(), validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/cancelDelivery/:id', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     var boxID = req.params.id;
     Box.findOne({
@@ -274,14 +268,18 @@ router.post('/cancelDelivery/:id', checkRoleIsAdmin(), validateRequest, function
  * @apiUse ChangeStateError
  */
 
-router.post('/sign/:id', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var dbUser = req._user;
-    var reqByAdmin = req._key.roleType === 'admin';
-    var boxID = req.params.id;
+router.post('/sign/:id', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const dbUser = req._user;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        next(error);
+    }
+    const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
+    const boxID = req.params.id;
 
     Box.findOne({
             boxID: boxID,
@@ -294,7 +292,7 @@ router.post('/sign/:id', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest
                     type: 'SignMessage',
                     message: "Can't Find The Box"
                 });
-            if (!reqByAdmin && aDelivery.storeID !== dbUser.roles.clerk.storeID)
+            if (!reqByCleanStation && aDelivery.storeID !== thisStoreID)
                 return res.status(403).json({
                     code: 'F008',
                     type: 'SignMessage',
@@ -307,7 +305,7 @@ router.post('/sign/:id', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest
                     newState: 1
                 }, {
                     boxID,
-                    storeID: reqByAdmin ? aDelivery.storeID : undefined,
+                    storeID: reqByCleanStation ? aDelivery.storeID : undefined,
                 },
                 (err, tradeSuccess, reply) => {
                     if (err) return next(err);
@@ -354,6 +352,13 @@ router.post('/sign/:id', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest
  */
 router.post('/rent/:id', checkRoleIsStore(), validateRequest, function (req, res, next) {
     const dbStore = req._user;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        next(error);
+    }
     const key = req.headers.userapikey;
     if (typeof key === 'undefined' || key.length === 0)
         return res.status(403).json({
@@ -421,7 +426,7 @@ router.post('/rent/:id', checkRoleIsStore(), validateRequest, function (req, res
                 }, (err, tradeSuccess, reply, tradeDetail) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
-                    tradeCallback.rent(tradeDetail, dbStore.roles.clerk.storeID);
+                    tradeCallback.rent(tradeDetail, thisStoreID);
                     return res.json(reply);
                 });
             });
@@ -457,45 +462,38 @@ router.post('/rent/:id', checkRoleIsStore(), validateRequest, function (req, res
  * @apiUse ReturnError
  * @apiUse ChangeStateError
  */
-router.post(
-    '/return/:id',
-    checkRoleIsBot(),
-    checkRoleIsStore(),
-    checkRoleIsAdmin(),
-    validateRequest,
-    function (req, res, next) {
-        var dbStore = req._user;
-        if (!res._payload.orderTime)
-            return res.status(403).json({
-                code: 'F006',
-                type: 'returnContainerMessage',
-                message: 'Missing Order Time'
+router.post('/return/:id', checkRoleIsBot(), checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    var dbStore = req._user;
+    if (!res._payload.orderTime)
+        return res.status(403).json({
+            code: 'F006',
+            type: 'returnContainerMessage',
+            message: 'Missing Order Time'
+        });
+    let container = req.params.id;
+    const storeID = req.body.storeId;
+    if (container === 'list') container = req.body.containers;
+    else container = [container];
+    changeContainersState(
+        container,
+        dbStore, {
+            action: 'Return',
+            newState: 3
+        }, {
+            storeID,
+            orderTime: res._payload.orderTime,
+            activity: "沒活動"
+        },
+        (err, tradeSuccess, reply, tradeDetail) => {
+            if (err) return next(err);
+            if (!tradeSuccess) return res.status(403).json(reply);
+            res.json(reply);
+            tradeCallback.return(tradeDetail, {
+                storeID
             });
-        let container = req.params.id;
-        const storeID = req.body.storeId;
-        if (container === 'list') container = req.body.containers;
-        else container = [container];
-        changeContainersState(
-            container,
-            dbStore, {
-                action: 'Return',
-                newState: 3
-            }, {
-                storeID,
-                orderTime: res._payload.orderTime,
-                activity: "沒活動"
-            },
-            (err, tradeSuccess, reply, tradeDetail) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                res.json(reply);
-                tradeCallback.return(tradeDetail, {
-                    storeID
-                });
-            }
-        );
-    }
-);
+        }
+    );
+});
 
 /**
  * @apiName Containers ready to clean

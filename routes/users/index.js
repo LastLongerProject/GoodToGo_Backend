@@ -27,6 +27,8 @@ const Coupon = require('../../models/DB/couponDB');
 const PointLog = require('../../models/DB/pointLogDB');
 const DataCacheFactory = require('../../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
+const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
 
 const NotificationCenter = require('../../helpers/notifications/center');
 
@@ -312,11 +314,7 @@ router.post('/addbot', checkRoleIsAdmin({
  */
 router.post('/createBotKey', checkRoleIsAdmin({
     "manager": true
-}), validateRequest, function (
-    req,
-    res,
-    next
-) {
+}), validateRequest, function (req, res, next) {
     userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -661,10 +659,19 @@ router.get('/pointLog', validateLine.all, function (req, res, next) {
 
 router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     var dbUser = req._user;
-
+    let theRole;
+    let userGroup;
+    try {
+        theRole = dbUser.findRole({
+            roleType: RoleType.CUSTOMER
+        });
+        userGroup = theRole.getElement(RoleElement.CUSTOMER_GROUP, false);
+    } catch (error) {
+        next(error);
+    }
     res.json({
         purchaseStatus: dbUser.getPurchaseStatus(),
-        userGroup: dbUser.roles.customer.group
+        userGroup
     });
 });
 

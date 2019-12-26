@@ -6,6 +6,7 @@ const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 
 const baseUrl = require('../../config/config.js').serverBaseUrl;
 
@@ -19,6 +20,7 @@ const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
 
 const historyDays = 14;
 
@@ -325,19 +327,25 @@ router.get('/deliveryHistory', checkRoleIsAdmin(), validateRequest, function (re
         }
  *
  */
-router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateRequest, function (req, res, next) {
-    var dbUser = req._user;
+router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var dbKey = req._key;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        next(error);
+    }
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === RoleType.CLERK)
+    if (dbKey.roleType === RoleType.STORE)
         queryCond = {
             '$or': [{
                 'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbUser.roles.clerk.storeID
+                'oriUser.storeID': thisStoreID
             }, {
                 'tradeType.action': 'UndoReadyToClean'
             }],
@@ -382,10 +390,10 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
                         typeList: [],
                         containerList: {},
                         cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === RoleType.CLERK) ? undefined : {
+                        phone: (dbKey.roleType === RoleType.STORE) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === RoleType.CLERK) ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === RoleType.STORE) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);

@@ -12,13 +12,8 @@ module.exports = {
     emit: function (event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-                if (target.clerk &&
-                    target.clerk.roles &&
-                    target.clerk.roles.clerk &&
-                    typeof target.clerk.roles.clerk.storeID !== "undefined") {
+                if (target.clerk) {
                     pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
-                } else {
-                    debug.error(`Clerk Struc Invalid. Clerk: ${JSON.stringify(target.clerk)}`);
                 }
                 break;
             case NotificationEvent.CONTAINER_RENT:

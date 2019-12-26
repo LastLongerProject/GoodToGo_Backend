@@ -215,6 +215,26 @@ schema.methods.removeRole = function (roleType, options, cb) {
     cb(null, roleToDelete, "Role Deleted");
 };
 
+schema.methods.getRoleByID = function (roleID) {
+    for (let roleIndex in this.roleList) {
+        if (this.roleList[roleIndex].roleID === roleID) {
+            const theRole = this.roleList[roleIndex];
+            return new Role(theRole.roleType, theRole);
+        }
+    }
+    return null;
+};
+
+schema.methods.findRole = function (condition) {
+    let theRole = this.roleList.find(aRole => {
+        for (let conditionKey in condition) {
+            if (!aRole[conditionKey] || aRole[conditionKey] !== condition[conditionKey]) return false;
+            return true;
+        }
+    });
+    return new Role(theRole.roleType, theRole);
+};
+
 schema.methods.roleIsExistByID = function (roleID) {
     for (let roleIndex in this.roleList) {
         if (this.roleList[roleIndex].roleID === roleID) return true;

@@ -30,6 +30,7 @@ const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const RoleType = require('../models/enums/userEnum').RoleType;
+const RoleElement = require('../models/enums/userEnum').RoleElement;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
@@ -996,15 +997,20 @@ router.get(
     checkRoleIsStore(),
     validateRequest,
     async function (req, res, next) {
-
         let boxStatus = req.params.status;
-        let storeID = parseInt(req._user.roles.clerk.storeID);
+        const dbRole = req._thisRole;
+        let thisStoreID;
+        try {
+            thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+        } catch (error) {
+            next(error);
+        }
         let startFrom = parseInt(req.params.startFrom);
         let boxObjs = [];
 
         Box.find({
             'status': boxStatus,
-            'storeID': storeID,
+            'storeID': thisStoreID,
             'createdAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
@@ -1029,8 +1035,7 @@ router.get(
 
             return res.status(200).json(boxObjs);
         });
-    }
-);
+    });
 
 /**
  * @apiName DeliveryList modify box info
@@ -1254,15 +1259,21 @@ router.delete('/deleteBox/:boxID', checkRoleIsAdmin(), validateRequest, function
  */
 
 router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateRequest, function (req, res, next) {
-    var dbUser = req._user;
-    var dbKey = req._key;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        next(error);
+    }
     const batch = parseInt(req.query.batch) || 0
     const offset = parseInt(req.query.offset) || 0
     const isCleanReload = req.query.cleanReload === 'true'
     const needBoth = req.query.cleanReload === undefined
-    var queryCond = (dbKey.roleType === RoleType.CLERK) ? {
+    var queryCond = (thisRoleType === RoleType.STORE) ? {
         'tradeType.action': 'ReadyToClean',
-        'oriUser.storeID': dbUser.roles.clerk.storeID,
+        'oriUser.storeID': thisStoreID,
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
@@ -1321,7 +1332,7 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
                 phone: {
                     $cond: {
                         if: {
-                            $eq: [dbKey.roleType, RoleType.CLERK]
+                            $eq: [thisRoleType, RoleType.STORE]
                         },
                         then: undefined,
                         else: "$newUser.phone"

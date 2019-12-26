@@ -11,6 +11,7 @@ const checkRoleIsStore = require('../../middlewares/validation/validateRequest')
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
 const RegisterMethod = require('../../models/enums/userEnum').RegisterMethod;
 
 const setDefaultPassword = require('../../config/keys').setDefaultPassword;
@@ -108,26 +109,44 @@ router.post('/clerk', checkRoleIsStore({
     "manager": true
 }), validateRequest, function (req, res, next) {
     // for CLERK
-    var dbUser = req._user;
-    var dbKey = req._key;
+    const dbUser = req._user;
     req._setSignupVerification({
         needVerified: false,
         passVerify: true
     });
-    if (dbKey.roleType === RoleType.CLERK) {
-        req.body.role = {
-            typeCode: RoleType.CLERK,
-            manager: false,
-            storeID: dbUser.roles.clerk.storeID
-        };
-        req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
-    } else if (dbKey.roleType === RoleType.ADMIN) {
-        req.body.role = {
-            typeCode: RoleType.ADMIN,
-            manager: false,
-            stationID: dbUser.roles.admin.stationID,
-        };
-        req._options.registerMethod = RegisterMethod.BY_ADMIN;
+    const dbRole = req._thisRole;
+    const ROLE_TYPE = dbRole.roleType;
+    switch (ROLE_TYPE) {
+        case RoleType.CLEAN_STATION:
+            var stationID;
+            try {
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+            } catch (error) {
+                return next(error);
+            }
+            req.body.role = {
+                typeCode: RoleType.ADMIN,
+                manager: false,
+                stationID
+            };
+            req._options.registerMethod = RegisterMethod.BY_ADMIN;
+            break;
+        case RoleType.STORE:
+            var storeID;
+            try {
+                storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+            } catch (error) {
+                return next(error);
+            }
+            req.body.role = {
+                typeCode: RoleType.STORE,
+                manager: false,
+                storeID
+            };
+            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
+            break;
+        default:
+            next();
     }
     req._options.preCheck = function () {
         if (req.body.phone === dbUser.user.phone)
@@ -329,7 +348,7 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin({
 }), validateRequest, function (req, res, next) {
     // for ADMIN and CLERK
     var dbKey = req._key;
-    if (String(dbKey.roleType).startsWith(`${RoleType.CLERK}`)) {
+    if (String(dbKey.roleType).startsWith(`${RoleType.STORE}`)) {
         req.body.role = {
             typeCode: RoleType.CUSTOMER
         };
@@ -338,7 +357,7 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin({
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
     }
     req._setSignupVerification({
-        needVerified: String(dbKey.roleType).startsWith(`${RoleType.CLERK}_`),
+        needVerified: String(dbKey.roleType).startsWith(`${RoleType.STORE}_`),
         passVerify: true
     });
     setDefaultPassword(req);

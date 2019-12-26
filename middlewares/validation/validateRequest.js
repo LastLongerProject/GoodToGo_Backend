@@ -168,7 +168,7 @@ module.exports = {
         }
     },
     checkRoleIsCleanStation: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.CLEAN_STATION, condition, next),
-    checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.CLERK, condition, next),
+    checkRoleIsStore: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.STORE, condition, next),
     checkRoleIsAdmin: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.ADMIN, condition, next),
     checkRoleIsBot: condition => (req, res, next) => addConditionToRoleCheck(req, RoleType.BOT, condition, next)
 };

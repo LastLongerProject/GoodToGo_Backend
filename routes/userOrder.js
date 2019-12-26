@@ -18,6 +18,7 @@ const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
@@ -257,32 +258,21 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                         phone: "0900000000",
                         password: null,
                         name: "GoodToGoBot"
-                    },
-                    roles: {
-                        typeList: ["bot", "clerk"],
-                        clerk: {
-                            storeID: 17,
-                            manager: false
-                        }
                     }
                 });
-                dbBot.save(err => {
-                    if (err) debug.error(err);
+                dbBot.addRole(RoleType.BOT, {}, err => {
+                    if (err) return debug.error(err);
+                    dbBot.save(err => {
+                        if (err) return debug.error(err);
+                    });
                 });
             }
-            if (!dbBot.roles.clerk) {
-                dbBot.roles.typeList.push("clerk");
-                dbBot.roles.clerk = {
-                    storeID: 17,
-                    manager: false
-                };
-            }
-            dbBot.roles.clerk.storeID = theUserOrder.storeID;
             changeContainersState(containerID, dbBot, {
                 action: "Rent",
                 newState: 2
             }, {
                 rentToUser: dbUser,
+                storeID: theUserOrder.storeID,
                 orderTime: theUserOrder.orderTime,
                 activity: "沒活動",
                 inLineSystem: true
@@ -352,7 +342,7 @@ router.post('/challenge/storeCode', validateLine, validateStoreCode, async (req,
  *      }
  */
 
-router.post('/addWithContainer', validateLine, validateStoreCode, async function (req, res, next) {
+router.post('/addWithContainer', validateLine, validateStoreCode, function (req, res, next) {
     const dbUser = req._user;
     let containers = req.body.containers;
     const bypassCheck = req.body.byCallback === true;
@@ -381,7 +371,7 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
 
     const containerAmount = containers.length;
 
-    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, async (err, isAvailable, detail) => {
+    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
         if (err) return next(err);
         if (!isAvailable) {
             if (detail.rentalQualification === RentalQualification.BANNED)
@@ -406,83 +396,79 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
         const storeID = req._storeID
         const now = Date.now();
 
-        let dbBot = await User.findOne({
+        User.findOne({
             "user.phone": "0900000000"
-        }) || await (new User({
-            user: {
-                phone: "0900000000",
-                password: null,
-                name: "GoodToGoBot"
-            },
-            roles: {
-                typeList: ["bot", "clerk"],
-                clerk: {
-                    storeID: 17,
-                    manager: false
-                }
-            }
-        }).save());
-
-        if (!dbBot.roles.clerk) {
-            dbBot.roles.typeList.push("clerk");
-            dbBot.roles.clerk = {
-                storeID: 17,
-                manager: false
-            };
-        }
-        dbBot.roles.clerk.storeID = storeID;
-
-        let userOrders = containers.map(id =>
-            new UserOrder({
-                orderID: generateUUID(),
-                user: dbUser._id,
-                containerID: id,
-                storeID,
-                orderTime: now
-            })
-        );
-
-        new Promise((resolve, reject) => {
-                changeContainersState(containers, dbBot, {
-                    action: "Rent",
-                    newState: 2
-                }, {
-                    rentToUser: dbUser,
-                    orderTime: now,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    return tradeSuccess ?
-                        resolve(tradeCallback.rent(tradeDetail, null)) :
-                        reject({
-                            status: 403,
-                            json: Object.assign(reply, {
-                                txt: "容器ID錯誤，請輸入正確容器 ID！"
-                            })
-                        })
+        }, (err, dbBot) => {
+            if (err) return next(err);
+            if (!dbBot) {
+                dbBot = new User({
+                    user: {
+                        phone: "0900000000",
+                        password: null,
+                        name: "GoodToGoBot"
+                    }
                 });
-            })
-            .then(() => userOrders.map(order => order.save()))
-            .then(() => {
-                res.status(200).json({
-                    code: '???',
-                    type: 'userOrderMessage',
-                    message: 'Create user order with containers successfully',
-                    storeName: StoreDict[storeID].name
-                })
-
-                return userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                dbBot.addRole(RoleType.BOT, {}, err => {
                     if (err) return debug.error(err);
+                    dbBot.save(err => {
+                        if (err) return debug.error(err);
+                    });
                 });
-            })
-            .catch(err => {
-                if (err.status && err.json) {
-                    res.status(err.status).json(err.json)
-                } else {
-                    next(err)
-                }
-            })
+            }
+
+            let userOrders = containers.map(id =>
+                new UserOrder({
+                    orderID: generateUUID(),
+                    user: dbUser._id,
+                    containerID: id,
+                    storeID,
+                    orderTime: now
+                })
+            );
+
+            new Promise((resolve, reject) => {
+                    changeContainersState(containers, dbBot, {
+                        action: "Rent",
+                        newState: 2
+                    }, {
+                        rentToUser: dbUser,
+                        storeID,
+                        orderTime: now,
+                        activity: "沒活動",
+                        inLineSystem: true
+                    }, (err, tradeSuccess, reply, tradeDetail) => {
+                        if (err) return next(err);
+                        return tradeSuccess ?
+                            resolve(tradeCallback.rent(tradeDetail, null)) :
+                            reject({
+                                status: 403,
+                                json: Object.assign(reply, {
+                                    txt: "容器ID錯誤，請輸入正確容器 ID！"
+                                })
+                            });
+                    });
+                })
+                .then(() => userOrders.map(order => order.save()))
+                .then(() => {
+                    res.status(200).json({
+                        code: '???',
+                        type: 'userOrderMessage',
+                        message: 'Create user order with containers successfully',
+                        storeName: StoreDict[storeID].name
+                    });
+
+                    return userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                        if (err) return debug.error(err);
+                    });
+                })
+                .catch(err => {
+                    if (err.status && err.json) {
+                        res.status(err.status).json(err.json);
+                    } else {
+                        next(err);
+                    }
+                })
+        });
     });
 });
 

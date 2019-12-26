@@ -5,6 +5,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const Container = require('../models/DB/containerDB');
+const RoleElement = require('../models/enums/userEnum').RoleElement;
 const validateStateChanging = require('../helpers/toolkit').validateStateChanging;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
@@ -43,10 +44,8 @@ module.exports = {
             debug.log('[SOCKET] EMIT "error": "Authentication error (Missing Something)"');
             return next(new Error('Authentication error (Missing Something)'));
         }
-        UserKeys.findOneAndUpdate({
+        UserKeys.findOne({
             'apiKey': handShakeData._query.apikey
-        }, {
-            'updatedAt': Date.now()
         }, function (err, dbKey) {
             if (err) return debug.error(err);
             keys.serverSecretKey(function (err, serverSecretKey) {
@@ -71,6 +70,7 @@ module.exports = {
                         return next(new Error('Authentication error (' + thisErr + ')'));
                     } else {
                         socket._user = decoded.user;
+                        socket._roleID = dbKey.roleId;
                         next();
                     }
                 });
@@ -106,45 +106,43 @@ module.exports = {
                 code: "Err1",
                 msg: "Request Format Invalid (Action Invalid)"
             });
-            process.nextTick(() => {
-                Container.findOne({
-                    'ID': containerID
-                }, function (err, theContainer) {
-                    if (err) return next(err);
-                    if (!theContainer)
-                        return next({
-                            code: 'Err2',
-                            msg: 'No Container Found',
-                            data: {
-                                id: containerID
-                            }
-                        });
-                    if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
-                        return socket.emitWithLog('reply', {
-                            id: containerID,
-                            succeed: true,
-                            requestID: requestID,
-                            message: "Can be " + action,
-                            originalState: theContainer.statusCode,
-                            newState: newState
-                        });
-                    if (!theContainer.active)
-                        return next({
-                            code: 'Err3',
-                            msg: 'Container Inactive',
-                            data: {
-                                id: containerID
-                            }
-                        });
-                    validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
-                        return socket.emitWithLog('reply', {
-                            id: containerID,
-                            requestID: requestID,
-                            succeed: succeed,
-                            message: "Can" + (succeed ? "" : " NOT") + " be " + action,
-                            originalState: theContainer.statusCode,
-                            newState: newState
-                        });
+            Container.findOne({
+                'ID': containerID
+            }, function (err, theContainer) {
+                if (err) return next(err);
+                if (!theContainer)
+                    return next({
+                        code: 'Err2',
+                        msg: 'No Container Found',
+                        data: {
+                            id: containerID
+                        }
+                    });
+                if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
+                    return socket.emitWithLog('reply', {
+                        id: containerID,
+                        succeed: true,
+                        requestID: requestID,
+                        message: "Can be " + action,
+                        originalState: theContainer.statusCode,
+                        newState: newState
+                    });
+                if (!theContainer.active)
+                    return next({
+                        code: 'Err3',
+                        msg: 'Container Inactive',
+                        data: {
+                            id: containerID
+                        }
+                    });
+                validateStateChanging(false, theContainer.statusCode, newState, function (succeed) {
+                    return socket.emitWithLog('reply', {
+                        id: containerID,
+                        requestID: requestID,
+                        succeed: succeed,
+                        message: "Can" + (succeed ? "" : " NOT") + " be " + action,
+                        originalState: theContainer.statusCode,
+                        newState: newState
                     });
                 });
             });
@@ -162,10 +160,18 @@ module.exports = {
                     "user.phone": socket._user
                 }, (err, theUser) => {
                     if (err) return next(err);
+                    if (!theUser) return next(`Can't find User:${socket._user}`);
+                    const dbRole = theUser.getRoleByID(socket._roleID);
+                    let storeID;
+                    try {
+                        storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                    } catch (error) {
+                        return next(error);
+                    }
                     Trade.count({
                         'tradeType.action': 'Rent',
                         "tradeType.oriState": 1,
-                        'oriUser.storeID': theUser.roles.clerk.storeID
+                        'oriUser.storeID': storeID
                     }, (err, amount) => {
                         if (err) return next(err);
                         return socket.emitWithLog('data_reply', amount);

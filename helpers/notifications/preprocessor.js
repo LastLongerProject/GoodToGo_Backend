@@ -44,32 +44,31 @@ module.exports = {
                                 }
                             },
                             errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
-                    }
-                    case SnsEvent.CONTAINER_RENT:
-                        formattedData = containerFormatter(data);
-                        return {
-                            content: {
-                                    title: `借用了${formattedData.amount}個容器！`,
-                                    body: formattedData.IDlist.join('、'),
-                                    options: {
-                                        action: "RELOAD_USAGE"
-                                    }
-                                },
-                                errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
-                        };
-
-                    case SnsEvent.CONTAINER_RETURN:
-                        formattedData = containerFormatter(data);
-                        return {
-                            content: {
-                                    title: `歸還了${formattedData.amount}個容器！`,
-                                    body: formattedData.IDlist.join("、"),
-                                    options: {
-                                        action: "RELOAD_USAGE"
-                                    }
-                                },
-                                errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
-                        };
+                    };
+                case SnsEvent.CONTAINER_RENT:
+                    formattedData = containerFormatter(data);
+                    return {
+                        content: {
+                                title: `借用了${formattedData.amount}個容器！`,
+                                body: formattedData.IDlist.join('、'),
+                                options: {
+                                    action: "RELOAD_USAGE"
+                                }
+                            },
+                            errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
+                    };
+                case SnsEvent.CONTAINER_RETURN:
+                    formattedData = containerFormatter(data);
+                    return {
+                        content: {
+                                title: `歸還了${formattedData.amount}個容器！`,
+                                body: formattedData.IDlist.join("、"),
+                                options: {
+                                    action: "RELOAD_USAGE"
+                                }
+                            },
+                            errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`
+                    };
             }
         } catch (error) {
             debug.error(error);
