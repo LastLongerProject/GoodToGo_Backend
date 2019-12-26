@@ -5,7 +5,6 @@ const debug = require('../../helpers/debugger')('containers/get');
 const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
 const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 
 const baseUrl = require('../../config/config.js').serverBaseUrl;
@@ -121,59 +120,56 @@ router.get('/list', validateDefault, function (req, res, next) {
         }
  *
  */
-router.get('/toDelivery', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
+router.get('/toDelivery', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
-    process.nextTick(function () {
-        Box.find(function (err, boxList) {
-            if (err) return next(err);
-            if (boxList.length === 0) return res.json({
-                toDelivery: []
-            });
-            var boxArr = [];
-            var thisBox;
-            var thisType;
-            for (var i = 0; i < boxList.length; i++) {
-                thisBox = boxList[i].boxID;
-                var thisBoxTypeList = [];
-                var thisBoxContainerList = {};
-                for (var j = 0; j < boxList[i].containerList.length; j++) {
-                    thisType = containerDict[boxList[i].containerList[j]];
-                    if (thisBoxTypeList.indexOf(thisType) < 0) {
-                        thisBoxTypeList.push(thisType);
-                        thisBoxContainerList[thisType] = [];
-                    }
-                    thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+    Box.find(function (err, boxList) {
+        if (err) return next(err);
+        if (boxList.length === 0) return res.json({
+            toDelivery: []
+        });
+        var boxArr = [];
+        var thisBox;
+        var thisType;
+        for (var i = 0; i < boxList.length; i++) {
+            thisBox = boxList[i].boxID;
+            var thisBoxTypeList = [];
+            var thisBoxContainerList = {};
+            for (var j = 0; j < boxList[i].containerList.length; j++) {
+                thisType = containerDict[boxList[i].containerList[j]];
+                if (thisBoxTypeList.indexOf(thisType) < 0) {
+                    thisBoxTypeList.push(thisType);
+                    thisBoxContainerList[thisType] = [];
                 }
-                boxArr.push({
-                    boxID: thisBox,
-                    boxTime: boxList[i].updatedAt,
-                    phone: boxList[i].user,
-                    typeList: thisBoxTypeList,
-                    containerList: thisBoxContainerList,
-                    stocking: boxList[i].stocking,
-                    isDelivering: boxList[i].delivering,
-                    destinationStore: boxList[i].storeID
+                thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+            }
+            boxArr.push({
+                boxID: thisBox,
+                boxTime: boxList[i].updatedAt,
+                phone: boxList[i].user,
+                typeList: thisBoxTypeList,
+                containerList: thisBoxContainerList,
+                stocking: boxList[i].stocking,
+                isDelivering: boxList[i].delivering,
+                destinationStore: boxList[i].storeID
+            });
+        }
+
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].containerOverview = [];
+            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                boxArr[i].containerOverview.push({
+                    containerType: boxArr[i].typeList[j],
+                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
             }
-
-            for (var i = 0; i < boxArr.length; i++) {
-                boxArr[i].containerOverview = [];
-                for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                    boxArr[i].containerOverview.push({
-                        containerType: boxArr[i].typeList[j],
-                        amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
-                    });
-                }
-            }
-            boxArr.sort((a, b) => {
-                return b.boxTime - a.boxTime;
-            });
-            var resJSON = {
-                toDelivery: boxArr
-            };
-            res.json(resJSON);
+        }
+        boxArr.sort((a, b) => {
+            return b.boxTime - a.boxTime;
         });
+        var resJSON = {
+            toDelivery: boxArr
+        };
+        res.json(resJSON);
     });
 });
 
@@ -218,8 +214,7 @@ router.get('/toDelivery', checkRoleIsAdmin(), validateRequest, function (req, re
         }
  *
  */
-router.get('/deliveryHistory', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
+router.get('/deliveryHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
         'tradeType.action': 'Sign',
@@ -268,16 +263,16 @@ router.get('/deliveryHistory', checkRoleIsAdmin(), validateRequest, function (re
             }
             thisBoxContainerList[thisType].push(list[i].container.id);
         }
-        for (var i = 0; i < boxArr.length; i++) {
+        for (let i = 0; i < boxArr.length; i++) {
             boxArr[i].containerOverview = [];
-            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+            for (let j = 0; j < boxArr[i].typeList.length; j++) {
                 boxArr[i].containerOverview.push({
                     containerType: boxArr[i].typeList[j],
                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
             }
         }
-        var resJSON = {
+        const resJSON = {
             pastDelivery: boxArr
         };
         res.json(resJSON);

@@ -18,9 +18,7 @@ const getFakeNotificationContext = function (cb) {
     });
 };
 
-router.post('/all', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
         let result = Object.keys(fakeNotificationContext).map(event => {
@@ -34,9 +32,7 @@ router.post('/all', checkRoleIsAdmin({
     });
 });
 
-router.post('/event/:eventName', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/event/:eventName', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
         const event = req.params.eventName || "null";

@@ -9,6 +9,7 @@ const validateDefault = require('../../middlewares/validation/validateDefault');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
@@ -105,7 +106,7 @@ router.post('/', validateDefault, function (req, res, next) {
 
 router.post('/clerk', checkRoleIsStore({
     "manager": true
-}), checkRoleIsAdmin({
+}), checkRoleIsCleanStation({
     "manager": true
 }), validateRequest, function (req, res, next) {
     // for CLERK
@@ -192,9 +193,7 @@ router.post('/clerk', checkRoleIsStore({
  * @apiUse SignupError
  */
 
-router.post('/storeManager', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/storeManager', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     req.body.role = {
         typeCode: RoleType.STORE,
         manager: true,
@@ -303,9 +302,7 @@ router.post('/lineUser', validateDefault, function (req, res, next) {
  * @apiUse SignupError
  */
 
-router.post('/lineUserRoot', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/lineUserRoot', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     req._options.passVerify = true;
     req._options.agreeTerms = true;
     req._options.registerMethod = RegisterMethod.BY_ADMIN;
@@ -343,9 +340,7 @@ router.post('/lineUserRoot', checkRoleIsAdmin({
  *     }
  * @apiUse SignupError
  */
-router.post('/root', checkRoleIsStore(), checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/root', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     // for ADMIN and CLERK
     var dbKey = req._key;
     if (String(dbKey.roleType).startsWith(`${RoleType.STORE}`)) {

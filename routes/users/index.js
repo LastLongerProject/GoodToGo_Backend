@@ -280,9 +280,7 @@ router.post('/logout', validateRequest, function (req, res, next) {
  *     }
  * @apiUse AddbotError
  */
-router.post('/addbot', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/addbot', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     userQuery.addBot(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -312,9 +310,7 @@ router.post('/addbot', checkRoleIsAdmin({
  *          } 
  *     }
  */
-router.post('/createBotKey', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/createBotKey', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -769,9 +765,7 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     });
 });
 
-router.post('/addPoint/:phone', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/addPoint/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userToAddPoint = req.params.phone;
 
     const pointMultiplier = parseInt(req.body.pointMultiplier);
@@ -816,9 +810,7 @@ router.post('/addPoint/:phone', checkRoleIsAdmin({
     });
 });
 
-router.post('/unbindLineUser/:phone', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/unbindLineUser/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
     User.updateOne({
         "user.phone": userToUnbind
@@ -836,9 +828,7 @@ router.post('/unbindLineUser/:phone', checkRoleIsAdmin({
     });
 });
 
-router.post('/addPurchaseUsers', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/addPurchaseUsers', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) =>
         userTrade.purchase(aUser, (err, oriUser) => {
@@ -858,9 +848,7 @@ router.post('/addPurchaseUsers', checkRoleIsAdmin({
         .catch(next);
 });
 
-router.post("/banUser/:phone", checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, (req, res, next) => {
+router.post("/banUser/:phone", checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
@@ -884,9 +872,7 @@ router.post("/banUser/:phone", checkRoleIsAdmin({
     });
 });
 
-router.post("/unbanUser/:phone", checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, (req, res, next) => {
+router.post("/unbanUser/:phone", checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({

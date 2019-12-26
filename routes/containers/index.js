@@ -462,7 +462,7 @@ router.post('/rent/:id', checkRoleIsStore(), validateRequest, function (req, res
  * @apiUse ReturnError
  * @apiUse ChangeStateError
  */
-router.post('/return/:id', checkRoleIsBot(), checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+router.post('/return/:id', checkRoleIsBot(), checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var dbStore = req._user;
     if (!res._payload.orderTime)
         return res.status(403).json({
@@ -523,11 +523,7 @@ router.post('/return/:id', checkRoleIsBot(), checkRoleIsStore(), checkRoleIsAdmi
  * @apiUse ReadyToCleanError
  * @apiUse ChangeStateError
  */
-router.post('/readyToClean/:id', checkRoleIsBot(), checkRoleIsAdmin(), validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/readyToClean/:id', checkRoleIsBot(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     if (!res._payload.orderTime)
         return res.status(403).json({
@@ -574,86 +570,81 @@ router.post('/readyToClean/:id', checkRoleIsBot(), checkRoleIsAdmin(), validateR
  * @apiUse BoxError
  * @apiUse ChangeStateError
  */
-router.post(
-    ['/cleanStation/box', '/box'],
-    checkRoleIsAdmin(),
-    validateRequest,
-    function (req, res, next) {
-        var dbAdmin = req._user;
-        let boxID = req.body.boxId;
-        const containerList = req.body.containerList;
-        if (!containerList || !Array.isArray(containerList))
-            return res.status(403).json({
-                code: 'F011',
-                type: 'BoxingMessage',
-                message: 'Boxing req body invalid'
-            });
-        var task = function (done) {
-            Box.findOne({
-                    boxID: boxID,
-                },
-                function (err, aBox) {
-                    if (err) return next(err);
-                    if (aBox)
-                        return res.status(403).json({
-                            code: 'F012',
-                            type: 'BoxingMessage',
-                            message: 'Box is already exist'
-                        });
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5
-                        }, {
-                            boxID,
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) return next(err);
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            const newBox = new Box({
-                                boxID,
-                                user: {
-                                    box: dbAdmin.user.phone,
-                                },
-                                containerList,
-                            });
-                            Object.assign(reply, {
-                                data: newBox,
-                            });
-                            newBox.save(function (err) {
-                                if (err) return next(err);
-                                return done(reply);
-                            });
-                        }
-                    );
-                }
-            );
-        };
-        if (typeof boxID === 'undefined') {
-            redis.get('boxCtr', (err, boxCtr) => {
+router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const dbAdmin = req._user;
+    let boxID = req.body.boxId;
+    const containerList = req.body.containerList;
+    if (!containerList || !Array.isArray(containerList))
+        return res.status(403).json({
+            code: 'F011',
+            type: 'BoxingMessage',
+            message: 'Boxing req body invalid'
+        });
+    const task = function (done) {
+        Box.findOne({
+                boxID: boxID,
+            },
+            function (err, aBox) {
                 if (err) return next(err);
-                if (boxCtr == null) boxCtr = 1;
-                else boxCtr++;
-                redis.setex('boxCtr', Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), boxCtr, (err, reply) => {
-                    if (err) return next(err);
-                    if (reply !== 'OK') return next(reply);
-                    var today = new Date();
-                    boxID = today.getMonth() + 1 + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
-                    task(reply => {
-                        res.json(reply);
+                if (aBox)
+                    return res.status(403).json({
+                        code: 'F012',
+                        type: 'BoxingMessage',
+                        message: 'Box is already exist'
                     });
+                changeContainersState(
+                    containerList,
+                    dbAdmin, {
+                        action: 'Boxing',
+                        newState: 5
+                    }, {
+                        boxID,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) return next(err);
+                        if (!tradeSuccess) return res.status(403).json(reply);
+                        const newBox = new Box({
+                            boxID,
+                            user: {
+                                box: dbAdmin.user.phone,
+                            },
+                            containerList,
+                        });
+                        Object.assign(reply, {
+                            data: newBox,
+                        });
+                        newBox.save(function (err) {
+                            if (err) return next(err);
+                            return done(reply);
+                        });
+                    }
+                );
+            }
+        );
+    };
+    if (typeof boxID === 'undefined') {
+        redis.get('boxCtr', (err, boxCtr) => {
+            if (err) return next(err);
+            if (boxCtr == null) boxCtr = 1;
+            else boxCtr++;
+            redis.setex('boxCtr', Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), boxCtr, (err, reply) => {
+                if (err) return next(err);
+                if (reply !== 'OK') return next(reply);
+                var today = new Date();
+                boxID = today.getMonth() + 1 + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
+                task(reply => {
+                    res.json(reply);
                 });
             });
-        } else
-            task(() => {
-                res.status(200).json({
-                    type: 'BoxingMessage',
-                    message: 'Boxing Succeeded',
-                });
+        });
+    } else
+        task(() => {
+            res.status(200).json({
+                type: 'BoxingMessage',
+                message: 'Boxing Succeeded',
             });
-    }
-);
+        });
+});
 
 /**
  * @apiName Containers Unbox 
@@ -682,49 +673,44 @@ router.post(
  * @apiUse UnboxError
  * @apiUse ChangeStateError
  */
-router.post(
-    ['/cleanStation/unbox/:id', '/unbox/:id'],
-    checkRoleIsAdmin(),
-    validateRequest,
-    function (req, res, next) {
-        var dbAdmin = req._user;
-        var boxID = req.params.id;
-        Box.findOne({
-                boxID: boxID,
-            },
-            function (err, aBox) {
-                if (err) return next(err);
-                if (!aBox)
-                    return res.status(403).json({
-                        code: 'F007',
-                        type: 'UnboxingMessage',
-                        message: "Can't Find The Box"
-                    });
-                changeContainersState(
-                    aBox.containerList,
-                    dbAdmin, {
-                        action: 'Unboxing',
-                        newState: 4
-                    }, {
-                        bypassStateValidation: true,
-                    },
-                    (err, tradeSuccess, reply) => {
-                        if (err) return next(err);
-                        if (!tradeSuccess) return res.status(403).json(reply);
-                        Box.remove({
-                                boxID: boxID
-                            },
-                            function (err) {
-                                if (err) return next(err);
-                                return res.json(reply);
-                            }
-                        );
-                    }
-                );
-            }
-        );
-    }
-);
+router.post(['/cleanStation/unbox/:id', '/unbox/:id'], checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    var dbAdmin = req._user;
+    var boxID = req.params.id;
+    Box.findOne({
+            boxID: boxID,
+        },
+        function (err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F007',
+                    type: 'UnboxingMessage',
+                    message: "Can't Find The Box"
+                });
+            changeContainersState(
+                aBox.containerList,
+                dbAdmin, {
+                    action: 'Unboxing',
+                    newState: 4
+                }, {
+                    bypassStateValidation: true,
+                },
+                (err, tradeSuccess, reply) => {
+                    if (err) return next(err);
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    Box.remove({
+                            boxID: boxID
+                        },
+                        function (err) {
+                            if (err) return next(err);
+                            return res.json(reply);
+                        }
+                    );
+                }
+            );
+        }
+    );
+});
 
 /**
  * @apiName Containers Undo action 
@@ -743,20 +729,14 @@ router.post(
         }
  * @apiUse UndoError
  */
-var actionCanUndo = {
+const actionCanUndo = {
     Return: 3,
     ReadyToClean: 4
 };
-router.post('/undo/:action/:id', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var dbAdmin = req._user;
-    var action = req.params.action;
-    var containerID = req.params.id;
+router.post('/undo/:action/:id', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    const dbAdmin = req._user;
+    const action = req.params.action;
+    const containerID = req.params.id;
     if (!(action in actionCanUndo)) return next();
     process.nextTick(() => {
         Trade.findOne({
@@ -846,14 +826,7 @@ router.post('/undo/:action/:id', checkRoleIsAdmin({
             token: String
         }
  */
-router.get(
-    '/challenge/token',
-    checkRoleIsBot(),
-    checkRoleIsStore(),
-    checkRoleIsAdmin(),
-    validateRequest,
-    generateSocketToken(SocketNamespace.CHALLENGE)
-);
+router.get('/challenge/token', checkRoleIsBot(), checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, generateSocketToken(SocketNamespace.CHALLENGE));
 
 /**
  * @apiName Containers do action to specific container
@@ -882,73 +855,65 @@ var actionTodo = [
     'Boxing',
     'dirtyReturn'
 ];
-router.get(
-    '/challenge/:action/:id',
-    checkRoleIsStore(),
-    checkRoleIsAdmin(),
-    validateRequest,
-    function (req, res, next) {
-        var action = req.params.action;
-        var containerID = parseInt(req.params.id);
-        var newState = actionTodo.indexOf(action);
-        if (newState === -1) return next();
-        req.headers['if-none-match'] = 'no-match-for-this';
-        if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
-            return res.json({
-                type: 'ChallengeMessage',
-                message: 'Can be ' + action
-            });
-        process.nextTick(() => {
-            Container.findOne({
-                    ID: containerID,
-                },
-                function (err, theContainer) {
-                    if (err) return next(err);
-                    if (!theContainer)
-                        return res.status(403).json({
-                            code: 'F002',
-                            type: 'ChallengeMessage',
-                            message: 'No container found',
-                            data: containerID
-                        });
-                    validateStateChanging(
-                        false,
-                        theContainer.statusCode,
-                        newState,
-                        function (succeed) {
-                            if (!succeed) {
-                                return res.status(403).json({
-                                    code: 'F001',
-                                    type: 'ChallengeMessage',
-                                    message: 'Can NOT be ' + action,
-                                    stateExplanation: status,
-                                    listExplanation: ['containerID', 'originalState', 'newState'],
-                                    errorList: [
-                                        [containerID, theContainer.statusCode, newState]
-                                    ],
-                                    errorDict: [{
-                                        containerID: containerID,
-                                        originalState: theContainer.statusCode,
-                                        newState: newState
-                                    }, ]
-                                });
-                            } else {
-                                return res.json({
-                                    type: 'ChallengeMessage',
-                                    message: 'Can be ' + action,
-                                });
-                            }
-                        }
-                    );
-                }
-            );
+router.get('/challenge/:action/:id', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const action = req.params.action;
+    const containerID = parseInt(req.params.id);
+    const newState = actionTodo.indexOf(action);
+    if (newState === -1) return next();
+    req.headers['if-none-match'] = 'no-match-for-this';
+    if (DEMO_CONTAINER_ID_LIST.indexOf(containerID) !== -1)
+        return res.json({
+            type: 'ChallengeMessage',
+            message: 'Can be ' + action
         });
-    }
-);
+    process.nextTick(() => {
+        Container.findOne({
+                ID: containerID,
+            },
+            function (err, theContainer) {
+                if (err) return next(err);
+                if (!theContainer)
+                    return res.status(403).json({
+                        code: 'F002',
+                        type: 'ChallengeMessage',
+                        message: 'No container found',
+                        data: containerID
+                    });
+                validateStateChanging(
+                    false,
+                    theContainer.statusCode,
+                    newState,
+                    function (succeed) {
+                        if (!succeed) {
+                            return res.status(403).json({
+                                code: 'F001',
+                                type: 'ChallengeMessage',
+                                message: 'Can NOT be ' + action,
+                                stateExplanation: status,
+                                listExplanation: ['containerID', 'originalState', 'newState'],
+                                errorList: [
+                                    [containerID, theContainer.statusCode, newState]
+                                ],
+                                errorDict: [{
+                                    containerID: containerID,
+                                    originalState: theContainer.statusCode,
+                                    newState: newState
+                                }, ]
+                            });
+                        } else {
+                            return res.json({
+                                type: 'ChallengeMessage',
+                                message: 'Can be ' + action,
+                            });
+                        }
+                    }
+                );
+            }
+        );
+    });
+});
 
-router.post('/triggerTradeCallback/return/all', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/triggerTradeCallback/return/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     tasks.solveUnusualUserOrder((err, results) => {
         if (err) return next(err);
         res.json({
@@ -959,9 +924,7 @@ router.post('/triggerTradeCallback/return/all', checkRoleIsAdmin({
     });
 });
 
-router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdmin({
-    "manager": true
-}), validateRequest, function (req, res, next) {
+router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const containerID = req.params.container;
     const userPhone = req.params.userPhone;
     Trade.findOne({

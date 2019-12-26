@@ -6,7 +6,7 @@ const getContainerHash = require('../helpers/tools').getContainerHash;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 const {
     validateCreateApiContent,
     validateBoxingApiContent,
@@ -75,7 +75,7 @@ const hash = require('object-hash');
  */
 router.post(
     '/create/:storeID',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     fetchBoxCreation,
     validateCreateApiContent,
@@ -134,7 +134,7 @@ router.post(
  */
 router.post(
     ['/cleanStation/box', '/box'],
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     validateBoxingApiContent,
     function (req, res, next) {
@@ -232,7 +232,7 @@ router.post(
  */
 router.post(
     '/stock/:storeID?',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     fetchBoxCreation,
     validateStockApiContent,
@@ -311,7 +311,7 @@ router.post(
  */
 router.post(
     '/changeState',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     validateChangeStateApiContent,
     function (req, res, next) {
@@ -387,7 +387,7 @@ router.post(
 router.post(
     '/sign',
     checkRoleIsStore(),
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     validateSignApiContent,
     async function (req, res, next) {
@@ -484,7 +484,7 @@ router.post(
  */
 router.get(
     '/box/list',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
         let result = [];
@@ -649,7 +649,7 @@ router.get(
  */
 router.get(
     '/box/list/query',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.query.boxStatus;
@@ -792,7 +792,7 @@ function parseSorter(rawValue) {
 
 router.get(
     '/box/list/query/:sorter',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.query.boxStatus;
@@ -898,7 +898,7 @@ router.get(
  */
 router.get(
     '/box/list/:status',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
         let result = [];
@@ -1071,7 +1071,7 @@ router.get(
         }
  * @apiUse ModifyError
  */
-router.patch('/modifyBoxInfo/:boxID', checkRoleIsAdmin(), validateRequest, validateModifyApiContent, async function (req, res, next) {
+router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
@@ -1189,7 +1189,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsAdmin(), validateRequest, valid
         }
  */
 
-router.delete('/deleteBox/:boxID', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
     let dbAdmin = req._user;
 
@@ -1258,7 +1258,7 @@ router.delete('/deleteBox/:boxID', checkRoleIsAdmin(), validateRequest, function
  *
  */
 
-router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateRequest, function (req, res, next) {
+router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
     let thisStoreID;
     let thisRoleType = dbRole.roleType;
@@ -1386,7 +1386,7 @@ router.get('/reloadHistory', checkRoleIsAdmin(), checkRoleIsStore(), validateReq
  */
 router.get(
     '/overview',
-    checkRoleIsAdmin(),
+    checkRoleIsCleanStation(),
     validateRequest,
     validateBoxStatus,
     async function (req, res, next) {
