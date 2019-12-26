@@ -4,11 +4,12 @@ const googleSheet_Preprocessor=require('../googleSheet/preprocessor');
 const googleSheet_Sender=require('../googleSheet/sender');
 const DataClassEnums=require('../../../summaryData/enums/DataClass');
 module.exports={
-    List_Of_Containers_Not_Return_To_Goodtogo:function(storeID,sheetID){
+    List_Of_Containers_Not_Return_To_Goodtogo:function(storeID,sheetID,startTime){
         return new Promise((resolve,reject)=>{
             let error_messenge;
             const dataClass=DataClassEnums.Containers_Not_Return;
-            DataSummary.get(dataClass,storeID).then(ori_data=>{
+            startTime=new Date(startTime);
+            DataSummary.get(dataClass,storeID,startTime).then(ori_data=>{
                 googleSheet_Preprocessor.List_Of_Containers_Not_Return_To_Goodtogo(ori_data)
                 .then(data_List=>{
                     //console.log(data_List);
@@ -34,11 +35,12 @@ module.exports={
             })
         })
     },
-    List_Of_Containers_Be_Used:function(storeID,sheetID){
+    List_Of_Containers_Be_Used:function(storeID,sheetID,startTime){
         return new Promise((resolve,reject)=>{
             let error_messenge;
             const dataClass=DataClassEnums.Containers_Be_Used;
-            DataSummary.get(dataClass,storeID).then(ori_data=>{
+            startTime=new Date(startTime);
+            DataSummary.get(dataClass,storeID,startTime).then(ori_data=>{
                 googleSheet_Preprocessor.List_Of_Containers_Be_Used(ori_data)
                 .then(data_List=>{
                     //console.log(data_List);
@@ -64,11 +66,12 @@ module.exports={
             })
         })
     },
-    List_Of_User_Of_Containers:function(storeID,sheetID){
+    List_Of_User_Of_Containers:function(storeID,sheetID,startTime){
         return new Promise((resolve,reject)=>{
             let error_messenge;
             const dataClass=DataClassEnums.User_Of_Containers;
-            DataSummary.get(dataClass,storeID).then(ori_data=>{
+            startTime=new Date(startTime);
+            DataSummary.get(dataClass,storeID,startTime).then(ori_data=>{
                 googleSheet_Preprocessor.List_Of_User_Of_Containers(ori_data)
                 .then(data_List=>{
                     //console.log(data_List);
@@ -94,15 +97,91 @@ module.exports={
             })
         })
     },
-    List_Of_Not_Return_Users:function(storeID,sheetID){
+    List_Of_Not_Return_Users:function(storeID,sheetID,startTime){
         return new Promise((resolve,reject)=>{
             let error_messenge;
             const dataClass=DataClassEnums.Not_Return_Users;
-            DataSummary.get(dataClass,storeID).then(ori_data=>{
+            startTime=new Date(startTime);
+            console.log(startTime)
+            DataSummary.get(dataClass,storeID,startTime).then(ori_data=>{
                 googleSheet_Preprocessor.List_Of_Not_Return_Users(ori_data)
                 .then(data_List=>{
                     //console.log(data_List);
                     googleSheet_Sender.List_Of_Not_Return_Users(data_List,sheetID)
+                    .then(success_Messenge=>{
+                        resolve([null,success_Messenge])
+                    })
+                    .catch(err=>{
+                        error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.Sender :'+err;
+                        debug.error(error_messenge)
+                        resolve([error_messenge])
+                    })
+                }).catch(err=>{
+                    error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.preprocessor: '+err;
+                    debug.error(error_messenge)
+                    resolve([error_messenge])
+                })
+            })
+            .catch(err=>{
+                error_messenge='Error Messenge from DataSummary.summary: '+err;
+                debug.error(error_messenge)
+                resolve([error_messenge])
+            })
+        })
+    },
+    List_Of_Summary_For_Store:function(storeID,sheetID,startTime){
+        return new Promise((resolve,reject)=>{
+            let error_messenge;
+            const dataClass_1=DataClassEnums.Summary_Data_For_Store;
+            const dataClass_2=DataClassEnums.User_Not_Return_For_Store;
+            startTime=new Date(startTime);
+            DataSummary.get(dataClass_1,storeID,startTime).then(ori_data_1=>{
+                console.log(ori_data_1)
+                DataSummary.get(dataClass_2,storeID,startTime).then(ori_data_2=>{
+                    console.log(ori_data_2)
+                        let ori_data={
+                            'Rent_Trades':ori_data_1.Trades_For_Rent,
+                            'Date_Return_To_OriStore':ori_data_1.the_Date_Return_To_OriStore,
+                            'the_Date_User_Not_Return':ori_data_2,
+                            'Date_Return_To_Other_Store':ori_data_1.the_Date_Return_To_Other_Store,
+                            'Date_Return_To_Bot':ori_data_1.the_Date_Return_To_Bot
+                        }
+                        googleSheet_Preprocessor.List_Of_Summary_For_Store(ori_data,startTime)
+                        .then(data_List=>{
+                        //console.log(data_List);
+                        googleSheet_Sender.List_Of_Summary_For_Store(data_List,sheetID)
+                        .then(success_Messenge=>{
+                            resolve([null,success_Messenge])
+                        })
+                        .catch(err=>{
+                            error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.Sender :'+err;
+                            debug.error(error_messenge)
+                            resolve([error_messenge])
+                        })
+                        }).catch(err=>{
+                            error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.preprocessor: '+err;
+                            debug.error(error_messenge)
+                            resolve([error_messenge])
+                        })
+                    .catch(err=>{
+                        error_messenge='Error Messenge from DataSummary.summary: '+err;
+                        debug.error(error_messenge)
+                        resolve([error_messenge])
+                    })
+                })
+            })
+        })
+    },
+    List_Of_Rent_UnLogRent_Return_For_Store:function(storeID,sheetID,startTime){
+        return new Promise((resolve,reject)=>{
+            let error_messenge;
+            const dataClass=DataClassEnums.Rent_UnLogRent_Return_For_Store;
+            startTime=new Date(startTime);
+            DataSummary.get(dataClass,storeID,startTime).then(ori_data=>{
+                googleSheet_Preprocessor.List_Of_Rent_UnLogRent_Return_For_Store(storeID,ori_data,startTime)
+                .then(data_List=>{
+                    //console.log(data_List);
+                    googleSheet_Sender.List_Of_Rent_UnLogRent_Return_For_Store(data_List,sheetID)
                     .then(success_Messenge=>{
                         resolve([null,success_Messenge])
                     })

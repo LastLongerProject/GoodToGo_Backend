@@ -51,6 +51,31 @@ module.exports={
             })
         })
     },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_Summary_For_Store:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            GoogleSheetRequest_Emit(data_List,sheetID,RangeClass.List_Of_Summary_For_Store)
+            .then(response=>{
+                resolve(response)
+            })
+            .catch(err=>{
+                reject(err)
+            })
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_Rent_UnLogRent_Return_For_Store:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            Promise.all([
+                GoogleSheetRequest_Emit(data_List.Rent,sheetID,RangeClass.List_Of_Rent_For_Store),
+                GoogleSheetRequest_Emit(data_List.UnLog,sheetID,RangeClass.List_Of_UnLogRent_For_Store),
+                GoogleSheetRequest_Emit(data_List.Return,sheetID,RangeClass.List_Of_Return_For_Store),
+            ]).then(res=>{
+                resolve(res)
+            }).catch(err=>{
+                reject(err)
+            })
+            
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
 }
 
 function GoogleSheetRequest_Emit(data_List,sheetID,Range){

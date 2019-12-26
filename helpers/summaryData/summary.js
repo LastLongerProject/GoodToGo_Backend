@@ -1,18 +1,22 @@
 const DataClass=require("../summaryData/enums/DataClass");
 const tradeDB=require('../../models/DB/tradeDB');
+const UserOrderDB=require('../../models/DB/userOrderDB');
+const UserDB=require('../../models/DB/userDB');
+const ContainerDB=require('../../models/DB/containerDB')
 const Summary=this;
 
 module.exports={
-    Containers_Not_Return:function(storeID){
-        return Containers_Not_Return(storeID)
+    Containers_Not_Return:function(storeID,startTime){
+        return Containers_Not_Return(storeID,startTime)
     },
-    Containers_Be_Used:function(storeID){
+    Containers_Be_Used:function(storeID,startTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 '$or':[
-                        {'newUser.storeID':storeID,'tradeType.oriState':1,'tradeType.newState':3},
-                        {'oriUser.storeID':storeID,'tradeType.newState':2}
+                        {'newUser.storeID':{'$in':storeID},'tradeType.oriState':1,'tradeType.newState':3},
+                        {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2}
                     ],
+                    'tradeTime':{'$gte':startTime}
             },(err,trades_Of_Used_Container)=>{
                 if(err)reject(err)
                 trades_Of_Used_Container=trades_Of_Used_Container.map(trade=>[
@@ -25,11 +29,12 @@ module.exports={
             })
         })
     },
-    User_Of_Containers:function(storeID){
+    User_Of_Containers:function(storeID,startTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
-                'oriUser.storeID':storeID,
-                'tradeType.action':'Rent'
+                'oriUser.storeID':{'$in':storeID},
+                'tradeType.action':'Rent',
+                'tradeTime':{'$gte':startTime}
             },(err,trades_Of_User_Rent)=>{
                 if(err) reject(err)
                 let returnValue=trades_Of_User_Rent.map(trade=>[
@@ -43,40 +48,205 @@ module.exports={
             })
         })
     },
-    Not_Return_Users:function(storeID){
+    Not_Return_Users:function(storeID,startTime){
         return new Promise(function(resolve,reject){
-            let this_Containers_Not_Return=Containers_Not_Return(storeID);
-            this_Containers_Not_Return.then(Containers=>{
-                let Container_User_Not_Return=[]
-                Containers.forEach(Container=>{
-                    if (Container[1]===2){
-                        Container_User_Not_Return.push(Container[0])
+                UserOrderDB.find({
+                    'storeID':{'$in':storeID},
+                    'orderTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                    'archived':false
+                },(err,orders)=>{
+                    let NotReturn_orders=[]
+                    orders.forEach(order=>{
+                        if(order.containerID){
+                            NotReturn_orders.push(
+                                [
+                                    order.orderTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                                    order.orderTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
+                                    order.user,
+                                    order.containerID,
+                                    order.containerID,
+                                    order.storeID
+                                ]
+                            )
+                        }
+                    })
+                    let Users=[]
+                    let Containers=[]
+                    orders.forEach(order=>{
+                        Users.push(order.user)
+                        Containers.push(order.containerID)
+                    })
+                    UserDB.find({
+                        '_id':{'$in':Users}
+                    },(err,users)=>{
+                        if (err) reject(err);
+                        let User_Phone={}
+                        users.forEach(user=>{
+                            User_Phone[user._id]=user.user.phone
+                        })
+                        ContainerDB.find({
+                            'ID':{'$in':Containers}
+                        },(err,containers)=>{
+                            if(err)reject(err);
+                            let container_typeCode=[];
+                            containers.forEach(container=>{
+                                container_typeCode[container.ID]=container.typeCode
+                            })
+                            NotReturn_orders.forEach(order=>{
+                                let user=order[2];
+                                order[2]=User_Phone[user];
+                                let container_id=order[4];
+                                order[4]=container_typeCode[container_id]
+                            })
+                            console.log(NotReturn_orders)
+                            resolve(NotReturn_orders)
+                        })
+                    })
+                })
+        })
+    },
+    Summary_Data_For_Store:function(storeID,startTime){
+        return new Promise(function(resolve,reject){
+            tradeDB.find({
+                '$or':[
+                    {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2,'tradeType.oriState':1},
+                    {'oriUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1},
+                ],
+                'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')}
+            },(err,trades)=>{
+                if(err) reject(err);
+                let Containers_ID=trades.map(trade=>trade.container.id);
+                let Trades_For_Rent=trades.map(trade=>[
+                    trade.tradeType.newState,
+                    trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    trade.newUser.phone
+                ])
+                //console.log(Trades_For_Rent)
+                tradeDB.find({
+                    '$or':[
+                        {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2,'tradeType.oriState':1},
+                        {'tradeType.newState':3,'tradeType.oriState':2},
+                        {'oriUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1}
+                    ],
+                    'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                    'container.id':{'$in':Containers_ID}
+                },(err,trades)=>{
+                    if(err) reject(err);
+                    let the_Date_Return_To_OriStore=[];
+                    let the_Date_Return_To_Other_Store=[];
+                    let the_Date_Return_To_Bot=[];
+                    let Container_TradeList=[];
+                    trades.sort((a,b)=>{
+                        return b.tradeTime-a.tradeTime
+                    })
+                    trades.forEach(trade=>{
+                        if(trade.tradeType.oriState===1&&trade.tradeType.newState===3){
+                            if(trade.oriUser.storeID===trade.newUser.storeID){
+                                the_Date_Return_To_OriStore.push(trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}));
+                            }else if(trade.newUser.phone.slice(0,3)==='bot'){
+                                the_Date_Return_To_Bot.push(trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}))
+                            }else{
+                                the_Date_Return_To_Other_Store.push(trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}))
+                            }
+                        }else if(trade.tradeType.action==='Rent'){
+                            if(!Container_TradeList[trade.container.id]){
+                                Container_TradeList[trade.container.id]=[]
+                            }
+                            Container_TradeList[trade.container.id].push([trade.tradeType.action,trade.oriUser.storeID,trade.oriUser.phone.slice(0,3),trade.tradeTime]);
+                        }else{
+                            if(!Container_TradeList[trade.container.id]){
+                                Container_TradeList[trade.container.id]=[]
+                            }
+                            Container_TradeList[trade.container.id].push([trade.tradeType.action,trade.newUser.storeID,trade.newUser.phone.slice(0,3),trade.tradeTime])
+                        }
+                    })
+                    Container_TradeList.forEach(Container_Trades=>{
+                        while(Container_Trades.length>=2){
+                            let Trade=Container_Trades.pop();
+                            if(Trade[0]==='Rent'){
+                                let Rent_Trade=Trade;
+                                let Return_Trade=Container_Trades.pop();
+                                while(Return_Trade[0]!=='Return'){
+                                    Rent_Trade=Return_Trade;
+                                    Return_Trade=Container_Trades.pop();
+                                }
+                                if(Rent_Trade[1]===Return_Trade[1]){
+                                    the_Date_Return_To_OriStore.push(Rent_Trade[3].toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}));
+                                }else if(Return_Trade[2]!=='bot'){
+                                    the_Date_Return_To_Other_Store.push(Rent_Trade[3].toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}))
+                                }else{
+                                    the_Date_Return_To_Bot.push(Rent_Trade[3].toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}))
+                                }
+                            }
+                        }
+                    })
+                    resolve({
+                        'Trades_For_Rent':Trades_For_Rent,
+                        'the_Date_Return_To_OriStore':the_Date_Return_To_OriStore,
+                        'the_Date_Return_To_Other_Store':the_Date_Return_To_Other_Store,
+                        'the_Date_Return_To_Bot':the_Date_Return_To_Bot
+                    })
+                })
+            })
+        })
+    },
+    User_Not_Return_For_Store:function(storeID,startTime){
+        return new Promise(function(resolve,reject){
+            UserOrderDB.find({
+                'storeID':{'$in':storeID},
+                'orderTime':{'$gte':startTime},
+                'archived':false
+            },(err,UserOrders)=>{
+                if(err)reject(err)
+                let the_Date_User_Not_Return=UserOrders.map(Order=>Order.orderTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}));
+                resolve(the_Date_User_Not_Return);
+            })
+        })
+    },
+    Rent_UnLogRent_Return_For_Store:function(storeID,startTime){
+        return new Promise(function(resolve,reject){
+            tradeDB.find({
+                '$or':[
+                    {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2,'tradeType.oriState':1},
+                    {'newUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':2},
+                    {'newUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1},
+                ],
+                'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+            },(err,trades)=>{
+                if(err) reject(err);
+                let Trades=[]
+                trades.forEach(trade=>{
+                    let tradeTime=trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'});
+                    if(trade.tradeType.action==='Return'){
+                        Trades.push([trade.newUser.storeID,'Return',tradeTime]);
+                    }else{
+                        Trades.push([trade.oriUser.storeID,'Rent',tradeTime]);
                     }
                 })
                 tradeDB.find({
-                    'oriUser.storeID':storeID,
-                    'container.id':{'$in':Container_User_Not_Return},
-                    'tradeType.newState':2
-                },(err,trades_Of_Not_Return_User)=>{
-                    if(err)reject(err)
-                    trades_Of_Not_Return_User=trades_Of_Not_Return_User.map(trade=>[
-                        trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
-                        trade.tradeTime.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
-                        trade.newUser.phone,
-                        trade.container.id,
-                        trade.container.typeCode
-                    ]);
-                    resolve(trades_Of_Not_Return_User)
+                    'oriUser.storeID':{'$in':storeID},
+                    'tradeType.newState':3,
+                    'tradeType.oriState':1,
+                    'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                },(err,trades)=>{
+                    if(err) reject(err)
+                    trades.forEach(trade=>{
+                        let tradeTime=trade.tradeTime.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'});
+                        Trades.push([trade.oriUser.storeID,'UnLogRent',tradeTime])
+                        resolve(Trades);
+                    })
                 })
             })
         })
     }
 };
-function Containers_Not_Return(storeID){
+function Containers_Not_Return(storeID,startTime){
     return new Promise(function(resolve,reject){
+        console.log(startTime)
         tradeDB.find({
-            'newUser.storeID':storeID,
-            'tradeType.newState':1
+            'newUser.storeID':{'$in':storeID},
+            'tradeType.newState':1,
+            'tradeTime':{'$gte':startTime}
           },(err,Containers_Store_Sign)=>{
               if(err) reject(err);
               let Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
@@ -110,8 +280,8 @@ function Containers_Not_Return(storeID){
               })
               tradeDB.find({
                   '$or':[
-                      {'newUser.storeID':storeID,'tradeType.newState':3},
-                      {'oriUser.storeID':storeID,'tradeType.newState':2},
+                      {'newUser.storeID':{'$in':storeID},'tradeType.newState':3},
+                      {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2},
                       {'tradeType.newState':4},
                       {'newUser.storeID':87},
                       {'tradeType.oriState':1,'tradeType.newState':5}

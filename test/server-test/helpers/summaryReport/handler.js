@@ -7,8 +7,9 @@ const {expect}=require('chai');
 const googleSheet=require('../../../../helpers/summaryReport/viewFormat/googleSheet/handler');
 
 describe("Test summaryReport/handler.js",(done)=>{
+/*
     it('Test the List_Of_Containers_Not_Return_To_Goodtogo',(done)=>{
-        googleSheet.List_Of_Containers_Not_Return_To_Goodtogo(157,'1z-STeqNKSzdW1KtlGD0bp0ElBwwbmfOIK-sdJmhx4G8')
+        googleSheet.List_Of_Containers_Not_Return_To_Goodtogo(157,'1_vtmYplfvF90i5wIqCd5m1OVPyakWNAWksUb4SMU4ik')
         .then(res=>{
             console.log(res)
             expect(res[1].status).to.equal(200);
@@ -16,7 +17,7 @@ describe("Test summaryReport/handler.js",(done)=>{
         })
     }).timeout(30000)
     it('Test the List_Of_Containers_Be_Used',done=>{
-        googleSheet.List_Of_Containers_Be_Used(157,'1z-STeqNKSzdW1KtlGD0bp0ElBwwbmfOIK-sdJmhx4G8')
+        googleSheet.List_Of_Containers_Be_Used(157,'1_vtmYplfvF90i5wIqCd5m1OVPyakWNAWksUb4SMU4ik')
         .then(res=>{
             console.log(res)
             expect(res[1].status).to.equal(200);
@@ -24,19 +25,38 @@ describe("Test summaryReport/handler.js",(done)=>{
         })
     }).timeout(10000)
     it('Test the List_Of_User_Of_Containers',done=>{
-        googleSheet.List_Of_User_Of_Containers(157,'1z-STeqNKSzdW1KtlGD0bp0ElBwwbmfOIK-sdJmhx4G8')
+        googleSheet.List_Of_User_Of_Containers(157,'1_vtmYplfvF90i5wIqCd5m1OVPyakWNAWksUb4SMU4ik')
         .then(res=>{
             console.log(res)
             expect(res[1].status).to.equal(200);
             done()
         })
     }).timeout(10000)
+    */
     it('Test the List_Of_Not_Return_Users',done=>{
-        googleSheet.List_Of_Not_Return_Users(157,'1z-STeqNKSzdW1KtlGD0bp0ElBwwbmfOIK-sdJmhx4G8')
+        googleSheet.List_Of_Not_Return_Users([61,62,63,64,65,66,68,69,70,75,76,84,85,86,88,89,93,94,96,97,98,99,100,103],'1jP7_-obd9PcVvFHraz9CrBoY1_fqXzjm26QKto9s3mI','2019-10-21')
         .then(res=>{
             console.log(res)
             expect(res[1].status).to.equal(200);
             done()
         })
-    }).timeout(30000)
+    }).timeout(10000)
+/*
+    it('Test the List_Of_Summary_For_Store',done=>{
+        googleSheet.List_Of_Summary_For_Store([61,62,63,64,65,66,68,69,70,75,76,84,85,86,88,89,93,94,96,97,98,99,100,103],'1vP0B6HGX-wcOvgq9njAIFjAXSQC5RnQwBw8L5lvuTx4','2019-10-21')
+        .then(res=>{
+            console.log(res)
+            expect(res[1].status).to.equal(200);
+            done()
+        })
+    }).timeout(10000);
+    it('Test the List_Of_Rent_UnLogRent_Return_For_Store',done=>{
+        googleSheet.List_Of_Rent_UnLogRent_Return_For_Store([61,62,63,64,65,66,68,69,70,75,76,84,85,86,88,89,93,94,96,97,98,99,100,103],'1vP0B6HGX-wcOvgq9njAIFjAXSQC5RnQwBw8L5lvuTx4','2019-10-21')
+        .then(res=>{
+            console.log(res)
+            expect(res[1].status).to.equal(200);
+            done()
+        })
+    }).timeout(10000);
+    */
 })
