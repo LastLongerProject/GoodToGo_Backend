@@ -41,6 +41,13 @@
  */
 
 /**
+ * @apiDefine ResetPwdError
+ * @apiError {String} D001 status : 401, type : resetPassMessage, msg : Content not Complete - Missing phone or password in body
+ * @apiError {String} D005 status : 401, type : resetPassMessage, msg : No user found
+ * @apiError {String} D009 status : 401, type : resetPassMessage, msg : Phone is not valid
+ */
+
+/**
  * @apiDefine AddbotError
  * @apiError {String} D001 status : 401, type : signupMessage, msg : Content not Complete - Missing phone or password in body
  * @apiError {String} D003 status : 401, type : signupMessage, msg : Role structure invalid
