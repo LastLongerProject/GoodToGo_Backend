@@ -6,17 +6,17 @@ const ContainerDB=require('../../models/DB/containerDB')
 const Summary=this;
 
 module.exports={
-    Containers_Not_Return:function(storeID,startTime){
-        return Containers_Not_Return(storeID,startTime)
+    Containers_Not_Return:function(storeID,startTime,endTime){
+        return Containers_Not_Return(storeID,startTime,endTime)
     },
-    Containers_Be_Used:function(storeID,startTime){
+    Containers_Be_Used:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 '$or':[
                         {'newUser.storeID':{'$in':storeID},'tradeType.oriState':1,'tradeType.newState':3},
                         {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2}
                     ],
-                    'tradeTime':{'$gte':startTime}
+                    'tradeTime':{'$gte':startTime,'$lt':endTime},
             },(err,trades_Of_Used_Container)=>{
                 if(err)reject(err)
                 trades_Of_Used_Container=trades_Of_Used_Container.map(trade=>[
@@ -29,12 +29,12 @@ module.exports={
             })
         })
     },
-    User_Of_Containers:function(storeID,startTime){
+    User_Of_Containers:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 'oriUser.storeID':{'$in':storeID},
                 'tradeType.action':'Rent',
-                'tradeTime':{'$gte':startTime}
+                'tradeTime':{'$gte':startTime,'$lt':endTime},
             },(err,trades_Of_User_Rent)=>{
                 if(err) reject(err)
                 let returnValue=trades_Of_User_Rent.map(trade=>[
@@ -48,14 +48,16 @@ module.exports={
             })
         })
     },
-    Not_Return_Users:function(storeID,startTime){
+    Not_Return_Users:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
+                console.log(endTime)
                 UserOrderDB.find({
                     'storeID':{'$in':storeID},
-                    'orderTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                    'orderTime':{'$gte':startTime,'$lt':endTime},
                     'archived':false
                 },(err,orders)=>{
                     let NotReturn_orders=[]
+                    console.log(err)
                     orders.forEach(order=>{
                         if(order.containerID){
                             NotReturn_orders.push(
@@ -105,14 +107,14 @@ module.exports={
                 })
         })
     },
-    Summary_Data_For_Store:function(storeID,startTime){
+    Summary_Data_For_Store:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 '$or':[
                     {'oriUser.storeID':{'$in':storeID},'tradeType.newState':2,'tradeType.oriState':1},
                     {'oriUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1},
                 ],
-                'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')}
+                'tradeTime':{'$gte':startTime,'$lt':endTime}
             },(err,trades)=>{
                 if(err) reject(err);
                 let Containers_ID=trades.map(trade=>trade.container.id);
@@ -128,7 +130,7 @@ module.exports={
                         {'tradeType.newState':3,'tradeType.oriState':2},
                         {'oriUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1}
                     ],
-                    'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                    'tradeTime':{'$gte':startTime,'$lt':endTime},
                     'container.id':{'$in':Containers_ID}
                 },(err,trades)=>{
                     if(err) reject(err);
@@ -190,7 +192,7 @@ module.exports={
             })
         })
     },
-    User_Not_Return_For_Store:function(storeID,startTime){
+    User_Not_Return_For_Store:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             UserOrderDB.find({
                 'storeID':{'$in':storeID},
@@ -203,7 +205,7 @@ module.exports={
             })
         })
     },
-    Rent_UnLogRent_Return_For_Store:function(storeID,startTime){
+    Rent_UnLogRent_Return_For_Store:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({
                 '$or':[
@@ -211,7 +213,7 @@ module.exports={
                     {'newUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':2},
                     {'newUser.storeID':{'$in':storeID},'tradeType.newState':3,'tradeType.oriState':1},
                 ],
-                'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                'tradeTime':{'$gte':startTime,'$lt':endTime},
             },(err,trades)=>{
                 if(err) reject(err);
                 let Trades=[]
@@ -227,7 +229,7 @@ module.exports={
                     'oriUser.storeID':{'$in':storeID},
                     'tradeType.newState':3,
                     'tradeType.oriState':1,
-                    'tradeTime':{'$gte':startTime,'$lt':new Date('2019-12-23')},
+                    'tradeTime':{'$gte':startTime,'$lt':endTime},
                 },(err,trades)=>{
                     if(err) reject(err)
                     trades.forEach(trade=>{
@@ -240,13 +242,12 @@ module.exports={
         })
     }
 };
-function Containers_Not_Return(storeID,startTime){
+function Containers_Not_Return(storeID,startTime,endTime){
     return new Promise(function(resolve,reject){
-        console.log(startTime)
         tradeDB.find({
             'newUser.storeID':{'$in':storeID},
             'tradeType.newState':1,
-            'tradeTime':{'$gte':startTime}
+            'tradeTime':{'$gte':startTime,'$lt':endTime},
           },(err,Containers_Store_Sign)=>{
               if(err) reject(err);
               let Containers_Store_Sign_And_TimeStamp=Containers_Store_Sign.map(Container_Store_Sign=>[
