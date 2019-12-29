@@ -713,6 +713,7 @@ router.post('/renew/:id',
             });
         let container = req.params.id;
         const storeID = req.body.storeId;
+        let activity = req.params.activity || null;
         if (container === 'list') container = req.body.containers;
         else container = [container];
         changeContainersState(
@@ -743,96 +744,117 @@ router.post('/renew/:id',
                     (err, tradeSuccess, reply) => {
                         if (err) return next(err);
                         if (!tradeSuccess) return res.status(403).json(reply);
-                        let boxID = req.body.boxId;
                         if (!container || !Array.isArray(container))
                             return res.status(403).json({
                                 code: 'F011',
                                 type: 'BoxingMessage',
                                 message: 'Boxing req body invalid'
                             });
-                        var task = function (done) {
-                            Box.findOne({
-                                    boxID: boxID,
-                                },
-                                function (err, aBox) {
-                                    if (err) return next(err);
-                                    if (aBox)
-                                        return res.status(403).json({
-                                            code: 'F012',
-                                            type: 'BoxingMessage',
-                                            message: 'Box is already exist'
-                                        });
-                                    changeContainersState(
-                                        container,
-                                        dbStore, {
-                                            action: 'Boxing',
-                                            newState: 5
-                                        }, {
-                                            boxID,
-                                        },
-                                        (err, tradeSuccess, reply) => {
-                                            if (err) return next(err);
-                                            if (!tradeSuccess) return res.status(403).json(reply);
-                                            const newBox = new Box({
-                                                boxID,
-                                                user: {
-                                                    box: dbStore.user.phone,
-                                                },
-                                                container,
-                                            });
-                                            Object.assign(reply, {
-                                                data: newBox,
-                                            });
-                                            newBox.save(function (err) {
-                                                if (err) return next(err);
-                                                return done(reply);
-                                            });
-                                        }
-                                    );
-                                }
-                            );
-                        };
-                        redis.get('boxCtr', (err, boxCtr) => {
-                            if (err) return next(err);
-                            if (boxCtr == null) boxCtr = 1;
-                            else boxCtr++;
-                            redis.set('boxCtr', boxCtr, (err, reply) => {
+                            redis.get('boxCtr', (err, boxCtr) => {
                                 if (err) return next(err);
-                                if (reply !== 'OK') return next(reply);
-                                redis.expire(
-                                    'boxCtr',
-                                    Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
-                                    (err, reply) => {
-                                        if (err) return next(err);
-                                        if (reply !== 1) return next(reply);
-                                        var today = new Date();
-                                        boxID =
-                                            today.getMonth() +
-                                            1 +
-                                            intReLength(today.getDate(), 2) +
-                                            intReLength(boxCtr, 3);
-                                        task(() => {
-                                            changeContainersState(
-                                                container,
-                                                dbStore, {
-                                                    action: 'Sign',
-                                                    newState: 1
-                                                }, {
-                                                    boxID,
-                                                    storeID: dbStore,
-                                                },
-                                                (err, tradeSuccess, reply) => {
-                                                    if (err) return next(err);
-                                                    if (!tradeSuccess) return res.status(403).json(reply);
-                                                    Box.remove({
-                                                        boxID: boxID,
-                                                    }, (err) => {
-                                                        if (err) return next(err);
-                                                        return res.json(Return_reply);
+                                if (boxCtr == null) boxCtr = 1;
+                                else boxCtr++;
+                                redis.set('boxCtr', boxCtr, (err, reply) => {
+                                    if (err) return next(err);
+                                    if (reply !== 'OK') return next(reply);
+                                    redis.expire(
+                                        'boxCtr',
+                                        Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
+                                        (err, reply) => {
+                                            if (err) return next(err);
+                                            if (reply !== 1) return next(reply);
+                                            var today = new Date();
+                                            let boxID =
+                                                today.getMonth() +
+                                                1 +
+                                                intReLength(today.getDate(), 2) +
+                                                intReLength(boxCtr, 3);
+                                            Box.findOne({
+                                                boxID: boxID,
+                                            },
+                                            function (err, aBox) {
+                                                if (err) return next(err);
+                                                if (aBox)
+                                                    return res.status(403).json({
+                                                        code: 'F012',
+                                                        type: 'BoxingMessage',
+                                                        message: 'Box is already exist'
                                                     });
-                                                }
-                                            );
-                                        });
+                                                changeContainersState(
+                                                    container,
+                                                    dbStore, {
+                                                        action: 'Boxing',
+                                                        newState: 5
+                                                    }, {
+                                                        boxID,
+                                                    },
+                                                    (err, tradeSuccess, reply) => {
+                                                        if (err) return next(err);
+                                                        if (!tradeSuccess) return res.status(403).json(reply);
+                                                        const newBox = new Box({
+                                                            boxID,
+                                                            user: {
+                                                                box: dbStore.user.phone,
+                                                            },
+                                                            container,
+                                                        });
+                                                        Object.assign(reply, {
+                                                            data: newBox,
+                                                        });
+                                                        newBox.save(function (err) {
+                                                            if (err) return next(err);
+                                                            changeContainersState(
+                                                                container,
+                                                                dbStore, {
+                                                                    action: 'Delivery',
+                                                                    newState: 0,
+                                                                }, {
+                                                                    boxID,
+                                                                    storeID,
+                                                                    activity
+                                                                },
+                                                                (err, tradeSuccess, reply) => {
+                                                                    if (err) return next(err);
+                                                                    if (!tradeSuccess) return res.status(403).json(reply);
+                                                                    newBox.delivering = true;
+                                                                    newBox.stocking = false;
+                                                                    newBox.storeID = storeID;
+                                                                    newBox.user.delivery = dbStore.user.phone;
+                                                                    newBox.save(function (err) {
+                                                                        if (err) return next(err);
+                                                                        User.find({
+                                                                            'roles.clerk.storeID': Number(storeID)
+                                                                        }, function (err, userList) {
+                                                                            if (err) return debug.error(err);
+                                                                            changeContainersState(
+                                                                                container,
+                                                                                dbStore, {
+                                                                                    action: 'Sign',
+                                                                                    newState: 1
+                                                                                }, {
+                                                                                    boxID,
+                                                                                    storeID
+                                                                                },
+                                                                                (err, tradeSuccess, reply) => {
+                                                                                    if (err) return next(err);
+                                                                                    if (!tradeSuccess) return res.status(403).json(reply);
+                                                                                    Box.remove({
+                                                                                        boxID: boxID,
+                                                                                    }, (err) => {
+                                                                                        if (err) return next(err);
+                                                                                        return res.json(Return_reply);
+                                                                                    });
+                                                                                }
+                                                                            );
+                                                                        });
+                                                                    });
+                                                                }
+                                                            );
+                                                        });
+                                                    }
+                                                );
+                                            }
+                                        );
                                     }
                                 );
                             });
