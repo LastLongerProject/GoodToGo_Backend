@@ -671,6 +671,179 @@ router.post(
 );
 
 /**
+ * @apiName Containers renew container
+ * @apiGroup Containers
+ *
+ * @api {post} /containers/renew/:id Renew specific container
+ * @apiPermission bot
+ * @apiPermission clerk
+ * @apiPermission admin
+ * 
+ * @apiUse JWT_orderTime
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ReturnMessage",
+            message: "Return Succeeded",
+            oriUser: "09xxxxxxxx",
+            containerList: [ 
+                {
+                    typeName: String,
+                    typeCode: Number,
+                    id: Number
+                },
+                ...
+            ]
+        }
+ * @apiUse RenewError
+ * @apiUse ChangeStateError
+ */
+router.post('/renew/:id',
+    regAsBot,
+    regAsStore,
+    regAsAdmin,
+    validateRequest,
+    function(req, res, next) {
+        let dbStore = req._user;
+        if (!res._payload.orderTime)
+            return res.status(403).json({
+                code: 'F006',
+                type: 'renewContainerMessage',
+                message: 'Missing Order Time'
+            });
+        let container = req.params.id;
+        const storeID = req.body.storeId;
+        if (container === 'list') container = req.body.containers;
+        else container = [container];
+        changeContainersState(
+            container,
+            dbStore, {
+                action: 'Return',
+                newState: 3
+            }, {
+                storeID,
+                orderTime: res._payload.orderTime,
+                activity: "沒活動"
+            },
+            (err, tradeSuccess, reply, tradeDetail) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                tradeCallback.return(tradeDetail, {
+                    storeID
+                });
+                let Return_reply=reply;
+                changeContainersState(
+                    container,
+                    dbStore, {
+                        action: 'ReadyToClean',
+                        newState: 4
+                    }, {
+                        orderTime: res._payload.orderTime,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) return next(err);
+                        if (!tradeSuccess) return res.status(403).json(reply);
+                        let boxID = req.body.boxId;
+                        if (!container || !Array.isArray(container))
+                            return res.status(403).json({
+                                code: 'F011',
+                                type: 'BoxingMessage',
+                                message: 'Boxing req body invalid'
+                            });
+                        var task = function (done) {
+                            Box.findOne({
+                                    boxID: boxID,
+                                },
+                                function (err, aBox) {
+                                    if (err) return next(err);
+                                    if (aBox)
+                                        return res.status(403).json({
+                                            code: 'F012',
+                                            type: 'BoxingMessage',
+                                            message: 'Box is already exist'
+                                        });
+                                    changeContainersState(
+                                        container,
+                                        dbStore, {
+                                            action: 'Boxing',
+                                            newState: 5
+                                        }, {
+                                            boxID,
+                                        },
+                                        (err, tradeSuccess, reply) => {
+                                            if (err) return next(err);
+                                            if (!tradeSuccess) return res.status(403).json(reply);
+                                            const newBox = new Box({
+                                                boxID,
+                                                user: {
+                                                    box: dbStore.user.phone,
+                                                },
+                                                container,
+                                            });
+                                            Object.assign(reply, {
+                                                data: newBox,
+                                            });
+                                            newBox.save(function (err) {
+                                                if (err) return next(err);
+                                                return done(reply);
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        };
+                        redis.get('boxCtr', (err, boxCtr) => {
+                            if (err) return next(err);
+                            if (boxCtr == null) boxCtr = 1;
+                            else boxCtr++;
+                            redis.set('boxCtr', boxCtr, (err, reply) => {
+                                if (err) return next(err);
+                                if (reply !== 'OK') return next(reply);
+                                redis.expire(
+                                    'boxCtr',
+                                    Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
+                                    (err, reply) => {
+                                        if (err) return next(err);
+                                        if (reply !== 1) return next(reply);
+                                        var today = new Date();
+                                        boxID =
+                                            today.getMonth() +
+                                            1 +
+                                            intReLength(today.getDate(), 2) +
+                                            intReLength(boxCtr, 3);
+                                        task(() => {
+                                            changeContainersState(
+                                                container,
+                                                dbStore, {
+                                                    action: 'Sign',
+                                                    newState: 1
+                                                }, {
+                                                    boxID,
+                                                    storeID: dbStore,
+                                                },
+                                                (err, tradeSuccess, reply) => {
+                                                    if (err) return next(err);
+                                                    if (!tradeSuccess) return res.status(403).json(reply);
+                                                    Box.remove({
+                                                        boxID: boxID,
+                                                    }, (err) => {
+                                                        if (err) return next(err);
+                                                        return res.json(Return_reply);
+                                                    });
+                                                }
+                                            );
+                                        });
+                                    }
+                                );
+                            });
+                        });
+                    }
+                );
+            }
+        );
+    }
+)
+/**
  * @apiName Containers Unbox 
  * @apiGroup Containers
  *
