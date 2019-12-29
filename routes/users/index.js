@@ -68,10 +68,10 @@ router.use('/role', roleRoute);
  *                      "roleType": String,
  *                      "apiKey": String,
  *                      "secretKey": String,
- *                      "manager": Boolean, // if [roleType] === "clerk" || [roleType] === "admin"
- *                      "stationID": Number,  // if [roleType] === "admin"
- *                      "storeID": Number,  // if [roleType] === "clerk"
- *                      "storeName": String,  // if [roleType] === "clerk"
+ *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+ *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "storeID": Number,  // if [roleType] === "store"
+ *                      "storeName": String,  // if [roleType] === "store"
  *                      "group": String  // if [roleType] === "customer"
  *                  }
  *              ]
@@ -122,10 +122,10 @@ router.post('/login', validateDefault, function (req, res, next) {
  *                      "roleType": String,
  *                      "apiKey": String,
  *                      "secretKey": String,
- *                      "manager": Boolean, // if [roleType] === "clerk" || [roleType] === "admin"
- *                      "stationID": Number,  // if [roleType] === "admin"
- *                      "storeID": Number,  // if [roleType] === "clerk"
- *                      "storeName": String,  // if [roleType] === "clerk"
+ *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+ *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "storeID": Number,  // if [roleType] === "store"
+ *                      "storeName": String,  // if [roleType] === "store"
  *                      "group": String  // if [roleType] === "customer"
  *                  }
  *              ]

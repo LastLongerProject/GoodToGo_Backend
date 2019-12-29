@@ -31,8 +31,42 @@
 ### Error Code
 - B001 ~ B004
 
-## | -Channel
+## | Channel
 ### Headers
 - line-id (line_channel_userID)
 ### Error Code
 - B001 ~ B004
+
+# § Role
+### Enum of RoleType
+```
+RoleType: Object.freeze({
+    CUSTOMER: "customer",
+    STORE: "store",
+    CLEAN_STATION: "station"
+    ADMIN: "admin",
+    BOT: "bot",
+    CLERK: "clerk" // Deprecated
+})
+```
+## | Customer
+### Elements
+- group: *String*
+## | Store
+### Elements
+- storeID: *Number*
+- manager: *Boolean*
+## | CleanStation
+### Elements
+- stationID: *Number*
+- manager: *Boolean*
+## | Admin
+### Elements
+- asStoreID: *Number*
+- asStationID: *Number*
+## | Bot
+### Elements
+- scopeID: *Number*
+- rentFromStoreID: *Number*
+- returnToStoreID: *Number*
+- reloadToStationID: *Number*
