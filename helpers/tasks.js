@@ -13,6 +13,9 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
+const RoleType = require('../models/enums/userEnum').RoleType;
+const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
+
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
 
@@ -360,6 +363,75 @@ module.exports = {
                         userTrade.fixPoint(userDict[userID].dbUser, userDict[userID].computedPoint);
                 }
             });
+        });
+    },
+    migrateUserRoleStructure: function (cb) {
+        User.find((err, userList) => {
+            if (err) return cb(err);
+            Promise
+                .all(userList.map(aUser => new Promise((resolve, reject) => {
+                    const newRoleList = [];
+                    for (let aRoleKey in aUser.roles) {
+                        if (!(aRoleKey in ORI_ROLE_TYPE) || !aUser.roles[aRoleKey]) continue;
+                        let theRoleKey = aRoleKey;
+                        let theRole = aUser.roles[theRoleKey];
+                        switch (theRoleKey) {
+                            case RoleType.CLERK:
+                                newRoleList.push({
+                                    roleType: RoleType.STORE,
+                                    storeID: theRole.storeID,
+                                    manager: theRole.manager
+                                });
+                                break;
+                            case RoleType.ADMIN:
+                                newRoleList.push({
+                                    roleType: RoleType.ADMIN,
+                                    asStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    asStationID: 0,
+                                    manager: theRole.manager
+                                });
+                                newRoleList.push({
+                                    roleType: RoleType.CLEAN_STATION,
+                                    stationID: 0,
+                                    manager: theRole.manager
+                                });
+                                break;
+                            case RoleType.BOT:
+                                newRoleList.push({
+                                    roleType: RoleType.ADMIN,
+                                    scopeID: theRole.scopeID,
+                                    rentFromStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    returnToStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    reloadToStationID: aUser.roles.admin ? aUser.roles.admin.stationID : null
+                                });
+                                break;
+                            case RoleType.CUSTOMER:
+                                newRoleList.push(theRole);
+                                break;
+                            default:
+                                debug.error(`Unknown Origin Role Type:[${theRoleKey}] - [${JSON.stringify(theRole)}]`);
+                        }
+                    }
+                    Promise
+                        .all(newRoleList.map(aNewRole => new Promise((innerResolve, innerReject) => {
+                            aUser.addRole(aNewRole.roleType, aNewRole, err => {
+                                if (err) return innerReject(err);
+                                innerResolve();
+                            });
+                        })))
+                        .then(() => {
+                            aUser.role = undefined;
+                            aUser.save(err => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                        })
+                        .catch(reject);
+                })))
+                .then(() => {
+                    cb(null, "Done User Role Migration");
+                })
+                .catch(cb);
         });
     }
 }

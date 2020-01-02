@@ -19,13 +19,7 @@ var schema = mongoose.Schema({
         line_liff_userID: String,
         line_channel_userID: String
     },
-    role: {
-        typeCode: String,
-        storeID: Number,
-        stationID: Number,
-        scopeID: Number,
-        manager: Boolean
-    },
+    role: Object,
     roles: {
         typeList: [],
         customer: Object,
@@ -103,13 +97,16 @@ schema.methods.getBannedTxt = function (action) {
 
 schema.methods.checkPermission = function (role_id) {};
 
+const ROLE_EXIST = "The Role Already exist";
 schema.methods.addRole = function (roleType, options, cb) {
+    if (!cb) cb = function (err) {
+        if (err) throw (err);
+    };
     let newRole;
     try {
         newRole = new Role(roleType, options);
     } catch (error) {
-        if (error instanceof RoleCreationError) return cb(null, null, error.message);
-        else return cb(error);
+        return cb(error);
     }
     let roleIsModified = false;
     for (let index in this.roleList) {
@@ -122,7 +119,7 @@ schema.methods.addRole = function (roleType, options, cb) {
                             aOldRole.manager = newRole.manager;
                             roleIsModified = true;
                         } else {
-                            return cb(null, null, "The Role Already exist");
+                            return cb(null, null, ROLE_EXIST);
                         }
                     }
                     break;
@@ -132,18 +129,18 @@ schema.methods.addRole = function (roleType, options, cb) {
                             aOldRole.manager = newRole.manager;
                             roleIsModified = true;
                         } else {
-                            return cb(null, null, "The Role Already exist");
+                            return cb(null, null, ROLE_EXIST);
                         }
                     }
                     break;
                 case RoleType.CUSTOMER:
-                    if (aOldRole.group === newRole.group) return cb(null, null, "The Role Already exist");
+                    if (aOldRole.group === newRole.group) return cb(null, null, ROLE_EXIST);
                     break;
                 case RoleType.BOT:
-                    if (aOldRole.scopeID === newRole.scopeID) return cb(null, null, "The Role Already exist");
+                    if (aOldRole.scopeID === newRole.scopeID) return cb(null, null, ROLE_EXIST);
                     break;
                 case RoleType.ADMIN:
-                    return cb(null, null, "The Role Already exist");
+                    return cb(null, null, ROLE_EXIST);
             }
         }
     }
