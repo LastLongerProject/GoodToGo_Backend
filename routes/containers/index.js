@@ -2,15 +2,12 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../../helpers/debugger')('containers');
 const redis = require("../../models/redis");
-const getContainerHash = require('../../helpers/tools').getContainerHash;
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
-const BoxStatus = require('../../models/enums/boxEnum').BoxStatus;
-const BoxAction = require('../../models/enums/boxEnum').BoxAction;
 
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
@@ -26,8 +23,7 @@ const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAva
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
-const changeContainersState = require('../../controllers/containerTrade').changeContainersState;
-const Renew_Containers=require('../../controllers/containerTrade').Renew_Containers;
+const changeContainersState = require('../../controllers/containerTrade');
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
 const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
@@ -673,6 +669,185 @@ router.post(
             });
     }
 );
+
+/*
+
+Function for renew/list api and renew/:id api
+
+*/
+
+function Renew_Containers(dbStore,containers,storeID,boxID,orderTime){
+    return new Promise(function(resolve,reject){
+        new Promise(function(resolve,reject){
+            changeContainersState(
+                containers,
+                dbStore, {
+                    action: 'Return',
+                    newState: 3
+                }, {
+                    storeID,
+                    orderTime:orderTime,
+                    activity: "沒活動"
+                },
+                (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) reject({
+                        err:err
+                    });
+                    if (!tradeSuccess) reject({
+                        reply:reply
+                    });
+                    tradeCallback.return(tradeDetail, {
+                        storeID
+                    });
+                    let Return_reply=reply;
+                    resolve(Return_reply)
+                }
+            );
+        }).then(Return_reply=>{
+            new Promise(function(resolve,reject){
+                changeContainersState(
+                    containers,
+                    dbStore, {
+                        action: 'ReadyToClean',
+                        newState: 4
+                    }, {
+                        orderTime:orderTime,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) reject({
+                            err:err
+                        });
+                        if (!tradeSuccess) reject({
+                            reply:reply
+                        });
+                        resolve(Return_reply)
+                    }
+                );
+            }).
+            then(Return_reply=>{
+                new Promise(function(resolve,reject){
+                    let task=function(done){
+                        changeContainersState(
+                            containers,
+                            dbStore, {
+                                action: 'Boxing',
+                                newState: 5
+                            }, {
+                                boxID,
+                            },
+                            (err, tradeSuccess, reply) => {
+                                if (err) reject({
+                                    err:err
+                                });
+                                if (!tradeSuccess) reject({
+                                    reply:reply
+                                });
+                                done()
+                            }
+                        );
+                    }
+                    redis.get('boxCtr', (err, boxCtr) => {
+                        if (err) reject({
+                            err:err
+                        });
+                        if (boxCtr == null) boxCtr = 1;
+                        else boxCtr++;
+                        redis.set('boxCtr', boxCtr, (err, reply) => {
+                            if (err) reject({
+                                err:err
+                            });
+                            if (reply !== 'OK') reject({
+                                reply:reply
+                            });
+                            redis.expire(
+                                'boxCtr',
+                                Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
+                                (err, reply) => {
+                                    if (err) reject({
+                                        err:err
+                                    });
+                                    if (reply !== 1) reject({
+                                        reply:reply
+                                    });
+                                    var today = new Date();
+                                    boxID =
+                                        today.getMonth() +
+                                        1 +
+                                        intReLength(today.getDate(), 2) +
+                                        intReLength(boxCtr, 3);
+                                    task(()=>{
+                                        resolve(Return_reply)
+                                    })
+                                }
+                            );
+                        });
+                    });
+                }).then((Return_reply)=>{
+                    new Promise(function(resolve,reject){
+                        changeContainersState(
+                            containers,
+                            dbStore, {
+                                action: 'Delivery',
+                                newState: 0,
+                            }, {
+                                boxID,
+                                storeID,
+                            },
+                            (err, tradeSuccess, reply) => {
+                                if (err) reject({
+                                    err:err
+                                });
+                                if (!tradeSuccess) reject({
+                                    reply:reply
+                                });
+                                resolve(Return_reply)
+                            }
+                        );
+                    }).then((Return_reply)=>{
+                        new Promise(function(resolve,reject){
+                            changeContainersState(
+                                containers,
+                                dbStore, {
+                                    action: 'Sign',
+                                    newState: 1
+                                }, {
+                                    boxID,
+                                    storeID: storeID,
+                                },
+                                (err, tradeSuccess, reply) => {
+                                    if (err) reject({
+                                        err:err
+                                    });
+                                    if (!tradeSuccess) reject({
+                                        reply:reply
+                                    });
+                                    resolve(Return_reply)
+                                }
+                            );
+                        }).then(Return_reply=>{
+                            resolve(Return_reply);
+                        }).catch(err_messenge=>{
+                            if(err_messenge.err) reject(err_messenge)
+                            if(err_messenge.reply) reject(err_messenge)
+                        })
+                    }).catch(err_messenge=>{
+                        if(err_messenge.err) reject(err_messenge)
+                        if(err_messenge.reply) reject(err_messenge)
+                    })
+                }).catch(err_messenge=>{
+                    if(err_messenge.err) reject(err_messenge)
+                    if(err_messenge.reply) reject(err_messenge)
+                })
+            }).catch(err_messenge=>{
+                if(err_messenge.err) reject(err_messenge)
+                if(err_messenge.reply) reject(err_messenge)
+            })
+        }).catch(err_messenge=>{
+            if(err_messenge.err) reject(err_messenge)
+            if(err_messenge.reply) reject(err_messenge)
+        })
+    })
+}
 /**
  * @apiName Containers renew container
  * @apiGroup Containers
