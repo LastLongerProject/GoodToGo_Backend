@@ -16,7 +16,6 @@ const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 const validateDefault = require('../middlewares/validation/validateDefault');
 const validateRequest = require('../middlewares/validation/validateRequest').JWT;
 const checkRoleIs = require('../middlewares/validation/validateRequest').checkRoleIs;
-const checkRoleIsBot = require('../middlewares/validation/validateRequest').checkRoleIsBot;
 const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../middlewares/validation/validateRequest').checkRoleIsCleanStation;
 const Box = require('../models/DB/boxDB');
@@ -472,17 +471,15 @@ router.get('/activityList/:storeID', validateDefault, function (req, res, next) 
  */
 
 router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    process.nextTick(function () {
-        Store.find({}, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            let storeDict = {};
-            storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
-            res.json(storeDict);
-        });
+    Store.find({}, {}, {
+        sort: {
+            id: 1
+        }
+    }, function (err, storeList) {
+        if (err) return next(err);
+        let storeDict = {};
+        storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
+        res.json(storeDict);
     });
 });
 

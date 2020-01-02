@@ -1,5 +1,6 @@
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
+const ContainerAction = require('../models/enums/containerTransactionEnum').Action;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const BoxSaveType = require('../models/enums/programEnum').BoxSaveType;
 const changeContainersState = require('./containerTrade');
@@ -266,7 +267,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
-                action: 'Delivery',
+                action: ContainerAction.DELIVERY,
                 newState: 0,
             }, {
                 boxID,
@@ -293,7 +294,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
-                action: 'CancelDelivery',
+                action: ContainerAction.CANCEL_DELIVERY,
                 newState: 5
             }, {
                 bypassStateValidation: true,
@@ -317,7 +318,7 @@ let containerStateFactory = async function (newState, aBox, dbAdmin, boxInfo, re
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
-                action: 'UnSign',
+                action: ContainerAction.UNSIGN,
                 newState: 5
             }, {
                 bypassStateValidation: true,

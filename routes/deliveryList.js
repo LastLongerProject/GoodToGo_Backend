@@ -23,23 +23,21 @@ const containerStateFactory = require('../controllers/boxTrade.js').containerSta
 const Box = require('../models/DB/boxDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
-const Container = require('../models/DB/containerDB');
 
 const DeliveryList = require('../models/DB/deliveryListDB.js');
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const RoleType = require('../models/enums/userEnum').RoleType;
+const ContainerAction = require('../models/enums/containerTransactionEnum').Action;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
-const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
 const isSameDay = require('../helpers/toolkit').isSameDay;
 
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const historyDays = 14;
-const hash = require('object-hash');
 
 /**
  * @apiName DeliveryList create delivery list
@@ -73,38 +71,31 @@ const hash = require('object-hash');
         }
  * @apiUse CreateError
  */
-router.post(
-    '/create/:storeID',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    fetchBoxCreation,
-    validateCreateApiContent,
-    function (req, res, next) {
-        let creator = req.body.phone;
-        let storeID = parseInt(req.params.storeID);
+router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateCreateApiContent, function (req, res, next) {
+    let creator = req.body.phone;
+    let storeID = parseInt(req.params.storeID);
 
-        Promise.all(req._boxArray.map(box => box.save()))
-            .then(() => {
-                let list = new DeliveryList({
-                    listID: req._listID,
-                    boxList: req._boxIDs,
-                    storeID,
-                    creator: creator,
-                });
-                list.save().then(() => {
-                    return res.status(200).json({
-                        type: 'CreateMessage',
-                        message: 'Create delivery list successfully',
-                        boxIDs: req._boxIDs,
-                    });
-                });
-            })
-            .catch(err => {
-                debug.error(err);
-                return res.status(500).json(ErrorResponse.H006);
+    Promise.all(req._boxArray.map(box => box.save()))
+        .then(() => {
+            let list = new DeliveryList({
+                listID: req._listID,
+                boxList: req._boxIDs,
+                storeID,
+                creator: creator,
             });
-    }
-);
+            list.save().then(() => {
+                return res.status(200).json({
+                    type: 'CreateMessage',
+                    message: 'Create delivery list successfully',
+                    boxIDs: req._boxIDs,
+                });
+            });
+        })
+        .catch(err => {
+            debug.error(err);
+            return res.status(500).json(ErrorResponse.H006);
+        });
+});
 
 /**
  * @apiName DeliveryList boxing
@@ -132,77 +123,66 @@ router.post(
         }
  * @apiUse CreateError
  */
-router.post(
-    ['/cleanStation/box', '/box'],
-    checkRoleIsCleanStation(),
-    validateRequest,
-    validateBoxingApiContent,
-    function (req, res, next) {
-        let dbAdmin = req._user;
-        let boxList = req.body.boxList;
-        let phone = req.body.phone;
+router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
+    let dbAdmin = req._user;
+    let boxList = req.body.boxList;
+    let phone = req.body.phone;
 
-        for (let element of boxList) {
-            const boxID = element.ID;
-            const containerList = element.containerList;
-            const comment = element.comment;
+    for (let element of boxList) {
+        const boxID = element.ID;
+        const containerList = element.containerList;
+        const comment = element.comment;
 
-            Box.findOne({
-                    boxID: boxID,
-                },
-                function (err, aBox) {
+        Box.findOne({
+            boxID: boxID,
+        }, function (err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F012',
+                    type: 'BoxingMessage',
+                    message: 'Box is not exist',
+                });
+            changeContainersState(
+                containerList,
+                dbAdmin, {
+                    action: ContainerAction.BOXING,
+                    newState: 5,
+                }, {
+                    boxID,
+                    storeID: aBox.storeID
+                }, (err, tradeSuccess, reply) => {
                     if (err) return next(err);
-                    if (!aBox)
-                        return res.status(403).json({
-                            code: 'F012',
-                            type: 'BoxingMessage',
-                            message: 'Box is not exist',
-                        });
-                    changeContainersState(
-                        containerList,
-                        dbAdmin, {
-                            action: 'Boxing',
-                            newState: 5,
+                    if (!tradeSuccess) return res.status(403).json(reply);
+                    aBox.update({
+                            containerList: containerList,
+                            containerHash: getContainerHash(containerList),
+                            comment: comment,
+                            $push: {
+                                action: {
+                                    phone: phone,
+                                    boxStatus: BoxStatus.Boxing,
+                                    boxAction: BoxAction.Pack,
+                                    timestamps: Date.now(),
+                                }
+                            },
+                            status: BoxStatus.Boxing,
                         }, {
-                            boxID,
-                            storeID: aBox.storeID
-                        },
-                        (err, tradeSuccess, reply) => {
-                            if (err) {
-                                return next(err);
-                            }
-                            if (!tradeSuccess) return res.status(403).json(reply);
-                            aBox.update({
-                                    containerList: containerList,
-                                    containerHash: getContainerHash(containerList),
-                                    comment: comment,
-                                    $push: {
-                                        action: {
-                                            phone: phone,
-                                            boxStatus: BoxStatus.Boxing,
-                                            boxAction: BoxAction.Pack,
-                                            timestamps: Date.now(),
-                                        }
-                                    },
-                                    status: BoxStatus.Boxing,
-                                }, {
-                                    upsert: true,
-                                }).exec()
-                                .then(() => {
-                                    return res.status(200).json({
-                                        type: 'BoxingMessage',
-                                        message: 'Boxing Succeeded',
-                                    });
-                                }).catch(() => {
-                                    return res.status(500).json(ErrorResponse.H006);
-                                });
-                        }
-                    );
+                            upsert: true,
+                        }).exec()
+                        .then(() => {
+                            return res.status(200).json({
+                                type: 'BoxingMessage',
+                                message: 'Boxing Succeeded',
+                            });
+                        }).catch(() => {
+                            return res.status(500).json(ErrorResponse.H006);
+                        });
                 }
             );
-        }
+        });
     }
-);
+});
 
 /**
  * @apiName DeliveryList stock
@@ -230,50 +210,42 @@ router.post(
         }
  * @apiUse CreateError
  */
-router.post(
-    '/stock/:storeID?',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    fetchBoxCreation,
-    validateStockApiContent,
-    function (req, res, next) {
-        const dbAdmin = req._user;
-        const boxList = req.body.boxList;
+router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateStockApiContent, function (req, res, next) {
+    const dbAdmin = req._user;
+    const boxList = req.body.boxList;
 
-        for (let element of boxList) {
-            const containerList = element.containerList;
-            const boxID = element.boxID;
+    for (let element of boxList) {
+        const containerList = element.containerList;
+        const boxID = element.boxID;
 
-            changeContainersState(
-                containerList,
-                dbAdmin, {
-                    action: 'Boxing',
-                    newState: 5,
-                }, {
-                    boxID,
-                },
-                (err, tradeSuccess, reply) => {
-                    if (err) {
-                        return next(err);
-                    }
-                    if (!tradeSuccess) return res.status(403).json(reply);
-                    Promise.all(req._boxArray.map(box => box.save()))
-                        .then(() => {
-                            return res.status(200).json({
-                                type: 'StockMessage',
-                                message: 'Stock successfully',
-                                boxIDs: req._boxIDs
-                            });
-                        })
-                        .catch(err => {
-                            debug.error(err);
-                            return res.status(500).json(ErrorResponse.H006);
-                        });
+        changeContainersState(
+            containerList,
+            dbAdmin, {
+                action: ContainerAction.BOXING,
+                newState: 5,
+            }, {
+                boxID,
+            }, (err, tradeSuccess, reply) => {
+                if (err) {
+                    return next(err);
                 }
-            );
-        }
+                if (!tradeSuccess) return res.status(403).json(reply);
+                Promise.all(req._boxArray.map(box => box.save()))
+                    .then(() => {
+                        return res.status(200).json({
+                            type: 'StockMessage',
+                            message: 'Stock successfully',
+                            boxIDs: req._boxIDs
+                        });
+                    })
+                    .catch(err => {
+                        debug.error(err);
+                        return res.status(500).json(ErrorResponse.H006);
+                    });
+            }
+        );
     }
-);
+});
 
 /**
  * @apiName DeliveryList change state
@@ -309,55 +281,46 @@ router.post(
  * @apiUse CreateError
  * @apiUse ChangeStateError
  */
-router.post(
-    '/changeState',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    validateChangeStateApiContent,
-    function (req, res, next) {
-        let dbAdmin = req._user;
-        let phone = req.body.phone;
-        let boxList = req.body.boxList;
+router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
+    let dbAdmin = req._user;
+    let phone = req.body.phone;
+    let boxList = req.body.boxList;
 
-        for (let element of boxList) {
-            const newState = element.newState;
-            const boxID = element.id;
+    for (let element of boxList) {
+        const newState = element.newState;
+        const boxID = element.id;
 
-            Box.findOne({
-                    boxID: boxID,
-                },
-                async function (err, aBox) {
-                    if (err) return next(err);
-                    if (!aBox)
-                        return res.status(403).json({
-                            code: 'F012',
-                            type: 'BoxingMessage',
-                            message: 'Box is not exist'
-                        });
-                    if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
-                        return res.status(403).json(ErrorResponse.H005_3);
-                    }
-                    if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
-                        return res.status(403).json(ErrorResponse.H008);
-                    }
-                    try {
-                        let boxInfo = await changeStateProcess(element, aBox, phone);
-                        if (boxInfo.status === ProgramStatus.Success) {
-                            return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
-                        } else {
-                            ErrorResponse.H007.message = boxInfo.message;
-                            return res.status(403).json(ErrorResponse.H007);
-                        }
-                    } catch (err) {
-                        debug.error(err);
-                        next(err);
-                    }
-
+        Box.findOne({
+            boxID: boxID,
+        }, async function (err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F012',
+                    type: 'BoxingMessage',
+                    message: 'Box is not exist'
+                });
+            if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
+                return res.status(403).json(ErrorResponse.H005_3);
+            }
+            if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+                return res.status(403).json(ErrorResponse.H008);
+            }
+            try {
+                let boxInfo = await changeStateProcess(element, aBox, phone);
+                if (boxInfo.status === ProgramStatus.Success) {
+                    return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
+                } else {
+                    ErrorResponse.H007.message = boxInfo.message;
+                    return res.status(403).json(ErrorResponse.H007);
                 }
-            );
-        }
+            } catch (err) {
+                debug.error(err);
+                next(err);
+            }
+        });
     }
-);
+});
 
 /**
  * @apiName DeliveryList sign
@@ -394,48 +357,68 @@ router.post(
         let dbUser = req._user;
         let phone = req.body.phone;
         let boxList = req.body.boxList;
-        var reqByAdmin = req._key.roleType === 'admin';
+        const dbRole = req._thisRole;
+        let thisStoreID;
+        const thisRoleType = dbRole.roleType;
+        try {
+            switch (thisRoleType) {
+                case RoleType.CLEAN_STATION:
+                    break;
+                case RoleType.STORE:
+                    thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                    break;
+                default:
+                    next();
+            }
+        } catch (error) {
+            next(error);
+        }
+        const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
 
         for (let element of boxList) {
             const boxID = element.ID;
             element.newState = BoxStatus.Signed;
             Box.findOne({
-                    boxID: boxID,
-                },
-                async function (err, aBox) {
-                    if (err) return next(err);
-                    if (!aBox)
-                        return res.status(403).json({
-                            code: 'F012',
-                            type: 'BoxingMessage',
-                            message: 'Box is not exist',
-                        });
-                    try {
-                        let boxInfo = await changeStateProcess(element, aBox, phone);
-                        if (boxInfo.status === ProgramStatus.Success) {
-                            return changeContainersState(
-                                aBox.containerList,
-                                dbUser, {
-                                    action: 'Sign',
-                                    newState: 1
-                                }, {
-                                    boxID,
-                                    storeID: reqByAdmin ? aBox.storeID : undefined
-                                },
-                                async (err, tradeSuccess, reply) => {
-                                    if (err) return next(err);
-                                    if (!tradeSuccess) return res.status(500).json(reply);
-                                    return containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info, res, next);
-                                });
-                        }
-                        ErrorResponse.H007.message = boxInfo.message;
-                        return res.status(403).json(ErrorResponse.H007);
-                    } catch (err) {
-                        debug.error(err);
-                        next(err);
+                boxID: boxID,
+            }, async function (err, aBox) {
+                if (err) return next(err);
+                if (!aBox)
+                    return res.status(403).json({
+                        code: 'F012',
+                        type: 'BoxingMessage',
+                        message: 'Box is not exist',
+                    });
+                if (!reqByCleanStation && aBox.storeID !== thisStoreID)
+                    return res.status(403).json({
+                        code: 'F008',
+                        type: 'BoxingMessage',
+                        message: "Box is not belong to user's store"
+                    });
+                try {
+                    let boxInfo = await changeStateProcess(element, aBox, phone);
+                    if (boxInfo.status === ProgramStatus.Success) {
+                        return changeContainersState(
+                            aBox.containerList,
+                            dbUser, {
+                                action: ContainerAction.SIGN,
+                                newState: 1
+                            }, {
+                                boxID,
+                                storeID: aBox.storeID
+                            },
+                            async (err, tradeSuccess, reply) => {
+                                if (err) return next(err);
+                                if (!tradeSuccess) return res.status(500).json(reply);
+                                return containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info, res, next);
+                            });
                     }
+                    ErrorResponse.H007.message = boxInfo.message;
+                    return res.status(403).json(ErrorResponse.H007);
+                } catch (err) {
+                    debug.error(err);
+                    next(err);
                 }
-            );
+            });
         }
     }
 );
@@ -819,7 +802,6 @@ router.get(
 
         Object.assign(query, keyword !== '' ? await createTextSearchQuery(keyword) : {})
 
-
         Box.find(query)
             .sort(sorter)
             .skip(offset)
@@ -1085,7 +1067,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 changeContainersState(
                     box.containerList,
                     dbAdmin, {
-                        action: 'Unboxing',
+                        action: ContainerAction,
                         newState: 4
                     }, {
                         bypassStateValidation: true,
@@ -1096,7 +1078,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                         changeContainersState(
                             containerList,
                             dbAdmin, {
-                                action: 'Boxing',
+                                action: ContainerAction.BOXING,
                                 newState: 5
                             }, {
                                 boxID,
@@ -1201,7 +1183,7 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
             return changeContainersState(
                 aBox.containerList,
                 dbAdmin, {
-                    action: 'Unboxing',
+                    action: ContainerAction.UNBOXING,
                     newState: 4
                 }, {
                     bypassStateValidation: true,
