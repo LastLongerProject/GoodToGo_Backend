@@ -505,7 +505,7 @@ module.exports = {
             });
         }
         User.findOne({
-            phone
+            "user.phone": phone
         }, (err, dbUser) => {
             if (err)
                 return done(err);
@@ -515,7 +515,7 @@ module.exports = {
                     type: 'resetPassMessage',
                     message: 'No user found'
                 });
-            dbUser.user.password = User.generateHash(password);
+            dbUser.user.password = dbUser.generateHash(password);
             dbUser.save(err => {
                 if (err) return done(err);
                 UserKeys.deleteMany({
