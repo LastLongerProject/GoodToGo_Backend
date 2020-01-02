@@ -47,7 +47,7 @@ module.exports = {
     checkCouponIsExpired: function (cb) {
         const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
         Coupon.find((err, couponList) => {
-            if (err) return debug.error(err);
+            if (err) return cb(err);
             const now = Date.now();
             couponList.forEach(aCoupon => {
                 if (!CouponTypeDict[aCoupon.couponType]) return;
@@ -63,8 +63,7 @@ module.exports = {
                     });
                 }
             });
-            if (cb) return cb(null);
-            debug.log('Expired Coupon is Check');
+            cb(null, 'Expired Coupon is Check');
         });
     },
     refreshStore: function (cb) {
@@ -366,13 +365,17 @@ module.exports = {
         });
     },
     migrateUserRoleStructure: function (cb) {
-        User.find((err, userList) => {
+        User.find({
+            "user.phone": {
+                $ne: undefined
+            }
+        }, (err, userList) => {
             if (err) return cb(err);
             Promise
                 .all(userList.map(aUser => new Promise((resolve, reject) => {
                     const newRoleList = [];
                     for (let aRoleKey in aUser.roles) {
-                        if (!(aRoleKey in ORI_ROLE_TYPE) || !aUser.roles[aRoleKey]) continue;
+                        if (ORI_ROLE_TYPE.indexOf(aRoleKey) === -1 || !aUser.roles[aRoleKey]) continue;
                         let theRoleKey = aRoleKey;
                         let theRole = aUser.roles[theRoleKey];
                         switch (theRoleKey) {
@@ -406,16 +409,22 @@ module.exports = {
                                 });
                                 break;
                             case RoleType.CUSTOMER:
+                                Object.assign(theRole, {
+                                    roleType: RoleType.CUSTOMER
+                                });
                                 newRoleList.push(theRole);
                                 break;
                             default:
-                                debug.error(`Unknown Origin Role Type:[${theRoleKey}] - [${JSON.stringify(theRole)}]`);
+                                reject(`Unknown Origin Role Type:[${theRoleKey}] - [${JSON.stringify(theRole)}]`);
                         }
                     }
                     Promise
                         .all(newRoleList.map(aNewRole => new Promise((innerResolve, innerReject) => {
                             aUser.addRole(aNewRole.roleType, aNewRole, err => {
-                                if (err) return innerReject(err);
+                                if (err) {
+                                    console.log(aUser);
+                                    return innerReject(err);
+                                }
                                 innerResolve();
                             });
                         })))

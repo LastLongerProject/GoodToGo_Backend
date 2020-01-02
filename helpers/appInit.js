@@ -59,6 +59,12 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
+                }),
+                new Promise((resolve, reject) => {
+                    tasks.migrateUserRoleStructure(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
                 })
             ])
             .then(() => {
