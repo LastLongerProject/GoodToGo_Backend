@@ -12,6 +12,7 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
+const Action = require('../models/enums/containerTransactionEnum').Action;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
@@ -155,12 +156,12 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = theContainer.statusCode;
-                    if (action === 'Rent' && theContainer.storeID !== storeID)
+                    if (action === Action.RENT && theContainer.storeID !== storeID)
                         return reject({
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
-                    else if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
+                    else if (action === Action.RETURN && oriState === 3) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
                             txt: "Already Return"
@@ -207,31 +208,31 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 }
 
                                 let storeID_newUser, storeID_oriUser;
-                                if (action === 'Sign') {
+                                if (action === Action.SIGN) {
                                     storeID_newUser = storeID;
-                                } else if (action === 'Rent') {
+                                } else if (action === Action.RENT) {
                                     let tmp = oriUser;
                                     oriUser = newUser;
                                     newUser = tmp;
                                     storeID_oriUser = storeID;
-                                } else if (action === 'Return') {
+                                } else if (action === Action.RETURN) {
                                     storeID_newUser = storeID;
                                     if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
-                                } else if (action === 'ReadyToClean') {
+                                } else if (action === Action.READY_TO_CLEAN) {
                                     storeID_oriUser = theContainer.storeID;
-                                } else if (action === 'Delivery') {
+                                } else if (action === Action.DELIVERY) {
                                     storeID_newUser = storeID;
                                     theContainer.cycleCtr++;
-                                } else if (action === 'CancelDelivery' || action === 'UnSign') {
+                                } else if (action === Action.CANCEL_DELIVERY || action === Action.UNSIGN) {
                                     theContainer.cycleCtr--;
-                                } else if (action === 'Boxing') {
+                                } else if (action === Action.BOXING) {
                                     theContainer.boxID = boxID;
                                 }
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 theContainer.inLineSystem = inLineSystem;
-                                if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
+                                if (action === Action.SIGN || action === Action.RETURN) theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = null;
 
                                 let newTrade = new Trade({
@@ -275,7 +276,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                             });
                                         });
                                     },
-                                    tradeDetail: action === "Rent" || (action === "Return" && oriState === 2) ? {
+                                    tradeDetail: action === Action.RENT || (action === Action.RETURN && oriState === 2) ? {
                                         oriUser,
                                         newUser,
                                         container: theContainer
