@@ -232,6 +232,39 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
 });
 
 /**
+ * @apiName Reset User's Password
+ * @apiGroup Users
+ * 
+ * @api {post} /users/resetpassword Reset password
+ * @apiUse JWT
+ * @apiPermission admin_manager
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 Signup Successfully
+ *     { 
+ *          type: 'resetPassMessage',
+ *          message: 'Authentication succeeded' 
+ *     }
+ * @apiUse ResetPwdError
+ */
+
+router.post('/resetpassword', regAsAdminManager, validateRequest, function (req, res, next) {
+    setDefaultPassword(req, true);
+    userQuery.resetPass(req, function (err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else if (info.needVerificationCode) {
+            return res.status(205).json(info.body);
+        } else {
+            res.json(info.body);
+        }
+    });
+});
+
+/**
  * @apiName Logout
  * @apiGroup Users
  * 

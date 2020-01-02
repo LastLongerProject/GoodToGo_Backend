@@ -51,7 +51,7 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (typeof phone !== 'string' || (!options.passPhoneValidation && !(isMobilePhone(phone) || isStudentID(phone)))) {
+        } else if (phoneIsNotValid(phone, options.passPhoneValidation)) {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
@@ -207,7 +207,7 @@ module.exports = {
                 type: 'signupMessage',
                 message: 'Content not Complete'
             });
-        } else if (!(typeof phone === 'string' && isMobilePhone(phone) && typeof line_liff_userID === 'string' && typeof line_channel_userID === 'string')) {
+        } else if (phoneIsNotValid(phone, false) || typeof line_liff_userID !== 'string' || typeof line_channel_userID !== 'string') {
             return done(null, false, {
                 code: 'D009',
                 type: 'signupMessage',
@@ -454,6 +454,48 @@ module.exports = {
             }
         });
     },
+    resetPass: function (req, done) {
+        const phone = req.body.phone;
+        const password = req.body.password;
+        if (typeof phone === 'undefined' || typeof password === 'undefined') {
+            return done(null, false, {
+                code: 'D001',
+                type: 'resetPassMessage',
+                message: 'Content not Complete'
+            });
+        } else if (phoneIsNotValid(phone, true)) {
+            return done(null, false, {
+                code: 'D009',
+                type: 'resetPassMessage',
+                message: 'Phone is not valid'
+            });
+        }
+        User.findOne({
+            "user.phone": phone
+        }, (err, dbUser) => {
+            if (err)
+                return done(err);
+            if (!dbUser)
+                return done(null, false, {
+                    code: 'D005',
+                    type: 'resetPassMessage',
+                    message: 'No user found'
+                });
+            dbUser.user.password = dbUser.generateHash(password);
+            dbUser.save(err => {
+                if (err) return done(err);
+                UserKeys.deleteMany({
+                    phone
+                }, (err) => {
+                    if (err) return done(err);
+                    return done(null, null, {
+                        type: 'resetPassMessage',
+                        message: 'Reset Password succeeded.'
+                    });
+                });
+            });
+        });
+    },
     logout: function (req, done) {
         const dbUser = req._user;
         UserKeys.deleteMany({
@@ -563,6 +605,10 @@ module.exports = {
         });
     }
 };
+
+function phoneIsNotValid(phone, passPhoneValidation) {
+    return typeof phone !== 'string' || (!passPhoneValidation && !(isMobilePhone(phone) || isStudentID(phone)));
+}
 
 function isMobilePhone(phone) {
     const reg = /^09[0-9]{8}$/;
