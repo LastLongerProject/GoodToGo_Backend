@@ -26,7 +26,8 @@ const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAva
 const SocketNamespace = require('../../controllers/socket').namespace;
 const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
-const changeContainersState = require('../../controllers/containerTrade');
+const changeContainersState = require('../../controllers/containerTrade').changeContainersState;
+const Renew_Containers=require('../../controllers/containerTrade').Renew_Containers;
 const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
 const regAsBot = require('../../middlewares/validation/validateRequest').regAsBot;
 const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
@@ -713,137 +714,20 @@ router.post('/renew/list',
                 type: 'renewContainerMessage',
                 message: 'Missing Order Time'
             });
-        let container = req.body.containers;
+        let orderTime=res._payload.orderTime;
+        let containers = req.body.containers;
         const storeID = req.body.storeId;
         let boxID;
-        new Promise(function(resolve,reject){
-            changeContainersState(
-                container,
-                dbStore, {
-                    action: 'Return',
-                    newState: 3
-                }, {
-                    storeID,
-                    orderTime: res._payload.orderTime,
-                    activity: "沒活動"
-                },
-                (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(reply);
-                    tradeCallback.return(tradeDetail, {
-                        storeID
-                    });
-                    let Return_reply=reply;
-                    resolve(Return_reply)
-                }
-            );
-        }).
-        then(Return_reply=>{
-            new Promise(function(resolve,reject){
-                changeContainersState(
-                    container,
-                    dbStore, {
-                        action: 'ReadyToClean',
-                        newState: 4
-                    }, {
-                        orderTime: res._payload.orderTime,
-                    },
-                    (err, tradeSuccess, reply) => {
-                        if (err) return next(err);
-                        if (!tradeSuccess) return res.status(403).json(reply);
-                        resolve(Return_reply)
-                    }
-                );
-            }).
-            then(Return_reply=>{
-                new Promise(function(resolve,reject){
-                    let task=function(done){
-                        changeContainersState(
-                            container,
-                            dbStore, {
-                                action: 'Boxing',
-                                newState: 5
-                            }, {
-                                boxID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) return next(err);
-                                if (!tradeSuccess) return res.status(403).json(reply);
-                                done()
-                            }
-                        );
-                    }
-                    redis.get('boxCtr', (err, boxCtr) => {
-                        if (err) return next(err);
-                        if (boxCtr == null) boxCtr = 1;
-                        else boxCtr++;
-                        redis.set('boxCtr', boxCtr, (err, reply) => {
-                            if (err) return next(err);
-                            if (reply !== 'OK') return next(reply);
-                            redis.expire(
-                                'boxCtr',
-                                Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
-                                (err, reply) => {
-                                    if (err) return next(err);
-                                    if (reply !== 1) return next(reply);
-                                    var today = new Date();
-                                    boxID =
-                                        today.getMonth() +
-                                        1 +
-                                        intReLength(today.getDate(), 2) +
-                                        intReLength(boxCtr, 3);
-                                    task(()=>{
-                                        resolve(Return_reply)
-                                    })
-                                }
-                            );
-                        });
-                    });
-                }).then((Return_reply)=>{
-                    new Promise(function(resolve,reject){
-                        changeContainersState(
-                            container,
-                            dbStore, {
-                                action: 'Delivery',
-                                newState: 0,
-                            }, {
-                                boxID,
-                                storeID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) return next(err);
-                                if (!tradeSuccess) return res.status(403).json(reply);
-                                resolve(Return_reply)
-                            }
-                        );
-                    }).then((Return_reply)=>{
-                        new Promise(function(resolve,reject){
-                            changeContainersState(
-                                container,
-                                dbStore, {
-                                    action: 'Sign',
-                                    newState: 1
-                                }, {
-                                    boxID,
-                                    storeID: storeID,
-                                },
-                                (err, tradeSuccess, reply) => {
-                                    if (err) return next(err);
-                                    if (!tradeSuccess) return res.status(403).json(reply);
-                                    resolve(Return_reply)
-                                }
-                            );
-                        }).then(Return_reply=>{
-                            res.json(Return_reply);
-                        })
-                    })
-                })
-            })
+        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
+        .then(Return_reply=>{
+            res.json(Return_reply);
+        })
+        .catch(err_messenge=>{
+            if(err_messenge.err) next(err_messenge.err);
+            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
         })
     }
 )
-
-
 /**
  * @apiName Containers renew container
  * @apiGroup Containers
@@ -885,133 +769,18 @@ router.post('/renew/:id',
                 type: 'renewContainerMessage',
                 message: 'Missing Order Time'
             });
+        let orderTime=res._payload.orderTime;
         let container = req.params.id;
         const storeID = req.body.storeId;
         let boxID;
-        container = [container];
-        new Promise(function(resolve,reject){
-            changeContainersState(
-                container,
-                dbStore, {
-                    action: 'Return',
-                    newState: 3
-                }, {
-                    storeID,
-                    orderTime: res._payload.orderTime,
-                    activity: "沒活動"
-                },
-                (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(reply);
-                    tradeCallback.return(tradeDetail, {
-                        storeID
-                    });
-                    let Return_reply=reply;
-                    resolve(Return_reply)
-                }
-            );
-        }).
-        then(Return_reply=>{
-            new Promise(function(resolve,reject){
-                changeContainersState(
-                    container,
-                    dbStore, {
-                        action: 'ReadyToClean',
-                        newState: 4
-                    }, {
-                        orderTime: res._payload.orderTime,
-                    },
-                    (err, tradeSuccess, reply) => {
-                        if (err) return next(err);
-                        if (!tradeSuccess) return res.status(403).json(reply);
-                        resolve(Return_reply)
-                    }
-                );
-            }).
-            then(Return_reply=>{
-                new Promise(function(resolve,reject){
-                    let task=function(done){
-                        changeContainersState(
-                            container,
-                            dbStore, {
-                                action: 'Boxing',
-                                newState: 5
-                            }, {
-                                boxID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) return next(err);
-                                if (!tradeSuccess) return res.status(403).json(reply);
-                                done()
-                            }
-                        );
-                    }
-                    redis.get('boxCtr', (err, boxCtr) => {
-                        if (err) return next(err);
-                        if (boxCtr == null) boxCtr = 1;
-                        else boxCtr++;
-                        redis.set('boxCtr', boxCtr, (err, reply) => {
-                            if (err) return next(err);
-                            if (reply !== 'OK') return next(reply);
-                            redis.expire(
-                                'boxCtr',
-                                Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
-                                (err, reply) => {
-                                    if (err) return next(err);
-                                    if (reply !== 1) return next(reply);
-                                    var today = new Date();
-                                    boxID =
-                                        today.getMonth() +
-                                        1 +
-                                        intReLength(today.getDate(), 2) +
-                                        intReLength(boxCtr, 3);
-                                    task(()=>{
-                                        resolve(Return_reply)
-                                    })
-                                }
-                            );
-                        });
-                    });
-                }).then((Return_reply)=>{
-                    new Promise(function(resolve,reject){
-                        changeContainersState(
-                            container,
-                            dbStore, {
-                                action: 'Delivery',
-                                newState: 0,
-                            }, {
-                                boxID,
-                                storeID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) return next(err);
-                                if (!tradeSuccess) return res.status(403).json(reply);
-                                resolve(Return_reply)
-                            }
-                        );
-                    }).then((Return_reply)=>{
-                        new Promise(function(resolve,reject){
-                            changeContainersState(
-                                container,
-                                dbStore, {
-                                    action: 'Sign',
-                                    newState: 1
-                                }, {
-                                    boxID,
-                                    storeID: storeID,
-                                },
-                                (err, tradeSuccess, reply) => {
-                                    if (err) return next(err);
-                                    if (!tradeSuccess) return res.status(403).json(reply);
-                                    resolve(Return_reply)
-                                }
-                            );
-                        }).then(Return_reply=>{
-                            res.json(Return_reply);
-                        })
-                    })
-                })
-            })
+        let containers = [container];
+        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
+        .then(Return_reply=>{
+            res.json(Return_reply);
+        })
+        .catch(err_messenge=>{
+            if(err_messenge.err) next(err_messenge.err);
+            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
         })
     }
 );
