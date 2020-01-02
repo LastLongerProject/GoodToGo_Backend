@@ -41,6 +41,7 @@ router.use('/role', roleRoute);
 /**
  * @apiName Login
  * @apiGroup Users
+ * @apiDescription See "Role" in <a href="#api-_">Auth</a>
  *
  * @api {post} /users/login User login
  * @apiUse DefaultSecurityMethod
@@ -97,6 +98,7 @@ router.post('/login', validateDefault, function (req, res, next) {
 /**
  * @apiName Fetch
  * @apiGroup Users
+ * @apiDescription See "Role" in <a href="#api-_">Auth</a>
  *
  * @api {post} /users/fetchRole User Fetch Role List
  * @apiUse JWT
@@ -131,7 +133,6 @@ router.post('/login', validateDefault, function (req, res, next) {
  *              ]
  *          };
  *      }
- *     
  * @apiUse LoginError
  */
 

@@ -1,14 +1,14 @@
 # § Auth Method & Security
 
 ## | Default
-### Headers
+**Headers**
 - reqID : random text ( suggestion -> String that encode with 'hex', length = 10 )
 - reqTime : Time.now();
-### Error Code
+**Error Code**
 - A001 ~ A002
 
 ## | JWT
-### Headers
+**Headers**
 - Authorization (A JWT string, encode using Secret key : // secretKey you get by signup or login. Shouldn't contain 'Bearer ' in string)
 > JWT payload should contain :
 > - jti : random text ( suggestion -> encode with 'hex', length = 10 )
@@ -16,29 +16,29 @@
 > - exp : Time.now(); plus 3 days
 - ApiKey
 > You can get ApiKey by signup or login
-### Error Code
+**Error Code**
 - B001 ~ B008
 
 ## | Token Control
-### Url
+**Url**
 - The url you get from "/stores/list"
-### Error Code
+**Error Code**
 - C001 ~ C003
 
 ## | LINE
-### Headers
+**Headers**
 - line-id (line_liff_userID)
-### Error Code
+**Error Code**
 - B001 ~ B004
 
 ## | Channel
-### Headers
+**Headers**
 - line-id (line_channel_userID)
-### Error Code
+**Error Code**
 - B001 ~ B004
 
 # § Role
-### Enum of RoleType
+**Enum of RoleType**
 ```
 RoleType: Object.freeze({
     CUSTOMER: "customer",
@@ -50,22 +50,22 @@ RoleType: Object.freeze({
 })
 ```
 ## | Customer
-### Elements
+**Elements**
 - group: *String*
 ## | Store
-### Elements
+**Elements**
 - storeID: *Number*
 - manager: *Boolean*
 ## | CleanStation
-### Elements
+**Elements**
 - stationID: *Number*
 - manager: *Boolean*
 ## | Admin
-### Elements
+**Elements**
 - asStoreID: *Number*
 - asStationID: *Number*
 ## | Bot
-### Elements
+**Elements**
 - scopeID: *Number*
 - rentFromStoreID: *Number*
 - returnToStoreID: *Number*
