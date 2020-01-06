@@ -12,7 +12,7 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
-const Action = require('../models/enums/containerTransactionEnum').Action;
+const Action = require('../models/enums/containerEnum').Action;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
@@ -292,7 +292,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
 }
 
 function getOriUser(action, theContainer, rentToUser, cb) {
-    if (action === "Rent" && rentToUser) return cb(null, rentToUser);
+    if (action === Action.RENT && rentToUser) return cb(null, rentToUser);
     else return User.findOne({
         'user.phone': theContainer.conbineTo
     }, cb);

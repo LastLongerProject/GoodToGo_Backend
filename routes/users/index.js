@@ -6,19 +6,19 @@ const userQuery = require('../../controllers/userQuery');
 const userTrade = require('../../controllers/userTrade');
 const pointTrade = require('../../controllers/pointTrade');
 
-const validateLine = require('../../middlewares/validation/validateLine');
-const validateDefault = require('../../middlewares/validation/validateDefault');
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIsBot = require('../../middlewares/validation/validateRequest').checkRoleIsBot;
-const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const validateLine = require('../../middlewares/validation/authorization/validateLine');
+const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsBot = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsBot;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
 
 const intReLength = require('../../helpers/toolkit').intReLength;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../../helpers/aws/SNS').sns_subscribe;
-const NotificationEvent = require('../../helpers/notifications/enums/events');
-const SnsAppType = require('../../helpers/notifications/enums/sns/appType');
+const NotificationEvent = require('../../models/enums/notificationEnum').CenterEvent;
+const SnsAppType = require('../../models/enums/notificationEnum').AppType;
 
 const redis = require('../../models/redis');
 const User = require('../../models/DB/userDB');
@@ -29,8 +29,11 @@ const DataCacheFactory = require('../../models/dataCacheFactory');
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 
 const NotificationCenter = require('../../helpers/notifications/center');
+
+const setDefaultPassword = require('../../config/keys').setDefaultPassword;
 
 const signupRoute = require("./signup");
 const roleRoute = require("./role");
@@ -249,7 +252,9 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
  * @apiUse ResetPwdError
  */
 
-router.post('/resetpassword', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/resetpassword', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     setDefaultPassword(req, true);
     userQuery.resetPass(req, function (err, user, info) {
         if (err) {
@@ -460,15 +465,15 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
             var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             Trade.find({
                 $or: [{
-                        'tradeType.action': 'Rent',
+                        'tradeType.action': ContainerAction.RENT,
                         'newUser.phone': dbUser.user.phone,
                     },
                     {
-                        'tradeType.action': 'Return',
+                        'tradeType.action': ContainerAction.RETURN,
                         'oriUser.phone': dbUser.user.phone,
                     },
                     {
-                        'tradeType.action': 'UndoReturn',
+                        'tradeType.action': ContainerAction.UNDO_RETURN,
                         'newUser.phone': dbUser.user.phone,
                     },
                 ],
@@ -476,7 +481,7 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
                 if (err) return next(err);
 
                 tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-                cleanUndoTrade('Return', tradeList);
+                cleanUndoTrade(ContainerAction.RETURN, tradeList);
 
                 var containerKey;
                 var tmpReturnedObject;
@@ -484,7 +489,7 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
                 var returnedList = [];
                 tradeList.forEach(aTrade => {
                     containerKey = aTrade.container.id + '-' + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === 'Rent') {
+                    if (aTrade.tradeType.action === ContainerAction.RENT) {
                         inUsedDict[containerKey] = {
                             container: '#' + intReLength(aTrade.container.id, 3),
                             containerCode: aTrade.container.id,
@@ -494,7 +499,7 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
                             cycle: aTrade.container.cycleCtr,
                             returned: false,
                         };
-                    } else if (aTrade.tradeType.action === 'Return' && inUsedDict[containerKey]) {
+                    } else if (aTrade.tradeType.action === ContainerAction.RETURN && inUsedDict[containerKey]) {
                         tmpReturnedObject = {};
                         Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
                         Object.assign(tmpReturnedObject, {
@@ -548,15 +553,15 @@ router.get('/data', validateRequest, function (req, res, next) {
     var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
             $or: [{
-                    'tradeType.action': 'Rent',
+                    'tradeType.action': ContainerAction.RENT,
                     'newUser.phone': dbUser.user.phone,
                 },
                 {
-                    'tradeType.action': 'Return',
+                    'tradeType.action': ContainerAction.RETURN,
                     'oriUser.phone': dbUser.user.phone,
                 },
                 {
-                    'tradeType.action': 'UndoReturn',
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
                     'newUser.phone': dbUser.user.phone,
                 },
             ],
@@ -565,7 +570,7 @@ router.get('/data', validateRequest, function (req, res, next) {
             if (err) return next(err);
 
             tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-            cleanUndoTrade('Return', tradeList);
+            cleanUndoTrade(ContainerAction.RETURN, tradeList);
 
             var containerKey;
             var tmpReturnedObject;
@@ -573,7 +578,7 @@ router.get('/data', validateRequest, function (req, res, next) {
             var returnedList = [];
             tradeList.forEach(aTrade => {
                 containerKey = aTrade.container.id + '-' + aTrade.container.cycleCtr;
-                if (aTrade.tradeType.action === 'Rent') {
+                if (aTrade.tradeType.action === ContainerAction.RENT) {
                     inUsedDict[containerKey] = {
                         container: '#' + intReLength(aTrade.container.id, 3),
                         containerCode: aTrade.container.id,
@@ -584,7 +589,7 @@ router.get('/data', validateRequest, function (req, res, next) {
                         returned: false,
                     };
                 } else if (
-                    aTrade.tradeType.action === 'Return' &&
+                    aTrade.tradeType.action === ContainerAction.RETURN &&
                     inUsedDict[containerKey]
                 ) {
                     tmpReturnedObject = {};
@@ -744,12 +749,12 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     Trade.find({
         "$or": [{
                 "newUser.phone": dbUser.user.phone,
-                "tradeType.action": "Rent",
+                "tradeType.action": ContainerAction.RENT,
                 "container.inLineSystem": true
             },
             {
                 "oriUser.phone": dbUser.user.phone,
-                "tradeType.action": "Return"
+                "tradeType.action": ContainerAction.RETURN
             }
         ]
     }, {}, {
@@ -763,14 +768,14 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         const intergratedTrade = {};
         tradeList.forEach(aTrade => {
             const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
-            if (aTrade.tradeType.action === "Rent") {
+            if (aTrade.tradeType.action === ContainerAction.RENT) {
                 rentHistory[tradeKey] = {
                     containerID: `#${aTrade.container.id}`,
                     containerType: ContainerTypeDict[aTrade.container.typeCode].name,
                     rentTime: aTrade.tradeTime,
                     rentStore: StoreDict[aTrade.oriUser.storeID].name
                 };
-            } else if (aTrade.tradeType.action === "Return") {
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 if (!rentHistory[tradeKey]) return;
                 intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
                     returnTime: aTrade.tradeTime,

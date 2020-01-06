@@ -4,7 +4,7 @@ const couponTrade = require('./couponTrade');
 
 const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');

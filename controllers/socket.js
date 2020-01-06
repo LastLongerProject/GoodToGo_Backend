@@ -6,11 +6,12 @@ const Trade = require('../models/DB/tradeDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const Container = require('../models/DB/containerDB');
 const RoleElement = require('../models/enums/userEnum').RoleElement;
+const Action = require('../models/enums/containerEnum').Action;
 const validateStateChanging = require('../helpers/toolkit').validateStateChanging;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
-const actionTodo = ['Delivery', 'Sign', 'Rent', 'Return', 'ReadyToClean', 'Boxing', 'dirtyReturn'];
+const actionTodo = [Action.DELIVERY, Action.SIGN, Action.RENT, Action.RETURN, Action.READY_TO_CLEAN, Action.BOXING, Action.DIRTY_RETURN];
 
 const namespace = Object.freeze({
     CHALLENGE: "/containers/challenge/socket",
@@ -169,7 +170,7 @@ module.exports = {
                         return next(error);
                     }
                     Trade.count({
-                        'tradeType.action': 'Rent',
+                        'tradeType.action': Action.RENT,
                         "tradeType.oriState": 1,
                         'oriUser.storeID': storeID
                     }, (err, amount) => {

@@ -11,13 +11,13 @@ const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
-const Action = require('../../models/enums/containerTransactionEnum').Action;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 
 const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
-const NotificationEvent = require('../../helpers/notifications/enums/events');
+const NotificationEvent = require('../../models/enums/notificationEnum').CenterEvent;
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
 const intReLength = require('../../helpers/toolkit').intReLength;
 const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
@@ -28,11 +28,11 @@ const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
 
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIs = require('../../middlewares/validation/validateRequest').checkRoleIs;
-const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
-const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIs = require('../../middlewares/validation/authorization/validateRequest').checkRoleIs;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
 const status = [
     'delivering',
@@ -113,7 +113,7 @@ router.post('/delivery/:boxID/:store', checkRoleIsCleanStation(), validateReques
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
-                action: Action.DELIVERY,
+                action: ContainerAction.DELIVERY,
                 newState: 0,
             }, {
                 boxID,
@@ -191,7 +191,7 @@ router.post('/cancelDelivery/:boxID', checkRoleIsCleanStation(), validateRequest
         changeContainersState(
             aBox.containerList,
             dbAdmin, {
-                action: Action.CANCEL_DELIVERY,
+                action: ContainerAction.CANCEL_DELIVERY,
                 newState: 5
             }, {
                 bypassStateValidation: true,
@@ -304,7 +304,7 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                         return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
                 }
                 changeContainersState(container, dbStore, {
-                    action: Action.RENT,
+                    action: ContainerAction.RENT,
                     newState: 2
                 }, {
                     rentToUser: theCustomer,
@@ -399,7 +399,7 @@ router.post('/return/:container', checkRoleIs([{
     changeContainersState(
         container,
         dbStore, {
-            action: Action.RETURN,
+            action: ContainerAction.RETURN,
             newState: 3
         }, {
             storeID: thisStoreID,
@@ -462,7 +462,7 @@ router.post('/readyToClean/:container', checkRoleIs([{
     changeContainersState(
         container,
         dbUser, {
-            action: Action.READY_TO_CLEAN,
+            action: ContainerAction.READY_TO_CLEAN,
             newState: 4
         }, {
             orderTime: res._payload.orderTime
@@ -606,13 +606,13 @@ router.get('/challenge/token', checkRoleIs([{
  * @apiUse ChanllengeActionError
  */
 var actionTodo = [
-    'Delivery',
-    'Sign',
-    'Rent',
-    'Return',
-    'ReadyToClean',
-    'Boxing',
-    'dirtyReturn'
+    ContainerAction.DELIVERY,
+    ContainerAction.SIGN,
+    ContainerAction.RENT,
+    ContainerAction.RETURN,
+    ContainerAction.READY_TO_CLEAN,
+    ContainerAction.BOXING,
+    ContainerAction.DIRTY_RETURN
 ];
 router.get('/challenge/:action/:container', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     const action = req.params.action;
@@ -687,7 +687,7 @@ router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdm
     Trade.findOne({
         "container.id": containerID,
         "oriUser.phone": userPhone,
-        "tradeType.action": "Return"
+        "tradeType.action": ContainerAction.RETURN
     }, {}, {
         sort: {
             tradeTime: -1

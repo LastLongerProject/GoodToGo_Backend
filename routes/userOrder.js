@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
-const validateLine = require('../middlewares/validation/validateLine').all;
-const validateStoreCode = require('../middlewares/validation/validateUserOrder').storeCode;
+const validateLine = require('../middlewares/validation/authorization/validateLine').all;
+const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
 
 const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
@@ -18,7 +18,7 @@ const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvaila
 
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
-const Action = require('../models/enums/containerTransactionEnum').Action;
+const Action = require('../models/enums/containerEnum').Action;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
 

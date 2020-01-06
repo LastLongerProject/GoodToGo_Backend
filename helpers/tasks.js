@@ -15,6 +15,7 @@ const ContainerType = require('../models/DB/containerTypeDB');
 
 const RoleType = require('../models/enums/userEnum').RoleType;
 const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
+const ContainerAction = require('../models/enums/containerEnum').Action;
 
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
@@ -261,7 +262,7 @@ module.exports = {
                             Trade.findOne({
                                 "container.id": aUserOrder.containerID,
                                 "oriUser.phone": oriUser.user.phone,
-                                "tradeType.action": "Return",
+                                "tradeType.action": ContainerAction.RETURN,
                                 "tradeTime": {
                                     '$gt': aUserOrder.orderTime
                                 }

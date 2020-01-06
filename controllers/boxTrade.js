@@ -1,6 +1,6 @@
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
-const ContainerAction = require('../models/enums/containerTransactionEnum').Action;
+const ContainerAction = require('../models/enums/containerEnum').Action;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const BoxSaveType = require('../models/enums/programEnum').BoxSaveType;
 const changeContainersState = require('./containerTrade');

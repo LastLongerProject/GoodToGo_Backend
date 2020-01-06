@@ -4,9 +4,9 @@ const debug = require('../helpers/debugger')('deliveryList');
 const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const getContainerHash = require('../helpers/tools').getContainerHash;
 const DataCacheFactory = require('../models/dataCacheFactory');
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsCleanStation = require('../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 const {
     validateCreateApiContent,
     validateBoxingApiContent,
@@ -16,7 +16,7 @@ const {
     validateModifyApiContent,
     fetchBoxCreation,
     validateBoxStatus
-} = require('../middlewares/validation/deliveryList/contentValidation.js');
+} = require('../middlewares/validation/content/deliveryList.js');
 
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
@@ -29,8 +29,8 @@ const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const RoleType = require('../models/enums/userEnum').RoleType;
-const ContainerAction = require('../models/enums/containerTransactionEnum').Action;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
+const ContainerAction = require('../models/enums/containerEnum').Action;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const isSameDay = require('../helpers/toolkit').isSameDay;
