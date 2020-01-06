@@ -749,27 +749,27 @@ function parseSorter(rawValue) {
         case Sorter.CONTAINER:
             return {
                 "containerHash": 1
-            }
-            case Sorter.STORE:
-                return {
-                    "storeID": 1
-                }
-                case Sorter.DESCEND_ARRIVAL:
-                    return {
-                        "deliveringDate": -1
-                    }
-                    case Sorter.ASCEND_ARRIVAL:
-                        return {
-                            "deliveringDate": 1
-                        }
-                        case Sorter.DESCEND_CREATED_DATE:
-                            return {
-                                "_id": -1
-                            }
-                            default:
-                                return {
-                                    "_id": 1
-                                }
+            };
+        case Sorter.STORE:
+            return {
+                "storeID": 1
+            };
+        case Sorter.DESCEND_ARRIVAL:
+            return {
+                "deliveringDate": -1
+            };
+        case Sorter.ASCEND_ARRIVAL:
+            return {
+                "deliveringDate": 1
+            };
+        case Sorter.DESCEND_CREATED_DATE:
+            return {
+                "_id": -1
+            };
+        default:
+            return {
+                "_id": 1
+            };
     }
 }
 
