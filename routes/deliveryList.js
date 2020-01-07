@@ -308,14 +308,19 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
             }
             try {
                 let boxInfo = await changeStateProcess(element, aBox, phone);
-                if (boxInfo.status === ProgramStatus.Success) {
-                    return containerStateFactory(newState, aBox, dbAdmin, boxInfo.info, res, next);
-                } else {
+                if (boxInfo.status !== ProgramStatus.Success) {
                     ErrorResponse.H007.message = boxInfo.message;
                     return res.status(403).json(ErrorResponse.H007);
                 }
+                let stateInfo = await containerStateFactory(newState, aBox, dbAdmin, boxInfo.info);
+                if (stateInfo.status !== ProgramStatus.Success) {
+                    return res.status(403).json(ProgramStatus.message);
+                }
+                return res.json({
+                    type: "ChangeStateMessage",
+                    message: "Change state successfully"
+                });
             } catch (err) {
-                debug.error(err);
                 next(err);
             }
         });
@@ -396,26 +401,30 @@ router.post(
                     });
                 try {
                     let boxInfo = await changeStateProcess(element, aBox, phone);
-                    if (boxInfo.status === ProgramStatus.Success) {
-                        return changeContainersState(
-                            aBox.containerList,
-                            dbUser, {
-                                action: ContainerAction.SIGN,
-                                newState: 1
-                            }, {
-                                boxID,
-                                storeID: aBox.storeID
-                            },
-                            async (err, tradeSuccess, reply) => {
-                                if (err) return next(err);
-                                if (!tradeSuccess) return res.status(500).json(reply);
-                                return containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info, res, next);
-                            });
+                    if (boxInfo.status !== ProgramStatus.Success) {
+                        ErrorResponse.H007.message = boxInfo.message;
+                        return res.status(403).json(ErrorResponse.H007);
                     }
-                    ErrorResponse.H007.message = boxInfo.message;
-                    return res.status(403).json(ErrorResponse.H007);
+                    return changeContainersState(
+                        aBox.containerList, dbUser, {
+                            action: ContainerAction.SIGN,
+                            newState: 1
+                        }, {
+                            boxID,
+                            storeID: aBox.storeID
+                        }, async (err, tradeSuccess, reply) => {
+                            if (err) return next(err);
+                            if (!tradeSuccess) return res.status(500).json(reply);
+                            let stateInfo = await containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info);
+                            if (stateInfo.status !== ProgramStatus.Success) {
+                                return res.status(403).json(ProgramStatus.message);
+                            }
+                            return res.json({
+                                type: "SignMessage",
+                                message: "Sign successfully"
+                            });
+                        });
                 } catch (err) {
-                    debug.error(err);
                     next(err);
                 }
             });
