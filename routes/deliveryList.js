@@ -424,92 +424,6 @@ router.post(
 );
 
 /**
- * @apiName DeliveryList Get list
- * @apiGroup DeliveryList
- *
- * @api {get} /deliveryList/box/list Box list
- * @apiPermission admin
- * @apiUse JWT
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        [   
-            {
-                storeID: Number
-                boxObjs: [{
-                    ID: Number //boxID,
-                    boxName: String,
-                    dueDate: Date,
-                    status: String,
-                    action: [
-                        {
-                            phone: String,
-                            boxStatus: String,
-                            timestamps: Date
-                        },...
-                    ],
-                    deliverContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    orderContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    containerList: Array //boxID,
-                    comment: String // If comment === "" means no error
-                },...]
-            },...
-        ]
- */
-router.get(
-    '/box/list',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    async function (req, res, next) {
-        let result = [];
-        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        for (let i = 0; i < Object.keys(storeList).length; i++) {
-            result.push({
-                storeID: Number(Object.keys(storeList)[i]),
-                boxObjs: []
-            });
-        }
-        Box.find({}, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (!String(box.storeID)) continue;
-
-                result.forEach(obj => {
-                    if (String(obj.storeID) === String(box.storeID)) {
-                        obj.boxObjs.push({
-                            ID: box.boxID,
-                            boxName: box.boxName || "",
-                            dueDate: box.dueDate || "",
-                            status: box.status || "",
-                            action: box.action || [],
-                            deliverContent: getDeliverContent(box.containerList),
-                            orderContent: box.boxOrderContent || [],
-                            containerList: box.containerList,
-                            containerHash: box.containerHash,
-                            user: box.user,
-                            comment: box.comment || ""
-                        });
-                    }
-                });
-            }
-            result = result.filter(obj => {
-                return obj.boxObjs.length > 0;
-            });
-            return res.status(200).json(result);
-        });
-    }
-);
-
-/**
  * @apiName DeliveryList Get Box
  * @apiGroup DeliveryList
  *
@@ -583,116 +497,7 @@ router.get(
     }
 );
 
-/**
- * @apiName DeliveryList Get stocked boxes in the specific warehouse
- * @apiGroup DeliveryList
- *
- * @api {get} /deliveryList/box/list/query Universal DeliveryList Box Query
- * @apiPermission admin
- * @apiUse JWT
- * @apiParam {storeID} warehouse id
- * @apiParam {offset} offset of the updated date
- * @apiParam {boxStatus[]} desired box status
- * @apiParam {batch} batch size
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        [   
-            {
-                storeID: Number
-                boxObjs: [{
-                    ID: Number //boxID,
-                    boxName: String,
-                    dueDate: Date,
-                    status: String,
-                    action: [
-                        {
-                            phone: String,
-                            boxStatus: String,
-                            timestamps: Date
-                        },...
-                    ],
-                    deliverContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    orderContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    containerList: Array //boxID,
-                    comment: String // If comment === "" means no error
-                },...]
-            },...
-        ]
- */
-router.get(
-    '/box/list/query',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    async function (req, res, next) {
-        let boxStatus = req.query.boxStatus;
-        let storeID = req.query.storeID && parseInt(req.query.storeID);
-        let offset = parseInt(req.query.offset) || 0;
-        let batch = parseInt(req.query.batch) || 0;
-        let ascend = req.query.ascent !== 'false'
 
-        let query = {
-            storeID,
-            'status': boxStatus
-        }
-
-        Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
-
-        if (!Object.keys(query).length)
-            return res.status(400).json({
-                code: "F014",
-                type: "missing parameters",
-                message: "At least one query parameter required"
-            })
-
-        const sorter = {
-            "_id": ascend ? 1 : -1
-        }
-        const offsetBoxes = await Box.find().sort(sorter).limit(offset + 1).exec()
-        const theBox = offsetBoxes.slice(-1).pop()
-        const idSorter = ascend ? {
-            '$gte': theBox._id
-        } : {
-            '$lte': theBox._id
-        }
-
-        Box.find({
-                ...query,
-                '_id': idSorter
-            })
-            .sort(sorter)
-            .limit(batch)
-            .exec((err, boxes) => {
-                if (err) return next(err);
-                let boxObjs = boxes.map(box => ({
-                    ID: box.boxID,
-                    storeID: box.storeID,
-                    boxName: box.boxName || "",
-                    dueDate: box.dueDate || "",
-                    status: box.status || "",
-                    action: box.action || [],
-                    deliverContent: getDeliverContent(box.containerList),
-                    orderContent: box.boxOrderContent || [],
-                    containerList: box.containerList,
-                    containerHash: box.containerHash,
-                    user: box.user,
-                    comment: box.comment || "",
-                    deliveringDate: box.deliveringDate
-                }))
-                return res.status(200).json(boxObjs);
-            })
-    }
-);
 
 const Sorter = {
     CONTAINER: 1 << 2,
@@ -773,6 +578,54 @@ function parseSorter(rawValue) {
     }
 }
 
+/**
+ * @apiName DeliveryList Get stocked boxes in the specific warehouse
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/box/list/query/:sorter Universal DeliveryList Box Query
+ * @apiPermission admin
+ * @apiUse JWT
+ * @apiParam {storeID} warehouse id
+ * @apiParam {offset} offset of the updated date
+ * @apiParam {boxStatus[]} desired box status
+ * @apiParam {batch} batch size
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        [   
+            {
+                storeID: Number
+                boxObjs: [{
+                    ID: Number //boxID,
+                    boxName: String,
+                    dueDate: Date,
+                    status: String,
+                    action: [
+                        {
+                            phone: String,
+                            boxStatus: String,
+                            timestamps: Date
+                        },...
+                    ],
+                    deliverContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    orderContent: [
+                        {
+                            amount: Number,
+                            containerType: String
+                        },...
+                    ],
+                    containerList: Array //boxID,
+                    comment: String // If comment === "" means no error
+                },...]
+            },...
+        ]
+ */
+
 router.get(
     '/box/list/query/:sorter',
     checkRoleIsCleanStation(),
@@ -825,103 +678,6 @@ router.get(
                 }))
                 return res.status(200).json(boxObjs);
             })
-    }
-);
-
-/**
- * @apiName DeliveryList Get specific status list
- * @apiGroup DeliveryList
- *
- * @api {get} /deliveryList/box/list/:status Specific status box list
- * @apiPermission admin
- * @apiUse JWT
- * @apiDescription
- * **Status**
- * - Created: "Created",
- * - Boxing: "Boxing",
- * - Delivering: "Delivering",
- * - Signed: "Signed",
- * - Stocked: "Stocked"
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        [   
-            {
-                storeID: Number
-                boxObjs: [{
-                    ID: Number //boxID,
-                    boxName: String,
-                    dueDate: Date,
-                    status: String,
-                    action: [
-                        {
-                            phone: String,
-                            boxStatus: String,
-                            timestamps: Date
-                        },...
-                    ],
-                    deliverContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    orderContent: [
-                        {
-                            amount: Number,
-                            containerType: String
-                        },...
-                    ],
-                    containerList: Array //boxID,
-                    comment: String // If comment === "" means no error
-                },...]
-            },...
-        ]
- */
-router.get(
-    '/box/list/:status',
-    checkRoleIsCleanStation(),
-    validateRequest,
-    async function (req, res, next) {
-        let result = [];
-        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        let boxStatus = req.params.status;
-        for (let i = 0; i < Object.keys(storeList).length; i++) {
-            result.push({
-                storeID: Number(Object.keys(storeList)[i]),
-                boxObjs: []
-            });
-        }
-        Box.find({
-            'status': boxStatus
-        }, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (!String(box.storeID)) continue;
-
-                result.forEach(obj => {
-                    if (String(obj.storeID) === String(box.storeID)) {
-                        obj.boxObjs.push({
-                            ID: box.boxID,
-                            boxName: box.boxName || "",
-                            dueDate: box.dueDate || "",
-                            status: box.status || "",
-                            action: box.action || [],
-                            deliverContent: getDeliverContent(box.containerList),
-                            orderContent: box.boxOrderContent || [],
-                            containerList: box.containerList,
-                            containerHash: box.containerHash,
-                            user: box.user,
-                            comment: box.comment || ""
-                        });
-                    }
-                });
-            }
-            result = result.filter(obj => {
-                return obj.boxObjs.length > 0;
-            });
-            return res.status(200).json(result);
-        });
     }
 );
 
