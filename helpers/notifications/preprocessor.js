@@ -1,8 +1,9 @@
 const debug = require("../debugger")("notification_preprocessor");
 
-const SnsEvent = require("./enums/sns/events");
-const WebhookEvent = require("./enums/webhook/events");
-const SocketEvent = require("./enums/socket/events");
+const SnsEvent = require("../../models/enums/notificationEnum").SnsEvent;
+const SocketEvent = require("../../models/enums/notificationEnum").SocketEvent;
+const WebhookEvent = require("../../models/enums/notificationEnum").WebhookEvent;
+const PostbackAction = require("../../models/enums/notificationEnum").PostbackAction;
 const DataCacheFactory = require("../../models/dataCacheFactory");
 
 function containerFormatter(data) {
@@ -40,7 +41,7 @@ module.exports = {
                                 title: "新容器送到囉！",
                                 body: `點我簽收 #${data.boxID}`,
                                 options: {
-                                    action: "BOX_DELIVERY"
+                                    action: PostbackAction.BOX_DELIVERY
                                 }
                             },
                             errMsgPrefix: `[配送]通知推播失敗：[${user.user.phone}]`
@@ -52,7 +53,7 @@ module.exports = {
                                 title: `借用了${formattedData.amount}個容器！`,
                                 body: formattedData.IDlist.join('、'),
                                 options: {
-                                    action: "RELOAD_USAGE"
+                                    action: PostbackAction.RELOAD_USAGE
                                 }
                             },
                             errMsgPrefix: `[借出]通知推播失敗：[${user.user.phone}]`
@@ -64,7 +65,7 @@ module.exports = {
                                 title: `歸還了${formattedData.amount}個容器！`,
                                 body: formattedData.IDlist.join("、"),
                                 options: {
-                                    action: "RELOAD_USAGE"
+                                    action: PostbackAction.RELOAD_USAGE
                                 }
                             },
                             errMsgPrefix: `[歸還]通知推播失敗：[${user.user.phone}]`

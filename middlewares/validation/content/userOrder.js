@@ -1,4 +1,4 @@
-const DataCacheFactory = require('../../models/dataCacheFactory');
+const DataCacheFactory = require('../../../models/dataCacheFactory');
 
 const storeCodeValidater = /\d{4}/;
 
@@ -34,7 +34,7 @@ module.exports = {
             });
 
         req._storeID = parseInt(storeCode.substring(0, 3));
-        
+
         next()
     }
 }

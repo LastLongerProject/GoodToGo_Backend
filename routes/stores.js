@@ -13,11 +13,11 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 
-const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const checkRoleIs = require('../middlewares/validation/validateRequest').checkRoleIs;
-const checkRoleIsStore = require('../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsCleanStation = require('../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateDefault = require('../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIs = require('../middlewares/validation/authorization/validateRequest').checkRoleIs;
+const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
@@ -30,6 +30,7 @@ const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 const RoleType = require('../models/enums/userEnum').RoleType;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+const ContainerAction = require('../models/enums/containerEnum').Action;
 
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
@@ -593,15 +594,15 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
                 '$lt': dateCheckpoint(1)
             },
             '$or': [{
-                    'tradeType.action': 'Rent',
+                    'tradeType.action': ContainerAction.RENT,
                     'oriUser.storeID': thisStoreID
                 },
                 {
-                    'tradeType.action': 'Return',
+                    'tradeType.action': ContainerAction.RETURN,
                     'newUser.storeID': thisStoreID
                 },
                 {
-                    'tradeType.action': 'UndoReturn',
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
                     'oriUser.storeID': thisStoreID
                 }
             ]
@@ -620,12 +621,12 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
                     }
                 }
             }
-            cleanUndoTrade("Return", trades);
+            cleanUndoTrade(ContainerAction.RETURN, trades);
             if (typeof trades !== 'undefined') {
                 for (let i in trades) {
-                    if (trades[i].tradeType.action === 'Rent')
+                    if (trades[i].tradeType.action === ContainerAction.RENT)
                         resJson.todayData.rent++;
-                    else if (trades[i].tradeType.action === 'Return')
+                    else if (trades[i].tradeType.action === ContainerAction.RETURN)
                         resJson.todayData.return++;
                 }
             }
@@ -837,7 +838,7 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
         data: []
     };
     Trade.find({
-        'tradeType.action': "Rent",
+        'tradeType.action': ContainerAction.RENT,
         'oriUser.storeID': thisStoreID
     }, function (err, rentedList) {
         if (err) return next(err);
@@ -847,7 +848,7 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
         for (var i in rentedList)
             rentedIdList.push(rentedList[i].container.id);
         Trade.find({
-            'tradeType.action': "Return",
+            'tradeType.action': ContainerAction.RETURN,
             'container.id': {
                 '$in': rentedIdList
             }
@@ -1042,7 +1043,7 @@ router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res
             }
         }
         Trade.find({
-            'tradeType.action': 'Sign',
+            'tradeType.action': ContainerAction.SIGN,
             'newUser.storeID': thisStoreID,
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays)
@@ -1132,7 +1133,7 @@ router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, re
     Promise
         .all([new Promise((resolve, reject) => {
                 Trade.find({
-                    'tradeType.action': 'Rent',
+                    'tradeType.action': ContainerAction.RENT,
                     'oriUser.storeID': thisStoreID
                 }, (err, tradeList) => {
                     if (err) return reject(err);
@@ -1200,7 +1201,7 @@ router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, 
             '$gte': dateCheckpoint(1 - historyDays),
             '$lt': dateCheckpoint(1)
         },
-        'tradeType.action': 'Rent',
+        'tradeType.action': ContainerAction.RENT,
         'oriUser.storeID': thisStoreID
     }, function (err, rentTrades) {
         if (err) return next(err);
@@ -1209,19 +1210,19 @@ router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, 
                 '$gte': dateCheckpoint(1 - historyDays),
                 '$lt': dateCheckpoint(1)
             },
-            'tradeType.action': 'Return',
+            'tradeType.action': ContainerAction.RETURN,
             'newUser.storeID': thisStoreID
         }, function (err, returnTrades) {
             if (err) return next(err);
             if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                parseHistory(rentTrades, 'Rent', type, function (parsedRent) {
+                parseHistory(rentTrades, ContainerAction.RENT, type, function (parsedRent) {
                     let resJson = {
                         rentHistory: {
                             amount: parsedRent.length,
                             dataList: parsedRent
                         }
                     };
-                    parseHistory(returnTrades, 'Return', type, function (parsedReturn) {
+                    parseHistory(returnTrades, ContainerAction.RETURN, type, function (parsedReturn) {
                         resJson.returnHistory = {
                             amount: parsedReturn.length,
                             dataList: parsedReturn
@@ -1266,30 +1267,30 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{
-                'tradeType.action': 'Sign',
+                'tradeType.action': ContainerAction.SIGN,
                 'newUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Rent',
+                'tradeType.action': ContainerAction.RENT,
                 'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Return',
+                'tradeType.action': ContainerAction.RETURN,
                 'newUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Return',
+                'tradeType.action': ContainerAction.RETURN,
                 'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'UndoReturn',
+                'tradeType.action': ContainerAction.UNDO_RETURN,
                 'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'ReadyToClean',
+                'tradeType.action': ContainerAction.READY_TO_CLEAN,
             },
             {
-                'tradeType.action': 'UndoReadyToClean'
+                'tradeType.action': ContainerAction.UNDO_READY_TO_CLEAN
             }
         ]
     };
@@ -1307,7 +1308,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
+        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
 
         var storeLostTradesDict = {};
         var personalLostTradesDict = {};
@@ -1317,16 +1318,16 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
         var cleanReloadTrades = [];
         tradeList.forEach(aTrade => {
             let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-            if (aTrade.tradeType.action === "Sign") {
+            if (aTrade.tradeType.action === ContainerAction.SIGN) {
                 storeLostTradesDict[containerKey] = aTrade;
-            } else if (aTrade.tradeType.action === "Rent") {
+            } else if (aTrade.tradeType.action === ContainerAction.RENT) {
                 rentTrades.push(aTrade);
                 personalLostTradesDict[containerKey] = aTrade;
                 if (storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
-            } else if (aTrade.tradeType.action === "Return") {
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 returnTrades.push(aTrade);
                 if (aTrade.oriUser.storeID === thisStoreID && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
@@ -1338,7 +1339,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
                 }
-            } else if (aTrade.tradeType.action === "ReadyToClean") {
+            } else if (aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN) {
                 if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === thisStoreID) {
                     cleanReloadTrades.push(aTrade);
                     if (storeLostTradesDict[containerKey]) {
@@ -1454,7 +1455,7 @@ router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function 
         next(error);
     }
     let tradeQuery = {
-        "tradeType.action": "Rent",
+        "tradeType.action": ContainerAction.RENT,
         'oriUser.storeID': thisStoreID
     };
     if (req.query.days)
@@ -1523,7 +1524,7 @@ router.get('/performance', checkRoleIsStore(), validateRequest, function (req, r
         next(error);
     }
     Trade.find({
-        'tradeType.action': 'Rent',
+        'tradeType.action': ContainerAction.RENT,
         'oriUser.storeID': thisStoreID
     }, function (err, rentTrades) {
         if (err) return next(err);
@@ -1597,7 +1598,7 @@ router.get('/favorite', checkRoleIsStore(), validateRequest, function (req, res,
             });
         } else {
             Trade.find({
-                'tradeType.action': 'Rent',
+                'tradeType.action': ContainerAction.RENT,
                 'oriUser.storeID': thisStoreID
             }, function (err, rentTrades) {
                 if (err) return next(err);
@@ -1636,9 +1637,9 @@ function parseHistory(data, dataType, type, callback) {
     if (data.length === 0) return callback([]);
     else if (data.length === 1) {
         aHistory = data[0];
-        if (dataType === 'Rent')
+        if (dataType === ContainerAction.RENT)
             lastPhone = aHistory.newUser.phone;
-        else if (dataType === 'Return')
+        else if (dataType === ContainerAction.RETURN)
             lastPhone = aHistory.oriUser.phone;
     } else {
         data.sort(function (a, b) {
@@ -1651,15 +1652,15 @@ function parseHistory(data, dataType, type, callback) {
     for (var i = 1; i < data.length; i++) {
         aHistory = data[i];
         lastHistory = data[i - 1];
-        if (dataType === 'Rent') {
+        if (dataType === ContainerAction.RENT) {
             thisPhone = aHistory.newUser.phone;
             lastPhone = lastHistory.newUser.phone;
-        } else if (dataType === 'Return') {
+        } else if (dataType === ContainerAction.RETURN) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
         if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
-            phoneFormatted = (dataType === 'Return') ? '' : lastPhone;
+            phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : lastPhone;
             byOrderArr.push({
                 time: lastHistory.tradeTime,
                 phone: phoneFormatted,
@@ -1670,7 +1671,7 @@ function parseHistory(data, dataType, type, callback) {
         }
         tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type[aHistory.container.typeCode].name);
     }
-    phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
+    phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
         time: aHistory.tradeTime,
         phone: phoneFormatted,

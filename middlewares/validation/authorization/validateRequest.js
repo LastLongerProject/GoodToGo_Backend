@@ -1,9 +1,9 @@
 const JWT = require('jsonwebtoken');
-const redis = require("../../models/redis");
-const User = require('../../models/DB/userDB');
-const UserKeys = require('../../models/DB/userKeysDB');
-const RoleType = require('../../models/enums/userEnum').RoleType;
-const Role = require('../../models/variables/role').Role;
+const redis = require("../../../models/redis");
+const User = require('../../../models/DB/userDB');
+const UserKeys = require('../../../models/DB/userKeysDB');
+const RoleType = require('../../../models/enums/userEnum').RoleType;
+const Role = require('../../../models/variables/role').Role;
 
 function iatGetDate(int) {
     var tmp = new Date();

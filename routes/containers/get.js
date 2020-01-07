@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../../helpers/debugger')('containers/get');
 
-const validateDefault = require('../../middlewares/validation/validateDefault');
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
 const baseUrl = require('../../config/config.js').serverBaseUrl;
 
@@ -20,6 +20,7 @@ const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 
 const historyDays = 14;
 
@@ -217,7 +218,7 @@ router.get('/toDelivery', checkRoleIsCleanStation(), validateRequest, function (
 router.get('/deliveryHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
-        'tradeType.action': 'Sign',
+        'tradeType.action': ContainerAction.SIGN,
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
@@ -339,10 +340,10 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
     if (dbKey.roleType === RoleType.STORE)
         queryCond = {
             '$or': [{
-                'tradeType.action': 'ReadyToClean',
+                'tradeType.action': ContainerAction.READY_TO_CLEAN,
                 'oriUser.storeID': thisStoreID
             }, {
-                'tradeType.action': 'UndoReadyToClean'
+                'tradeType.action': ContainerAction.UNDO_READY_TO_CLEAN
             }],
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)
@@ -351,7 +352,7 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
     else
         queryCond = {
             'tradeType.action': {
-                '$in': ['ReadyToClean', 'UndoReadyToClean']
+                '$in': [ContainerAction.READY_TO_CLEAN, ContainerAction.UNDO_READY_TO_CLEAN]
             },
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)

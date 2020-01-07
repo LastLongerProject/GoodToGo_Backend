@@ -7,7 +7,7 @@ const userTrade = require('../controllers/userTrade');
 const pointTrade = require('../controllers/pointTrade');
 
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 const generateUUID = require('../helpers/tools').generateUUID;
 
 module.exports = {

@@ -1,10 +1,10 @@
 const debug = require("../debugger")("notification_center");
 
-const NotificationEvent = require("./enums/events");
-const SnsEvent = require("./enums/sns/events");
-const SnsAppType = require("./enums/sns/appType");
-const WebhookEvent = require("./enums/webhook/events");
-const SocketEvent = require("./enums/socket/events");
+const SnsEvent = require("../../models/enums/notificationEnum").SnsEvent;
+const SnsAppType = require("../../models/enums/notificationEnum").AppType;
+const SocketEvent = require("../../models/enums/notificationEnum").SocketEvent;
+const WebhookEvent = require("../../models/enums/notificationEnum").WebhookEvent;
+const NotificationEvent = require("../../models/enums/notificationEnum").CenterEvent;
 
 const pushBy = require("./push");
 

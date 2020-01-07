@@ -6,15 +6,17 @@ const queue = require('queue')({
 
 const sendCode = require("../helpers/aws/SNS").sms_now;
 const intReLength = require('../helpers/toolkit').intReLength;
+
 const keys = require('../config/keys');
 const redis = require("../models/redis");
 const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const RoleType = require('../models/enums/userEnum').RoleType;
 const UserGroup = require('../models/enums/userEnum').UserGroup;
-const Role = require('../models/variables/role').Role;
-const RoleCreationError = require('../models/variables/role').RoleCreationError;
+
 const role = require('../models/variables/role');
+const Role = role.Role;
+const RoleCreationError = role.RoleCreationError;
 
 function sendVerificationCode(phone, done) {
     var newCode = keys.getVerificationCode();

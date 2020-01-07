@@ -3,11 +3,11 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('notification_testing');
 const fs = require('fs');
 
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const checkRoleIsAdmin = require('../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsAdmin = require('../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
 
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 
 const rootDir = require("../config/config").staticFileDir;
 
