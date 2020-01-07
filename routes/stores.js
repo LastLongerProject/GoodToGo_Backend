@@ -24,7 +24,6 @@ const Store = require('../models/DB/storeDB');
 const Trade = require('../models/DB/tradeDB');
 const Place = require('../models/DB/placeIdDB');
 const Container = require('../models/DB/containerDB');
-const Activity = require('../models/DB/activityDB')
 const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
 const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
@@ -206,51 +205,6 @@ router.get('/list/forOfficialPage', function (req, res, next) {
 });
 
 /**
- * @apiName Store list JSON
- * @apiGroup Stores
- *
- * @api {get} /stores/list.js Get store list with JSON format
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-
-        var placeid_json = [{"placeid":"ChIJ8c8g8WR2bjQRsgin1zcdMsk","name":"正興咖啡館","borrow":true,"return":true,"type":"咖啡, 生活小物, 旅宿"},...]
- * 
- * 
- * 
- */
-router.get('/list.js', function (req, res, next) {
-    Place.find({
-        "project": {
-            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
-        },
-        "active": true
-    }, ["ID"], {
-        sort: {
-            id: 1
-        }
-    }, function (err, placeList) {
-        if (err) return next(err);
-        const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        let tmpArr = placeList.map(aPlace => {
-            let aStore = storeDict[aPlace.ID];
-            let photo = null;
-            if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
-            return {
-                placeid: aStore.placeID,
-                name: aStore.name,
-                photo,
-                borrow: aStore.contract.borrowable,
-                return: aStore.contract.returnable,
-                type: aStore.type
-            };
-        });
-        res.type('application/javascript');
-        res.end("var placeid_json = " + JSON.stringify(tmpArr));
-    });
-});
-
-/**
  * @apiName Store list
  * @apiGroup Stores
  *
@@ -327,131 +281,6 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
         });
     });
 });
-
-/**
- * @apiName Store specific activity
- * @apiGroup Stores
- *
- * @api {get} /stores/activity/:activityID Get specific activity
- * @apiUse DefaultSecurityMethod
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        { 
-            ID: '0',
-            name: '沒活動',
-            startAt: '2018-03-02T16:00:00.000Z',
-            endAt: '2018-03-02T16:00:00.000Z' 
-        }
- * @apiUse GetActivityError
- */
-router.get('/activity/:activityID', validateDefault, function (req, res, next) {
-    const ID = String(req.params.activityID);
-    Activity
-        .findOne({
-            'ID': ID
-        })
-        .exec()
-        .then(activity => {
-            if (activity)
-                return res.status(200).json({
-                    name: activity.name,
-                    startAt: activity.startAt,
-                    endAt: activity.endAt
-                });
-            return res.status(404).json({
-                code: "E005",
-                type: "ActivityMessage",
-                message: "activity not found, plz check id"
-            });
-        })
-        .catch(err => {
-            debug.error(err);
-            return next(err);
-        });
-});
-
-/**
- * @apiName Store activities list
- * @apiGroup Stores
- *
- * @api {get} /stores/activityList Get activities list
- * @apiUse DefaultSecurityMethod
- * 
- * @apiSuccessExample {json} Success-Response:
-       HTTP/1.1 200 
-       {
-            [
-                { 
-                    ID: '0',
-                    name: '沒活動',
-                    startAt: '2018-03-02T16:00:00.000Z',
-                    endAt: '2018-03-02T16:00:00.000Z' 
-                },... 
-            ]
-        }
- * 
- */
-router.get('/activityList', validateDefault, function (req, res, next) {
-    Activity
-        .find({})
-        .exec()
-        .then(activities => {
-            if (activities) {
-                let result = [];
-                for (let {
-                        ID: id,
-                        name: name,
-                        startAt: start,
-                        endAt: end
-                    } of activities) {
-                    result.push({
-                        ID: id,
-                        name,
-                        startAt: start,
-                        endAt: end
-                    });
-                }
-                return res.status(200).json(result);
-            }
-
-            return res.status(200).json({});
-        })
-        .catch(err => {
-            debug.error(err);
-            return next(err);
-        });
-});
-
-/**
- * @apiName Store activities list of specific store
- * @apiGroup Stores
- * @apiDescription
- * still need to test
- * @api {get} /stores/activityList/:storeID Get activities list of specific store
- * @apiUse DefaultSecurityMethod
- * 
- * @apiSuccessExample {json} Success-Response:
-       HTTP/1.1 200 
-       {
-            ["沒活動",...]
-        }
- * 
- */
-router.get('/activityList/:storeID', validateDefault, function (req, res, next) {
-    let storeID = req.params.storeID;
-    Store
-        .findOne({
-            'id': storeID
-        })
-        .exec()
-        .then(activities => res.status(200).json(activities))
-        .catch(err => {
-            debug.error(err);
-            next(err);
-        });
-});
-
 
 /**
  * @apiName Store dict

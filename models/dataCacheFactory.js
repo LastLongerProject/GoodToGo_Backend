@@ -10,7 +10,6 @@ module.exports = {
     },
     keys: Object.freeze({
         STORE: "store",
-        ACTIVITY: "activity",
         CONTAINER_TYPE: "containerType",
         CONTAINER_WITH_DEACTIVE: "containerWithDeactive",
         CONTAINER_ONLY_ACTIVE: "container",

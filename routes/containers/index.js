@@ -72,7 +72,6 @@ router.get('/globalUsedAmount', function (req, res, next) {
  * @api {post} /containers/delivery/:boxID/:store Delivery box id to store
  * @apiPermission admin
  * @apiUse JWT
- * @apiParam {string} activity only pass if deliver to specific activity 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -86,7 +85,6 @@ router.post('/delivery/:boxID/:store', checkRoleIsCleanStation(), validateReques
     const dbAdmin = req._user;
     const boxID = req.params.boxID;
     const storeID = parseInt(req.params.store);
-    let activity = req.params.activity || null;
 
     if (isNaN(storeID))
         return res.status(403).json({
@@ -117,8 +115,7 @@ router.post('/delivery/:boxID/:store', checkRoleIsCleanStation(), validateReques
                 newState: 0,
             }, {
                 boxID,
-                storeID,
-                activity
+                storeID
             }, (err, tradeSuccess, reply) => {
                 if (err) return next(err);
                 if (!tradeSuccess) return res.status(403).json(reply);
@@ -309,7 +306,6 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                 }, {
                     rentToUser: theCustomer,
                     orderTime: res._payload.orderTime,
-                    activity: "沒活動",
                     inLineSystem: true,
                     storeID: thisStoreID
                 }, (err, tradeSuccess, reply, tradeDetail) => {
@@ -403,8 +399,7 @@ router.post('/return/:container', checkRoleIs([{
             newState: 3
         }, {
             storeID: thisStoreID,
-            orderTime: res._payload.orderTime,
-            activity: "沒活動"
+            orderTime: res._payload.orderTime
         },
         (err, tradeSuccess, reply, tradeDetail) => {
             if (err) return next(err);
