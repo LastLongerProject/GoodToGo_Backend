@@ -175,9 +175,7 @@ router.post('/delivery/:boxID/:store', checkRoleIsCleanStation(), validateReques
                     }, function (err, userList) {
                         if (err) return debug.error(err);
                         userList.forEach(aClerk =>
-                            NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, {
-                                clerk: aClerk
-                            }, {
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, aClerk, {
                                 boxID
                             })
                         );

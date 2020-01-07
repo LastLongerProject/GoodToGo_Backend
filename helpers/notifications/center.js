@@ -12,27 +12,19 @@ module.exports = {
     emit: function (event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-                if (target.clerk) {
-                    pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target, data);
                 break;
             case NotificationEvent.CONTAINER_RENT:
-                if (target.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target.customer, data);
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target.customer);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target, data);
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target);
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data);
                 break;
             case NotificationEvent.CONTAINER_RETURN:
-                if (target.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data);
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target, data);
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target);
                 break;
             case NotificationEvent.CONTAINER_RETURN_LINE:
-                if (target.customer) {
-                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target.customer, data);
-                }
+                pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target, data);
                 break;
             case NotificationEvent.USER_ALMOST_OVERDUE:
                 pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target, data);
