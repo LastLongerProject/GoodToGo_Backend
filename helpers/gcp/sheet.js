@@ -8,11 +8,8 @@ const intReLength = require('../toolkit').intReLength;
 const dateCheckpoint = require('../toolkit').dateCheckpoint;
 const getDateCheckpoint = require('../toolkit').getDateCheckpoint;
 
-const User = require('../../models/DB/userDB');
 const Store = require('../../models/DB/storeDB');
 const PlaceID = require('../../models/DB/placeIdDB');
-const UserKeys = require('../../models/DB/userKeysDB');
-const Activity = require('../../models/DB/activityDB');
 const Container = require('../../models/DB/containerDB');
 const CouponType = require('../../models/DB/couponTypeDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
@@ -291,28 +288,6 @@ module.exports = {
                                                     new: true
                                                 }, (err, res) => {
                                                     if (err) return reject(err);
-                                                    if (aPlace.activity) {
-                                                        Promise
-                                                            .all(aPlace.activity.map(activity => User
-                                                                .updateMany({
-                                                                    'roles.clerk.storeID': aPlace.ID,
-                                                                    'roles.typeList': {
-                                                                        $nin: [`clerk_${activity}`]
-                                                                    }
-                                                                }, {
-                                                                    $push: {
-                                                                        'roles.typeList': `clerk_${activity}`
-                                                                    }
-                                                                }, {
-                                                                    upsert: true,
-                                                                    new: true,
-                                                                    setDefaultsOnInsert: true
-                                                                })
-                                                                .exec()
-                                                            ))
-                                                            .then(resolve)
-                                                            .catch(reject);
-                                                    }
                                                     if (photos_fromGoogle !== null)
                                                         photosList.push({
                                                             storeID: aPlace.ID,
@@ -341,63 +316,6 @@ module.exports = {
                         });
                     })
                     .catch(cb);
-            });
-        });
-    },
-    getActivity: function (cb) {
-        googleAuth(function getSheet(auth) {
-            sheets.spreadsheets.values.get({
-                auth: auth,
-                spreadsheetId: configs.activity_sheet_ID,
-                range: 'active!A2:D',
-            }, function (err, response) {
-                if (err) return debug.error('[Sheet API ERR (getActivity)] Error: ' + err);
-                const rows = response.data.values;
-                const checkpoint = Date.now();
-                const validRows = rows.filter(aRow => (aRow[1] !== "" && aRow[2] !== "" && aRow[3] !== ""));
-                Promise
-                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
-                        Activity.findOneAndUpdate({
-                            'ID': aRow[0]
-                        }, {
-                            'name': aRow[1],
-                            'startAt': aRow[2],
-                            'endAt': aRow[3]
-                        }, {
-                            upsert: true,
-                            new: true
-                        }, (err, afterUpdate) => {
-                            if (err) return reject(err);
-                            resolve(afterUpdate);
-                        });
-                    })))
-                    .then(activityList => {
-                        Activity.updateMany({
-                            'checkedAt': {
-                                '$lt': checkpoint
-                            }
-                        }, {
-                            'active': false
-                        }, (err) => {
-                            if (err) return debug.error(err);
-
-                            activityList = activityList.filter(activity => {
-                                return dateCheckpoint(0) > activity.endAt;
-                            });
-
-                            let deleteExpiredActivityIdAll = Promise.all(activityList.map(activity => deleteExpiredActivityId(activity.name)));
-                            let deleteAtivityKeyAll = Promise.all(activityList.map(activity => deleteAtivityKey(activity.name)));
-
-                            Promise
-                                .all([deleteExpiredActivityIdAll, deleteAtivityKeyAll])
-                                .then(_ => {
-                                    cb();
-                                });
-                        });
-                    })
-                    .catch((err) => {
-                        if (err) return debug.error(err);
-                    });
             });
         });
     },
@@ -473,25 +391,3 @@ module.exports = {
         });
     }
 };
-
-function deleteExpiredActivityId(activityName) {
-    return User
-        .updateMany({}, {
-            $pull: {
-                'roles.typeList': {
-                    $in: [`clerk_${activityName}`]
-                }
-            }
-        }, {
-            new: true
-        })
-        .exec();
-}
-
-function deleteAtivityKey(activityName) {
-    return UserKeys
-        .remove({
-            roleType: `clerk_${activityName}`
-        })
-        .exec();
-}

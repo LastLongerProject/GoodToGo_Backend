@@ -1,6 +1,5 @@
 var mongoose = require('mongoose');
 
-// define the schema for our user model
 var schema = mongoose.Schema({
     tradeTime: Date,
     tradeType: {
@@ -31,10 +30,6 @@ var schema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    activity: {
-        type: String,
-        default: "沒活動"
-    },
     exception: {
         type: Boolean,
         default: false
@@ -51,6 +46,4 @@ schema.index({
     "tradeType.action": 1
 });
 
-
-// create the model for users and expose it to our app
 module.exports = mongoose.model('Trade', schema);

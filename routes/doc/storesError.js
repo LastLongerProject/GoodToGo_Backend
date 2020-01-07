@@ -13,8 +13,3 @@
  * @apiDefine GetStoreInfoError
  * @apiError {String} E004 status : 403, type : GetStoreInfoError, msg : No store id found, please check it
  */
-
-/**
- * @apiDefine GetActivityError
- * @apiError {String} E005 status : 404 type: GetActivityError, msg: activity not found, plz check id
- */

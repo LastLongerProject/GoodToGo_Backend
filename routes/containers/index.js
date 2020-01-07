@@ -113,7 +113,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
  * @api {post} /containers/delivery/:id/:store Delivery box id to store
  * @apiPermission admin
  * @apiUse JWT
- * @apiParam {string} activity only pass if deliver to specific activity 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -417,8 +416,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                 }, {
                     rentToUser: theCustomer,
                     orderTime: res._payload.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
+                    inLineSystem: true,
                 }, (err, tradeSuccess, reply, tradeDetail) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);

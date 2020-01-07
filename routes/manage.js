@@ -12,7 +12,6 @@ const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const refreshStore = require('../helpers/tasks').refreshStore;
 const refreshStoreImg = require('../helpers/tasks').refreshStoreImg;
 const refreshContainer = require('../helpers/tasks').refreshContainer;
-const refreshActivity = require('../helpers/tasks').refreshActivity;
 const refreshCoupon = require('../helpers/tasks').refreshCoupon;
 const refreshCouponImage = require('../helpers/tasks').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/tasks').refreshContainerIcon;
@@ -1958,30 +1957,6 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req
 router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function (err) {
-        if (err) return next(err);
-        res.json({
-            "success": true
-        });
-    });
-});
-
-/**
- * @apiName Manage refresh activity
- * @apiGroup Manage
- *
- * @api {patch} /manage/refresh/activity Refresh container
- * @apiPermission admin_manager
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            "success": true
-        }
- * 
- */
-router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
