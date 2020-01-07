@@ -7,7 +7,6 @@ const Store = require('../models/DB/storeDB');
 const Coupon = require('../models/DB/couponDB');
 const PlaceID = require('../models/DB/placeIdDB');
 const PointLog = require("../models/DB/pointLogDB");
-const Activity = require('../models/DB/activityDB');
 const Container = require('../models/DB/containerDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
@@ -83,15 +82,6 @@ module.exports = {
                 if (err) return cb(err);
                 debug.log('containerList refresh');
                 cb(null);
-            });
-        });
-    },
-    refreshActivity: function (cb) {
-        sheet.getActivity(data => {
-            activityListGenerator(err => {
-                if (err) return cb(err);
-                debug.log('activityList refresh');
-                cb(null, data);
             });
         });
     },
@@ -443,22 +433,6 @@ module.exports = {
                 .catch(cb);
         });
     }
-}
-
-function activityListGenerator(cb) {
-    Activity.find({}, {}, {
-        sort: {
-            ID: 1
-        }
-    }, (err, activities) => {
-        if (err) return cb(err);
-        var activityDict = {};
-        activities.forEach((aActivity) => {
-            activityDict[aActivity.ID] = aActivity;
-        });
-        DataCacheFactory.set(DataCacheFactory.keys.ACTIVITY, activityDict);
-        cb();
-    });
 }
 
 function storeListGenerator(cb) {

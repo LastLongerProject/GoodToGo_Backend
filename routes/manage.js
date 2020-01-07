@@ -12,7 +12,6 @@ const checkRoleIsBot = require('../middlewares/validation/validateRequest').chec
 const refreshStore = require('../helpers/tasks').refreshStore;
 const refreshStoreImg = require('../helpers/tasks').refreshStoreImg;
 const refreshContainer = require('../helpers/tasks').refreshContainer;
-const refreshActivity = require('../helpers/tasks').refreshActivity;
 const refreshCoupon = require('../helpers/tasks').refreshCoupon;
 const refreshCouponImage = require('../helpers/tasks').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/tasks').refreshContainerIcon;
@@ -1816,30 +1815,6 @@ router.patch('/refresh/store', checkRoleIsAdmin(), validateRequest, function (re
 router.patch('/refresh/container', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function (err) {
-        if (err) return next(err);
-        res.json({
-            "success": true
-        });
-    });
-});
-
-/**
- * @apiName Manage refresh activity
- * @apiGroup Manage
- *
- * @api {patch} /manage/refresh/activity Refresh container
- * @apiPermission admin_manager
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            "success": true
-        }
- * 
- */
-router.patch('/refresh/activity', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
-    refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
