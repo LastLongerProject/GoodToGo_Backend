@@ -298,15 +298,16 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
         try {
             let boxInfo = await changeStateProcess(boxContent, aBox, phone);
             if (boxInfo.status === ProgramStatus.Error) {
-                if (boxInfo.errorType === StateChangingError.MissingArg) {
-                    ErrorResponse.H005_4.message += ", Missing Arguments: " + boxInfo.argumentNameList.join(" ,");
-                    return res.status(403).json(ErrorResponse.H005_4);
-                } else if (boxInfo.errorType === StateChangingError.InvalidStateChanging) {
-                    ErrorResponse.H007.message = "Invalid box state changing";
-                    return res.status(403).json(ErrorResponse.H007);
-                } else if (boxInfo.errorType === StateChangingError.ArgumentInvalid) {
-                    ErrorResponse.H005_4.message += ", " + boxInfo.message;
-                    return res.status(403).json(ErrorResponse.H005_4);
+                switch (boxInfo.errorType) {
+                    case StateChangingError.MissingArg:
+                        ErrorResponse.H005_4.message += ", Missing Arguments: " + boxInfo.argumentNameList.join(" ,");
+                        return res.status(403).json(ErrorResponse.H005_4);
+                    case StateChangingError.InvalidStateChanging:
+                        ErrorResponse.H007.message = "Invalid box state changing";
+                        return res.status(403).json(ErrorResponse.H007);
+                    case StateChangingError.ArgumentInvalid:
+                        ErrorResponse.H005_4.message += ", " + boxInfo.message;
+                        return res.status(403).json(ErrorResponse.H005_4);
                 }
             }
             let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbAdmin, boxInfo.info);
@@ -399,25 +400,14 @@ router.post(
                     ErrorResponse.H007.message = boxInfo.message;
                     return res.status(403).json(ErrorResponse.H007);
                 }
-                return changeContainersState(
-                    aBox.containerList, dbUser, {
-                        action: ContainerAction.SIGN,
-                        newState: 1
-                    }, {
-                        boxID,
-                        storeID: aBox.storeID
-                    }, async (err, tradeSuccess, reply) => {
-                        if (err) return next(err);
-                        if (!tradeSuccess) return res.status(500).json(reply);
-                        let stateInfo = await containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info);
-                        if (stateInfo.status !== ProgramStatus.Success) {
-                            return res.status(403).json(ProgramStatus.message);
-                        }
-                        return res.json({
-                            type: "SignMessage",
-                            message: "Sign successfully"
-                        });
-                    });
+                let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbUser, boxInfo.info);
+                if (stateInfo.status !== ProgramStatus.Success) {
+                    return res.status(403).json(ProgramStatus.message);
+                }
+                return res.json({
+                    type: "SignMessage",
+                    message: "Sign successfully"
+                });
             } catch (err) {
                 next(err);
             }
