@@ -11,13 +11,13 @@ const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
-const Action = require('../../models/enums/containerTransactionEnum').Action;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 
 const tasks = require('../../helpers/tasks');
 const NotificationCenter = require('../../helpers/notifications/center');
-const NotificationEvent = require('../../helpers/notifications/enums/events');
+const NotificationEvent = require('../../models/enums/notificationEnum').CenterEvent;
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
 const intReLength = require('../../helpers/toolkit').intReLength;
 const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
@@ -28,11 +28,11 @@ const generateSocketToken = require('../../controllers/socket').generateToken;
 const tradeCallback = require('../../controllers/tradeCallback');
 const changeContainersState = require('../../controllers/containerTrade');
 
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIs = require('../../middlewares/validation/validateRequest').checkRoleIs;
-const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
-const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIs = require('../../middlewares/validation/authorization/validateRequest').checkRoleIs;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
 const status = [
     'delivering',
@@ -62,263 +62,6 @@ router.get('/globalUsedAmount', function (req, res, next) {
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.send(count.toString());
         res.end();
-    });
-});
-
-/**
- * @apiName Containers stock specific box
- * @apiGroup Containers
- *
- * @api {post} /containers/stock/:boxID Stock specific box id
- * @apiPermission admin
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "stockBoxMessage",
-            message: "StockBox Succeed"
-        }
- * @apiUse StockError
- */
-router.post('/stock/:boxID', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const boxID = req.params.boxID;
-    Box.findOne({
-        boxID: boxID,
-    }, function (err, aBox) {
-        if (err) return next(err);
-        if (!aBox)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'stockBoxMessage',
-                message: "Can't Find The Box",
-            });
-        aBox.stocking = true;
-        aBox.save(function (err) {
-            if (err) return next(err);
-            return res.json({
-                type: 'stockBoxMessage',
-                message: 'StockBox Succeed'
-            });
-        });
-    });
-});
-
-/**
- * @apiName Containers delivery box to store
- * @apiGroup Containers
- *
- * @api {post} /containers/delivery/:boxID/:store Delivery box id to store
- * @apiPermission admin
- * @apiUse JWT
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "DeliveryMessage",
-            message: "Delivery Succeed"
-        }
- * @apiUse DeliveryError
- * @apiUse ChangeStateError
- */
-router.post('/delivery/:boxID/:store', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const dbAdmin = req._user;
-    const boxID = req.params.boxID;
-    const storeID = parseInt(req.params.store);
-
-    if (isNaN(storeID))
-        return res.status(403).json({
-            code: 'F???',
-            type: 'DeliveryMessage',
-            message: "StoreID Invalid",
-        });
-    Box.findOne({
-        boxID: boxID,
-    }, function (err, aBox) {
-        if (err) return next(err);
-        if (!aBox)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'DeliveryMessage',
-                message: "Can't Find The Box",
-            });
-        if (aBox.delivering)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'DeliveryMessage',
-                message: 'Box Already Delivering',
-            });
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: Action.DELIVERY,
-                newState: 0,
-            }, {
-                boxID,
-                storeID
-            }, (err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                aBox.delivering = true;
-                aBox.stocking = false;
-                aBox.storeID = storeID;
-                aBox.user.delivery = dbAdmin.user.phone;
-                aBox.save(function (err) {
-                    if (err) return next(err);
-                    res.json(reply);
-                    //test
-                    User.find({
-                        roleList: {
-                            $elemMatch: {
-                                storeID
-                            }
-                        }
-                    }, function (err, userList) {
-                        if (err) return debug.error(err);
-                        userList.forEach(aClerk =>
-                            NotificationCenter.emit(NotificationEvent.CONTAINER_DELIVERY, aClerk, {
-                                boxID
-                            })
-                        );
-                    });
-                });
-            }
-        );
-    });
-});
-
-/**
- * @apiName Containers cancel delivery
- * @apiGroup Containers
- *
- * @api {post} /containers/cancelDelivery/:boxID Cancel box id delivery
- * @apiPermission admin
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "CancelDeliveryMessage",
-            message: "CancelDelivery Succeed"
-        }
- * @apiUse CancelDeliveryError
- * @apiUse ChangeStateError
- */
-router.post('/cancelDelivery/:boxID', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
-    var boxID = req.params.boxID;
-    Box.findOne({
-        boxID: boxID,
-    }, function (err, aBox) {
-        if (err) return next(err);
-        if (!aBox)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'CancelDeliveryMessage',
-                message: "Can't Find The Box",
-            });
-        if (!aBox.delivering)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'DeliveryMessage',
-                message: "Box Isn't Delivering"
-            });
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: Action.CANCEL_DELIVERY,
-                newState: 5
-            }, {
-                bypassStateValidation: true,
-            }, (err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                aBox.delivering = false;
-                aBox.storeID = undefined;
-                aBox.user.delivery = undefined;
-                aBox.save(function (err) {
-                    if (err) return next(err);
-                    return res.json(reply);
-                });
-            }
-        );
-    });
-});
-
-/**
- * @apiName Containers Sign box id
- * @apiGroup Containers
- *
- * @api {post} /containers/sign/:boxID Sign box id
- * @apiPermission clerk_manager
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "SignMessage",
-            message: "Sign Succeed"
-        }
- * @apiUse SignError
- * @apiUse ChangeStateError
- */
-
-router.post('/sign/:boxID', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const dbUser = req._user;
-    const dbRole = req._thisRole;
-    const boxID = req.params.boxID;
-    let thisStoreID;
-    const thisRoleType = dbRole.roleType;
-    try {
-        switch (thisRoleType) {
-            case RoleType.CLEAN_STATION:
-                break;
-            case RoleType.STORE:
-                thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
-                break;
-            default:
-                next();
-        }
-    } catch (error) {
-        next(error);
-    }
-    const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
-
-    Box.findOne({
-        boxID: boxID,
-    }, function (err, aDelivery) {
-        if (err) return next(err);
-        if (!aDelivery)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'SignMessage',
-                message: "Can't Find The Box"
-            });
-        if (!reqByCleanStation && aDelivery.storeID !== thisStoreID)
-            return res.status(403).json({
-                code: 'F008',
-                type: 'SignMessage',
-                message: "Box is not belong to user's store"
-            });
-        changeContainersState(
-            aDelivery.containerList,
-            dbUser, {
-                action: Action.SIGN,
-                newState: 1
-            }, {
-                boxID,
-                storeID: aDelivery.storeID,
-            },
-            (err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                Box.remove({
-                    boxID
-                }, (err) => {
-                    if (err) return next(err);
-                    return res.json(reply);
-                });
-            }
-        );
     });
 });
 
@@ -416,7 +159,7 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                         return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
                 }
                 changeContainersState(container, dbStore, {
-                    action: Action.RENT,
+                    action: ContainerAction.RENT,
                     newState: 2
                 }, {
                     rentToUser: theCustomer,
@@ -510,7 +253,7 @@ router.post('/return/:container', checkRoleIs([{
     changeContainersState(
         container,
         dbStore, {
-            action: Action.RETURN,
+            action: ContainerAction.RETURN,
             newState: 3
         }, {
             storeID: thisStoreID,
@@ -572,7 +315,7 @@ router.post('/readyToClean/:container', checkRoleIs([{
     changeContainersState(
         container,
         dbUser, {
-            action: Action.READY_TO_CLEAN,
+            action: ContainerAction.READY_TO_CLEAN,
             newState: 4
         }, {
             orderTime: res._payload.orderTime
@@ -583,161 +326,6 @@ router.post('/readyToClean/:container', checkRoleIs([{
             res.json(reply);
         }
     );
-});
-
-/**
- * @apiName Containers box container
- * @apiGroup Containers
- *
- * @api {post} /containers/cleanStation/box Box container
- * @apiPermission admin
- * 
- * @apiUse JWT
- * @apiParam {String} phone Boxer's phone
- * @apiParam {Array} containerList Boxed containers
- * @apiParam {String} boxId Box's id
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "BoxingMessage",
-            message: "Boxing Succeeded"
-        }
- * @apiUse BoxError
- * @apiUse ChangeStateError
- */
-router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const dbAdmin = req._user;
-    let boxID = req.body.boxId;
-    const containerList = req.body.containerList;
-    if (!containerList || !Array.isArray(containerList))
-        return res.status(403).json({
-            code: 'F011',
-            type: 'BoxingMessage',
-            message: 'Boxing req body invalid'
-        });
-    const task = function (done) {
-        Box.findOne({
-            boxID: boxID,
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (aBox)
-                return res.status(403).json({
-                    code: 'F012',
-                    type: 'BoxingMessage',
-                    message: 'Box is already exist'
-                });
-            changeContainersState(
-                containerList,
-                dbAdmin, {
-                    action: Action.BOXING,
-                    newState: 5
-                }, {
-                    boxID
-                }, (err, tradeSuccess, reply) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(reply);
-                    const newBox = new Box({
-                        boxID,
-                        user: {
-                            box: dbAdmin.user.phone,
-                        },
-                        containerList,
-                    });
-                    Object.assign(reply, {
-                        data: newBox,
-                    });
-                    newBox.save(function (err) {
-                        if (err) return next(err);
-                        return done(reply);
-                    });
-                }
-            );
-        });
-    };
-    if (typeof boxID === 'undefined') {
-        redis.get('boxCtr', (err, boxCtr) => {
-            if (err) return next(err);
-            if (boxCtr == null) boxCtr = 1;
-            else boxCtr++;
-            redis.setex('boxCtr', Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), boxCtr, (err, reply) => {
-                if (err) return next(err);
-                if (reply !== 'OK') return next(reply);
-                var today = new Date();
-                boxID = today.getMonth() + 1 + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
-                task(reply => {
-                    res.json(reply);
-                });
-            });
-        });
-    } else
-        task(() => {
-            res.status(200).json({
-                type: 'BoxingMessage',
-                message: 'Boxing Succeeded',
-            });
-        });
-});
-
-/**
- * @apiName Containers Unbox 
- * @apiGroup Containers
- *
- * @api {post} /containers/cleanStation/unbox/:boxID Unbox 
- * @apiPermission admin
- * 
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            type: "UnboxingMessage",
-            message: "Unboxing Succeeded",
-            oriUser: "09xxxxxxxx",
-            containerList: [ 
-                {
-                    typeName: String,
-                    typeCode: Number,
-                    id: Number
-                },
-                ...
-            ]
-        }
- * @apiUse UnboxError
- * @apiUse ChangeStateError
- */
-router.post(['/cleanStation/unbox/:boxID', '/unbox/:boxID'], checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const dbAdmin = req._user;
-    const boxID = req.params.boxID;
-    Box.findOne({
-        boxID: boxID,
-    }, function (err, aBox) {
-        if (err) return next(err);
-        if (!aBox)
-            return res.status(403).json({
-                code: 'F007',
-                type: 'UnboxingMessage',
-                message: "Can't Find The Box"
-            });
-        changeContainersState(
-            aBox.containerList,
-            dbAdmin, {
-                action: Action.UNBOXING,
-                newState: 4
-            }, {
-                bypassStateValidation: true
-            }, (err, tradeSuccess, reply) => {
-                if (err) return next(err);
-                if (!tradeSuccess) return res.status(403).json(reply);
-                Box.remove({
-                    boxID: boxID
-                }, function (err) {
-                    if (err) return next(err);
-                    return res.json(reply);
-                });
-            }
-        );
-    });
 });
 
 /**
@@ -871,13 +459,13 @@ router.get('/challenge/token', checkRoleIs([{
  * @apiUse ChanllengeActionError
  */
 var actionTodo = [
-    'Delivery',
-    'Sign',
-    'Rent',
-    'Return',
-    'ReadyToClean',
-    'Boxing',
-    'dirtyReturn'
+    ContainerAction.DELIVERY,
+    ContainerAction.SIGN,
+    ContainerAction.RENT,
+    ContainerAction.RETURN,
+    ContainerAction.READY_TO_CLEAN,
+    ContainerAction.BOXING,
+    ContainerAction.DIRTY_RETURN
 ];
 router.get('/challenge/:action/:container', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     const action = req.params.action;
@@ -952,7 +540,7 @@ router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdm
     Trade.findOne({
         "container.id": containerID,
         "oriUser.phone": userPhone,
-        "tradeType.action": "Return"
+        "tradeType.action": ContainerAction.RETURN
     }, {}, {
         sort: {
             tradeTime: -1

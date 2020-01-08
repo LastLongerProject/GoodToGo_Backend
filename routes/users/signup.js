@@ -5,11 +5,11 @@ const debug = require('../../helpers/debugger')('users/signup');
 const userQuery = require('../../controllers/userQuery');
 const couponTrade = require('../../controllers/couponTrade');
 
-const validateDefault = require('../../middlewares/validation/validateDefault');
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIsStore = require('../../middlewares/validation/validateRequest').checkRoleIsStore;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
-const checkRoleIsCleanStation = require('../../middlewares/validation/validateRequest').checkRoleIsCleanStation;
+const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
+const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;

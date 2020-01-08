@@ -3,7 +3,7 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('coupon');
 
 const couponTrade = require('../controllers/couponTrade');
-const validateLine = require('../middlewares/validation/validateLine').all;
+const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');

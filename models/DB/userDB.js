@@ -1,8 +1,11 @@
 var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
+
 const Role = require("../variables/role").Role;
 const RoleCreationError = require("../variables/role").RoleCreationError;
+
 const RoleType = require("../enums/userEnum").RoleType;
+const PurchaseStatus = require('../enums/userEnum').PurchaseStatus;
 
 var schema = mongoose.Schema({
     user: {
@@ -80,8 +83,6 @@ schema.statics.generateHash = function (password) {
 schema.methods.validPassword = function (password) {
     return bcrypt.compareSync(password, this.user.password);
 };
-
-const PurchaseStatus = require('../enums/userEnum').PurchaseStatus;
 
 schema.methods.getPurchaseStatus = function () {
     return this.hasPurchase ?

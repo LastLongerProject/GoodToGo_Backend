@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../../helpers/debugger')('users/role');
 
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const checkRoleIsAdmin = require('../../middlewares/validation/validateRequest').checkRoleIsAdmin;
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
 
 const User = require('../../models/DB/userDB');
 
