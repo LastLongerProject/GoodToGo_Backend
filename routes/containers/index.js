@@ -46,6 +46,26 @@ const status = [
 router.use('/get', require('./get'));
 
 /**
+ * @apiName Containers global used amount
+ * @apiGroup Containers
+ *
+ * @api {get} /containers/globalUsedAmount Get global used amount
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        res.text: String //amount
+ * 
+ */
+router.get('/globalUsedAmount', function (req, res, next) {
+    getGlobalUsedAmount((err, count) => {
+        if (err) return next(err);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.send(count.toString());
+        res.end();
+    });
+});
+
+/**
  * @apiName Containers rent container
  * @apiGroup Containers
  *
