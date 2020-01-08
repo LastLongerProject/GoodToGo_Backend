@@ -37,6 +37,7 @@ const isSameDay = require('../helpers/toolkit').isSameDay;
 
 const changeContainersState = require('../controllers/containerTrade');
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const StateChangingError = require('../models/enums/programEnum').StateChangingError;
 const historyDays = 14;
 
 /**
@@ -261,6 +262,8 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  *      - Delivering -> Boxing 
  *      - Signed -> Stocked 
  *      - Stocked -> Boxing 
+ *      - Dispatching -> Stocked 
+ *      - Stocked -> Dispatching 
  * @apiParamExample {json} Request-Example:
  *      {
  *          phone: String,
@@ -300,19 +303,24 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
                     type: 'BoxingMessage',
                     message: 'Box is not exist'
                 });
-            if (aBox.status === BoxStatus.Stocked && newState === BoxStatus.Boxing && !element.destinationStoreId) {
-                return res.status(403).json(ErrorResponse.H005_3);
-            }
-            if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed) {
+            if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed)
                 return res.status(403).json(ErrorResponse.H008);
-            }
+
             try {
                 let boxInfo = await changeStateProcess(element, aBox, phone);
-                if (boxInfo.status !== ProgramStatus.Success) {
-                    ErrorResponse.H007.message = boxInfo.message;
-                    return res.status(403).json(ErrorResponse.H007);
+                if (boxInfo.status === ProgramStatus.Error) {
+                    if (boxInfo.errorType === StateChangingError.MissingArg) {
+                        ErrorResponse.H005_4.message += ", Missing Arguments: " + boxInfo.argumentNameList.join(" ,");
+                        return res.status(403).json(ErrorResponse.H005_4);
+                    } else if (boxInfo.errorType === StateChangingError.InvalidStateChanging) {
+                        ErrorResponse.H007.message = "Invalid box state changing";
+                        return res.status(403).json(ErrorResponse.H007);
+                    } else if (boxInfo.errorType === StateChangingError.ArgumentInvalid) {
+                        ErrorResponse.H005_4.message += ", " + boxInfo.message;
+                        return res.status(403).json(ErrorResponse.H005_4);
+                    }
                 }
-                let stateInfo = await containerStateFactory(newState, aBox, dbAdmin, boxInfo.info);
+                let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbAdmin, boxInfo.info);
                 if (stateInfo.status !== ProgramStatus.Success) {
                     return res.status(403).json(ProgramStatus.message);
                 }

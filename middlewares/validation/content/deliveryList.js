@@ -213,7 +213,6 @@ function validateChangeStateApiContent(req, res, next) {
             "id",
             'newState',
         ]);
-
         if (!pass.bool) {
             return res.status(403).json(ErrorResponse[pass.code]);
         }
