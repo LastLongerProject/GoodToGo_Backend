@@ -82,7 +82,7 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
                 listID: req._listID,
                 boxList: req._boxIDs,
                 storeID,
-                creator: creator,
+                creator
             });
             list.save().then(() => {
                 return res.status(200).json({
@@ -106,16 +106,14 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
- *      {
- *          phone: String,
- *          boxList: [
- *              {
- *                  ID: Number,
- *                  containerList: Array,
- *                  comment: String
- *              },...
- *          ]
- *      }
+    {
+        phone: String,
+        boxContent: {
+            ID: Number,
+            containerList: Array,
+            comment: String
+        }
+    }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -126,63 +124,61 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  */
 router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
     let dbAdmin = req._user;
-    let boxList = req.body.boxList;
+    let boxContent = req.body.boxContent;
     let phone = req.body.phone;
 
-    for (let element of boxList) {
-        const boxID = element.ID;
-        const containerList = element.containerList;
-        const comment = element.comment;
+    const boxID = boxContent.ID;
+    const containerList = boxContent.containerList;
+    const comment = boxContent.comment;
 
-        Box.findOne({
-            boxID: boxID,
-        }, function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox)
-                return res.status(403).json({
-                    code: 'F012',
-                    type: 'BoxingMessage',
-                    message: 'Box is not exist',
-                });
-            changeContainersState(
-                containerList,
-                dbAdmin, {
-                    action: ContainerAction.BOXING,
-                    newState: 5,
-                }, {
-                    boxID,
-                    storeID: aBox.storeID
-                }, (err, tradeSuccess, reply) => {
-                    if (err) return next(err);
-                    if (!tradeSuccess) return res.status(403).json(reply);
-                    aBox.update({
-                            containerList: containerList,
-                            containerHash: getContainerHash(containerList),
-                            comment: comment,
-                            $push: {
-                                action: {
-                                    phone: phone,
-                                    boxStatus: BoxStatus.Boxing,
-                                    boxAction: BoxAction.Pack,
-                                    timestamps: Date.now(),
-                                }
-                            },
-                            status: BoxStatus.Boxing,
-                        }, {
-                            upsert: true,
-                        }).exec()
-                        .then(() => {
-                            return res.status(200).json({
-                                type: 'BoxingMessage',
-                                message: 'Boxing Succeeded',
-                            });
-                        }).catch(() => {
-                            return res.status(500).json(ErrorResponse.H006);
+    Box.findOne({
+        boxID: boxID,
+    }, function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox)
+            return res.status(403).json({
+                code: 'F012',
+                type: 'BoxingMessage',
+                message: 'Box is not exist',
+            });
+        changeContainersState(
+            containerList,
+            dbAdmin, {
+                action: ContainerAction.BOXING,
+                newState: 5,
+            }, {
+                boxID,
+                storeID: aBox.storeID
+            }, (err, tradeSuccess, reply) => {
+                if (err) return next(err);
+                if (!tradeSuccess) return res.status(403).json(reply);
+                aBox.update({
+                        containerList: containerList,
+                        containerHash: getContainerHash(containerList),
+                        comment: comment,
+                        $push: {
+                            action: {
+                                phone: phone,
+                                boxStatus: BoxStatus.Boxing,
+                                boxAction: BoxAction.Pack,
+                                timestamps: Date.now(),
+                            }
+                        },
+                        status: BoxStatus.Boxing,
+                    }, {
+                        upsert: true,
+                    }).exec()
+                    .then(() => {
+                        return res.status(200).json({
+                            type: 'BoxingMessage',
+                            message: 'Boxing Succeeded',
                         });
-                }
-            );
-        });
-    }
+                    }).catch(() => {
+                        return res.status(500).json(ErrorResponse.H006);
+                    });
+            }
+        );
+    });
 });
 
 /**
@@ -193,15 +189,13 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
- *      {
- *          phone: String,
- *          boxList: [
- *              {
- *                  boxName: String,
- *                  containerList: Array,
- *              },...
- *          ]
- *      }
+    {
+        phone: String,
+        boxContent: {
+            boxName: String,
+            containerList: Array,
+        }
+    }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -213,39 +207,37 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
  */
 router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateStockApiContent, function (req, res, next) {
     const dbAdmin = req._user;
-    const boxList = req.body.boxList;
+    const boxContent = req.body.boxContent;
 
-    for (let element of boxList) {
-        const containerList = element.containerList;
-        const boxID = element.boxID;
+    const containerList = boxContent.containerList;
+    const boxID = boxContent.boxID;
 
-        changeContainersState(
-            containerList,
-            dbAdmin, {
-                action: ContainerAction.BOXING,
-                newState: 5,
-            }, {
-                boxID,
-            }, (err, tradeSuccess, reply) => {
-                if (err) {
-                    return next(err);
-                }
-                if (!tradeSuccess) return res.status(403).json(reply);
-                Promise.all(req._boxArray.map(box => box.save()))
-                    .then(() => {
-                        return res.status(200).json({
-                            type: 'StockMessage',
-                            message: 'Stock successfully',
-                            boxIDs: req._boxIDs
-                        });
-                    })
-                    .catch(err => {
-                        debug.error(err);
-                        return res.status(500).json(ErrorResponse.H006);
-                    });
+    changeContainersState(
+        containerList,
+        dbAdmin, {
+            action: ContainerAction.BOXING,
+            newState: 5,
+        }, {
+            boxID,
+        }, (err, tradeSuccess, reply) => {
+            if (err) {
+                return next(err);
             }
-        );
-    }
+            if (!tradeSuccess) return res.status(403).json(reply);
+            Promise.all(req._boxArray.map(box => box.save()))
+                .then(() => {
+                    return res.status(200).json({
+                        type: 'StockMessage',
+                        message: 'Stock successfully',
+                        boxIDs: req._boxIDs
+                    });
+                })
+                .catch(err => {
+                    debug.error(err);
+                    return res.status(500).json(ErrorResponse.H006);
+                });
+        }
+    );
 });
 
 /**
@@ -265,16 +257,14 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  *      - Dispatching -> Stocked 
  *      - Stocked -> Dispatching 
  * @apiParamExample {json} Request-Example:
- *      {
- *          phone: String,
- *          boxList: [
- *              {
- *                  id: String
- *                  newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
- *                  [destinationStoreId]: String // only need when update Stocked to Boxing 
- *              },...
- *          ]
- *      }
+    {
+        phone: String,
+        boxContent: {
+            id: String
+            newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
+            [destinationStoreId]: String // only need when update Stocked to Boxing 
+        }
+    }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -287,52 +277,50 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
 router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
     let dbAdmin = req._user;
     let phone = req.body.phone;
-    let boxList = req.body.boxList;
+    let boxContent = req.body.boxContent;
 
-    for (let element of boxList) {
-        const newState = element.newState;
-        const boxID = element.id;
+    const newState = boxContent.newState;
+    const boxID = boxContent.id;
 
-        Box.findOne({
-            boxID: boxID,
-        }, async function (err, aBox) {
-            if (err) return next(err);
-            if (!aBox)
-                return res.status(403).json({
-                    code: 'F012',
-                    type: 'BoxingMessage',
-                    message: 'Box is not exist'
-                });
-            if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed)
-                return res.status(403).json(ErrorResponse.H008);
+    Box.findOne({
+        boxID: boxID,
+    }, async function (err, aBox) {
+        if (err) return next(err);
+        if (!aBox)
+            return res.status(403).json({
+                code: 'F012',
+                type: 'BoxingMessage',
+                message: 'Box is not exist'
+            });
+        if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed)
+            return res.status(403).json(ErrorResponse.H008);
 
-            try {
-                let boxInfo = await changeStateProcess(element, aBox, phone);
-                if (boxInfo.status === ProgramStatus.Error) {
-                    if (boxInfo.errorType === StateChangingError.MissingArg) {
-                        ErrorResponse.H005_4.message += ", Missing Arguments: " + boxInfo.argumentNameList.join(" ,");
-                        return res.status(403).json(ErrorResponse.H005_4);
-                    } else if (boxInfo.errorType === StateChangingError.InvalidStateChanging) {
-                        ErrorResponse.H007.message = "Invalid box state changing";
-                        return res.status(403).json(ErrorResponse.H007);
-                    } else if (boxInfo.errorType === StateChangingError.ArgumentInvalid) {
-                        ErrorResponse.H005_4.message += ", " + boxInfo.message;
-                        return res.status(403).json(ErrorResponse.H005_4);
-                    }
+        try {
+            let boxInfo = await changeStateProcess(boxContent, aBox, phone);
+            if (boxInfo.status === ProgramStatus.Error) {
+                if (boxInfo.errorType === StateChangingError.MissingArg) {
+                    ErrorResponse.H005_4.message += ", Missing Arguments: " + boxInfo.argumentNameList.join(" ,");
+                    return res.status(403).json(ErrorResponse.H005_4);
+                } else if (boxInfo.errorType === StateChangingError.InvalidStateChanging) {
+                    ErrorResponse.H007.message = "Invalid box state changing";
+                    return res.status(403).json(ErrorResponse.H007);
+                } else if (boxInfo.errorType === StateChangingError.ArgumentInvalid) {
+                    ErrorResponse.H005_4.message += ", " + boxInfo.message;
+                    return res.status(403).json(ErrorResponse.H005_4);
                 }
-                let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbAdmin, boxInfo.info);
-                if (stateInfo.status !== ProgramStatus.Success) {
-                    return res.status(403).json(ProgramStatus.message);
-                }
-                return res.json({
-                    type: "ChangeStateMessage",
-                    message: "Change state successfully"
-                });
-            } catch (err) {
-                next(err);
             }
-        });
-    }
+            let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbAdmin, boxInfo.info);
+            if (stateInfo.status !== ProgramStatus.Success) {
+                return res.status(403).json(ProgramStatus.message);
+            }
+            return res.json({
+                type: "ChangeStateMessage",
+                message: "Change state successfully"
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
 });
 
 /**
@@ -343,14 +331,12 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
  * @apiPermission admin
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
- *      {
- *          phone: String,
- *          boxList: [
- *              {
- *                  ID: String
- *              },...
- *          ]
- *      }
+    {
+        phone: String,
+        boxContent: {
+            ID: String
+        }
+    }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -369,7 +355,8 @@ router.post(
     async function (req, res, next) {
         let dbUser = req._user;
         let phone = req.body.phone;
-        let boxList = req.body.boxList;
+        let boxContent = req.body.boxContent;
+
         const dbRole = req._thisRole;
         let thisStoreID;
         const thisRoleType = dbRole.roleType;
@@ -388,55 +375,53 @@ router.post(
         }
         const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
 
-        for (let element of boxList) {
-            const boxID = element.ID;
-            element.newState = BoxStatus.Signed;
-            Box.findOne({
-                boxID: boxID,
-            }, async function (err, aBox) {
-                if (err) return next(err);
-                if (!aBox)
-                    return res.status(403).json({
-                        code: 'F012',
-                        type: 'BoxingMessage',
-                        message: 'Box is not exist',
-                    });
-                if (!reqByCleanStation && aBox.storeID !== thisStoreID)
-                    return res.status(403).json({
-                        code: 'F008',
-                        type: 'BoxingMessage',
-                        message: "Box is not belong to user's store"
-                    });
-                try {
-                    let boxInfo = await changeStateProcess(element, aBox, phone);
-                    if (boxInfo.status !== ProgramStatus.Success) {
-                        ErrorResponse.H007.message = boxInfo.message;
-                        return res.status(403).json(ErrorResponse.H007);
-                    }
-                    return changeContainersState(
-                        aBox.containerList, dbUser, {
-                            action: ContainerAction.SIGN,
-                            newState: 1
-                        }, {
-                            boxID,
-                            storeID: aBox.storeID
-                        }, async (err, tradeSuccess, reply) => {
-                            if (err) return next(err);
-                            if (!tradeSuccess) return res.status(500).json(reply);
-                            let stateInfo = await containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info);
-                            if (stateInfo.status !== ProgramStatus.Success) {
-                                return res.status(403).json(ProgramStatus.message);
-                            }
-                            return res.json({
-                                type: "SignMessage",
-                                message: "Sign successfully"
-                            });
-                        });
-                } catch (err) {
-                    next(err);
+        const boxID = boxContent.ID;
+        boxContent.newState = BoxStatus.Signed;
+        Box.findOne({
+            boxID: boxID,
+        }, async function (err, aBox) {
+            if (err) return next(err);
+            if (!aBox)
+                return res.status(403).json({
+                    code: 'F012',
+                    type: 'BoxingMessage',
+                    message: 'Box is not exist',
+                });
+            if (!reqByCleanStation && aBox.storeID !== thisStoreID)
+                return res.status(403).json({
+                    code: 'F008',
+                    type: 'BoxingMessage',
+                    message: "Box is not belong to user's store"
+                });
+            try {
+                let boxInfo = await changeStateProcess(boxContent, aBox, phone);
+                if (boxInfo.status !== ProgramStatus.Success) {
+                    ErrorResponse.H007.message = boxInfo.message;
+                    return res.status(403).json(ErrorResponse.H007);
                 }
-            });
-        }
+                return changeContainersState(
+                    aBox.containerList, dbUser, {
+                        action: ContainerAction.SIGN,
+                        newState: 1
+                    }, {
+                        boxID,
+                        storeID: aBox.storeID
+                    }, async (err, tradeSuccess, reply) => {
+                        if (err) return next(err);
+                        if (!tradeSuccess) return res.status(500).json(reply);
+                        let stateInfo = await containerStateFactory(BoxStatus.Signed, aBox, dbUser, boxInfo.info);
+                        if (stateInfo.status !== ProgramStatus.Success) {
+                            return res.status(403).json(ProgramStatus.message);
+                        }
+                        return res.json({
+                            type: "SignMessage",
+                            message: "Sign successfully"
+                        });
+                    });
+            } catch (err) {
+                next(err);
+            }
+        });
     }
 );
 
