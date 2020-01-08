@@ -452,14 +452,15 @@ function storeListGenerator(cb) {
             var storeDict = {};
             places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
             stores.forEach(aStore => {
-                if (storeDict[aStore.id]) Object.assign(storeDict[aStore.id], {
-                    img_info: aStore.img_info,
-                    photos_fromGoogle: aStore.photos_fromGoogle,
-                    url_fromGoogle: aStore.url_fromGoogle,
-                    address: aStore.address,
-                    opening_hours: aStore.opening_hours,
-                    location: aStore.location
-                })
+                if (storeDict[aStore.id])
+                    Object.assign(storeDict[aStore.id], {
+                        img_info: aStore.img_info,
+                        photos_fromGoogle: aStore.photos_fromGoogle,
+                        url_fromGoogle: aStore.url_fromGoogle,
+                        address: aStore.address,
+                        opening_hours: aStore.opening_hours,
+                        location: aStore.location
+                    });
             });
             DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
             cb();

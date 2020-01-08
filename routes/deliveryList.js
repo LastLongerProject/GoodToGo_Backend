@@ -3,7 +3,6 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
 const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const getContainerHash = require('../helpers/tools').getContainerHash;
-const DataCacheFactory = require('../models/dataCacheFactory');
 const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
@@ -123,7 +122,7 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiUse CreateError
  */
 router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
-    let dbAdmin = req._user;
+    let dbUser = req._user;
     let boxContent = req.body.boxContent;
     let phone = req.body.phone;
 
@@ -143,7 +142,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
             });
         changeContainersState(
             containerList,
-            dbAdmin, {
+            dbUser, {
                 action: ContainerAction.BOXING,
                 newState: 5,
             }, {
@@ -206,7 +205,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
  * @apiUse CreateError
  */
 router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateStockApiContent, function (req, res, next) {
-    const dbAdmin = req._user;
+    const dbUser = req._user;
     const boxContent = req.body.boxContent;
 
     const containerList = boxContent.containerList;
@@ -214,7 +213,7 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
 
     changeContainersState(
         containerList,
-        dbAdmin, {
+        dbUser, {
             action: ContainerAction.BOXING,
             newState: 5,
         }, {
@@ -275,7 +274,7 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiUse ChangeStateError
  */
 router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
-    let dbAdmin = req._user;
+    let dbUser = req._user;
     let phone = req.body.phone;
     let boxContent = req.body.boxContent;
 
@@ -310,7 +309,7 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
                         return res.status(403).json(ErrorResponse.H005_4);
                 }
             }
-            let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbAdmin, boxInfo.info);
+            let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbUser, boxInfo.info);
             if (stateInfo.status !== ProgramStatus.Success) {
                 return res.status(403).json(ProgramStatus.message);
             }
@@ -803,7 +802,7 @@ router.get(
  */
 router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest, validateModifyApiContent, async function (req, res, next) {
     let boxID = req.params.boxID;
-    let dbAdmin = req._user;
+    let dbUser = req._user;
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
     req.body['dueDate'] ? req.body['dueDate'] = new Date(req.body['dueDate']) : undefined;
 
@@ -814,7 +813,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
             if (containerList) {
                 changeContainersState(
                     box.containerList,
-                    dbAdmin, {
+                    dbUser, {
                         action: ContainerAction,
                         newState: 4
                     }, {
@@ -825,7 +824,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                         if (!tradeSuccess) return res.status(403).json(reply);
                         changeContainersState(
                             containerList,
-                            dbAdmin, {
+                            dbUser, {
                                 action: ContainerAction.BOXING,
                                 newState: 5
                             }, {
@@ -840,7 +839,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                                     containerHash: getContainerHash(containerList),
                                     $push: {
                                         action: {
-                                            phone: dbAdmin.user.phone,
+                                            phone: dbUser.user.phone,
                                             boxStatus: box.status,
                                             boxAction: BoxAction.Pack,
                                             timestamps: Date.now()
@@ -864,7 +863,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
 
                 if (info.storeID !== undefined || info.dueDate !== undefined) {
                     let assignAction = info.storeID && box.storeID !== info.storeID && {
-                        phone: dbAdmin.user.phone,
+                        phone: dbUser.user.phone,
                         destinationStoreId: info.storeID,
                         boxStatus: box.status,
                         boxAction: BoxAction.Assign,
@@ -872,7 +871,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                     }
 
                     let modifyDateAction = info.dueDate && !isSameDay(info.dueDate, box.dueDate) && {
-                        phone: dbAdmin.user.phone,
+                        phone: dbUser.user.phone,
                         boxStatus: box.status,
                         boxAction: BoxAction.ModifyDueDate,
                         timestamps: Date.now()
@@ -921,7 +920,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
 
 router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
-    let dbAdmin = req._user;
+    let dbUser = req._user;
 
     Box.findOne({
             boxID
@@ -930,7 +929,7 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
         .then(aBox => {
             return changeContainersState(
                 aBox.containerList,
-                dbAdmin, {
+                dbUser, {
                     action: ContainerAction.UNBOXING,
                     newState: 4
                 }, {
