@@ -58,7 +58,7 @@ app.use((req, res, next) => {
 
 app.use('/manage', manage);
 app.use('/images', (req, res, next) => {
-    res.setHeader('Cache-Control', `max-age=${60 * 60 * 24 * 3}`);
+    res.setHeader('Cache-Control', `public, max-age=${60 * 60 * 24 * 3}`);
     next();
 }, images);
 
