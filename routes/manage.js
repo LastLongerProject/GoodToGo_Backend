@@ -21,6 +21,7 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const summaryReport=require('../helpers/summaryReport/viewFormat/googleSheet/handler');
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -2096,5 +2097,34 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
+
+router.get('/summaryData/googlesheet/:storeID/:sheetID',regAsAdminManager, validateRequest, (req,res,next)=>{
+    let storeID=Number(req.params.storeID);
+    let sheetID=req.params.sheetID;
+    Promise.all([
+        summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID),
+        summaryReport.List_Of_Containers_Be_Used(storeID,sheetID),
+        summaryReport.List_Of_User_Of_Containers(storeID,sheetID),
+        summaryReport.List_Of_Not_Return_Users(storeID,sheetID)
+    ])
+    .then(messenges=>{
+        let err_messenge=[];
+        for(let index in messenges){
+            if(messenges[index][0]){
+                err_messenge.push({
+                    which_function:index,
+                    error_messenge:messenges[index][0]
+                })
+            }
+        }
+        if(err_messenge.length===0){
+            res.status(200).json({
+                success:true
+            })
+        }else{
+            next(err_messenge)
+        }
+    })
+})
 
 module.exports = router;
