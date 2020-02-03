@@ -13,7 +13,7 @@ const validChange = {
     Deliver2Box: [BoxStatus.Delivering, BoxStatus.Boxing],
     Sign2Stock: [BoxStatus.Signed, BoxStatus.Stocked],
     Stock2Box: [BoxStatus.Stocked, BoxStatus.Boxing],
-    Sign2Archive: [BoxStatus.Signed, BoxStatus.Archived],
+    // Sign2Archive: [BoxStatus.Signed, BoxStatus.Archived],
     Deliver2Sign: [BoxStatus.Delivering, BoxStatus.Signed],
     Stock2Dispatch: [BoxStatus.Stocked, BoxStatus.Dispatching],
     Dispatch2Stock: [BoxStatus.Dispatching, BoxStatus.Stocked]
@@ -166,12 +166,12 @@ let changeStateProcess = async function (element, box, phone) {
             info,
             validatedStateChanging
         });
-    } else if (validatedStateChanging === validChange.Sign2Archive) {
-        return Promise.resolve({
-            status: ProgramStatus.Success,
-            message: "State is validate, update box after change container successfully",
-            validatedStateChanging
-        });
+    // } else if (validatedStateChanging === validChange.Sign2Archive) {
+    //     return Promise.resolve({
+    //         status: ProgramStatus.Success,
+    //         message: "State is validate, update box after change container successfully",
+    //         validatedStateChanging
+    //     });
     } else if (validatedStateChanging === validChange.Deliver2Sign) {
         let info = {
             status: BoxStatus.Signed,
@@ -361,12 +361,12 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
             status: ProgramStatus.Success,
             message: "Changing Container State successfully"
         });
-    } else if (validatedStateChanging === validChange.Sign2Archive) {
-        await aBox.remove();
-        return Promise.resolve({
-            status: ProgramStatus.Success,
-            message: "Changing Container State successfully"
-        });
+    // } else if (validatedStateChanging === validChange.Sign2Archive) {
+    //     await aBox.remove();
+    //     return Promise.resolve({
+    //         status: ProgramStatus.Success,
+    //         message: "Changing Container State successfully"
+    //     });
     }
 }
 
