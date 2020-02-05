@@ -39,7 +39,7 @@ let changeStateProcess = async function (element, box, phone) {
         });
 
     if (validatedStateChanging === validChange.Box2Stock) {
-        const validationResult = validateStoreID(element);
+        const validationResult = validateStoreID(element, Category.Storage);
         if (!validationResult.valid) {
             const reply = {
                 status: ProgramStatus.Error
@@ -105,7 +105,7 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Sign2Stock) {
-        const validationResult = validateStoreID(element);
+        const validationResult = validateStoreID(element, Category.Storage);
         if (!validationResult.valid) {
             const reply = {
                 status: ProgramStatus.Error
@@ -136,7 +136,7 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Stock2Box) {
-        const validationResult = validateStoreID(element);
+        const validationResult = validateStoreID(element, Category.Store);
         if (!validationResult.valid) {
             const reply = {
                 status: ProgramStatus.Error
@@ -166,12 +166,12 @@ let changeStateProcess = async function (element, box, phone) {
             info,
             validatedStateChanging
         });
-    // } else if (validatedStateChanging === validChange.Sign2Archive) {
-    //     return Promise.resolve({
-    //         status: ProgramStatus.Success,
-    //         message: "State is validate, update box after change container successfully",
-    //         validatedStateChanging
-    //     });
+        // } else if (validatedStateChanging === validChange.Sign2Archive) {
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "State is validate, update box after change container successfully",
+        //         validatedStateChanging
+        //     });
     } else if (validatedStateChanging === validChange.Deliver2Sign) {
         let info = {
             status: BoxStatus.Signed,
@@ -191,7 +191,7 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Stock2Dispatch) {
-        const validationResult = validateStoreID(element);
+        const validationResult = validateStoreID(element, Category.Storage);
         if (!validationResult.valid) {
             const reply = {
                 status: ProgramStatus.Error
@@ -361,12 +361,12 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
             status: ProgramStatus.Success,
             message: "Changing Container State successfully"
         });
-    // } else if (validatedStateChanging === validChange.Sign2Archive) {
-    //     await aBox.remove();
-    //     return Promise.resolve({
-    //         status: ProgramStatus.Success,
-    //         message: "Changing Container State successfully"
-    //     });
+        // } else if (validatedStateChanging === validChange.Sign2Archive) {
+        //     await aBox.remove();
+        //     return Promise.resolve({
+        //         status: ProgramStatus.Success,
+        //         message: "Changing Container State successfully"
+        //     });
     }
 }
 
@@ -385,7 +385,15 @@ function checkMissingArgument(obj, argNameList) {
     return missingArgList;
 }
 
-function validateStoreID(element) {
+function checkStoreIs(storeID, category) {
+    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    return storeDict[storeID].category === category;
+}
+
+
+
+
+function validateStoreID(element, category) {
     const missingArgList = checkMissingArgument(element, ["destinationStoreId"]);
     if (missingArgList.length !== 0)
         return {
@@ -394,19 +402,15 @@ function validateStoreID(element) {
             argumentNameList: missingArgList
         };
     const storeID = element.destinationStoreId;
-    if (!storeIdIsStorage(storeID))
+    const storeIsStorage = checkStoreIs(storeID, category);
+    if (!storeIsStorage)
         return {
             valid: false,
             errorType: StateChangingError.ArgumentInvalid,
-            message: `Arguments [storeID] should represent a Storage`
+            message: `Arguments [storeID] should represent a ${category}`
         };
     return {
         valid: true,
         storeID
     };
-}
-
-function storeIdIsStorage(storeID) {
-    const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-    return storeDict[storeID].category === Category.Storage;
 }
