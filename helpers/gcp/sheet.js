@@ -27,6 +27,7 @@ const googleMapsClient = require('@google/maps').createClient({
 const isNum = /^\d+$/;
 const ignorePlaceTypes = ["point_of_interest", "establishment"];
 const defaultPeriods = [];
+const allOpenPeriods = [];
 for (let i = 0; i < 7; i++) {
     defaultPeriods.push({
         "close": {
@@ -36,6 +37,16 @@ for (let i = 0; i < 7; i++) {
         "open": {
             "day": i,
             "time": "12:00"
+        }
+    });
+    allOpenPeriods.push({
+        "close": {
+            "day": i,
+            "time": "00:00"
+        },
+        "open": {
+            "day": i,
+            "time": "24:00"
         }
     });
 }
@@ -246,9 +257,14 @@ module.exports = {
                                             } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
                                                 opening_hours = dataFromApi.opening_hours.periods;
                                                 for (let j = 0; j < opening_hours.length; j++) {
-                                                    if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
-                                                        opening_hours = defaultPeriods;
-                                                        break;
+                                                    if (!(opening_hours[j].close && opening_hours[j].close.time)) {
+                                                        if (opening_hours[j].open && opening_hours[j].open.day === 0 && opening_hours[j].open.time === "0000") {
+                                                            opening_hours = allOpenPeriods;
+                                                            break;
+                                                        } else {
+                                                            opening_hours = defaultPeriods;
+                                                            break;
+                                                        }
                                                     } else {
                                                         opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
                                                         opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
