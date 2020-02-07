@@ -11,7 +11,8 @@ const BoxSaveType = Object.freeze({
 const StateChangingError = Object.freeze({
     MissingArg: "missing_arg",
     InvalidStateChanging: "invalid_state_changing",
-    ArgumentInvalid: "argument_invalid"
+    ArgumentInvalid: "argument_invalid",
+    Unknown:"unknown"
 });
 
 module.exports = {

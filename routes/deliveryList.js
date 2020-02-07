@@ -248,20 +248,21 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiUse JWT
  * @apiDescription
  *      **available state changing list**: 
- *      - Boxing -> Stocked 
- *      - Boxing -> Delivering 
- *      - Delivering -> Boxing 
- *      - Signed -> Stocked 
- *      - Stocked -> Boxing 
- *      - Dispatching -> Stocked 
- *      - Stocked -> Dispatching 
+ *      0 - Boxing -> Stocked 
+ *      1 - Boxing -> Delivering 
+ *      2 - Delivering -> Boxing 
+ *      3 - Signed -> Stocked 
+ *      4 - Stocked -> Boxing 
+ *      6 - Dispatching -> Stocked 
+ *      7 - Stocked -> Dispatching 
  * @apiParamExample {json} Request-Example:
     {
         phone: String,
         boxContent: {
             id: String
             newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
-            [destinationStoreId]: String // only need when update Stocked to Boxing 
+            [destinationStoreId]: String, // Needed when state changing is 0, 3, 4, 6
+            [boxAction]: String // Needed when state changing is 7, Action: ['Sign', 'CancelArrival']
         }
     }
  * @apiSuccessExample {json} Success-Response:
@@ -307,6 +308,8 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
                     case StateChangingError.ArgumentInvalid:
                         ErrorResponse.H005_4.message += ", " + boxInfo.message;
                         return res.status(403).json(ErrorResponse.H005_4);
+                    default:
+                        return next(boxInfo.message);
                 }
             }
             let stateInfo = await containerStateFactory(boxInfo.validatedStateChanging, aBox, dbUser, boxInfo.info);

@@ -228,13 +228,30 @@ let changeStateProcess = async function (element, box, phone) {
                 errorType: StateChangingError.MissingArg,
                 argumentNameList: missingArgList
             });
-        if (element.boxAction !== BoxAction.Sign || element.boxAction !== BoxAction.CancelArrival)
+
+        let storeID = null;
+        if (element.boxAction === BoxAction.Sign) {
+            storeID = box.action[box.action.length - 1].storeID;
+        } else if (element.boxAction === BoxAction.CancelArrival) {
+            for (let i = box.action.length - 2; i >= 0; i--) {
+                if (typeof box.action[i].storeID !== "undefined") {
+                    storeID = box.action[i].storeID;
+                    break;
+                }
+            }
+        } else {
             return Promise.resolve({
                 status: ProgramStatus.Error,
                 errorType: StateChangingError.ArgumentInvalid,
                 message: `Arguments [boxAction] should be ${BoxAction.Sign} or ${BoxAction.CancelArrival}`
             });
-        const storeID = box.action[box.action.length - 1].storeID;
+        }
+        if (storeID === null)
+            return Promise.resolve({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.Unknown,
+                message: `Element [storeID] can't be found in box's[${box.boxID}] action list`
+            });
         let info = {
             status: BoxStatus.Stocked,
             storeID,
