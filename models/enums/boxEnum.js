@@ -19,6 +19,8 @@ module.exports = {
         ModifyDueDate: "ModifyDueDate",
         // Archive: "Archive",
         Assign: "Assign",
-        Dispatch: "Dispatch"
+        Dispatch: "Dispatch",
+        AcceptDispatch: "AcceptDispatch",
+        RejectDispatch: "RejectDispatch"
     })
 };

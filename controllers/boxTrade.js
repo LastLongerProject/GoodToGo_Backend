@@ -230,9 +230,10 @@ let changeStateProcess = async function (element, box, phone) {
             });
 
         let storeID = null;
-        if (element.boxAction === BoxAction.Sign) {
-            storeID = box.action[box.action.length - 1].storeID;
-        } else if (element.boxAction === BoxAction.CancelArrival) {
+        let boxAction = element.boxAction;
+        if (boxAction === BoxAction.AcceptDispatch) {
+            storeID = undefined;
+        } else if (boxAction === BoxAction.CancelArrival) {
             for (let i = box.action.length - 2; i >= 0; i--) {
                 if (typeof box.action[i].storeID !== "undefined") {
                     storeID = box.action[i].storeID;
@@ -259,7 +260,7 @@ let changeStateProcess = async function (element, box, phone) {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
-                    boxAction: element.boxAction,
+                    boxAction,
                     storeID,
                     timestamps: Date.now()
                 }
@@ -372,7 +373,9 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
             });
         });
     } else if (validatedStateChanging === validChange.Stock2Box ||
-        validatedStateChanging === validChange.Box2Stock) {
+        validatedStateChanging === validChange.Box2Stock ||
+        validatedStateChanging === validChange.Stock2Dispatch ||
+        validatedStateChanging === validChange.Dispatch2Stock) {
         await aBox.update(boxInfo).exec();
         return Promise.resolve({
             status: ProgramStatus.Success,
