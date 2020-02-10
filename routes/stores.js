@@ -6,6 +6,7 @@ const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
 const baseUrl = require('../config/config.js').serverBaseUrl;
+const getStoreListInArea = require('../helpers/tools').getStoreListInArea;
 const intReLength = require('../helpers/toolkit').intReLength;
 const timeFormatter = require('../helpers/toolkit').timeFormatter;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
@@ -301,6 +302,28 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
  */
 
 router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const query = {};
+
+    const dbRole = req._thisRole;
+    let thisStationID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                Object.assign(query, {
+                    id: {
+                        "$in": getStoreListInArea(thisStationID)
+                    }
+                });
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
     Store.find({}, {}, {
         sort: {
             id: 1

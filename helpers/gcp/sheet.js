@@ -10,6 +10,7 @@ const getDateCheckpoint = require('../toolkit').getDateCheckpoint;
 
 const Store = require('../../models/DB/storeDB');
 const PlaceID = require('../../models/DB/placeIdDB');
+const Station = require('../../models/DB/stationDB');
 const Container = require('../../models/DB/containerDB');
 const CouponType = require('../../models/DB/couponTypeDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
@@ -181,7 +182,8 @@ module.exports = {
                             'project': aRow[8],
                             'active': aRow[9] === 'TRUE',
                             'category': aRow[10],
-                            'activity': aRow[11]
+                            'activity': aRow[11],
+                            'delivery_area': aRow[12].split(",") || [0]
                         }, {
                             upsert: true,
                             new: true
@@ -276,6 +278,7 @@ module.exports = {
                                                     'activity': aPlace.activity,
                                                     'photos_fromGoogle': photos_fromGoogle,
                                                     'url_fromGoogle': dataFromApi.url,
+                                                    'delivery_area': aPlace.delivery_area,
                                                     '$setOnInsert': {
                                                         'img_info': {
                                                             img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
@@ -315,6 +318,35 @@ module.exports = {
                                 });
                         });
                     })
+                    .catch(cb);
+            });
+        });
+    },
+    getStation: function (cb) {
+        googleAuth(function getSheet(auth) {
+            sheets.spreadsheets.values.get({
+                auth: auth,
+                spreadsheetId: configs.store_sheet_ID,
+                range: 'StorageStation!A2:B',
+            }, function (err, response) {
+                if (err) return debug.error('[Sheet API ERR (getStation)] Error: ' + err);
+                const rowsFromSheet = response.data.values;
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== ""));
+                Promise
+                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
+                        Station.findOneAndUpdate({
+                            'ID': aRow[0]
+                        }, {
+                            'name': aRow[1]
+                        }, {
+                            upsert: true,
+                            new: true
+                        }, (err, afterUpdate) => {
+                            if (err) return reject(err);
+                            resolve(afterUpdate);
+                        });
+                    })))
+                    .then(stationList => cb(null, stationList))
                     .catch(cb);
             });
         });

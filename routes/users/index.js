@@ -74,6 +74,7 @@ router.use('/role', roleRoute);
  *                      "secretKey": String,
  *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
  *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "stationName": String,  // if [roleType] === "station"
  *                      "storeID": Number,  // if [roleType] === "store"
  *                      "storeName": String,  // if [roleType] === "store"
  *                      "group": String  // if [roleType] === "customer"
@@ -129,6 +130,7 @@ router.post('/login', validateDefault, function (req, res, next) {
  *                      "secretKey": String,
  *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
  *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "stationName": String,  // if [roleType] === "station"
  *                      "storeID": Number,  // if [roleType] === "store"
  *                      "storeName": String,  // if [roleType] === "store"
  *                      "group": String  // if [roleType] === "customer"

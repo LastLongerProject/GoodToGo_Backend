@@ -420,9 +420,6 @@ function checkStoreIs(storeID, category) {
     return storeDict[storeID].category === category;
 }
 
-
-
-
 function validateStoreID(element, category) {
     const missingArgList = checkMissingArgument(element, ["destinationStoreId"]);
     if (missingArgList.length !== 0)

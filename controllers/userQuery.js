@@ -13,6 +13,7 @@ const User = require('../models/DB/userDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const RoleType = require('../models/enums/userEnum').RoleType;
 const UserGroup = require('../models/enums/userEnum').UserGroup;
+const RoleElement = require('../models/enums/userEnum').RoleElement;
 
 const role = require('../models/variables/role');
 const Role = role.Role;
@@ -710,7 +711,11 @@ function payloadBuilder(payload, userKey) {
     delete theRole.roleID;
     if (userKey.roleType === RoleType.STORE)
         Object.assign(theRole, {
-            storeName: role.getElement(theRole, role.elements.STORE_NAME)
+            [RoleElement.STORE_NAME]: role.getElement(theRole, RoleElement.STORE_NAME)
+        });
+    else if (userKey.roleType === RoleType.CLEAN_STATION)
+        Object.assign(theRole, {
+            [RoleElement.STATION_NAME]: role.getElement(theRole, RoleElement.STATION_NAME)
         });
 
     // Legacy Role sys
@@ -725,7 +730,7 @@ function payloadBuilder(payload, userKey) {
             manager: theRole.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
-            storeName: role.getElement(theRole, role.elements.STORE_NAME)
+            storeName: role.getElement(theRole, RoleElement.STORE_NAME)
         };
     } else if (userKey.roleType === RoleType.ADMIN) {
         payload.roles.admin = {

@@ -11,6 +11,7 @@ module.exports = {
         STORE_ID: "storeID",
         STORE_NAME: "storeName",
         STATION_ID: "stationID",
+        STATION_NAME: "stationName",
         CUSTOMER_GROUP: "group",
         MANAGER: "manager",
         SCOPE_ID: "scopeID",

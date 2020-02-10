@@ -10,9 +10,10 @@ const validateRequest = require("../middlewares/validation/authorization/validat
 const checkRoleIsAdmin = require("../middlewares/validation/authorization/validateRequest").checkRoleIsAdmin;
 const checkRoleIsBot = require("../middlewares/validation/authorization/validateRequest").checkRoleIsBot;
 const refreshStore = require("../helpers/tasks").refreshStore;
+const refreshCoupon = require("../helpers/tasks").refreshCoupon;
+const refreshStation = require("../helpers/tasks").refreshStation;
 const refreshStoreImg = require("../helpers/tasks").refreshStoreImg;
 const refreshContainer = require("../helpers/tasks").refreshContainer;
-const refreshCoupon = require("../helpers/tasks").refreshCoupon;
 const refreshCouponImage = require("../helpers/tasks").refreshCouponImage;
 const refreshContainerIcon = require("../helpers/tasks").refreshContainerIcon;
 const cleanUndo = require("../helpers/toolkit").cleanUndoTrade;
@@ -1781,7 +1782,8 @@ function addContent(lastHistory, newHistory) {
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            "success": true
+            "success": true,
+            "updatedStoresAmount": Number
         }
  * 
  */
@@ -1791,6 +1793,32 @@ router.patch("/refresh/store", checkRoleIsAdmin(), validateRequest, function (re
         res.json({
             "success": true,
             "updatedStoresAmount": data.length
+        });
+    });
+});
+
+/**
+ * @apiName Manage refresh station
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/station Refresh station
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true,
+            "updatedStationsAmount": Number
+        }
+ * 
+ */
+router.patch("/refresh/station", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    refreshStation(function (err, data) {
+        if (err) return next(err);
+        res.json({
+            "success": true,
+            "updatedStationsAmount": data.length
         });
     });
 });
@@ -1831,7 +1859,8 @@ router.patch("/refresh/container", checkRoleIsAdmin(), validateRequest, function
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            "success": true
+            "success": true,
+            "data": Array // Coupon Type List
         }
  * 
  */

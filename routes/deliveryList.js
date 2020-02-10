@@ -3,6 +3,8 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
 const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
 const getContainerHash = require('../helpers/tools').getContainerHash;
+const getStoreListInArea = require('../helpers/tools').getStoreListInArea;
+const storeIsInArea = require('../helpers/tools').checkStoreIsInArea;
 const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
@@ -90,7 +92,12 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
         next(error);
     }
 
-    // check storeID
+    if (!storeIsInArea(storeID, stationID))
+        return res.status(401).json({
+            code: 'F016',
+            type: 'DeliveryListMessage',
+            message: "Store is not in your Area"
+        });
     Promise.all(req._boxArray.map(box => box.save()))
         .then(() => {
             let list = new DeliveryList({
@@ -1151,13 +1158,16 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
             case RoleType.CLEAN_STATION:
                 thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 Object.assign(query, {
-                    'oriUser.storeID': thisStoreID
+                    'oriUser.storeID': {
+                        "$in": storeIdList
+                    }
                 });
                 break;
             case RoleType.STORE:
                 thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                var storeIdList = getStoreListInArea(thisStationID);
                 Object.assign(query, {
-                    'oriUser.storeID': null // To Be Done
+                    'oriUser.storeID': thisStoreID
                 });
                 break;
             default:
@@ -1325,18 +1335,47 @@ router.get(
     validateBoxStatus,
     async function (req, res, next) {
         let status = req.query.boxStatus
-        let storeID = parseInt(req.query.storeID) || -1 // check storeID
+        let storeID = parseInt(req.query.storeID) || null
         let query = Array.isArray(status) ? {
             status: {
                 $in: status
             }
         } : {
             status
+        };
+
+        const dbRole = req._thisRole;
+        let thisStationID;
+        let thisRoleType = dbRole.roleType;
+        try {
+            switch (thisRoleType) {
+                case RoleType.CLEAN_STATION:
+                    thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                    break;
+                default:
+                    next();
+            }
+        } catch (error) {
+            next(error);
         }
 
-        Object.assign(query, storeID !== -1 ? {
-            storeID
-        } : {})
+        if (storeID !== null) {
+            if (!storeIsInArea(storeID, thisStationID))
+                return res.status(401).json({
+                    code: 'F016',
+                    type: 'DeliveryListMessage',
+                    message: "Store is not in your Area"
+                });
+            Object.assign(query, {
+                storeID
+            });
+        } else {
+            Object.assign(query, {
+                storeID: {
+                    "$in": getStoreListInArea(thisStationID)
+                }
+            });
+        }
 
         Box.aggregate([{
                 $match: query
@@ -1372,21 +1411,21 @@ router.get(
                 }
             }])
             .exec((err, overviews) => {
-                if (err) return next(err)
-                let overview = overviews[0]
+                if (err) return next(err);
+                let overview = overviews[0];
 
                 if (!overview) {
                     return res.status(200).json({
                         containers: [],
                         storeAmount: 0,
                         total: 0
-                    })
+                    });
                 }
 
                 res.status(200).json({
                     ...overview,
                     containers: getDeliverContent(overview.containers)
-                })
+                });
             })
     }
 );

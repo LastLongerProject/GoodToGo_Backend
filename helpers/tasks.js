@@ -5,6 +5,7 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
 const Coupon = require('../models/DB/couponDB');
+const Station = require('../models/DB/stationDB');
 const PlaceID = require('../models/DB/placeIdDB');
 const PointLog = require("../models/DB/pointLogDB");
 const Container = require('../models/DB/containerDB');
@@ -68,6 +69,16 @@ module.exports = {
     },
     refreshStore: function (cb) {
         sheet.getStore((err, data) => {
+            if (err) return cb(err);
+            storeListGenerator(err => {
+                if (err) return cb(err);
+                debug.log('storeList refresh');
+                cb(null, data);
+            });
+        });
+    },
+    refreshStation: function(cb){
+        sheet.getStation((err, data) => {
             if (err) return cb(err);
             storeListGenerator(err => {
                 if (err) return cb(err);
@@ -445,25 +456,42 @@ function storeListGenerator(cb) {
         if (err) return cb(err);
         Store.find({}, {}, {
             sort: {
-                ID: 1
+                id: 1
             }
         }, (err, stores) => {
             if (err) return cb(err);
-            var storeDict = {};
-            places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
-            stores.forEach(aStore => {
-                if (storeDict[aStore.id])
-                    Object.assign(storeDict[aStore.id], {
-                        img_info: aStore.img_info,
-                        photos_fromGoogle: aStore.photos_fromGoogle,
-                        url_fromGoogle: aStore.url_fromGoogle,
-                        address: aStore.address,
-                        opening_hours: aStore.opening_hours,
-                        location: aStore.location
+            Station.find({}, {}, {
+                sort: {
+                    ID: 1
+                }
+            }, (err, stations) => {
+                const storeDict = {};
+                const stationDict = {};
+                places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
+                stations.forEach(aStation => stationDict[aStation.ID] = {
+                    name: aStation.name,
+                    storeList: []
+                });
+                stores.forEach(aStore => {
+                    if (storeDict[aStore.id])
+                        Object.assign(storeDict[aStore.id], {
+                            img_info: aStore.img_info,
+                            photos_fromGoogle: aStore.photos_fromGoogle,
+                            url_fromGoogle: aStore.url_fromGoogle,
+                            address: aStore.address,
+                            opening_hours: aStore.opening_hours,
+                            location: aStore.location
+                        });
+                    const deliveryAreaList = aStore.delivery_area;
+                    deliveryAreaList.forEach(aArea => {
+                        if (stationDict[aArea])
+                            stationDict[aArea].storeList.push(aStore.id);
                     });
+                });
+                DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
+                DataCacheFactory.set(DataCacheFactory.keys.STATION, stationDict);
+                cb();
             });
-            DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
-            cb();
         });
     });
 }

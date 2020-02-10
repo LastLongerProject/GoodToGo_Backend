@@ -12,7 +12,8 @@ var schema = mongoose.Schema({
     project: String,
     type: String,
     category: Number,
-    activity: Array
+    activity: Array,
+    delivery_area: Array
 }, {
     timestamps: true
 });

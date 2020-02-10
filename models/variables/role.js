@@ -142,8 +142,7 @@ module.exports = {
         return this;
     },
     RoleCreationError,
-    getElement,
-    elements: RoleElement
+    getElement
 };
 
 function getElement(theRole, eleName, nullable = true) {
@@ -165,6 +164,11 @@ function getElement(theRole, eleName, nullable = true) {
             var theStore = storeDict[theRole[RoleElement.STORE_ID]];
             if (theStore) return done(theStore.name);
             else return done("找不到店家");
+        case RoleElement.STATION_NAME:
+            var stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
+            var theStation = stationDict[theRole[RoleElement.STATION_ID]];
+            if (theStation) return done(theStation.name);
+            else return done("找不到調度站");
         case RoleElement.MANAGER:
             if (theRole.roleType !== RoleType.CLEAN_STATION && theRole.roleType !== RoleType.STORE) return done(null);
             return done(theRole[RoleElement.MANAGER]);

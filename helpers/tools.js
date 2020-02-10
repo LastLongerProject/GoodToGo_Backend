@@ -53,6 +53,17 @@ exports.computeDaysOfUsing = function (dateToCompute, now) {
     return Math.ceil((now - getDateCheckpoint(dateToCompute)) / (1000 * 60 * 60 * 24));
 };
 
+function getStoreListInArea(stationID) {
+    const stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
+    return stationDict[stationID].storeList;
+}
+
+exports.getStoreListInArea = getStoreListInArea;
+
+exports.checkStoreIsInArea = function (storeID, stationID) {
+    return getStoreListInArea(stationID).indexOf(storeID) !== -1;
+};
+
 exports.userIsAvailableForRentContainer = function (dbUser, amountOrdered, byPassCheck, cb) {
     if (byPassCheck)
         return cb(null, true);
