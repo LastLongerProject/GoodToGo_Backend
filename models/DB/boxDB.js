@@ -10,7 +10,14 @@ var schema = mongoose.Schema({
         amount: Number
     }],
     dueDate: Date,
-    storeID: Number,
+    storeID: {
+        type: Number,
+        default: null
+    },
+    stationID: {
+        type: Number,
+        default: null
+    },
     action: [{
         phone: String,
         boxStatus: String,

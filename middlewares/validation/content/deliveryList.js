@@ -126,7 +126,6 @@ function validateStockApiContent(req, res, next) {
     } catch (error) {
         next(error);
     }
-    let storeID = req.params.storeID || 99999
 
     let index = req._sequence || 1;
 
@@ -149,7 +148,8 @@ function validateStockApiContent(req, res, next) {
                 boxID: boxID,
                 boxName: element.boxName,
                 dueDate: Date.now(),
-                storeID: storeID,
+                storeID: null,
+                stationID: thisStationID,
                 boxOrderContent: orderContent,
                 containerList: element.containerList,
                 containerHash: getContainerHash(element.containerList),

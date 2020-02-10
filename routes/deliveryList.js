@@ -75,12 +75,29 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
     let creator = req.body.phone;
     let storeID = parseInt(req.params.storeID);
 
+    const dbRole = req._thisRole;
+    let stationID;
+    const thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
+    // check storeID
     Promise.all(req._boxArray.map(box => box.save()))
         .then(() => {
             let list = new DeliveryList({
                 listID: req._listID,
                 boxList: req._boxIDs,
                 storeID,
+                stationID,
                 creator
             });
             list.save().then(() => {
@@ -126,6 +143,21 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
     let boxContent = req.body.boxContent;
     let phone = req.body.phone;
 
+    const dbRole = req._thisRole;
+    let stationID;
+    const thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
     const boxID = boxContent.ID;
     const containerList = boxContent.containerList;
     const comment = boxContent.comment;
@@ -155,9 +187,11 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
                         containerList: containerList,
                         containerHash: getContainerHash(containerList),
                         comment: comment,
+                        stationID,
                         $push: {
                             action: {
                                 phone: phone,
+                                stationID,
                                 boxStatus: BoxStatus.Boxing,
                                 boxAction: BoxAction.Pack,
                                 timestamps: Date.now(),
@@ -282,19 +316,34 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
     const newState = boxContent.newState;
     const boxID = boxContent.id;
 
+    const dbRole = req._thisRole;
+    let stationID;
+    const thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
     Box.findOne({
         boxID: boxID,
     }, async function (err, aBox) {
         if (err) return next(err);
-        if (!aBox)
+        if (!aBox || aBox.stationID !== stationID)
             return res.status(403).json({
                 code: 'F012',
                 type: 'BoxingMessage',
                 message: 'Box is not exist'
             });
+
         if (aBox.status === BoxStatus.Delivering && newState === BoxStatus.Signed)
             return res.status(403).json(ErrorResponse.H008);
-
         try {
             let boxInfo = await changeStateProcess(boxContent, aBox, phone);
             if (boxInfo.status === ProgramStatus.Error) {
@@ -361,11 +410,12 @@ router.post(
         let boxContent = req.body.boxContent;
 
         const dbRole = req._thisRole;
-        let thisStoreID;
+        let thisStoreID, thisStationID;
         const thisRoleType = dbRole.roleType;
         try {
             switch (thisRoleType) {
                 case RoleType.CLEAN_STATION:
+                    thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                     break;
                 case RoleType.STORE:
                     thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
@@ -390,11 +440,12 @@ router.post(
                     type: 'BoxingMessage',
                     message: 'Box is not exist',
                 });
-            if (!reqByCleanStation && aBox.storeID !== thisStoreID)
+            if ((!reqByCleanStation && aBox.storeID !== thisStoreID) ||
+                (reqByCleanStation && aBox.stationID !== thisStationID))
                 return res.status(403).json({
                     code: 'F008',
                     type: 'BoxingMessage',
-                    message: "Box is not belong to user's store"
+                    message: "Box is not belong to user"
                 });
             try {
                 let boxInfo = await changeStateProcess(boxContent, aBox, phone);
@@ -459,13 +510,40 @@ router.post(
  */
 router.get(
     '/box/:boxID',
+    checkRoleIsStore(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async (req, res, next) => {
         const boxID = req.params.boxID
-        let box = await Box.findOne({
+        const query = {
             boxID
-        })
+        };
 
+        const dbRole = req._thisRole;
+        let thisStoreID, thisStationID;
+        const thisRoleType = dbRole.roleType;
+        try {
+            switch (thisRoleType) {
+                case RoleType.CLEAN_STATION:
+                    thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                    Object.assign(query, {
+                        storeID: thisStoreID
+                    });
+                    break;
+                case RoleType.STORE:
+                    thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                    Object.assign(query, {
+                        stationID: thisStationID
+                    });
+                    break;
+                default:
+                    next();
+            }
+        } catch (error) {
+            next(error);
+        }
+
+        let box = await Box.findOne(query)
         if (box) {
             res.status(200).json({
                 ID: box.boxID,
@@ -491,8 +569,6 @@ router.get(
     }
 );
 
-
-
 const Sorter = {
     CONTAINER: 1 << 2,
     STORE: 1 << 3,
@@ -500,7 +576,7 @@ const Sorter = {
     ASCEND_ARRIVAL: 1 << 5,
     DESCEND_CREATED_DATE: 1 << 6,
     ASCEND_CREATED_DATE: 1 << 7
-}
+};
 
 async function createTextSearchQuery(keyword) {
     const regex = {
@@ -579,7 +655,6 @@ function parseSorter(rawValue) {
  * @api {get} /deliveryList/box/list/query/:sorter Universal DeliveryList Box Query
  * @apiPermission admin
  * @apiUse JWT
- * @apiParam {storeID} warehouse id
  * @apiParam {offset} offset of the updated date
  * @apiParam {boxStatus[]} desired box status
  * @apiParam {batch} batch size
@@ -626,17 +701,31 @@ router.get(
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.query.boxStatus;
-        let storeID = req.query.storeID && parseInt(req.query.storeID);
         let offset = parseInt(req.query.offset) || 0;
         let batch = parseInt(req.query.batch) || 0;
         let sorterRawValue = parseInt(req.params.sorter) || 1 << 6
         let keyword = req.query.keyword || ''
         const sorter = parseSorter(sorterRawValue)
 
-        let query = {
-            storeID,
-            'status': boxStatus
+        const dbRole = req._thisRole;
+        let stationID;
+        const thisRoleType = dbRole.roleType;
+        try {
+            switch (thisRoleType) {
+                case RoleType.CLEAN_STATION:
+                    stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                    break;
+                default:
+                    next();
+            }
+        } catch (error) {
+            next(error);
         }
+
+        let query = {
+            stationID,
+            'status': boxStatus
+        };
 
         Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
 
@@ -657,6 +746,7 @@ router.get(
                 if (err) return next(err);
                 let boxObjs = boxes.map(box => ({
                     ID: box.boxID,
+                    stationID: box.stationID,
                     storeID: box.storeID,
                     boxName: box.boxName || "",
                     dueDate: box.dueDate || "",
@@ -671,7 +761,7 @@ router.get(
                     deliveringDate: box.deliveringDate
                 }))
                 return res.status(200).json(boxObjs);
-            })
+            });
     }
 );
 
@@ -689,6 +779,7 @@ router.get(
  * - Delivering: "Delivering",
  * - Signed: "Signed",
  * - Stocked: "Stocked"
+ * - Dispatching: "Dispatching"
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -724,30 +815,48 @@ router.get(
             }
         
  */
-router.get(
+router.get(-
     '/box/specificList/:status/:startFrom',
     checkRoleIsStore(),
+    checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
         let boxStatus = req.params.status;
-        const dbRole = req._thisRole;
-        let thisStoreID;
-        try {
-            thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
-        } catch (error) {
-            next(error);
-        }
         let startFrom = parseInt(req.params.startFrom);
         let boxObjs = [];
-
-        Box.find({
+        const query = {
             'status': boxStatus,
-            'storeID': thisStoreID,
             'createdAt': {
                 '$lte': dateCheckpoint(startFrom + 1),
                 '$gt': dateCheckpoint(startFrom - 14)
             },
-        }, (err, boxes) => {
+        };
+
+        const dbRole = req._thisRole;
+        let thisStoreID, thisStationID;
+        const thisRoleType = dbRole.roleType;
+        try {
+            switch (thisRoleType) {
+                case RoleType.CLEAN_STATION:
+                    thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                    Object.assign(query, {
+                        storeID: thisStoreID
+                    });
+                    break;
+                case RoleType.STORE:
+                    thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                    Object.assign(query, {
+                        stationID: thisStationID
+                    });
+                    break;
+                default:
+                    next();
+            }
+        } catch (error) {
+            next(error);
+        }
+
+        Box.find(query, (err, boxes) => {
             if (err) return next(err);
             for (let box of boxes) {
                 boxObjs.push({
@@ -809,8 +918,24 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
     let containerList = req.body['containerList'] ? req.body['containerList'] : undefined;
     req.body['dueDate'] ? req.body['dueDate'] = new Date(req.body['dueDate']) : undefined;
 
+    const dbRole = req._thisRole;
+    let thisStationID;
+    const thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
     Box.findOne({
-        boxID
+        boxID,
+        stationID: thisStationID
     }, async (err, box) => {
         try {
             if (containerList) {
@@ -924,9 +1049,24 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
 router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     let boxID = req.params.boxID;
     let dbUser = req._user;
+    const dbRole = req._thisRole;
+    let thisStationID;
+    const thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
 
     Box.findOne({
-            boxID
+            boxID,
+            stationID: thisStationID
         })
         .exec()
         .then(aBox => {
@@ -991,45 +1131,58 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
  */
 
 router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), validateRequest, function (req, res, next) {
-    const dbRole = req._thisRole;
-    let thisStoreID;
-    let thisRoleType = dbRole.roleType;
-    try {
-        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
-    } catch (error) {
-        next(error);
-    }
     const batch = parseInt(req.query.batch) || 0
     const offset = parseInt(req.query.offset) || 0
     const isCleanReload = req.query.cleanReload === 'true'
     const needBoth = req.query.cleanReload === undefined
-    var queryCond = (thisRoleType === RoleType.STORE) ? {
+    const query = {
         'tradeType.action': 'ReadyToClean',
         'oriUser.storeID': thisStoreID,
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
-    } : {
-        'tradeType.action': 'ReadyToClean',
-        'tradeTime': {
-            '$gte': dateCheckpoint(1 - historyDays)
-        }
     };
 
+    const dbRole = req._thisRole;
+    let thisStoreID, thisStationID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                Object.assign(query, {
+                    'oriUser.storeID': thisStoreID
+                });
+                break;
+            case RoleType.STORE:
+                thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                Object.assign(query, {
+                    'oriUser.storeID': null // To Be Done
+                });
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        next(error);
+    }
+
     if (!needBoth) {
-        queryCond = isCleanReload ? {
-            ...queryCond,
-            "tradeType.oriState": 1
-        } : {
-            ...queryCond,
-            "tradeType.oriState": {
-                "$ne": 1
-            }
+        if (isCleanReload) {
+            Object.assign(query, {
+                "tradeType.oriState": 1
+            });
+        } else {
+            Object.assign(query, {
+                "tradeType.oriState": {
+                    "$ne": 1
+                }
+            });
         }
     }
 
     let aggregate = Trade.aggregate([{
-        $match: queryCond
+        $match: query
     }, {
         $group: {
             _id: {
@@ -1099,6 +1252,55 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
 });
 
 /**
+ * @apiName Containers dispatch history
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /deliveryList/dispatchHistory Reload history
+ * 
+ * @apiUse JWT
+ * @apiPermission admin
+ * @apiPermission clerk
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            [
+                {
+                    "containerList": [
+                        36
+                    ],
+                    "status": "reload",
+                    "action": [
+                        {
+                            "boxStatus": "Archived",
+                            "timestamps": "2019-04-26T08:50:07.072Z"
+                        }
+                    ],
+                    "orderContent": [
+                        {
+                            "containerType": "12oz 玻璃杯",
+                            "amount": 1
+                        }
+                    ]
+                }
+            ]
+        }
+ *
+ */
+
+router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStationID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+    } catch (error) {
+        next(error);
+    }
+    const batch = parseInt(req.query.batch) || 0
+    const offset = parseInt(req.query.offset) || 0
+});
+
+/**
  * @apiName DeliveryList Get delivery list overview
  * @apiGroup DeliveryList
  *
@@ -1123,7 +1325,7 @@ router.get(
     validateBoxStatus,
     async function (req, res, next) {
         let status = req.query.boxStatus
-        let storeID = parseInt(req.query.storeID) || -1
+        let storeID = parseInt(req.query.storeID) || -1 // check storeID
         let query = Array.isArray(status) ? {
             status: {
                 $in: status

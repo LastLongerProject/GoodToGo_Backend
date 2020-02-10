@@ -39,25 +39,23 @@ let changeStateProcess = async function (element, box, phone) {
         });
 
     if (validatedStateChanging === validChange.Box2Stock) {
-        const validationResult = validateStoreID(element, Category.Storage);
-        if (!validationResult.valid) {
-            const reply = {
-                status: ProgramStatus.Error
-            };
-            delete validationResult.valid;
-            Object.assign(reply, validationResult);
-            return Promise.resolve(reply);
-        }
-        const storeID = validationResult.storeID;
+        const missingArgList = checkMissingArgument(element, ["stationID"]);
+        if (missingArgList.length !== 0)
+            return Promise.resolve({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.MissingArg,
+                argumentNameList: missingArgList
+            });
+        const stationID = element.stationID;
         let info = {
             status: BoxStatus.Stocked,
-            storeID,
+            stationID,
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    storeID,
+                    stationID,
                     timestamps: Date.now()
                 }
             }
@@ -105,26 +103,29 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Sign2Stock) {
-        const validationResult = validateStoreID(element, Category.Storage);
-        if (!validationResult.valid) {
-            const reply = {
-                status: ProgramStatus.Error
-            };
-            delete validationResult.valid;
-            Object.assign(reply, validationResult);
-            return Promise.resolve(reply);
+        let stationID = null;
+        for (let i = box.action.length - 1; i >= 0; i--) {
+            if (typeof box.action[i].stationID !== "undefined") {
+                stationID = box.action[i].stationID;
+                break;
+            }
         }
-        const storeID = validationResult.storeID;
+        if (stationID === null)
+            return Promise.resolve({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.Unknown,
+                message: `Element [stationID] can't be found in box's[${box.boxID}] action list`
+            });
         let info = {
             status: BoxStatus.Stocked,
-            storeID,
+            stationID,
             dueDate: Date.now(),
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    storeID,
+                    stationID,
                     timestamps: Date.now()
                 }
             }
@@ -191,25 +192,23 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Stock2Dispatch) {
-        const validationResult = validateStoreID(element, Category.Storage);
-        if (!validationResult.valid) {
-            const reply = {
-                status: ProgramStatus.Error
-            };
-            delete validationResult.valid;
-            Object.assign(reply, validationResult);
-            return Promise.resolve(reply);
-        }
-        const storeID = validationResult.storeID;
+        const missingArgList = checkMissingArgument(element, ["stationID"]);
+        if (missingArgList.length !== 0)
+            return Promise.resolve({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.MissingArg,
+                argumentNameList: missingArgList
+            });
+        const stationID = element.stationID;
         let info = {
             status: BoxStatus.Dispatching,
-            storeID,
+            stationID,
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Dispatching,
                     boxAction: BoxAction.Dispatch,
-                    storeID,
+                    stationID,
                     timestamps: Date.now()
                 }
             }
@@ -229,17 +228,47 @@ let changeStateProcess = async function (element, box, phone) {
                 argumentNameList: missingArgList
             });
 
-        let storeID = null;
+        let info;
+        let stationID = null;
         let boxAction = element.boxAction;
         if (boxAction === BoxAction.AcceptDispatch) {
-            storeID = undefined;
+            info = {
+                status: BoxStatus.Stocked,
+                $push: {
+                    action: {
+                        phone: phone,
+                        boxStatus: BoxStatus.Stocked,
+                        boxAction,
+                        timestamps: Date.now()
+                    }
+                }
+            };
         } else if (boxAction === BoxAction.CancelArrival) {
             for (let i = box.action.length - 2; i >= 0; i--) {
-                if (typeof box.action[i].storeID !== "undefined") {
-                    storeID = box.action[i].storeID;
+                if (typeof box.action[i].stationID !== "undefined") {
+                    stationID = box.action[i].stationID;
                     break;
                 }
             }
+            if (stationID === null)
+                return Promise.resolve({
+                    status: ProgramStatus.Error,
+                    errorType: StateChangingError.Unknown,
+                    message: `Element [stationID] can't be found in box's[${box.boxID}] action list`
+                });
+            info = {
+                status: BoxStatus.Stocked,
+                stationID,
+                $push: {
+                    action: {
+                        phone: phone,
+                        stationID,
+                        boxStatus: BoxStatus.Stocked,
+                        boxAction,
+                        timestamps: Date.now()
+                    }
+                }
+            };
         } else {
             return Promise.resolve({
                 status: ProgramStatus.Error,
@@ -247,25 +276,6 @@ let changeStateProcess = async function (element, box, phone) {
                 message: `Arguments [boxAction] should be ${BoxAction.Sign} or ${BoxAction.CancelArrival}`
             });
         }
-        if (storeID === null)
-            return Promise.resolve({
-                status: ProgramStatus.Error,
-                errorType: StateChangingError.Unknown,
-                message: `Element [storeID] can't be found in box's[${box.boxID}] action list`
-            });
-        let info = {
-            status: BoxStatus.Stocked,
-            storeID,
-            $push: {
-                action: {
-                    phone: phone,
-                    boxStatus: BoxStatus.Stocked,
-                    boxAction,
-                    storeID,
-                    timestamps: Date.now()
-                }
-            }
-        };
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
