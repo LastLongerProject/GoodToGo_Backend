@@ -719,15 +719,15 @@ function payloadBuilder(payload, userKey) {
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
         };
-    } else if (String(userKey.roleType).startsWith(`${RoleType.CLERK}`)) {
-        payload.roles[userKey.roleType] = {
+    } else if (userKey.roleType === RoleType.STORE) {
+        payload.roles[RoleType.CLERK] = {
             storeID: theRole.storeID,
             manager: theRole.manager,
             apiKey: userKey.apiKey,
             secretKey: userKey.secretKey,
             storeName: role.getElement(theRole, role.elements.STORE_NAME)
         };
-    } else if (userKey.roleType === RoleType.ADMIN) {
+    } else if (userKey.roleType === RoleType.CLEAN_STATION) {
         payload.roles.admin = {
             stationID: theRole.stationID,
             manager: theRole.manager,
