@@ -1258,7 +1258,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
             });
 
             res.status(200).json(list);
-        })
+        });
 });
 
 /**
@@ -1297,6 +1297,11 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
  *
  */
 
+const DispatchStatus = {
+    GET_DISPATCH: "getDispatch",
+    SEND_DISPATCH: "sendDispatch"
+};
+
 router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
     let thisStationID;
@@ -1306,8 +1311,68 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     } catch (error) {
         next(error);
     }
-    const batch = parseInt(req.query.batch) || 0
-    const offset = parseInt(req.query.offset) || 0
+    const batch = parseInt(req.query.batch) || 0;
+    const offset = parseInt(req.query.offset) || 0;
+
+    let aggregate = Box.aggregate([{
+        $unwind: {
+            path: "$action",
+        }
+    }, {
+        $match: {
+            "action.boxAction": {
+                "$in": [BoxAction.Dispatch, BoxAction.AcceptDispatch, BoxAction.RejectDispatch]
+            }
+        }
+    }, {
+        $project: {
+            boxID: "$boxID",
+            containerList: "$containerList",
+            timestamp: "$action.timestamps",
+            action: "$action.boxAction",
+            status: "$action.boxStatus",
+            stationID: "$action.stationID"
+        }
+    }])
+
+    if (batch) {
+        aggregate = aggregate.limit(batch)
+    }
+
+    aggregate
+        .skip(offset)
+        .sort({
+            timestamp: 1
+        })
+        .exec((err, list) => {
+            if (err) return next(err);
+            const formattedAction = [];
+            list.forEach(anAction => {
+                if (anAction.boxAction === BoxAction.Dispatch) {
+                    if (anAction.stationID === thisStationID)
+                        formattedAction.push(Object.assign(anAction, {
+                            action: DispatchStatus.GET_DISPATCH
+                        }));
+                    else
+                        formattedAction.push(Object.assign(anAction, {
+                            action: DispatchStatus.SEND_DISPATCH
+                        }));
+                } else if (anAction.boxAction === BoxAction.AcceptDispatch) {
+                    const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
+                    Object.assign(formattedAction[index], {
+                        accepted: true
+                    });
+                } else if (anAction.boxAction === BoxAction.RejectDispatch) {
+                    const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
+                    Object.assign(formattedAction[index], {
+                        accepted: false
+                    });
+                }
+            });
+            res.status(200).json({
+                action: formattedAction
+            });
+        });
 });
 
 /**
