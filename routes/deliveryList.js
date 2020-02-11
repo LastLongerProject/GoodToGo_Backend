@@ -50,7 +50,6 @@ const historyDays = 14;
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
  *      {
- *          phone: String,
  *          boxList: [
  *              {
  *                  boxName: String,
@@ -130,7 +129,6 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
-        phone: String,
         boxContent: {
             ID: Number,
             containerList: Array,
@@ -148,7 +146,6 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
 router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
     let dbUser = req._user;
     let boxContent = req.body.boxContent;
-    let phone = req.body.phone;
 
     const dbRole = req._thisRole;
     let stationID;
@@ -197,7 +194,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
                         stationID,
                         $push: {
                             action: {
-                                phone: phone,
+                                phone: dbUser.user.phone,
                                 stationID,
                                 boxStatus: BoxStatus.Boxing,
                                 boxAction: BoxAction.Pack,
@@ -230,7 +227,6 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
-        phone: String,
         boxContent: {
             boxName: String,
             containerList: Array,
@@ -298,12 +294,11 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  *      7 - Stocked -> Dispatching 
  * @apiParamExample {json} Request-Example:
     {
-        phone: String,
         boxContent: {
             id: String
             newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
             [destinationStoreId]: String, // Needed when state changing is 0, 3, 4, 6
-            [boxAction]: String // Needed when state changing is 7, Action: ['Sign', 'CancelArrival']
+            [boxAction]: String // Needed when state changing is 7, Action: ['AcceptDispatch', 'RejectDispatch']
         }
     }
  * @apiSuccessExample {json} Success-Response:
@@ -317,7 +312,7 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  */
 router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
     let dbUser = req._user;
-    let phone = req.body.phone;
+    let phone = dbUser.user.phone;
     let boxContent = req.body.boxContent;
 
     const newState = boxContent.newState;
@@ -392,7 +387,6 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
-        phone: String,
         boxContent: {
             ID: String
         }
@@ -414,7 +408,7 @@ router.post(
     validateSignApiContent,
     async function (req, res, next) {
         let dbUser = req._user;
-        let phone = req.body.phone;
+        let phone = dbUser.user.phone;
         let boxContent = req.body.boxContent;
 
         const dbRole = req._thisRole;
@@ -793,7 +787,6 @@ router.get(
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
-        
             {
                 boxObjs: [{
                     ID: Number //boxID,
@@ -1286,7 +1279,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                     "action": String, // ["getDispatch", "sendDispatch"]
                     "toStationID":Number,
                     "boxAccepted": Boolean
-                }
+                },...
             ]
         }
  */
@@ -1321,7 +1314,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
         }
     }, {
         $unwind: {
-            path: "$action",
+            path: "$action"
         }
     }, {
         $match: {
@@ -1341,7 +1334,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     }])
 
     if (batch) {
-        aggregate = aggregate.limit(batch)
+        aggregate = aggregate.limit(batch);
     }
 
     aggregate
@@ -1349,12 +1342,12 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
         .sort({
             timestamp: 1
         })
-        .exec((err, list) => {
+        .exec((err, actions) => {
             if (err) return next(err);
             const formattedAction = [];
-            list.forEach(anAction => {
-                if (anAction.boxAction === BoxAction.Dispatch) {
-                    if (anAction.stationID === thisStationID)
+            actions.forEach(anAction => {
+                if (anAction.action === BoxAction.Dispatch) {
+                    if (anAction.toStationID === thisStationID)
                         formattedAction.push(Object.assign(anAction, {
                             action: DispatchStatus.GET_DISPATCH
                         }));
@@ -1362,20 +1355,20 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
                         formattedAction.push(Object.assign(anAction, {
                             action: DispatchStatus.SEND_DISPATCH
                         }));
-                } else if (anAction.boxAction === BoxAction.AcceptDispatch) {
-                    const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
+                } else if (anAction.action === BoxAction.AcceptDispatch) {
+                    const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
                     Object.assign(formattedAction[index], {
                         boxAccepted: true
                     });
-                } else if (anAction.boxAction === BoxAction.RejectDispatch) {
-                    const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
+                } else if (anAction.action === BoxAction.RejectDispatch) {
+                    const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
                     Object.assign(formattedAction[index], {
                         boxAccepted: false
                     });
                 }
             });
             res.status(200).json({
-                action: formattedAction
+                action: formattedAction.reverse()
             });
         });
 });
@@ -1501,3 +1494,14 @@ router.get(
 );
 
 module.exports = router;
+
+function findLastIndexOf(source, target) {
+    if (!Array.isArray(source))
+        throw new Error("[Source] is not itertable");
+    let i = source.length - 1;
+    for (; i >= 0; i--) {
+        if (target(source[i]))
+            return i;
+    }
+    return i;
+}

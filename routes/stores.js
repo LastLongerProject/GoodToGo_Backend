@@ -325,7 +325,7 @@ router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateReque
         next(error);
     }
 
-    Store.find({}, {}, {
+    Store.find(query, {}, {
         sort: {
             id: 1
         }

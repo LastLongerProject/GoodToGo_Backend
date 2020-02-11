@@ -69,12 +69,11 @@ function validateCreateApiContent(req, res, next) {
 
     if (boxList === undefined || !Array.isArray(boxList)) {
         return res.status(403).json(ErrorResponse.H001_1);
-    } else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
+    }
 
     for (let element of boxList) {
 
-        let pass = validateBoxListContent(element, BoxContentType.order, [
+        let pass = validateBoxContent(element, BoxContentType.order, [
             'boxName',
             'boxOrderContent',
             'dueDate'
@@ -117,7 +116,7 @@ function validateCreateApiContent(req, res, next) {
 function validateStockApiContent(req, res, next) {
     let boxArray = [];
     let boxIDs = [];
-    let boxList = req.body.boxList;
+    let boxContent = req.body.boxContent;
     let date = new Date();
     const dbRole = req._thisRole;
     let thisStationID;
@@ -129,51 +128,44 @@ function validateStockApiContent(req, res, next) {
 
     let index = req._sequence || 1;
 
-    if (boxList === undefined || !Array.isArray(boxList)) {
-        return res.status(403).json(ErrorResponse.H001_1);
-    } else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, null, [
-            'boxName',
-            'containerList'
-        ]);
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        } else {
-            let boxID = parseInt(createBoxID(date, index, thisStationID));
-            let orderContent = getDeliverContent(element.containerList);
-            let box = new Box({
-                boxID: boxID,
-                boxName: element.boxName,
-                dueDate: Date.now(),
-                storeID: null,
-                stationID: thisStationID,
-                boxOrderContent: orderContent,
-                containerList: element.containerList,
-                containerHash: getContainerHash(element.containerList),
-                action: [{
-                    phone: req.body.phone,
-                    boxStatus: BoxStatus.Boxing,
-                    boxAction: BoxAction.Pack,
-                    timestamps: Date.now(),
-                }, {
-                    phone: req.body.phone,
-                    boxStatus: BoxStatus.Stocked,
-                    boxAction: BoxAction.Stock,
-                    timestamps: Date.now()
-                }],
-                user: {
-                    box: req.body.phone,
-                },
-                status: BoxStatus.Stocked,
-            });
-            element.boxID = boxID;
-            boxArray.push(box);
-            boxIDs.push(boxID);
-            index++;
-        }
+    let pass = validateBoxContent(boxContent, null, [
+        'boxName',
+        'containerList'
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
+    } else {
+        let boxID = parseInt(createBoxID(date, index, thisStationID));
+        let orderContent = getDeliverContent(boxContent.containerList);
+        let box = new Box({
+            boxID: boxID,
+            boxName: boxContent.boxName,
+            dueDate: Date.now(),
+            storeID: null,
+            stationID: thisStationID,
+            boxOrderContent: orderContent,
+            containerList: boxContent.containerList,
+            containerHash: getContainerHash(boxContent.containerList),
+            action: [{
+                phone: req.body.phone,
+                boxStatus: BoxStatus.Boxing,
+                boxAction: BoxAction.Pack,
+                timestamps: Date.now(),
+            }, {
+                phone: req.body.phone,
+                boxStatus: BoxStatus.Stocked,
+                boxAction: BoxAction.Stock,
+                timestamps: Date.now()
+            }],
+            user: {
+                box: req.body.phone,
+            },
+            status: BoxStatus.Stocked,
+        });
+        boxContent.boxID = boxID;
+        boxArray.push(box);
+        boxIDs.push(boxID);
+        index++;
     }
     req._boxArray = boxArray;
     req._boxIDs = boxIDs;
@@ -181,63 +173,38 @@ function validateStockApiContent(req, res, next) {
 }
 
 function validateBoxingApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, null, [
-            'comment',
-            'containerList',
-            'ID',
-        ]);
-
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
+    let boxContent = req.body.boxContent;
+    let pass = validateBoxContent(boxContent, null, [
+        'comment',
+        'containerList',
+        'ID',
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
     }
-
     next();
 }
 
 function validateChangeStateApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, BoxContentType.changeState, [
-            "id",
-            'newState',
-        ]);
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
+    let boxContent = req.body.boxContent;
+    let pass = validateBoxContent(boxContent, BoxContentType.changeState, [
+        "id",
+        'newState',
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
     }
-
     next();
 }
 
 function validateSignApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, BoxContentType.changeState, [
-            "ID"
-        ]);
-
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
+    let boxContent = req.body.boxContent;
+    let pass = validateBoxContent(boxContent, BoxContentType.changeState, [
+        "ID"
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
     }
-
     next();
 }
 
@@ -310,7 +277,7 @@ let BoxContentType = Object.freeze({
     changeState: 'change state'
 });
 
-function validateBoxListContent(element, boxContentType, contents) {
+function validateBoxContent(element, boxContentType, contents) {
     for (let index in contents) {
         if (!(contents[index] in element)) {
             return {

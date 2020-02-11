@@ -162,11 +162,11 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
-                range: 'active!A2:L',
+                range: 'active!A2:M',
             }, function (err, response) {
                 if (err) return debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                 const rowsFromSheet = response.data.values;
-                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length >= 11));
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length >= 13));
                 Promise
                     .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({

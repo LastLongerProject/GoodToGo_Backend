@@ -20,7 +20,7 @@ const validChange = {
 };
 
 let checkStateChanging = function (stateChanging) {
-    for (let element of validChange) {
+    for (let element of Object.values(validChange)) {
         if (stateChanging[0] === element[0] && stateChanging[1] === element[1]) {
             return element;
         }
@@ -254,7 +254,7 @@ let changeStateProcess = async function (element, box, phone) {
                     }
                 }
             };
-        } else if (boxAction === BoxAction.CancelArrival) {
+        } else if (boxAction === BoxAction.RejectDispatch) {
             const stationID = getLastStationIdInAction(box).from;
             if (stationID === null)
                 return Promise.resolve({
@@ -282,7 +282,7 @@ let changeStateProcess = async function (element, box, phone) {
             return Promise.resolve({
                 status: ProgramStatus.Error,
                 errorType: StateChangingError.ArgumentInvalid,
-                message: `Arguments [boxAction] should be ${BoxAction.Sign} or ${BoxAction.CancelArrival}`
+                message: `Arguments [boxAction] should be ${BoxAction.AcceptDispatch} or ${BoxAction.RejectDispatch}`
             });
         }
         return Promise.resolve({
