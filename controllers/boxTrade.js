@@ -55,7 +55,10 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    stationID,
+                    stationID: {
+                        from: box.stationID,
+                        to: stationID
+                    },
                     timestamps: Date.now()
                 }
             }
@@ -103,29 +106,20 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Sign2Stock) {
-        let stationID = null;
-        for (let i = box.action.length - 1; i >= 0; i--) {
-            if (typeof box.action[i].stationID !== "undefined") {
-                stationID = box.action[i].stationID;
-                break;
-            }
-        }
-        if (stationID === null)
-            return Promise.resolve({
-                status: ProgramStatus.Error,
-                errorType: StateChangingError.Unknown,
-                message: `Element [stationID] can't be found in box's[${box.boxID}] action list`
-            });
+        const storeID = null;
         let info = {
             status: BoxStatus.Stocked,
-            stationID,
+            storeID,
             dueDate: Date.now(),
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    stationID,
+                    storeID:{
+                        from: box.storeID,
+                        to: storeID
+                    },
                     timestamps: Date.now()
                 }
             }
@@ -155,7 +149,10 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Boxing,
                     boxAction: BoxAction.Deliver,
-                    storeID,
+                    storeID:{
+                        from: box.storeID,
+                        to: storeID
+                    },
                     timestamps: Date.now()
                 }
             }
@@ -208,7 +205,10 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Dispatching,
                     boxAction: BoxAction.Dispatch,
-                    stationID,
+                    stationID:{
+                        from: box.stationID,
+                        to: stationID
+                    },
                     timestamps: Date.now()
                 }
             }
@@ -229,7 +229,6 @@ let changeStateProcess = async function (element, box, phone) {
             });
 
         let info;
-        let stationID = null;
         let boxAction = element.boxAction;
         if (boxAction === BoxAction.AcceptDispatch) {
             info = {
@@ -244,12 +243,7 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             };
         } else if (boxAction === BoxAction.CancelArrival) {
-            for (let i = box.action.length - 2; i >= 0; i--) {
-                if (typeof box.action[i].stationID !== "undefined") {
-                    stationID = box.action[i].stationID;
-                    break;
-                }
-            }
+            const stationID = getLastStationIdInAction(box).from;
             if (stationID === null)
                 return Promise.resolve({
                     status: ProgramStatus.Error,
@@ -262,7 +256,10 @@ let changeStateProcess = async function (element, box, phone) {
                 $push: {
                     action: {
                         phone: phone,
-                        stationID,
+                        stationID:{
+                            from: box.stationID,
+                            to: stationID
+                        },
                         boxStatus: BoxStatus.Stocked,
                         boxAction,
                         timestamps: Date.now()
@@ -440,4 +437,15 @@ function validateStoreID(element, category) {
         valid: true,
         storeID
     };
+}
+
+function getLastStationIdInAction(box){
+    let stationID = null;
+    for (let i = box.action.length - 1; i >= 0; i--) {
+        if (box.action[i].stationID) {
+            stationID = box.action[i].stationID;
+            break;
+        }
+    }
+    return stationID;
 }

@@ -4,7 +4,12 @@
  */
 
 /**
- * @apiDefine clerk Clerk access rights needed.
+ * @apiDefine station Station access rights needed.
+ * Please use station identity to request this uri.
+ */
+
+/**
+ * @apiDefine clerk Store access rights needed.
  * Please use clerk identity to request this uri.
  */
 
@@ -24,7 +29,7 @@
  */
 
 /**
- * @apiDefine admin_clerk Admin/Clerk access rights needed.
+ * @apiDefine admin_clerk Admin/Store access rights needed.
  * Please use admin/clerk identity to request this uri.
  */
 

@@ -289,7 +289,8 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
  *
  * @api {get} /stores/dict Get store dict
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
+ * @apiPermission clerk
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 

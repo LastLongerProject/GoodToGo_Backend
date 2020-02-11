@@ -46,7 +46,7 @@ const historyDays = 14;
  * @apiGroup DeliveryList
  *
  * @api {post} /deliveryList/create/:destiantionStoreId Create delivery list
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
  *      {
@@ -126,7 +126,7 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiGroup DeliveryList
  *
  * @api {post} /deliveryList/box Boxing
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
@@ -226,7 +226,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
  * @apiGroup DeliveryList
  *
  * @api {post} /deliveryList/stock Create stock box
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
@@ -285,7 +285,7 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiGroup DeliveryList
  *
  * @api {post} /deliveryList/changeState Change state
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiDescription
  *      **available state changing list**: 
@@ -387,7 +387,8 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
  * @apiGroup DeliveryList
  *
  * @api {post} /deliveryList/sign Sign
- * @apiPermission admin
+ * @apiPermission station
+ * @apiPermission clerk
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
@@ -480,7 +481,8 @@ router.post(
  * @apiGroup DeliveryList
  *
  * @api {get} /deliveryList/box/:boxID
- * @apiPermission admin
+ * @apiPermission station
+ * @apiPermission clerk
  * @apiUse JWT
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -660,7 +662,7 @@ function parseSorter(rawValue) {
  * @apiGroup DeliveryList
  *
  * @api {get} /deliveryList/box/list/query/:sorter Universal DeliveryList Box Query
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiParam {offset} offset of the updated date
  * @apiParam {boxStatus[]} desired box status
@@ -777,6 +779,7 @@ router.get(
  * @apiGroup DeliveryList
  *
  * @api {get} /deliveryList/box/specificList/:status/:startFrom Specific store and specific status box list
+ * @apiPermission station
  * @apiPermission clerk
  * @apiUse JWT
  * @apiDescription
@@ -890,7 +893,7 @@ router.get(-
  * @apiGroup DeliveryList
  *
  * @api {patch} /deliveryList/modifyBoxInfo/:boxID Modify box info
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiDescription 
  * **Can modify** 
@@ -1041,7 +1044,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
  * @apiGroup DeliveryList
  *
  * @api {delete} /deliveryList/deleteBox/:boxID Delete box info
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * @apiDescription 
 
@@ -1108,7 +1111,7 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
  * @api {get} /deliveryList/reloadHistory Reload history
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * @apiPermission clerk
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -1265,36 +1268,27 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
  * @apiName Containers dispatch history
  * @apiGroup DeliveryList
  *
- * @api {get} /deliveryList/dispatchHistory Reload history
+ * @api {get} /deliveryList/dispatchHistory Dispatch history
  * 
  * @apiUse JWT
- * @apiPermission admin
- * @apiPermission clerk
+ * @apiPermission station
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            [
+            action: [
                 {
+                    "boxID": String,
+                    "phone": String,
                     "containerList": [
-                        36
+                        Number,...
                     ],
-                    "status": "reload",
-                    "action": [
-                        {
-                            "boxStatus": "Archived",
-                            "timestamps": "2019-04-26T08:50:07.072Z"
-                        }
-                    ],
-                    "orderContent": [
-                        {
-                            "containerType": "12oz 玻璃杯",
-                            "amount": 1
-                        }
-                    ]
+                    "timestamp": Date,
+                    "action": String, // ["getDispatch", "sendDispatch"]
+                    "toStationID":Number,
+                    "boxAccepted": Boolean
                 }
             ]
         }
- *
  */
 
 const DispatchStatus = {
@@ -1305,7 +1299,6 @@ const DispatchStatus = {
 router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
     let thisStationID;
-    let thisRoleType = dbRole.roleType;
     try {
         thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
     } catch (error) {
@@ -1315,6 +1308,18 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     const offset = parseInt(req.query.offset) || 0;
 
     let aggregate = Box.aggregate([{
+        $match: {
+            $or: [{
+                    "action.boxAction": BoxAction.Dispatch,
+                    "action.stationID.from": thisStationID
+                },
+                {
+                    "action.boxAction": BoxAction.Dispatch,
+                    "action.stationID.to": thisStationID
+                }
+            ]
+        }
+    }, {
         $unwind: {
             path: "$action",
         }
@@ -1327,11 +1332,11 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     }, {
         $project: {
             boxID: "$boxID",
+            phone: "$phone",
             containerList: "$containerList",
             timestamp: "$action.timestamps",
             action: "$action.boxAction",
-            status: "$action.boxStatus",
-            stationID: "$action.stationID"
+            toStationID: "$action.stationID.to"
         }
     }])
 
@@ -1360,12 +1365,12 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
                 } else if (anAction.boxAction === BoxAction.AcceptDispatch) {
                     const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
                     Object.assign(formattedAction[index], {
-                        accepted: true
+                        boxAccepted: true
                     });
                 } else if (anAction.boxAction === BoxAction.RejectDispatch) {
                     const index = formattedAction.lastIndexOf(anFormattedAction => anFormattedAction.boxID === anAction.boxID);
                     Object.assign(formattedAction[index], {
-                        accepted: false
+                        boxAccepted: false
                     });
                 }
             });
@@ -1380,7 +1385,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
  * @apiGroup DeliveryList
  *
  * @api {get} /deliveryList/overview Specific clean station's overview
- * @apiPermission admin
+ * @apiPermission station
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:

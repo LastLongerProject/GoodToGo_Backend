@@ -82,7 +82,7 @@ module.exports = {
             if (err) return cb(err);
             storeListGenerator(err => {
                 if (err) return cb(err);
-                debug.log('storeList refresh');
+                debug.log('stationList refresh');
                 cb(null, data);
             });
         });

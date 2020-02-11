@@ -86,7 +86,7 @@ router.get('/list', validateDefault, function (req, res, next) {
  * @api {get} /containers/get/toDelivery Get toDelivery list
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -181,7 +181,7 @@ router.get('/toDelivery', checkRoleIsCleanStation(), validateRequest, function (
  * @api {get} /containers/get/toDelivery Get delivery history
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -287,7 +287,7 @@ router.get('/deliveryHistory', checkRoleIsCleanStation(), validateRequest, funct
  * @api {get} /containers/get/reloadHistory Reload history
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * @apiPermission clerk
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 

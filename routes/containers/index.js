@@ -445,7 +445,7 @@ router.get('/challenge/token', checkRoleIs([{
  * @apiGroup Containers
  *
  * @api {get} /containers/challenge/:action/:container Do action to specific container
- * @apiPermission admin
+ * @apiPermission station
  * @apiPermission clerk
  * 
  * @apiUse JWT
