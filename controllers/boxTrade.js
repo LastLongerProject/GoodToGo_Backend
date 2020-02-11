@@ -63,6 +63,18 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             }
         };
+        if (box.storeID !== null)
+            Object.assign(info, {
+                storeID: null,
+                $push: {
+                    action: {
+                        storeID: {
+                            from: box.storeID,
+                            to: null
+                        }
+                    }
+                }
+            });
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -116,7 +128,7 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    storeID:{
+                    storeID: {
                         from: box.storeID,
                         to: storeID
                     },
@@ -149,7 +161,7 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Boxing,
                     boxAction: BoxAction.Deliver,
-                    storeID:{
+                    storeID: {
                         from: box.storeID,
                         to: storeID
                     },
@@ -205,7 +217,7 @@ let changeStateProcess = async function (element, box, phone) {
                     phone: phone,
                     boxStatus: BoxStatus.Dispatching,
                     boxAction: BoxAction.Dispatch,
-                    stationID:{
+                    stationID: {
                         from: box.stationID,
                         to: stationID
                     },
@@ -256,7 +268,7 @@ let changeStateProcess = async function (element, box, phone) {
                 $push: {
                     action: {
                         phone: phone,
-                        stationID:{
+                        stationID: {
                             from: box.stationID,
                             to: stationID
                         },
@@ -439,7 +451,7 @@ function validateStoreID(element, category) {
     };
 }
 
-function getLastStationIdInAction(box){
+function getLastStationIdInAction(box) {
     let stationID = null;
     for (let i = box.action.length - 1; i >= 0; i--) {
         if (box.action[i].stationID) {
