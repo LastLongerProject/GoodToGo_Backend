@@ -1,10 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('deliveryList');
-const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
-const getContainerHash = require('../helpers/tools').getContainerHash;
-const getStoreListInArea = require('../helpers/tools').getStoreListInArea;
-const storeIsInArea = require('../helpers/tools').checkStoreIsInArea;
+
 const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
@@ -18,27 +15,60 @@ const {
     validateBoxStatus
 } = require('../middlewares/validation/content/deliveryList.js');
 
+const changeContainersState = require('../controllers/containerTrade');
 const changeStateProcess = require('../controllers/boxTrade.js').changeStateProcess;
 const containerStateFactory = require('../controllers/boxTrade.js').containerStateFactory;
+
 const Box = require('../models/DB/boxDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
-
+const Station = require('../models/DB/stationDB');
 const DeliveryList = require('../models/DB/deliveryListDB.js');
-const ErrorResponse = require('../models/enums/error').ErrorResponse;
+
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const RoleType = require('../models/enums/userEnum').RoleType;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
+const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const StateChangingError = require('../models/enums/programEnum').StateChangingError;
 
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const isSameDay = require('../helpers/toolkit').isSameDay;
 
-const changeContainersState = require('../controllers/containerTrade');
-const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
-const StateChangingError = require('../models/enums/programEnum').StateChangingError;
+const getDeliverContent = require('../helpers/tools.js').getDeliverContent;
+const getContainerHash = require('../helpers/tools').getContainerHash;
+const getStoreListInArea = require('../helpers/tools').getStoreListInArea;
+const storeIsInArea = require('../helpers/tools').checkStoreIsInArea;
+
 const historyDays = 14;
+
+/**
+ * @apiName Get Station Dictionary
+ * @apiGroup DeliveryList
+ *
+ * @api {get} /stationDict Get Station Dictionary
+ * @apiPermission station
+ * @apiUse JWT
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            [stationID]: String // "台南庫存"
+        }
+ */
+router.get('/stationDict', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    Station.find({}, {}, {
+        sort: {
+            ID: 1
+        }
+    }, (err, stations) => {
+        if (err) return next(err);
+        const stationDict = {};
+        stations.forEach(aStation => stationDict[aStation.ID] = aStation.name);
+        res.json(stationDict);
+    });
+});
 
 /**
  * @apiName DeliveryList create delivery list
