@@ -65,10 +65,18 @@ schema.index({
 });
 schema.index({
     "deliveringDate": -1
-})
+});
 schema.index({
     'containerHash': 1
-})
+});
+schema.index({
+    'action.boxAction': 1,
+    'action.stationID.from': 1
+});
+schema.index({
+    'action.boxAction': 1,
+    'action.stationID.to': 1
+});
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Box', schema);
