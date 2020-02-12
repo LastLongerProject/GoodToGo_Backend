@@ -61,6 +61,9 @@ schema.index({
     "storeID": 1
 });
 schema.index({
+    "stationID": 1
+});
+schema.index({
     "boxID": 1
 });
 schema.index({
