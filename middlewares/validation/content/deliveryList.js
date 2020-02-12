@@ -72,6 +72,8 @@ function validateCreateApiContent(req, res, next) {
 
     let boxArray = [];
     let boxIDs = [];
+    if (!stationIsBoxable(thisStationID))
+        return res.status(403).json(ErrorResponse.H013);
     for (let element of boxList) {
         let pass = validateBoxContent(element, BoxContentType.order, [
             'boxName',
@@ -81,8 +83,6 @@ function validateCreateApiContent(req, res, next) {
 
         if (!pass.bool)
             return res.status(403).json(ErrorResponse[pass.code]);
-        if (!stationIsBoxable(thisStationID))
-            return res.status(403).json(ErrorResponse.H013);
         let boxID = parseInt(createBoxID(date, index++, thisStationID));
         let box = new Box({
             boxID: boxID,

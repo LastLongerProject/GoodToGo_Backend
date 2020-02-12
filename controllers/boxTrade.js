@@ -277,96 +277,101 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
     let storeID = aBox.storeID;
 
     if (validatedStateChanging === validChange.Box2Deliver) {
-        changeContainersState(aBox.containerList, dbAdmin, {
-            action: ContainerAction.DELIVERY,
-            newState: ContainerState.DELIVERING,
-        }, {
-            boxID,
-            storeID,
-        }, async (err, tradeSuccess, reply) => {
-            if (err)
-                return Promise.reject(err);
-            if (!tradeSuccess)
-                return Promise.resolve({
-                    status: ProgramStatus.Error,
-                    message: reply
+        return new Promise((resolve, reject) => {
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: ContainerAction.DELIVERY,
+                newState: ContainerState.DELIVERING,
+            }, {
+                boxID,
+                storeID,
+            }, async (err, tradeSuccess, reply) => {
+                if (err)
+                    return reject(err);
+                if (!tradeSuccess)
+                    return resolve({
+                        status: ProgramStatus.Error,
+                        message: reply
+                    });
+                aBox.delivering = true;
+                aBox.stocking = false;
+                aBox.user.delivery = dbAdmin.user.phone;
+                await aBox.update(boxInfo).exec();
+                return resolve({
+                    status: ProgramStatus.Success,
+                    message: "Changing Container State successfully"
                 });
-            aBox.delivering = true;
-            aBox.stocking = false;
-            aBox.user.delivery = dbAdmin.user.phone;
-            await aBox.update(boxInfo).exec();
-            await aBox.save();
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Changing Container State successfully"
             });
         });
     } else if (validatedStateChanging === validChange.Deliver2Box) {
-        changeContainersState(aBox.containerList, dbAdmin, {
-            action: ContainerAction.CANCEL_DELIVERY,
-            newState: ContainerState.BOXED
-        }, {
-            bypassStateValidation: true,
-        }, async (err, tradeSuccess, reply) => {
-            if (err)
-                return Promise.reject(err);
-            if (!tradeSuccess)
-                return Promise.resolve({
-                    status: ProgramStatus.Error,
-                    message: reply
+        return new Promise((resolve, reject) => {
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: ContainerAction.CANCEL_DELIVERY,
+                newState: ContainerState.BOXED
+            }, {
+                bypassStateValidation: true,
+            }, async (err, tradeSuccess, reply) => {
+                if (err)
+                    return reject(err);
+                if (!tradeSuccess)
+                    return resolve({
+                        status: ProgramStatus.Error,
+                        message: reply
+                    });
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                await aBox.update(boxInfo).exec();
+                return resolve({
+                    status: ProgramStatus.Success,
+                    message: "Changing Container State successfully"
                 });
-            aBox.delivering = false;
-            aBox.user.delivery = undefined;
-            await aBox.update(boxInfo).exec();
-            await aBox.save();
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Changing Container State successfully"
             });
         });
     } else if (validatedStateChanging === validChange.Sign2Stock) {
-        changeContainersState(aBox.containerList, dbAdmin, {
-            action: ContainerAction.UNSIGN,
-            newState: ContainerState.BOXED
-        }, {
-            bypassStateValidation: true,
-        }, async (err, tradeSuccess, reply) => {
-            if (err)
-                return Promise.reject(err);
-            if (!tradeSuccess)
-                return Promise.resolve({
-                    status: ProgramStatus.Error,
-                    message: reply
+        return new Promise((resolve, reject) => {
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: ContainerAction.UNSIGN,
+                newState: ContainerState.BOXED
+            }, {
+                bypassStateValidation: true,
+            }, async (err, tradeSuccess, reply) => {
+                if (err)
+                    return reject(err);
+                if (!tradeSuccess)
+                    return resolve({
+                        status: ProgramStatus.Error,
+                        message: reply
+                    });
+                aBox.delivering = false;
+                aBox.user.delivery = undefined;
+                aBox.stocking = true;
+                await aBox.update(boxInfo).exec();
+                return resolve({
+                    status: ProgramStatus.Success,
+                    message: "Changing Container State successfully"
                 });
-            aBox.delivering = false;
-            aBox.user.delivery = undefined;
-            aBox.stocking = true;
-            await aBox.update(boxInfo).exec();
-            await aBox.save();
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Changing Container State successfully"
             });
         });
     } else if (validatedStateChanging === validChange.Deliver2Sign) {
-        changeContainersState(aBox.containerList, dbAdmin, {
-            action: ContainerAction.SIGN,
-            newState: ContainerState.READY_TO_USE
-        }, {
-            boxID,
-            storeID
-        }, async (err, tradeSuccess, reply) => {
-            if (err)
-                return Promise.reject(err);
-            if (!tradeSuccess)
-                return Promise.resolve({
-                    status: ProgramStatus.Error,
-                    message: reply
+        return new Promise((resolve, reject) => {
+            changeContainersState(aBox.containerList, dbAdmin, {
+                action: ContainerAction.SIGN,
+                newState: ContainerState.READY_TO_USE
+            }, {
+                boxID,
+                storeID
+            }, async (err, tradeSuccess, reply) => {
+                if (err)
+                    return reject(err);
+                if (!tradeSuccess)
+                    return resolve({
+                        status: ProgramStatus.Error,
+                        message: reply
+                    });
+                await aBox.update(boxInfo).exec();
+                return resolve({
+                    status: ProgramStatus.Success,
+                    message: "Changing Container State successfully"
                 });
-            await aBox.update(boxInfo).exec();
-            return Promise.resolve({
-                status: ProgramStatus.Success,
-                message: "Changing Container State successfully"
             });
         });
     } else if (validatedStateChanging === validChange.Stock2Box ||

@@ -191,7 +191,7 @@ router.post('/box/:boxID', checkRoleIsCleanStation(), validateRequest, validateB
         next(error);
     }
 
-    const boxID = req.param.boxID;
+    const boxID = req.params.boxID;
     const containerList = boxContent.containerList;
     const comment = boxContent.comment;
 
@@ -317,10 +317,10 @@ router.post('/stock', checkRoleIsCleanStation(), validateRequest, fetchBoxCreati
  * @apiParamExample {json} Request-Example:
     {
         boxContent: {
-            newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
+            newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked', 'Dispatching'], if you wanna sign a box, use sign api
             [destinationStationID]: String, // Needed when state changing is 6, 8
             [destinationStoreID]: String, // Needed when state changing is 4
-            [boxAction]: String // Needed when state changing is 7, Action: ['AcceptDispatch', 'RejectDispatch']
+            [boxAction]: String // Needed when state changing is 6, Action: ['AcceptDispatch', 'RejectDispatch']
         }
     }
  * @apiSuccessExample {json} Success-Response:
@@ -338,7 +338,7 @@ router.post('/changeState/:boxID', checkRoleIsCleanStation(), validateRequest, v
     let boxContent = req.body.boxContent;
 
     const newState = boxContent.newState;
-    const boxID = req.param.boxID;
+    const boxID = req.params.boxID;
 
     const dbRole = req._thisRole;
     let stationID;
@@ -410,12 +410,6 @@ router.post('/changeState/:boxID', checkRoleIsCleanStation(), validateRequest, v
  * @apiPermission station
  * @apiPermission clerk
  * @apiUse JWT
- * @apiParamExample {json} Request-Example:
-    {
-        boxContent: {
-            ID: String
-        }
-    }
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -452,9 +446,10 @@ router.post(
         }
         const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
 
-        const boxID = req.param.boxID;
-        let boxContent = req.body.boxContent;
-        boxContent.newState = BoxStatus.Signed;
+        const boxID = req.params.boxID;
+        let boxContent = {
+            newState: BoxStatus.Signed
+        };
         Box.findOne({
             boxID: boxID,
         }, async function (err, aBox) {
@@ -553,13 +548,13 @@ router.get(
                 case RoleType.CLEAN_STATION:
                     thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                     Object.assign(query, {
-                        storeID: thisStoreID
+                        stationID: thisStationID
                     });
                     break;
                 case RoleType.STORE:
                     thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
                     Object.assign(query, {
-                        stationID: thisStationID
+                        storeID: thisStoreID
                     });
                     break;
                 default:
@@ -1231,7 +1226,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
             status: {
                 $cond: {
                     if: {
-                        $eq: ['$_id.state', 1]
+                        $eq: ['$_id.state', ContainerState.READY_TO_USE]
                     },
                     then: "cleanReload",
                     else: "reload",

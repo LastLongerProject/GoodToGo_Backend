@@ -77,7 +77,7 @@ module.exports = {
             });
         });
     },
-    refreshStation: function(cb){
+    refreshStation: function (cb) {
         sheet.getStation((err, data) => {
             if (err) return cb(err);
             storeListGenerator(err => {
@@ -468,9 +468,11 @@ function storeListGenerator(cb) {
                 const storeDict = {};
                 const stationDict = {};
                 places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
-                stations.forEach(aStation => stationDict[aStation.ID] = {
-                    name: aStation.name,
-                    storeList: []
+                stations.forEach(aStation => {
+                    stationDict[aStation.ID] = aStation;
+                    Object.assign(stationDict[aStation.ID], {
+                        storeList: []
+                    });
                 });
                 stores.forEach(aStore => {
                     if (storeDict[aStore.id])
