@@ -715,7 +715,8 @@ function payloadBuilder(payload, userKey) {
         });
     else if (userKey.roleType === RoleType.CLEAN_STATION)
         Object.assign(theRole, {
-            [RoleElement.STATION_NAME]: role.getElement(theRole, RoleElement.STATION_NAME)
+            [RoleElement.STATION_NAME]: role.getElement(theRole, RoleElement.STATION_NAME),
+            [RoleElement.STATION_BOXABLE]: role.getElement(theRole, RoleElement.STATION_BOXABLE)
         });
 
     // Legacy Role sys

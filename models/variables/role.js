@@ -160,14 +160,22 @@ function getElement(theRole, eleName, nullable = true) {
             if (theRole.roleType !== RoleType.CLEAN_STATION) return done(null);
             return done(theRole[RoleElement.STATION_ID]);
         case RoleElement.STORE_NAME:
+            if (theRole.roleType !== RoleType.STORE) return done(null);
             var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
             var theStore = storeDict[theRole[RoleElement.STORE_ID]];
             if (theStore) return done(theStore.name);
             else return done("找不到店家");
         case RoleElement.STATION_NAME:
+            if (theRole.roleType !== RoleType.CLEAN_STATION) return done(null);
             var stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
             var theStation = stationDict[theRole[RoleElement.STATION_ID]];
             if (theStation) return done(theStation.name);
+            else return done("找不到調度站");
+        case RoleElement.STATION_BOXABLE:
+            if (theRole.roleType !== RoleType.CLEAN_STATION) return done(null);
+            var stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
+            var theStation = stationDict[theRole[RoleElement.STATION_ID]];
+            if (theStation) return done(theStation.boxable);
             else return done("找不到調度站");
         case RoleElement.MANAGER:
             if (theRole.roleType !== RoleType.CLEAN_STATION && theRole.roleType !== RoleType.STORE) return done(null);

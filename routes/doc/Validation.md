@@ -55,10 +55,13 @@ RoleType: Object.freeze({
 ## | Store
 **Elements**
 - storeID: *Number*
+- storeName: *String*
 - manager: *Boolean*
 ## | CleanStation
 **Elements**
 - stationID: *Number*
+- stationName: *String*
+- boxable: *Boolean*
 - manager: *Boolean*
 ## | Admin
 **Elements**

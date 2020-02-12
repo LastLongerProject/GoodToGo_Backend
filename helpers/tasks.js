@@ -423,10 +423,7 @@ module.exports = {
                     Promise
                         .all(newRoleList.map(aNewRole => new Promise((innerResolve, innerReject) => {
                             aUser.addRole(aNewRole.roleType, aNewRole, err => {
-                                if (err) {
-                                    console.log(aUser);
-                                    return innerReject(err);
-                                }
+                                if (err) return innerReject(err);
                                 innerResolve();
                             });
                         })))
