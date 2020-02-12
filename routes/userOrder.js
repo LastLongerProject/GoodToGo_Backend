@@ -18,7 +18,8 @@ const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvaila
 
 const UserOrder = require('../models/DB/userOrderDB');
 const DueDays = require('../models/enums/userEnum').DueDays;
-const Action = require('../models/enums/containerEnum').Action;
+const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
@@ -251,8 +252,8 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
         getSystemBot((err, dbBot) => {
             if (err) return next(err);
             changeContainersState(containerID, dbBot, {
-                action: Action.RENT,
-                newState: 2
+                action: ContainerAction.RENT,
+                newState: ContainerState.USING
             }, {
                 rentToUser: dbUser,
                 storeID: theUserOrder.storeID,
@@ -392,8 +393,8 @@ router.post('/addWithContainer', validateLine, validateStoreCode, function (req,
 
             new Promise((resolve, reject) => {
                     changeContainersState(containers, dbBot, {
-                        action: Action.RENT,
-                        newState: 2
+                        action: ContainerAction.RENT,
+                        newState: ContainerState.USING
                     }, {
                         rentToUser: dbUser,
                         storeID,

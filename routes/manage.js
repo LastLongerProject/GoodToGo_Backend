@@ -28,6 +28,7 @@ const Store = require("../models/DB/storeDB");
 const Trade = require("../models/DB/tradeDB");
 const Container = require("../models/DB/containerDB");
 const ContainerAction = require("../models/enums/containerEnum").Action;
+const ContainerState = require("../models/enums/containerEnum").State;
 const ContainerActionTranslation = require("../models/enums/containerEnum").ActionTranslation;
 const DataCacheFactory = require("../models/dataCacheFactory");
 
@@ -86,13 +87,13 @@ router.get("/socketToken", checkRoleIsAdmin(), validateRequest, generateSocketTo
         }
  * 
  */
-const CONTAINER_ACTION_FROM_SIGN_TO_READY_TO_CLEAN = [
+const CONTAINER_ACTION_FROM_SIGN_TO_RELOAD = [
     ContainerAction.SIGN,
     ContainerAction.RENT,
     ContainerAction.RETURN,
     ContainerAction.UNDO_RETURN,
-    ContainerAction.READY_TO_CLEAN,
-    ContainerAction.UNDO_READY_TO_CLEAN
+    ContainerAction.RELOAD,
+    ContainerAction.UNDO_RELOAD
 ];
 router.get("/index", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var result = {
@@ -130,7 +131,7 @@ router.get("/index", checkRoleIsAdmin(), validateRequest, function (req, res, ne
             result.summary.storeAmount = storeAmount;
             var tradeQuery = {
                 "tradeType.action": {
-                    "$in": CONTAINER_ACTION_FROM_SIGN_TO_READY_TO_CLEAN
+                    "$in": CONTAINER_ACTION_FROM_SIGN_TO_RELOAD
                 }
             };
 
@@ -150,7 +151,7 @@ router.get("/index", checkRoleIsAdmin(), validateRequest, function (req, res, ne
                     tradeList.sort((a, b) => {
                         return a.tradeTime - b.tradeTime;
                     });
-                    cleanUndo([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
+                    cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
                     var now = Date.now();
                     var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
@@ -425,11 +426,11 @@ router.get("/search", checkRoleIsAdmin(), validateRequest, function (req, res, n
         }
  * 
  */
-const CONTAINER_ACTION_SIGN_AND_RENT_AND_READY_TO_CLEAN = [
+const CONTAINER_ACTION_SIGN_AND_RENT_AND_RELOAD = [
     ContainerAction.SIGN,
     ContainerAction.RENT,
-    ContainerAction.READY_TO_CLEAN,
-    ContainerAction.UNDO_READY_TO_CLEAN
+    ContainerAction.RELOAD,
+    ContainerAction.UNDO_RELOAD
 ];
 router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     Store.find({
@@ -450,7 +451,7 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
         });
         var tradeQuery = {
             "tradeType.action": {
-                "$in": CONTAINER_ACTION_SIGN_AND_RENT_AND_READY_TO_CLEAN
+                "$in": CONTAINER_ACTION_SIGN_AND_RENT_AND_RELOAD
             }
         };
 
@@ -508,7 +509,7 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                 }, function (err, tradeList) {
                     if (err) return next(err);
 
-                    cleanUndo(ContainerAction.READY_TO_CLEAN, tradeList);
+                    cleanUndo(ContainerAction.RELOAD, tradeList);
 
                     let usedContainer = dataCached.usedContainer || {};
                     let unusedContainer = dataCached.unusedContainer || {};
@@ -519,8 +520,8 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: aTrade.newUser.storeID
                             };
-                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN) && unusedContainer[containerKey]) {
-                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN && aTrade.tradeType.oriState === 3)) {
+                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && unusedContainer[containerKey]) {
+                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                                 usedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: unusedContainer[containerKey].storeID
@@ -658,10 +659,10 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
                     "oriUser.storeID": STORE_ID
                 },
                 {
-                    "tradeType.action": ContainerAction.READY_TO_CLEAN,
+                    "tradeType.action": ContainerAction.RELOAD,
                 },
                 {
-                    "tradeType.action": ContainerAction.UNDO_READY_TO_CLEAN
+                    "tradeType.action": ContainerAction.UNDO_RELOAD
                 }
             ]
         };
@@ -673,7 +674,7 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
         }, function (err, tradeList) {
             if (err) return next(err);
 
-            cleanUndo([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
+            cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
             var lastUsed = {};
             var usedContainer = {};
@@ -692,8 +693,8 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
                         time: aTrade.tradeTime.valueOf(),
                         storeID: aTrade.newUser.storeID
                     };
-                } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN) && containerKey in unusedContainer) {
-                    if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN && aTrade.tradeType.oriState === 3)) {
+                } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && containerKey in unusedContainer) {
+                    if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                         usedContainer[containerKey] = {
                             user: aTrade.newUser.phone,
                             time: aTrade.tradeTime.valueOf(),
@@ -871,10 +872,10 @@ router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, re
                         "oriUser.storeID": STORE_ID
                     },
                     {
-                        "tradeType.action": ContainerAction.READY_TO_CLEAN,
+                        "tradeType.action": ContainerAction.RELOAD,
                     },
                     {
-                        "tradeType.action": ContainerAction.UNDO_READY_TO_CLEAN
+                        "tradeType.action": ContainerAction.UNDO_RELOAD
                     }
                 ]
             };
@@ -896,7 +897,7 @@ router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, re
                 }, function (err, tradeList) {
                     if (err) return next(err);
 
-                    cleanUndo([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
+                    cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
                     var lastUsed = dataCached.lastUsed || {};
                     var usedContainer = dataCached.usedContainer || {};
@@ -914,8 +915,8 @@ router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, re
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: aTrade.newUser.storeID
                             };
-                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN) && containerKey in unusedContainer) {
-                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN && aTrade.tradeType.oriState === 3)) {
+                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && containerKey in unusedContainer) {
+                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                                 usedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: unusedContainer[containerKey].storeID
@@ -1174,7 +1175,7 @@ router.get("/user", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                         if (aTrade.tradeTime >= weekCheckpoint) weeklyAmount[weekCheckpoint]++;
                         result.totalUsageAmount++;
                         if (now - aTrade.tradeTime <= MILLISECONDS_OF_A_WEEK) recentTotalUsageAmount++;
-                        if (aTrade.tradeType.oriState === 2 && userUsingDict[aTrade.oriUser.phone][containerKey])
+                        if (aTrade.tradeType.oriState === ContainerState.USING && userUsingDict[aTrade.oriUser.phone][containerKey])
                             delete userUsingDict[aTrade.oriUser.phone][containerKey];
                     }
                 });
@@ -1618,7 +1619,7 @@ router.get("/shopSummary", checkRoleIsAdmin(), validateRequest, function (req, r
 
     Trade.find({
         "tradeType.action": {
-            "$in": CONTAINER_ACTION_FROM_SIGN_TO_READY_TO_CLEAN
+            "$in": CONTAINER_ACTION_FROM_SIGN_TO_RELOAD
         }
     }, {}, {
         sort: {
@@ -1628,7 +1629,7 @@ router.get("/shopSummary", checkRoleIsAdmin(), validateRequest, function (req, r
         if (err) return next(err);
 
         debug.log("[Manage/shopSummary] Get DB Response!");
-        cleanUndo([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
+        cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var lastUsed = {};
         var unusedContainer = {};

@@ -3,6 +3,7 @@ const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const Category = require('../models/enums/storeEnum').Category;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const StateChangingError = require('../models/enums/programEnum').StateChangingError;
 
 const changeContainersState = require('./containerTrade');
@@ -278,7 +279,7 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
     if (validatedStateChanging === validChange.Box2Deliver) {
         changeContainersState(aBox.containerList, dbAdmin, {
             action: ContainerAction.DELIVERY,
-            newState: 0,
+            newState: ContainerState.DELIVERING,
         }, {
             boxID,
             storeID,
@@ -303,7 +304,7 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
     } else if (validatedStateChanging === validChange.Deliver2Box) {
         changeContainersState(aBox.containerList, dbAdmin, {
             action: ContainerAction.CANCEL_DELIVERY,
-            newState: 5
+            newState: ContainerState.BOXED
         }, {
             bypassStateValidation: true,
         }, async (err, tradeSuccess, reply) => {
@@ -326,7 +327,7 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
     } else if (validatedStateChanging === validChange.Sign2Stock) {
         changeContainersState(aBox.containerList, dbAdmin, {
             action: ContainerAction.UNSIGN,
-            newState: 5
+            newState: ContainerState.BOXED
         }, {
             bypassStateValidation: true,
         }, async (err, tradeSuccess, reply) => {
@@ -350,7 +351,7 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
     } else if (validatedStateChanging === validChange.Deliver2Sign) {
         changeContainersState(aBox.containerList, dbAdmin, {
             action: ContainerAction.SIGN,
-            newState: 1
+            newState: ContainerState.READY_TO_USE
         }, {
             boxID,
             storeID

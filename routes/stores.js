@@ -32,6 +32,7 @@ const RoleType = require('../models/enums/userEnum').RoleType;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
@@ -1311,10 +1312,10 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
                 'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': ContainerAction.READY_TO_CLEAN,
+                'tradeType.action': ContainerAction.RELOAD,
             },
             {
-                'tradeType.action': ContainerAction.UNDO_READY_TO_CLEAN
+                'tradeType.action': ContainerAction.UNDO_RELOAD
             }
         ]
     };
@@ -1332,7 +1333,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.READY_TO_CLEAN], tradeList);
+        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var storeLostTradesDict = {};
         var personalLostTradesDict = {};
@@ -1363,13 +1364,13 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
                 }
-            } else if (aTrade.tradeType.action === ContainerAction.READY_TO_CLEAN) {
-                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === thisStoreID) {
+            } else if (aTrade.tradeType.action === ContainerAction.RELOAD) {
+                if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE && aTrade.oriUser.storeID === thisStoreID) {
                     cleanReloadTrades.push(aTrade);
                     if (storeLostTradesDict[containerKey]) {
                         delete storeLostTradesDict[containerKey];
                     }
-                } else if (aTrade.tradeType.oriState === 3 && storeLostTradesDict[containerKey]) {
+                } else if (aTrade.tradeType.oriState === ContainerState.RETURNED && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }

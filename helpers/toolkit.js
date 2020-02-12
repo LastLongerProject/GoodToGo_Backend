@@ -1,5 +1,7 @@
-var debug = require('debug')('goodtogo_toolKit:err');
-var crc32 = require('buffer-crc32');
+const debug = require('debug')('goodtogo_toolKit:err');
+const crc32 = require('buffer-crc32');
+
+const ContainerState = require("../models/enums/containerEnum").State;
 
 module.exports = {
     uniqArr: function (a) {
@@ -74,12 +76,12 @@ module.exports = {
     validateStateChanging: function (bypass, oriState, newState, callback) {
         if (bypass) {
             switch (newState) {
-                case 5: // CancelDelivery
-                    if (oriState > 1)
+                case ContainerState.BOXED: // CancelDelivery
+                    if (oriState > ContainerState.READY_TO_USE)
                         return callback(false);
                     break;
-                case 4: // Unbox
-                    if (oriState !== 5)
+                case ContainerState.RELOADED: // Unbox
+                    if (oriState !== ContainerState.BOXED)
                         return callback(false);
                     break;
                 default:
@@ -87,28 +89,28 @@ module.exports = {
             }
         } else {
             switch (oriState) {
-                case 0: // delivering
-                    if (newState !== 1)
+                case ContainerState.DELIVERING:
+                    if (newState !== ContainerState.READY_TO_USE)
                         return callback(false);
                     break;
-                case 1: // readyToUse
-                    if (newState <= 1 || newState === 5)
+                case ContainerState.READY_TO_USE:
+                    if (newState <= ContainerState.READY_TO_USE || newState === ContainerState.BOXED)
                         return callback(false);
                     break;
-                case 2: // rented
-                    if (newState !== 3 && newState !== 6)
+                case ContainerState.USING:
+                    if (newState !== ContainerState.RETURNED && newState !== ContainerState.DIRTY_RETURN)
                         return callback(false);
                     break;
-                case 3: // returned
-                    if (newState !== 4 && newState !== 6)
+                case ContainerState.RETURNED:
+                    if (newState !== ContainerState.RELOADED && newState !== ContainerState.DIRTY_RETURN)
                         return callback(false);
                     break;
-                case 4: // notClean
-                    if (newState !== 5)
+                case ContainerState.RELOADED:
+                    if (newState !== ContainerState.BOXED)
                         return callback(false);
                     break;
-                case 5: // boxed
-                    if (newState !== 0)
+                case ContainerState.BOXED:
+                    if (newState !== ContainerState.DELIVERING)
                         return callback(false);
                     break;
                 default:
@@ -162,13 +164,13 @@ module.exports = {
             then.apply(this, arguments);
         };
     },
-    isSameDay: function (d1, d2) {    
+    isSameDay: function (d1, d2) {
         if (!(d1 instanceof Date && d2 instanceof Date)) return false;
         d1.toLocaleString
         if (d1.getFullYear() !== d2.getFullYear()) return false;
         if (d1.getMonth() !== d2.getMonth()) return false;
         if (d1.getDate() !== d2.getDate()) return false;
-    
+
         return true
     }
 };

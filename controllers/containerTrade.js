@@ -13,6 +13,7 @@ const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
 const Action = require('../models/enums/containerEnum').Action;
+const State = require('../models/enums/containerEnum').State;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
@@ -160,7 +161,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
-                    else if (action === Action.RETURN && oriState === 3) // 髒杯回收時已經被歸還過
+                    else if (action === Action.RETURN && oriState === State.RETURNED) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
                             txt: "Already Return"
@@ -178,7 +179,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorDict
                             };
 
-                            if (oriState === 0 || oriState === 1) {
+                            if (oriState === State.DELIVERING || oriState === State.READY_TO_USE) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
@@ -217,7 +218,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 } else if (action === Action.RETURN) {
                                     storeID_newUser = storeID;
                                     if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
-                                } else if (action === Action.READY_TO_CLEAN) {
+                                } else if (action === Action.RELOAD) {
                                     storeID_oriUser = theContainer.storeID;
                                 } else if (action === Action.DELIVERY) {
                                     storeID_newUser = storeID;
@@ -274,7 +275,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                             });
                                         });
                                     },
-                                    tradeDetail: action === Action.RENT || (action === Action.RETURN && oriState === 2) ? {
+                                    tradeDetail: action === Action.RENT || (action === Action.RETURN && oriState === State.USING) ? {
                                         oriUser,
                                         newUser,
                                         container: theContainer

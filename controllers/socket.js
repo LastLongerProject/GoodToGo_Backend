@@ -6,12 +6,13 @@ const Trade = require('../models/DB/tradeDB');
 const UserKeys = require('../models/DB/userKeysDB');
 const Container = require('../models/DB/containerDB');
 const RoleElement = require('../models/enums/userEnum').RoleElement;
-const Action = require('../models/enums/containerEnum').Action;
+const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const validateStateChanging = require('../helpers/toolkit').validateStateChanging;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
-const actionTodo = [Action.DELIVERY, Action.SIGN, Action.RENT, Action.RETURN, Action.READY_TO_CLEAN, Action.BOXING, Action.DIRTY_RETURN];
+const actionTodo = [ContainerAction.DELIVERY, ContainerAction.SIGN, ContainerAction.RENT, ContainerAction.RETURN, ContainerAction.RELOAD, ContainerAction.BOXING, ContainerAction.DIRTY_RETURN];
 
 const namespace = Object.freeze({
     CHALLENGE: "/containers/challenge/socket",
@@ -105,7 +106,7 @@ module.exports = {
             var newState = actionTodo.indexOf(action);
             if (newState === -1) return next({
                 code: "Err1",
-                msg: "Request Format Invalid (Action Invalid)"
+                msg: "Request Format Invalid (ContainerAction Invalid)"
             });
             Container.findOne({
                 'ID': containerID
@@ -170,8 +171,8 @@ module.exports = {
                         return next(error);
                     }
                     Trade.count({
-                        'tradeType.action': Action.RENT,
-                        "tradeType.oriState": 1,
+                        'tradeType.action': ContainerAction.RENT,
+                        "tradeType.oriState": ContainerState.READY_TO_USE,
                         'oriUser.storeID': storeID
                     }, (err, amount) => {
                         if (err) return next(err);

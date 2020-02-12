@@ -5,22 +5,18 @@ const redis = require("../../models/redis");
 
 const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
-const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerState = require('../../models/enums/containerEnum').State;
 const ContainerAction = require('../../models/enums/containerEnum').Action;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
 
 const tasks = require('../../helpers/tasks');
-const NotificationCenter = require('../../helpers/notifications/center');
-const NotificationEvent = require('../../models/enums/notificationEnum').CenterEvent;
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
-const intReLength = require('../../helpers/toolkit').intReLength;
-const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
 const validateStateChanging = require('../../helpers/toolkit').validateStateChanging;
 
 const SocketNamespace = require('../../controllers/socket').namespace;
@@ -160,7 +156,7 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                 }
                 changeContainersState(container, dbStore, {
                     action: ContainerAction.RENT,
-                    newState: 2
+                    newState: ContainerState.USING
                 }, {
                     rentToUser: theCustomer,
                     orderTime: res._payload.orderTime,
@@ -254,7 +250,7 @@ router.post('/return/:container', checkRoleIs([{
         container,
         dbStore, {
             action: ContainerAction.RETURN,
-            newState: 3
+            newState: ContainerState.RETURNED
         }, {
             storeID: thisStoreID,
             orderTime: res._payload.orderTime
@@ -315,8 +311,8 @@ router.post('/readyToClean/:container', checkRoleIs([{
     changeContainersState(
         container,
         dbUser, {
-            action: ContainerAction.READY_TO_CLEAN,
-            newState: 4
+            action: ContainerAction.RELOAD,
+            newState: ContainerState.RELOADED
         }, {
             orderTime: res._payload.orderTime
         },
@@ -346,8 +342,8 @@ router.post('/readyToClean/:container', checkRoleIs([{
  * @apiUse UndoError
  */
 const actionCanUndo = {
-    Return: 3,
-    ReadyToClean: 4
+    [ContainerAction.RETURN]: ContainerState.RETURNED,
+    [ContainerAction.RELOAD]: ContainerState.RELOADED
 };
 router.post('/undo/:action/:container', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const dbAdmin = req._user;
@@ -382,7 +378,7 @@ router.post('/undo/:action/:container', checkRoleIsAdmin(), validateRequest, fun
                 });
             theContainer.conbineTo = theTrade.oriUser.phone;
             theContainer.statusCode = theTrade.tradeType.oriState;
-            theContainer.storeID = [1, 3].indexOf(theTrade.tradeType.oriState) >= 0 ? theTrade.oriUser.storeID : undefined;
+            theContainer.storeID = [ContainerState.READY_TO_USE, ContainerState.RETURNED].indexOf(theTrade.tradeType.oriState) >= ContainerState.DELIVERING ? theTrade.oriUser.storeID : undefined;
             let newTrade = new Trade();
             newTrade.tradeTime = Date.now();
             newTrade.tradeType = {
@@ -463,7 +459,7 @@ var actionTodo = [
     ContainerAction.SIGN,
     ContainerAction.RENT,
     ContainerAction.RETURN,
-    ContainerAction.READY_TO_CLEAN,
+    ContainerAction.RELOAD,
     ContainerAction.BOXING,
     ContainerAction.DIRTY_RETURN
 ];

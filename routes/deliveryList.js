@@ -31,6 +31,7 @@ const RoleType = require('../models/enums/userEnum').RoleType;
 const RoleElement = require('../models/enums/userEnum').RoleElement;
 const ErrorResponse = require('../models/enums/error').ErrorResponse;
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
 const StateChangingError = require('../models/enums/programEnum').StateChangingError;
 
@@ -208,7 +209,7 @@ router.post('/box/:boxID', checkRoleIsCleanStation(), validateRequest, validateB
             containerList,
             dbUser, {
                 action: ContainerAction.BOXING,
-                newState: 5,
+                newState: ContainerState.BOXED,
             }, {
                 boxID,
                 storeID: aBox.storeID
@@ -278,7 +279,7 @@ router.post('/stock', checkRoleIsCleanStation(), validateRequest, fetchBoxCreati
         containerList,
         dbUser, {
             action: ContainerAction.BOXING,
-            newState: 5,
+            newState: ContainerState.BOXED,
         }, {
             boxID,
         }, (err, tradeSuccess, reply) => {
@@ -967,8 +968,8 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 changeContainersState(
                     box.containerList,
                     dbUser, {
-                        action: ContainerAction,
-                        newState: 4
+                        action: ContainerAction.UNBOXING,
+                        newState: ContainerState.RELOADED
                     }, {
                         bypassStateValidation: true,
                     },
@@ -979,7 +980,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                             containerList,
                             dbUser, {
                                 action: ContainerAction.BOXING,
-                                newState: 5
+                                newState: ContainerState.BOXED
                             }, {
                                 boxID,
                             },
@@ -1099,7 +1100,7 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
                 aBox.containerList,
                 dbUser, {
                     action: ContainerAction.UNBOXING,
-                    newState: 4
+                    newState: ContainerState.RELOADED
                 }, {
                     bypassStateValidation: true,
                 },
@@ -1198,12 +1199,12 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
     if (!needBoth) {
         if (isCleanReload) {
             Object.assign(query, {
-                "tradeType.oriState": 1
+                "tradeType.oriState": ContainerState.READY_TO_USE
             });
         } else {
             Object.assign(query, {
                 "tradeType.oriState": {
-                    "$ne": 1
+                    "$ne": ContainerState.READY_TO_USE
                 }
             });
         }

@@ -20,6 +20,7 @@ const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerState = require('../../models/enums/containerEnum').State;
 const ContainerAction = require('../../models/enums/containerEnum').Action;
 
 const historyDays = 14;
@@ -340,10 +341,10 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
     if (dbKey.roleType === RoleType.STORE)
         queryCond = {
             '$or': [{
-                'tradeType.action': ContainerAction.READY_TO_CLEAN,
+                'tradeType.action': ContainerAction.RELOAD,
                 'oriUser.storeID': thisStoreID
             }, {
-                'tradeType.action': ContainerAction.UNDO_READY_TO_CLEAN
+                'tradeType.action': ContainerAction.UNDO_RELOAD
             }],
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)
@@ -352,7 +353,7 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
     else
         queryCond = {
             'tradeType.action': {
-                '$in': [ContainerAction.READY_TO_CLEAN, ContainerAction.UNDO_READY_TO_CLEAN]
+                '$in': [ContainerAction.RELOAD, ContainerAction.UNDO_RELOAD]
             },
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)
@@ -379,13 +380,13 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
             tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
             tradeTimeDict[aTradeTime].forEach(theTrade => {
                 thisTypeName = typeDict[theTrade.container.typeCode].name;
-                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === ContainerState.READY_TO_USE)}`;
                 if (!boxDict[boxDictKey])
                     boxDict[boxDictKey] = {
                         boxTime: theTrade.tradeTime,
                         typeList: [],
                         containerList: {},
-                        cleanReload: (theTrade.tradeType.oriState === 1),
+                        cleanReload: (theTrade.tradeType.oriState === ContainerState.READY_TO_USE),
                         phone: (dbKey.roleType === RoleType.STORE) ? undefined : {
                             reload: theTrade.newUser.phone
                         },

@@ -7,8 +7,8 @@ const ContainerAction = Object.freeze({
     RETURN: "Return",
     UNDO_RETURN: "UndoReturn",
     DIRTY_RETURN: "dirtyReturn",
-    READY_TO_CLEAN: "ReadyToClean",
-    UNDO_READY_TO_CLEAN: "UndoReadyToClean",
+    RELOAD: "ReadyToClean",
+    UNDO_RELOAD: "UndoReadyToClean",
     BOXING: "Boxing",
     UNBOXING: "Unboxing"
 });
@@ -23,9 +23,18 @@ module.exports = {
         [ContainerAction.RENT]: "借出",
         [ContainerAction.RETURN]: "歸還",
         [ContainerAction.UNDO_RETURN]: "取消歸還",
-        [ContainerAction.READY_TO_CLEAN]: "回收",
-        [ContainerAction.UNDO_READY_TO_CLEAN]: "取消回收",
+        [ContainerAction.RELOAD]: "回收",
+        [ContainerAction.UNDO_RELOAD]: "取消回收",
         [ContainerAction.BOXING]: "裝箱",
         [ContainerAction.UNBOXING]: "取消裝箱"
+    }),
+    State: Object.freeze({
+        DELIVERING: 0,
+        READY_TO_USE: 1,
+        USING: 2,
+        RETURNED: 3,
+        RELOADED: 4,
+        BOXED: 5,
+        DIRTY_RETURN: 6 // exception
     })
 };
