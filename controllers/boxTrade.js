@@ -1,11 +1,14 @@
 const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../models/enums/boxEnum').BoxAction;
 const Category = require('../models/enums/storeEnum').Category;
-const ContainerAction = require('../models/enums/containerEnum').Action;
 const ProgramStatus = require('../models/enums/programEnum').ProgramStatus;
+const ContainerAction = require('../models/enums/containerEnum').Action;
 const StateChangingError = require('../models/enums/programEnum').StateChangingError;
+
 const changeContainersState = require('./containerTrade');
 const DataCacheFactory = require('../models/dataCacheFactory');
+
+const checkStoreIsInArea = require("../helpers/tools").checkStoreIsInArea;
 
 const validChange = {
     Box2Stock: [BoxStatus.Boxing, BoxStatus.Stocked],
@@ -16,7 +19,8 @@ const validChange = {
     // Sign2Archive: [BoxStatus.Signed, BoxStatus.Archived],
     Deliver2Sign: [BoxStatus.Delivering, BoxStatus.Signed],
     Stock2Dispatch: [BoxStatus.Stocked, BoxStatus.Dispatching],
-    Dispatch2Stock: [BoxStatus.Dispatching, BoxStatus.Stocked]
+    Dispatch2Stock: [BoxStatus.Dispatching, BoxStatus.Stocked],
+    Box2Dispatch: [BoxStatus.Boxing, BoxStatus.Dispatching]
 };
 
 let checkStateChanging = function (stateChanging) {
@@ -39,42 +43,18 @@ let changeStateProcess = async function (element, box, phone) {
         });
 
     if (validatedStateChanging === validChange.Box2Stock) {
-        const missingArgList = checkMissingArgument(element, ["stationID"]);
-        if (missingArgList.length !== 0)
-            return Promise.resolve({
-                status: ProgramStatus.Error,
-                errorType: StateChangingError.MissingArg,
-                argumentNameList: missingArgList
-            });
-        const stationID = element.stationID;
         let info = {
             status: BoxStatus.Stocked,
-            stationID,
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    stationID: {
-                        from: box.stationID,
-                        to: stationID
-                    },
                     timestamps: Date.now()
                 }
             }
         };
-        if (box.storeID !== null)
-            Object.assign(info, {
-                storeID: null,
-                $push: {
-                    action: {
-                        storeID: {
-                            from: box.storeID,
-                            to: null
-                        }
-                    }
-                }
-            });
+        removeStoreIDfromBox(box, info);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -118,24 +98,19 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Sign2Stock) {
-        const storeID = null;
         let info = {
             status: BoxStatus.Stocked,
-            storeID,
             dueDate: Date.now(),
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Stocked,
                     boxAction: BoxAction.Stock,
-                    storeID: {
-                        from: box.storeID,
-                        to: storeID
-                    },
                     timestamps: Date.now()
                 }
             }
         };
+        removeStoreIDfromBox(box, info);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -143,7 +118,7 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Stock2Box) {
-        const validationResult = validateStoreID(element, Category.Store);
+        const validationResult = validateStoreID(element);
         if (!validationResult.valid) {
             const reply = {
                 status: ProgramStatus.Error
@@ -200,15 +175,16 @@ let changeStateProcess = async function (element, box, phone) {
             info,
             validatedStateChanging
         });
-    } else if (validatedStateChanging === validChange.Stock2Dispatch) {
-        const missingArgList = checkMissingArgument(element, ["stationID"]);
+    } else if (validatedStateChanging === validChange.Stock2Dispatch ||
+        validatedStateChanging === validChange.Box2Dispatch) {
+        const missingArgList = checkMissingArgument(element, ["destinationStationID"]);
         if (missingArgList.length !== 0)
             return Promise.resolve({
                 status: ProgramStatus.Error,
                 errorType: StateChangingError.MissingArg,
                 argumentNameList: missingArgList
             });
-        const stationID = element.stationID;
+        const stationID = element.destinationStationID;
         let info = {
             status: BoxStatus.Dispatching,
             stationID,
@@ -225,6 +201,7 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             }
         };
+        removeStoreIDfromBox(box, info);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -393,6 +370,7 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
         });
     } else if (validatedStateChanging === validChange.Stock2Box ||
         validatedStateChanging === validChange.Box2Stock ||
+        validatedStateChanging === validChange.Box2Dispatch ||
         validatedStateChanging === validChange.Stock2Dispatch ||
         validatedStateChanging === validChange.Dispatch2Stock) {
         await aBox.update(boxInfo).exec();
@@ -430,20 +408,28 @@ function checkStoreIs(storeID, category) {
 }
 
 function validateStoreID(element, category) {
-    const missingArgList = checkMissingArgument(element, ["destinationStoreId"]);
+    const missingArgList = checkMissingArgument(element, ["destinationStoreID"]);
     if (missingArgList.length !== 0)
         return {
             valid: false,
             errorType: StateChangingError.MissingArg,
             argumentNameList: missingArgList
         };
-    const storeID = element.destinationStoreId;
-    const storeIsStorage = checkStoreIs(storeID, category);
-    if (!storeIsStorage)
+    const storeID = element.destinationStoreID;
+    const stationID = element.stationID;
+    const storeIsStorage = checkStoreIs(storeID, Category.Storage);
+    const storeIsInArea = checkStoreIsInArea(storeID, stationID);
+    if (storeIsStorage)
         return {
             valid: false,
             errorType: StateChangingError.ArgumentInvalid,
-            message: `Arguments [storeID] should represent a ${category}`
+            message: `Arguments [storeID] should not represent a ${category}`
+        };
+    if (!storeIsInArea)
+        return {
+            valid: false,
+            errorType: StateChangingError.ArgumentInvalid,
+            message: `Arguments [storeID] is not in your Area`
         };
     return {
         valid: true,
@@ -460,4 +446,19 @@ function getLastStationIdInAction(box) {
         }
     }
     return stationID;
+}
+
+function removeStoreIDfromBox(box, info) {
+    if (box.storeID !== null)
+        Object.assign(info, {
+            storeID: null,
+            $push: {
+                action: {
+                    storeID: {
+                        from: box.storeID,
+                        to: null
+                    }
+                }
+            }
+        });
 }

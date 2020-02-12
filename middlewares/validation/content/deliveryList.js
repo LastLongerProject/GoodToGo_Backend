@@ -54,6 +54,10 @@ function validateCreateApiContent(req, res, next) {
     let boxArray = [];
     let boxIDs = [];
     let boxList = req.body.boxList;
+    const storeID = parseInt(req.params.storeID);
+
+    const dbUser = req._user;
+    const phone = dbUser.user.phone;
     const dbRole = req._thisRole;
     let thisStationID;
     try {
@@ -72,7 +76,6 @@ function validateCreateApiContent(req, res, next) {
     }
 
     for (let element of boxList) {
-
         let pass = validateBoxContent(element, BoxContentType.order, [
             'boxName',
             'boxOrderContent',
@@ -89,15 +92,24 @@ function validateCreateApiContent(req, res, next) {
                 boxOrderContent: element.boxOrderContent,
                 containerHash: getContainerHash(element.boxOrderContent, true),
                 dueDate: element.dueDate,
-                storeID: parseInt(req.params.storeID),
+                storeID,
+                stationID: thisStationID,
                 action: [{
-                    phone: req.body.phone,
+                    phone,
+                    storeID: {
+                        from: null,
+                        to: storeID
+                    },
+                    stationID: {
+                        from: null,
+                        to: thisStationID
+                    },
                     boxStatus: BoxStatus.Created,
                     boxAction: BoxAction.Create,
                     timestamps: Date.now(),
                 }],
                 user: {
-                    box: req.body.phone,
+                    box: phone
                 },
                 status: BoxStatus.Created,
             });
@@ -114,10 +126,12 @@ function validateCreateApiContent(req, res, next) {
 }
 
 function validateStockApiContent(req, res, next) {
-    let boxArray = [];
-    let boxIDs = [];
     let boxContent = req.body.boxContent;
     let date = new Date();
+    let index = req._sequence || 1;
+
+    const dbUser = req._user;
+    const phone = dbUser.user.phone;
     const dbRole = req._thisRole;
     let thisStationID;
     try {
@@ -126,49 +140,53 @@ function validateStockApiContent(req, res, next) {
         next(error);
     }
 
-    let index = req._sequence || 1;
-
     let pass = validateBoxContent(boxContent, null, [
         'boxName',
         'containerList'
     ]);
     if (!pass.bool) {
         return res.status(403).json(ErrorResponse[pass.code]);
-    } else {
-        let boxID = parseInt(createBoxID(date, index, thisStationID));
-        let orderContent = getDeliverContent(boxContent.containerList);
-        let box = new Box({
-            boxID: boxID,
-            boxName: boxContent.boxName,
-            dueDate: Date.now(),
-            storeID: null,
-            stationID: thisStationID,
-            boxOrderContent: orderContent,
-            containerList: boxContent.containerList,
-            containerHash: getContainerHash(boxContent.containerList),
-            action: [{
-                phone: req.body.phone,
-                boxStatus: BoxStatus.Boxing,
-                boxAction: BoxAction.Pack,
-                timestamps: Date.now(),
-            }, {
-                phone: req.body.phone,
-                boxStatus: BoxStatus.Stocked,
-                boxAction: BoxAction.Stock,
-                timestamps: Date.now()
-            }],
-            user: {
-                box: req.body.phone,
-            },
-            status: BoxStatus.Stocked,
-        });
-        boxContent.boxID = boxID;
-        boxArray.push(box);
-        boxIDs.push(boxID);
-        index++;
     }
-    req._boxArray = boxArray;
-    req._boxIDs = boxIDs;
+
+    let boxID = parseInt(createBoxID(date, index++, thisStationID));
+    let orderContent = getDeliverContent(boxContent.containerList);
+
+    let box = new Box({
+        boxID,
+        boxName: boxContent.boxName,
+        dueDate: Date.now(),
+        storeID: null,
+        stationID: thisStationID,
+        boxOrderContent: orderContent,
+        containerList: boxContent.containerList,
+        containerHash: getContainerHash(boxContent.containerList),
+        action: [{
+            phone,
+            stationID: {
+                from: null,
+                to: thisStationID
+            },
+            boxStatus: BoxStatus.Created,
+            boxAction: BoxAction.Create,
+            timestamps: Date.now(),
+        }, {
+            phone,
+            boxStatus: BoxStatus.Boxing,
+            boxAction: BoxAction.Pack,
+            timestamps: Date.now(),
+        }, {
+            phone,
+            boxStatus: BoxStatus.Stocked,
+            boxAction: BoxAction.Stock,
+            timestamps: Date.now()
+        }],
+        user: {
+            box: phone
+        },
+        status: BoxStatus.Stocked,
+    });
+
+    req._box = box;
     next();
 }
 
@@ -176,8 +194,7 @@ function validateBoxingApiContent(req, res, next) {
     let boxContent = req.body.boxContent;
     let pass = validateBoxContent(boxContent, null, [
         'comment',
-        'containerList',
-        'ID',
+        'containerList'
     ]);
     if (!pass.bool) {
         return res.status(403).json(ErrorResponse[pass.code]);
@@ -188,19 +205,7 @@ function validateBoxingApiContent(req, res, next) {
 function validateChangeStateApiContent(req, res, next) {
     let boxContent = req.body.boxContent;
     let pass = validateBoxContent(boxContent, BoxContentType.changeState, [
-        "id",
         'newState',
-    ]);
-    if (!pass.bool) {
-        return res.status(403).json(ErrorResponse[pass.code]);
-    }
-    next();
-}
-
-function validateSignApiContent(req, res, next) {
-    let boxContent = req.body.boxContent;
-    let pass = validateBoxContent(boxContent, BoxContentType.changeState, [
-        "ID"
     ]);
     if (!pass.bool) {
         return res.status(403).json(ErrorResponse[pass.code]);
@@ -266,7 +271,6 @@ module.exports = {
     validateBoxingApiContent,
     validateStockApiContent,
     validateChangeStateApiContent,
-    validateSignApiContent,
     validateModifyApiContent,
     validateBoxStatus,
     fetchBoxCreation

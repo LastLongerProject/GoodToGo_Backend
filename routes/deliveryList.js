@@ -13,7 +13,6 @@ const {
     validateBoxingApiContent,
     validateStockApiContent,
     validateChangeStateApiContent,
-    validateSignApiContent,
     validateModifyApiContent,
     fetchBoxCreation,
     validateBoxStatus
@@ -124,13 +123,12 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiName DeliveryList boxing
  * @apiGroup DeliveryList
  *
- * @api {post} /deliveryList/box Boxing
+ * @api {post} /deliveryList/box/:boxID Boxing
  * @apiPermission station
  * @apiUse JWT
  * @apiParamExample {json} Request-Example:
     {
         boxContent: {
-            ID: Number,
             containerList: Array,
             comment: String
         }
@@ -143,7 +141,7 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
         }
  * @apiUse CreateError
  */
-router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
+router.post('/box/:boxID', checkRoleIsCleanStation(), validateRequest, validateBoxingApiContent, function (req, res, next) {
     let dbUser = req._user;
     let boxContent = req.body.boxContent;
 
@@ -162,7 +160,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
         next(error);
     }
 
-    const boxID = boxContent.ID;
+    const boxID = req.param.boxID;
     const containerList = boxContent.containerList;
     const comment = boxContent.comment;
 
@@ -170,7 +168,7 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
         boxID: boxID,
     }, function (err, aBox) {
         if (err) return next(err);
-        if (!aBox)
+        if (!aBox || aBox.stationID !== stationID)
             return res.status(403).json({
                 code: 'F012',
                 type: 'BoxingMessage',
@@ -191,11 +189,9 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
                         containerList: containerList,
                         containerHash: getContainerHash(containerList),
                         comment: comment,
-                        stationID,
                         $push: {
                             action: {
                                 phone: dbUser.user.phone,
-                                stationID,
                                 boxStatus: BoxStatus.Boxing,
                                 boxAction: BoxAction.Pack,
                                 timestamps: Date.now(),
@@ -237,16 +233,16 @@ router.post(['/cleanStation/box', '/box'], checkRoleIsCleanStation(), validateRe
         {
             type: "StockMessage",
             message: "Stock successfully",
-            boxIDs: Array
+            boxID: Number
         }
  * @apiUse CreateError
  */
-router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateStockApiContent, function (req, res, next) {
+router.post('/stock', checkRoleIsCleanStation(), validateRequest, fetchBoxCreation, validateStockApiContent, function (req, res, next) {
     const dbUser = req._user;
-    const boxContent = req.body.boxContent;
 
-    const containerList = boxContent.containerList;
-    const boxID = boxContent.boxID;
+    const box = req._box;
+    const boxID = box.boxID;
+    const containerList = box.containerList;
 
     changeContainersState(
         containerList,
@@ -256,22 +252,16 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
         }, {
             boxID,
         }, (err, tradeSuccess, reply) => {
-            if (err) {
-                return next(err);
-            }
+            if (err) return next(err);
             if (!tradeSuccess) return res.status(403).json(reply);
-            Promise.all(req._boxArray.map(box => box.save()))
-                .then(() => {
-                    return res.status(200).json({
-                        type: 'StockMessage',
-                        message: 'Stock successfully',
-                        boxIDs: req._boxIDs
-                    });
-                })
-                .catch(err => {
-                    debug.error(err);
-                    return res.status(500).json(ErrorResponse.H006);
+            box.save(err => {
+                if (err) return next(err);
+                return res.status(200).json({
+                    type: 'StockMessage',
+                    message: 'Stock successfully',
+                    boxID
                 });
+            });
         }
     );
 });
@@ -280,7 +270,7 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiName DeliveryList change state
  * @apiGroup DeliveryList
  *
- * @api {post} /deliveryList/changeState Change state
+ * @api {post} /deliveryList/changeState/:boxID Change state
  * @apiPermission station
  * @apiUse JWT
  * @apiDescription
@@ -292,12 +282,13 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  *      4 - Stocked -> Boxing 
  *      6 - Dispatching -> Stocked 
  *      7 - Stocked -> Dispatching 
+ *      8 - Boxing -> Dispatching 
  * @apiParamExample {json} Request-Example:
     {
         boxContent: {
-            id: String
             newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked'], if you wanna sign a box, use sign api
-            [destinationStoreId]: String, // Needed when state changing is 0, 3, 4, 6
+            [destinationStationID]: String, // Needed when state changing is 6, 8
+            [destinationStoreID]: String, // Needed when state changing is 4
             [boxAction]: String // Needed when state changing is 7, Action: ['AcceptDispatch', 'RejectDispatch']
         }
     }
@@ -310,13 +301,13 @@ router.post('/stock/:storeID?', checkRoleIsCleanStation(), validateRequest, fetc
  * @apiUse CreateError
  * @apiUse ChangeStateError
  */
-router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
+router.post('/changeState/:boxID', checkRoleIsCleanStation(), validateRequest, validateChangeStateApiContent, function (req, res, next) {
     let dbUser = req._user;
     let phone = dbUser.user.phone;
     let boxContent = req.body.boxContent;
 
     const newState = boxContent.newState;
-    const boxID = boxContent.id;
+    const boxID = req.param.boxID;
 
     const dbRole = req._thisRole;
     let stationID;
@@ -325,6 +316,9 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
         switch (thisRoleType) {
             case RoleType.CLEAN_STATION:
                 stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                Object.assign(boxContent, {
+                    stationID
+                });
                 break;
             default:
                 next();
@@ -381,7 +375,7 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
  * @apiName DeliveryList sign
  * @apiGroup DeliveryList
  *
- * @api {post} /deliveryList/sign Sign
+ * @api {post} /deliveryList/sign/:boxID Sign
  * @apiPermission station
  * @apiPermission clerk
  * @apiUse JWT
@@ -401,16 +395,13 @@ router.post('/changeState', checkRoleIsCleanStation(), validateRequest, validate
  * @apiUse ChangeStateError
  */
 router.post(
-    '/sign',
+    '/sign/:boxID',
     checkRoleIsStore(),
     checkRoleIsCleanStation(),
     validateRequest,
-    validateSignApiContent,
     async function (req, res, next) {
         let dbUser = req._user;
         let phone = dbUser.user.phone;
-        let boxContent = req.body.boxContent;
-
         const dbRole = req._thisRole;
         let thisStoreID, thisStationID;
         const thisRoleType = dbRole.roleType;
@@ -430,7 +421,8 @@ router.post(
         }
         const reqByCleanStation = thisRoleType === RoleType.CLEAN_STATION;
 
-        const boxID = boxContent.ID;
+        const boxID = req.param.boxID;
+        let boxContent = req.body.boxContent;
         boxContent.newState = BoxStatus.Signed;
         Box.findOne({
             boxID: boxID,
