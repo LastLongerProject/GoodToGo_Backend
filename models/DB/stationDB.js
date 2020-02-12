@@ -2,7 +2,8 @@ var mongoose = require('mongoose');
 
 var schema = mongoose.Schema({
     ID: Number,
-    name: String
+    name: String,
+    boxable: Boolean
 }, {
     timestamps: true
 });

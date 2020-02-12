@@ -85,9 +85,14 @@ let ErrorResponse = Object.freeze({
         message: "Box update failed, plz contact developer"
     },
     H012: {
-        code: "H011",
+        code: "H012",
         type: "ModifyMessage",
         message: "ContainerList and boxDeliverContent need to be modified at the same time, and should correspond to each other"
+    },
+    H013: {
+        code: "H013",
+        type: "CreateMessage",
+        message: "You shall not box a box"
     },
     F016_1: {
         code: "F016",

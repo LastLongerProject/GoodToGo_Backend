@@ -327,7 +327,7 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
-                range: 'StorageStation!A2:B',
+                range: 'StorageStation!A2:C',
             }, function (err, response) {
                 if (err) return debug.error('[Sheet API ERR (getStation)] Error: ' + err);
                 const rowsFromSheet = response.data.values;
@@ -337,7 +337,8 @@ module.exports = {
                         Station.findOneAndUpdate({
                             'ID': aRow[0]
                         }, {
-                            'name': aRow[1]
+                            'name': aRow[1],
+                            'boxable': aRow[2] === 'TRUE'
                         }, {
                             upsert: true,
                             new: true
