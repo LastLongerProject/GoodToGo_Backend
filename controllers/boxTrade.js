@@ -63,6 +63,12 @@ let changeStateProcess = async function (element, box, phone) {
             validatedStateChanging
         });
     } else if (validatedStateChanging === validChange.Box2Deliver) {
+        if (box.storeID === null)
+            return Promise.reject({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.MissingArg,
+                message: "StoreID is not assign yet"
+            });
         let info = {
             status: BoxStatus.Delivering,
             $push: {

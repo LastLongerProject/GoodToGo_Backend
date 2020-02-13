@@ -229,8 +229,6 @@ router.post('/box/:boxID', checkRoleIsCleanStation(), validateRequest, validateB
                             }
                         },
                         status: BoxStatus.Boxing,
-                    }, {
-                        upsert: true,
                     }).exec()
                     .then(() => {
                         return res.status(200).json({
@@ -306,21 +304,21 @@ router.post('/stock', checkRoleIsCleanStation(), validateRequest, fetchBoxCreati
  * @apiUse JWT
  * @apiDescription
  *      **available state changing list**: 
- *      0 - Boxing -> Stocked 
- *      1 - Boxing -> Delivering 
- *      2 - Delivering -> Boxing 
- *      3 - Signed -> Stocked 
- *      4 - Stocked -> Boxing 
- *      6 - Dispatching -> Stocked 
- *      7 - Stocked -> Dispatching 
- *      8 - Boxing -> Dispatching 
+ *      (0) - Boxing -> Stocked 
+ *      (1) - Boxing -> Delivering 
+ *      (2) - Delivering -> Boxing 
+ *      (3) - Signed -> Stocked 
+ *      (4) - Stocked -> Boxing 
+ *      (5) - Dispatching -> Stocked 
+ *      (6) - Stocked -> Dispatching 
+ *      (7) - Boxing -> Dispatching 
  * @apiParamExample {json} Request-Example:
     {
         boxContent: {
             newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked', 'Dispatching'], if you wanna sign a box, use sign api
-            [destinationStationID]: String, // Needed when state changing is 6, 8
-            [destinationStoreID]: String, // Needed when state changing is 4
-            [boxAction]: String // Needed when state changing is 6, Action: ['AcceptDispatch', 'RejectDispatch']
+            [destinationStationID]: Number, // Needed when state changing is (6), (8)
+            [destinationStoreID]: Number, // Needed when state changing is (4)
+            [boxAction]: String // Needed when state changing is (6), (8); Action: ['AcceptDispatch', 'RejectDispatch']
         }
     }
  * @apiSuccessExample {json} Success-Response:
@@ -836,7 +834,7 @@ router.get(
             }
         
  */
-router.get(-
+router.get(
     '/box/specificList/:status/:startFrom',
     checkRoleIsStore(),
     checkRoleIsCleanStation(),
@@ -861,13 +859,13 @@ router.get(-
                 case RoleType.CLEAN_STATION:
                     thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                     Object.assign(query, {
-                        storeID: thisStoreID
+                        stationID: thisStationID
                     });
                     break;
                 case RoleType.STORE:
                     thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
                     Object.assign(query, {
-                        stationID: thisStationID
+                        storeID: thisStoreID
                     });
                     break;
                 default:
