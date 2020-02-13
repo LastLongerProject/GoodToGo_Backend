@@ -1960,7 +1960,7 @@ router.patch("/refresh/couponImage/:forceRenew", checkRoleIsAdmin(), validateReq
     });
 });
 
-router.get('/summaryData/googlesheet/:storeID/:sheetID', regAsAdminManager, validateRequest, (req, res, next) => {
+router.get('/summaryData/googlesheet/:storeID/:sheetID', checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     let storeID = Number(req.params.storeID);
     let sheetID = req.params.sheetID;
     Promise.all([
