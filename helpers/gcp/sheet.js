@@ -28,6 +28,7 @@ const googleMapsClient = require('@google/maps').createClient({
 const isNum = /^\d+$/;
 const ignorePlaceTypes = ["point_of_interest", "establishment"];
 const defaultPeriods = [];
+const allOpenPeriods = [];
 for (let i = 0; i < 7; i++) {
     defaultPeriods.push({
         "close": {
@@ -37,6 +38,16 @@ for (let i = 0; i < 7; i++) {
         "open": {
             "day": i,
             "time": "12:00"
+        }
+    });
+    allOpenPeriods.push({
+        "close": {
+            "day": i,
+            "time": "00:00"
+        },
+        "open": {
+            "day": i,
+            "time": "24:00"
         }
     });
 }
@@ -198,110 +209,117 @@ module.exports = {
                             let photosList = [];
                             Promise
                                 .all(placeList.map(aPlace => new Promise((resolve, reject) => {
-                                    googleMapsClient.place({
-                                        placeid: aPlace.placeID,
-                                        language: "zh-TW",
-                                        fields: ["formatted_address", "opening_hours", "geometry", "type", "photo", "url"]
-                                    }, (err, response) => {
-                                        if (err) {
-                                            if (err === 'timeout') {
-                                                return reject(`[Place API ERR (timeout)]: ${aPlace.placeID}`);
-                                            } else if (err.json) {
-                                                return reject(`[Place API ERR (status_1)]: ${aPlace.placeID} - ${err.status}`);
-                                            } else {
-                                                let errDetail = err;
-                                                if (typeof errDetail === "object") errDetail = JSON.stringify(errDetail);
-                                                return reject(`[Place API ERR (unknown)]: ${aPlace.placeID} - ${errDetail}`);
-                                            }
-                                        }
-                                        let TIMEOUT = 0;
-                                        if (response.json.status !== "OK") {
-                                            if (response.json.status === "OVER_QUERY_LIMIT") {
-                                                TIMEOUT = 1000;
-                                            } else {
-                                                return reject(`[Place API ERR (status_2)]: ${aPlace.placeID} - ${response.json.status}`);
-                                            }
-                                        }
-                                        setTimeout(() => {
-                                            const dataFromApi = response.json.result;
-                                            try {
-                                                let formattedType = [];
-                                                if (aPlace && aPlace.type !== "") {
-                                                    formattedType = aPlace.type.replace(" ", "").split(",");
+                                    let errCtr = 0;
+                                    const getResponse = function (cb) {
+                                        googleMapsClient.place({
+                                            placeid: aPlace.placeID,
+                                            language: "zh-TW",
+                                            fields: ["formatted_address", "opening_hours", "geometry", "type", "photo", "url"]
+                                        }, (err, response) => {
+                                            if (err) {
+                                                if (err === 'timeout') {
+                                                    return reject(`[Place API ERR (timeout)]: ${aPlace.placeID}`);
+                                                } else if (err.json) {
+                                                    return reject(`[Place API ERR (status_1)]: ${aPlace.placeID} - ${err.status}`);
                                                 } else {
-                                                    dataFromApi.types.forEach(aType => {
-                                                        const translated = dictionary[aType];
-                                                        if (translated)
-                                                            formattedType.push(translated);
-                                                        else if (ignorePlaceTypes.indexOf(aType) === -1)
-                                                            debug.error(`[Sheet] New Word To Translate: ${aType}`);
-                                                    });
+                                                    let errDetail = err;
+                                                    if (typeof errDetail === "object") errDetail = JSON.stringify(errDetail);
+                                                    return reject(`[Place API ERR (unknown)]: ${aPlace.placeID} - ${errDetail}`);
                                                 }
-                                                let opening_hours;
-                                                let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
-                                                if (theOriStore && theOriStore.opening_default) {
-                                                    opening_hours = theOriStore.opening_hours;
-                                                } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
-                                                    opening_hours = dataFromApi.opening_hours.periods;
-                                                    for (let j = 0; j < opening_hours.length; j++) {
-                                                        if (!(opening_hours[j].close && opening_hours[j].close.time && opening_hours[j].open && opening_hours[j].open.time)) {
-                                                            opening_hours = defaultPeriods;
+                                            }
+                                            if (response.json.status !== "OK") {
+                                                if (response.json.status === "OVER_QUERY_LIMIT" && errCtr++ < 3) {
+                                                    setTimeout(getResponse(cb), 1000);
+                                                } else {
+                                                    return reject(`[Place API ERR (status_2)]: ${aPlace.placeID} - ${response.json.status}`);
+                                                }
+                                            }
+                                            cb(response);
+                                        });
+                                    };
+                                    getResponse((response) => {
+                                        const dataFromApi = response.json.result;
+                                        try {
+                                            let formattedType = [];
+                                            if (aPlace && aPlace.type !== "") {
+                                                formattedType = aPlace.type.replace(" ", "").split(",");
+                                            } else {
+                                                dataFromApi.types.forEach(aType => {
+                                                    const translated = dictionary[aType];
+                                                    if (translated)
+                                                        formattedType.push(translated);
+                                                    else if (ignorePlaceTypes.indexOf(aType) === -1)
+                                                        debug.error(`[Sheet] New Word To Translate: ${aType}`);
+                                                });
+                                            }
+                                            let opening_hours;
+                                            let theOriStore = oriStoreList.find(ele => ele.id == aPlace.ID);
+                                            if (theOriStore && theOriStore.opening_default) {
+                                                opening_hours = theOriStore.opening_hours;
+                                            } else if (dataFromApi.opening_hours && dataFromApi.opening_hours.periods) {
+                                                opening_hours = dataFromApi.opening_hours.periods;
+                                                for (let j = 0; j < opening_hours.length; j++) {
+                                                    if (!(opening_hours[j].close && opening_hours[j].close.time)) {
+                                                        if (opening_hours[j].open && opening_hours[j].open.day === 0 && opening_hours[j].open.time === "0000") {
+                                                            opening_hours = allOpenPeriods;
                                                             break;
                                                         } else {
-                                                            opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
-                                                            opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
+                                                            opening_hours = defaultPeriods;
+                                                            break;
                                                         }
+                                                    } else {
+                                                        opening_hours[j].close.time = opening_hours[j].close.time.slice(0, 2) + ":" + opening_hours[j].close.time.slice(2);
+                                                        opening_hours[j].open.time = opening_hours[j].open.time.slice(0, 2) + ":" + opening_hours[j].open.time.slice(2);
                                                     }
-                                                } else {
-                                                    opening_hours = defaultPeriods;
                                                 }
-                                                let photos_fromGoogle = null;
-                                                if (dataFromApi.photos && dataFromApi.photos.length >= 1 && typeof dataFromApi.photos[0].photo_reference === "string")
-                                                    photos_fromGoogle = dataFromApi.photos[0].photo_reference;
-                                                Store.findOneAndUpdate({
-                                                    'id': aPlace.ID
-                                                }, {
-                                                    'name': aPlace.name,
-                                                    'contract': {
-                                                        returnable: aPlace.contract.returnable,
-                                                        borrowable: aPlace.contract.borrowable,
-                                                        status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
-                                                    },
-                                                    'type': formattedType,
-                                                    'project': aPlace.project,
-                                                    'address': dataFromApi.formatted_address
-                                                        .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
-                                                    'opening_hours': opening_hours,
-                                                    'location': dataFromApi.geometry.location,
-                                                    'active': aPlace.active,
-                                                    'category': aPlace.category,
-                                                    'activity': aPlace.activity,
-                                                    'photos_fromGoogle': photos_fromGoogle,
-                                                    'url_fromGoogle': dataFromApi.url,
-                                                    'delivery_area': aPlace.delivery_area,
-                                                    '$setOnInsert': {
-                                                        'img_info': {
-                                                            img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
-                                                            img_version: 0
-                                                        }
-                                                    }
-                                                }, {
-                                                    upsert: true,
-                                                    setDefaultsOnInsert: true,
-                                                    new: true
-                                                }, (err, res) => {
-                                                    if (err) return reject(err);
-                                                    if (photos_fromGoogle !== null)
-                                                        photosList.push({
-                                                            storeID: aPlace.ID,
-                                                            ref: photos_fromGoogle
-                                                        });
-                                                    resolve(res);
-                                                });
-                                            } catch (error) {
-                                                reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
+                                            } else {
+                                                opening_hours = defaultPeriods;
                                             }
-                                        }, TIMEOUT);
+                                            let photos_fromGoogle = null;
+                                            if (dataFromApi.photos && dataFromApi.photos.length >= 1 && typeof dataFromApi.photos[0].photo_reference === "string")
+                                                photos_fromGoogle = dataFromApi.photos[0].photo_reference;
+                                            Store.findOneAndUpdate({
+                                                'id': aPlace.ID
+                                            }, {
+                                                'name': aPlace.name,
+                                                'contract': {
+                                                    returnable: aPlace.contract.returnable,
+                                                    borrowable: aPlace.contract.borrowable,
+                                                    status_code: (((aPlace.contract.returnable) ? 1 : 0) + ((aPlace.contract.borrowable) ? 1 : 0))
+                                                },
+                                                'type': formattedType,
+                                                'project': aPlace.project,
+                                                'address': dataFromApi.formatted_address
+                                                    .replace(/^\d*/, '').replace('区', '區').replace('F', '樓'),
+                                                'opening_hours': opening_hours,
+                                                'location': dataFromApi.geometry.location,
+                                                'active': aPlace.active,
+                                                'category': aPlace.category,
+                                                'activity': aPlace.activity,
+                                                'photos_fromGoogle': photos_fromGoogle,
+                                                'url_fromGoogle': dataFromApi.url,
+                                                '$setOnInsert': {
+                                                    'img_info': {
+                                                        img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
+                                                        img_version: 0
+                                                    }
+                                                }
+                                            }, {
+                                                upsert: true,
+                                                setDefaultsOnInsert: true,
+                                                new: true
+                                            }, (err, res) => {
+                                                if (err) return reject(err);
+                                                if (photos_fromGoogle !== null)
+                                                    photosList.push({
+                                                        storeID: aPlace.ID,
+                                                        ref: photos_fromGoogle
+                                                    });
+                                                resolve(res);
+                                            });
+                                        } catch (error) {
+                                            reject(`[Place API ERR (response))] placeID: ${aPlace.placeID} Error:${error.message} ApiResponse: ${JSON.stringify(dataFromApi)}`);
+                                        }
                                     });
                                 })))
                                 .then((data) => {
