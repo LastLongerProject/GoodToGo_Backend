@@ -5,7 +5,7 @@ const debug = require('../helpers/debugger')('stores');
 const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const baseUrl = require('../config/config.js').serverBaseUrl;
+const baseUrl = require('../config/config.js').serverUrl;
 const intReLength = require('../helpers/toolkit').intReLength;
 const timeFormatter = require('../helpers/toolkit').timeFormatter;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;

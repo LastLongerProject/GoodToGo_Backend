@@ -20,7 +20,7 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
-const summaryReport=require('../helpers/summaryReport/viewFormat/googleSheet/handler');
+const summaryReport = require('../helpers/summaryReport/viewFormat/googleSheet/handler');
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -29,7 +29,10 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const { validateCreateApiContent, fetchBoxCreation } = require('../middlewares/validation/deliveryList/contentValidation.js')
+const {
+    validateCreateApiContent,
+    fetchBoxCreation
+} = require('../middlewares/validation/deliveryList/contentValidation.js')
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
@@ -45,7 +48,7 @@ const CACHE = {
 };
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
-const baseUrl = require("../config/config").serverBaseUrl + "/manager";
+const baseUrl = require("../config/config").serverUrl + "/manager";
 
 router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
@@ -2073,33 +2076,33 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
     });
 });
 
-router.get('/summaryData/googlesheet/:storeID/:sheetID',regAsAdminManager, validateRequest, (req,res,next)=>{
-    let storeID=Number(req.params.storeID);
-    let sheetID=req.params.sheetID;
+router.get('/summaryData/googlesheet/:storeID/:sheetID', regAsAdminManager, validateRequest, (req, res, next) => {
+    let storeID = Number(req.params.storeID);
+    let sheetID = req.params.sheetID;
     Promise.all([
-        summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID,sheetID),
-        summaryReport.List_Of_Containers_Be_Used(storeID,sheetID),
-        summaryReport.List_Of_User_Of_Containers(storeID,sheetID),
-        summaryReport.List_Of_Not_Return_Users(storeID,sheetID)
-    ])
-    .then(messenges=>{
-        let err_messenge=[];
-        for(let index in messenges){
-            if(messenges[index][0]){
-                err_messenge.push({
-                    which_function:index,
-                    error_messenge:messenges[index][0]
-                })
+            summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID, sheetID),
+            summaryReport.List_Of_Containers_Be_Used(storeID, sheetID),
+            summaryReport.List_Of_User_Of_Containers(storeID, sheetID),
+            summaryReport.List_Of_Not_Return_Users(storeID, sheetID)
+        ])
+        .then(messenges => {
+            let err_messenge = [];
+            for (let index in messenges) {
+                if (messenges[index][0]) {
+                    err_messenge.push({
+                        which_function: index,
+                        error_messenge: messenges[index][0]
+                    })
+                }
             }
-        }
-        if(err_messenge.length===0){
-            res.status(200).json({
-                success:true
-            })
-        }else{
-            next(err_messenge)
-        }
-    })
+            if (err_messenge.length === 0) {
+                res.status(200).json({
+                    success: true
+                })
+            } else {
+                next(err_messenge)
+            }
+        })
 })
 
 module.exports = router;
