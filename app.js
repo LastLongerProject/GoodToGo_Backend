@@ -50,7 +50,8 @@ app.use((req, res, next) => {
     if (!esm) {
         esm = require('express-status-monitor')({
             title: "GoodToGo Backend Monitor",
-            websocket: app.get('socket.io')
+            websocket: app.get('socket.io'),
+            socketPath: `${(config.serverEnv === null? "": ("/" + config.serverEnv))}/socket.io`
         });
     }
     esm(req, res, next);
@@ -162,8 +163,8 @@ function startServer() {
 
 // cookie middleware (just for identify user)
 function cookieMid() {
-    let url = URL.parse(config.serverBaseUrl);
-    if (!url.slashes) url = URL.parse(`http://${config.serverBaseUrl}`);
+    let url = URL.parse(config.serverUrl);
+    if (!url.slashes) url = URL.parse(`http://${config.serverUrl}`);
     const cookieOptions = {
         domain: url.hostname,
         path: url.path,

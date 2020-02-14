@@ -1,6 +1,6 @@
 const DataCacheFactory = require('../dataCacheFactory');
 
-const baseUrl = require('../../config/config.js').serverBaseUrl;
+const baseUrl = require('../../config/config.js').serverUrl;
 
 const CouponState = require('../enums/couponEnum').CouponState;
 const CouponTypeState = require('../enums/couponEnum').CouponTypeState;

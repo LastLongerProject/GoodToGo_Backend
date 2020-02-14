@@ -7,7 +7,7 @@ const validateRequest = require('../../middlewares/validation/authorization/vali
 const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
 const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
-const baseUrl = require('../../config/config.js').serverBaseUrl;
+const baseUrl = require('../../config/config.js').serverUrl;
 
 const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');

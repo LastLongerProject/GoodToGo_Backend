@@ -47,7 +47,7 @@ const CACHE = {
 };
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
-const baseUrl = require("../config/config").serverBaseUrl + "/manager";
+const baseUrl = require("../config/config").serverUrl + "/manager";
 
 router.get("/socketToken", checkRoleIsAdmin(), validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
