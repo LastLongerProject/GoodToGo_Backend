@@ -44,7 +44,7 @@
         "debug": "^3.1.0",
         "ejs": "~2.5.7",
         "express": "^4.16.4",
-        "express-status-monitor": "^1.2.7",
+        "express-status-monitor": "^1.2.8",
         "googleapis": "^44.0.0",
         "helmet": "^3.9.0",
         "jsonwebtoken": "^8.5.1",
