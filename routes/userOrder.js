@@ -284,7 +284,6 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             }, {
                 rentToUser: dbUser,
                 orderTime: theUserOrder.orderTime,
-                activity: "沒活動",
                 inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);
