@@ -86,6 +86,7 @@ module.exports = {
                     break;
                 case WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM:
                 case WebhookEvent.USER_ALMOST_OVERDUE:
+                case WebhookEvent.USER_LAST_CALL:
                 case WebhookEvent.USER_BANNED:
                 case WebhookEvent.USER_UNBANNED:
                 case WebhookEvent.USER_PURCHASED:

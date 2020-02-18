@@ -39,6 +39,9 @@ module.exports = {
                     pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target.customer, data);
                 }
                 break;
+            case NotificationEvent.USER_LAST_CALL:
+                pushBy.webhook(WebhookEvent.USER_LAST_CALL, target, data);
+                break;
             case NotificationEvent.USER_ALMOST_OVERDUE:
                 pushBy.webhook(WebhookEvent.USER_ALMOST_OVERDUE, target, data);
                 break;

@@ -31,8 +31,18 @@ const thisModule = module.exports = {
                 } else if (dbUser.bannedTimes <= 1) {
                     thisModule.unbanUser(dbUser, true);
                 }
-                if (sendNotice && summary.hasAlmostOverdueContainer) {
-                    thisModule.noticeUserWhoIsGoingToBeBanned(dbUser, summary.almostOverdueAmount);
+                if (sendNotice) {
+                    let event = null;
+                    if (summary.hasLastCallContainer) {
+                        event = NotificationEvent.USER_LAST_CALL;
+                    } else if (summary.hasAlmostOverdueContainer) {
+                        event = NotificationEvent.USER_ALMOST_OVERDUE;
+                    }
+                    if (event !== null)
+                        thisModule.noticeUser(dbUser, event, {
+                            almostOverdueAmount: summary.almostOverdueAmount,
+                            lastCallAmount: summary.lastCallAmount
+                        });
                 }
                 NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
                     userIsBanned: dbUser.hasBanned,
@@ -86,12 +96,15 @@ const thisModule = module.exports = {
             });
         }
     },
-    noticeUserWhoIsGoingToBeBanned: function (dbUser, almostOverdueAmount) {
+    noticeUser: function (dbUser, event, summary) {
         if (!dbUser.hasBanned) {
-            NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
-                bannedTimes: dbUser.bannedTimes,
-                almostOverdueAmount
+            const data = {
+                bannedTimes: dbUser.bannedTimes
+            };
+            Object.assign(data, {
+                summary
             });
+            NotificationCenter.emit(event, dbUser, data);
         }
     },
     purchase: function (aUser, cb) {
@@ -211,6 +224,7 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
             const almostOverdueAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.ALMOST_OVERDUE);
             const hasAlmostOverdueContainer = almostOverdueAmount > 0;
             const lastCallAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.LAST_CALL);
+            const hasLastCallContainer = lastCallAmount > 0;
 
             const summary = {
                 hasUnregisteredOrder,
@@ -218,7 +232,8 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
                 hasOverdueContainer,
                 almostOverdueAmount,
                 lastCallAmount,
-                overdueAmount
+                overdueAmount,
+                hasLastCallContainer
             };
 
             Object.assign(userDict[userID], {
