@@ -9,17 +9,13 @@ function computeDaysOfUsing(dateToCompute, now) {
 }
 
 module.exports = {
-    daysOverDue: function (dateToCompute, userPurchaseStatus, now) {
-        if (typeof now === "undefined") now = Date.now();
+    daysOverDue: function (dateToCompute, userPurchaseStatus, now = Date.now()) {
         return computeDaysOfUsing(dateToCompute, now) - DueDays[userPurchaseStatus];
     },
-    daysToDue: function (dateToCompute, userPurchaseStatus, now) {
-        if (typeof now === "undefined") now = Date.now();
+    daysToDue: function (dateToCompute, userPurchaseStatus, now = Date.now()) {
         return DueDays[userPurchaseStatus] - computeDaysOfUsing(dateToCompute, now);
     },
-    dueStatus: function (dateToCompute, userPurchaseStatus, now) {
-        if (typeof now === "undefined") now = Date.now();
-
+    dueStatus: function (dateToCompute, userPurchaseStatus, now = Date.now()) {
         const UserDueDays = DueDays[userPurchaseStatus];
         const UserLastCallDays = LastCallDays[userPurchaseStatus];
         const daysOfUsing = computeDaysOfUsing(dateToCompute, now);

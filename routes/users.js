@@ -1144,12 +1144,6 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
             describe: "Can't find user"
         });
         userTrade.banUser(dbUser, null, byUser.user.phone);
-        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-            userIsBanned: dbUser.hasBanned,
-            hasOverdueContainer: 9999,
-            hasUnregisteredOrder: 9999,
-            hasAlmostOverdueContainer: 9999
-        });
         res.json({
             success: true
         });
@@ -1167,13 +1161,7 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             success: false,
             describe: "Can't find user"
         });
-        userTrade.unbanUser(dbUser, true, byUser.user.phone);
-        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-            userIsBanned: dbUser.hasBanned,
-            hasOverdueContainer: 9999,
-            hasUnregisteredOrder: 9999,
-            hasAlmostOverdueContainer: 9999
-        });
+        userTrade.unbanUser(dbUser, false, byUser.user.phone);
         res.json({
             success: true
         });
