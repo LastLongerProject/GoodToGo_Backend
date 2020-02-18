@@ -63,7 +63,6 @@ module.exports = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
                 setTimeout(tasks.refreshContainer, 0, bot, generalCb);
                 setTimeout(tasks.refreshStore, 1000 * 60 * 5, generalCb);
-                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, generalCb);
                 setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, generalCb);
                 setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);

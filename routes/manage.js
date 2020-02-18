@@ -12,7 +12,6 @@ const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
 const refreshStore = require('../helpers/tasks').refreshStore;
 const refreshStoreImg = require('../helpers/tasks').refreshStoreImg;
 const refreshContainer = require('../helpers/tasks').refreshContainer;
-const refreshActivity = require('../helpers/tasks').refreshActivity;
 const refreshCoupon = require('../helpers/tasks').refreshCoupon;
 const refreshCouponImage = require('../helpers/tasks').refreshCouponImage;
 const refreshContainerIcon = require('../helpers/tasks').refreshContainerIcon;
@@ -21,6 +20,7 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const summaryReport = require('../helpers/summaryReport/viewFormat/googleSheet/handler');
 
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
@@ -29,7 +29,10 @@ const Trade = require('../models/DB/tradeDB');
 const Container = require('../models/DB/containerDB');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
-const { validateCreateApiContent, fetchBoxCreation } = require('../middlewares/validation/deliveryList/contentValidation.js')
+const {
+    validateCreateApiContent,
+    fetchBoxCreation
+} = require('../middlewares/validation/deliveryList/contentValidation.js')
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
@@ -45,7 +48,7 @@ const CACHE = {
 };
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
-const baseUrl = require("../config/config").serverBaseUrl + "/manager";
+const baseUrl = require("../config/config").serverUrl + "/manager";
 
 router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
@@ -1965,30 +1968,6 @@ router.patch('/refresh/container', regAsAdminManager, validateRequest, function 
 });
 
 /**
- * @apiName Manage refresh activity
- * @apiGroup Manage
- *
- * @api {patch} /manage/refresh/activity Refresh container
- * @apiPermission admin_manager
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            "success": true
-        }
- * 
- */
-router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshActivity(function (err) {
-        if (err) return next(err);
-        res.json({
-            "success": true
-        });
-    });
-});
-
-/**
  * @apiName Manage refresh coupon type
  * @apiGroup Manage
  *
@@ -2096,5 +2075,34 @@ router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequ
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
+
+router.get('/summaryData/googlesheet/:storeID/:sheetID', regAsAdminManager, validateRequest, (req, res, next) => {
+    let storeID = Number(req.params.storeID);
+    let sheetID = req.params.sheetID;
+    Promise.all([
+            summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID, sheetID),
+            summaryReport.List_Of_Containers_Be_Used(storeID, sheetID),
+            summaryReport.List_Of_User_Of_Containers(storeID, sheetID),
+            summaryReport.List_Of_Not_Return_Users(storeID, sheetID)
+        ])
+        .then(messenges => {
+            let err_messenge = [];
+            for (let index in messenges) {
+                if (messenges[index][0]) {
+                    err_messenge.push({
+                        which_function: index,
+                        error_messenge: messenges[index][0]
+                    })
+                }
+            }
+            if (err_messenge.length === 0) {
+                res.status(200).json({
+                    success: true
+                })
+            } else {
+                next(err_messenge)
+            }
+        })
+})
 
 module.exports = router;

@@ -50,7 +50,8 @@ app.use((req, res, next) => {
     if (!esm) {
         esm = require('express-status-monitor')({
             title: "GoodToGo Backend Monitor",
-            websocket: app.get('socket.io')
+            websocket: app.get('socket.io'),
+            socketPath: `${(config.serverEnv === null? "": ("/" + config.serverEnv))}/socket.io`
         });
     }
     esm(req, res, next);
@@ -58,7 +59,7 @@ app.use((req, res, next) => {
 
 app.use('/manage', manage);
 app.use('/images', (req, res, next) => {
-    res.setHeader('Cache-Control', `max-age=${60 * 60 * 24 * 3}`);
+    res.setHeader('Cache-Control', `public, max-age=${60 * 60 * 24 * 3}`);
     next();
 }, images);
 
@@ -160,8 +161,8 @@ function startServer() {
 
 // cookie middleware (just for identify user)
 function cookieMid() {
-    let url = URL.parse(config.serverBaseUrl);
-    if (!url.slashes) url = URL.parse(`http://${config.serverBaseUrl}`);
+    let url = URL.parse(config.serverUrl);
+    if (!url.slashes) url = URL.parse(`http://${config.serverUrl}`);
     const cookieOptions = {
         domain: url.hostname,
         path: url.path,

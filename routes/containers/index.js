@@ -113,7 +113,6 @@ router.post('/stock/:id', regAsAdmin, validateRequest, function (
  * @api {post} /containers/delivery/:id/:store Delivery box id to store
  * @apiPermission admin
  * @apiUse JWT
- * @apiParam {string} activity only pass if deliver to specific activity 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
@@ -417,8 +416,7 @@ router.post('/rent/:id', regAsStore, validateRequest, function (req, res, next) 
                 }, {
                     rentToUser: theCustomer,
                     orderTime: res._payload.orderTime,
-                    activity: "沒活動",
-                    inLineSystem: true
+                    inLineSystem: true,
                 }, (err, tradeSuccess, reply, tradeDetail) => {
                     if (err) return next(err);
                     if (!tradeSuccess) return res.status(403).json(reply);
@@ -670,6 +668,295 @@ router.post(
     }
 );
 
+/*
+
+Function for renew/list api and renew/:id api
+
+*/
+
+function Renew_Containers(dbStore,containers,storeID,boxID,orderTime){
+    return new Promise(function(resolve,reject){
+        new Promise(function(resolve,reject){
+            changeContainersState(
+                containers,
+                dbStore, {
+                    action: 'Return',
+                    newState: 3
+                }, {
+                    storeID,
+                    orderTime:orderTime,
+                    activity: "沒活動"
+                },
+                (err, tradeSuccess, reply, tradeDetail) => {
+                    if (err) reject({
+                        err:err
+                    });
+                    if (!tradeSuccess) reject({
+                        reply:reply
+                    });
+                    tradeCallback.return(tradeDetail, {
+                        storeID
+                    });
+                    let Return_reply=reply;
+                    resolve(Return_reply)
+                }
+            );
+        }).then(Return_reply=>{
+            new Promise(function(resolve,reject){
+                changeContainersState(
+                    containers,
+                    dbStore, {
+                        action: 'ReadyToClean',
+                        newState: 4
+                    }, {
+                        orderTime:orderTime,
+                    },
+                    (err, tradeSuccess, reply) => {
+                        if (err) reject({
+                            err:err
+                        });
+                        if (!tradeSuccess) reject({
+                            reply:reply
+                        });
+                        resolve(Return_reply)
+                    }
+                );
+            }).
+            then(Return_reply=>{
+                new Promise(function(resolve,reject){
+                    let task=function(done){
+                        changeContainersState(
+                            containers,
+                            dbStore, {
+                                action: 'Boxing',
+                                newState: 5
+                            }, {
+                                boxID,
+                            },
+                            (err, tradeSuccess, reply) => {
+                                if (err) reject({
+                                    err:err
+                                });
+                                if (!tradeSuccess) reject({
+                                    reply:reply
+                                });
+                                done()
+                            }
+                        );
+                    }
+                    redis.get('boxCtr', (err, boxCtr) => {
+                        if (err) reject({
+                            err:err
+                        });
+                        if (boxCtr == null) boxCtr = 1;
+                        else boxCtr++;
+                        redis.set('boxCtr', boxCtr, (err, reply) => {
+                            if (err) reject({
+                                err:err
+                            });
+                            if (reply !== 'OK') reject({
+                                reply:reply
+                            });
+                            redis.expire(
+                                'boxCtr',
+                                Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
+                                (err, reply) => {
+                                    if (err) reject({
+                                        err:err
+                                    });
+                                    if (reply !== 1) reject({
+                                        reply:reply
+                                    });
+                                    var today = new Date();
+                                    boxID =
+                                        today.getMonth() +
+                                        1 +
+                                        intReLength(today.getDate(), 2) +
+                                        intReLength(boxCtr, 3);
+                                    task(()=>{
+                                        resolve(Return_reply)
+                                    })
+                                }
+                            );
+                        });
+                    });
+                }).then((Return_reply)=>{
+                    new Promise(function(resolve,reject){
+                        changeContainersState(
+                            containers,
+                            dbStore, {
+                                action: 'Delivery',
+                                newState: 0,
+                            }, {
+                                boxID,
+                                storeID,
+                            },
+                            (err, tradeSuccess, reply) => {
+                                if (err) reject({
+                                    err:err
+                                });
+                                if (!tradeSuccess) reject({
+                                    reply:reply
+                                });
+                                resolve(Return_reply)
+                            }
+                        );
+                    }).then((Return_reply)=>{
+                        new Promise(function(resolve,reject){
+                            changeContainersState(
+                                containers,
+                                dbStore, {
+                                    action: 'Sign',
+                                    newState: 1
+                                }, {
+                                    boxID,
+                                    storeID: storeID,
+                                },
+                                (err, tradeSuccess, reply) => {
+                                    if (err) reject({
+                                        err:err
+                                    });
+                                    if (!tradeSuccess) reject({
+                                        reply:reply
+                                    });
+                                    resolve(Return_reply)
+                                }
+                            );
+                        }).then(Return_reply=>{
+                            resolve(Return_reply);
+                        }).catch(err_messenge=>{
+                            if(err_messenge.err) reject(err_messenge)
+                            if(err_messenge.reply) reject(err_messenge)
+                        })
+                    }).catch(err_messenge=>{
+                        if(err_messenge.err) reject(err_messenge)
+                        if(err_messenge.reply) reject(err_messenge)
+                    })
+                }).catch(err_messenge=>{
+                    if(err_messenge.err) reject(err_messenge)
+                    if(err_messenge.reply) reject(err_messenge)
+                })
+            }).catch(err_messenge=>{
+                if(err_messenge.err) reject(err_messenge)
+                if(err_messenge.reply) reject(err_messenge)
+            })
+        }).catch(err_messenge=>{
+            if(err_messenge.err) reject(err_messenge)
+            if(err_messenge.reply) reject(err_messenge)
+        })
+    })
+}
+/**
+ * @apiName Containers renew container
+ * @apiGroup Containers
+ *
+ * @api {post} /containers/renew/list Renew containers
+ * @apiPermission bot
+ * @apiPermission clerk
+ * @apiPermission admin
+ * 
+ * @apiUse JWT_orderTime
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ReturnMessage",
+            message: "Return Succeeded",
+            oriUser: "09xxxxxxxx",
+            containerList: [ 
+                {
+                    typeName: String,
+                    typeCode: Number,
+                    id: Number
+                },
+                ...
+            ]
+        }
+ * @apiUse RenewError
+ * @apiUse ChangeStateError
+ */
+router.post('/renew/list',
+    regAsBot,
+    regAsStore,
+    regAsAdmin,
+    validateRequest,
+    function(req, res, next) {
+        let dbStore = req._user;
+        if (!res._payload.orderTime)
+            return res.status(403).json({
+                code: 'F006',
+                type: 'renewContainerMessage',
+                message: 'Missing Order Time'
+            });
+        let orderTime=res._payload.orderTime;
+        let containers = req.body.containers;
+        const storeID = req.body.storeId;
+        let boxID;
+        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
+        .then(Return_reply=>{
+            res.json(Return_reply);
+        })
+        .catch(err_messenge=>{
+            if(err_messenge.err) next(err_messenge.err);
+            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
+        })
+    }
+)
+/**
+ * @apiName Containers renew container
+ * @apiGroup Containers
+ *
+ * @api {post} /containers/renew/:id Renew specific container
+ * @apiPermission bot
+ * @apiPermission clerk
+ * @apiPermission admin
+ * 
+ * @apiUse JWT_orderTime
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "ReturnMessage",
+            message: "Return Succeeded",
+            oriUser: "09xxxxxxxx",
+            containerList: [ 
+                {
+                    typeName: String,
+                    typeCode: Number,
+                    id: Number
+                },
+                ...
+            ]
+        }
+ * @apiUse RenewError
+ * @apiUse ChangeStateError
+ */
+router.post('/renew/:id',
+    regAsBot,
+    regAsStore,
+    regAsAdmin,
+    validateRequest,
+    function(req, res, next) {
+        let dbStore = req._user;
+        if (!res._payload.orderTime)
+            return res.status(403).json({
+                code: 'F006',
+                type: 'renewContainerMessage',
+                message: 'Missing Order Time'
+            });
+        let orderTime=res._payload.orderTime;
+        let container = req.params.id;
+        const storeID = req.body.storeId;
+        let boxID;
+        let containers = [container];
+        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
+        .then(Return_reply=>{
+            res.json(Return_reply);
+        })
+        .catch(err_messenge=>{
+            if(err_messenge.err) next(err_messenge.err);
+            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
+        })
+    }
+);
 /**
  * @apiName Containers Unbox 
  * @apiGroup Containers

@@ -13,6 +13,7 @@ const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
+const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
@@ -284,7 +285,6 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             }, {
                 rentToUser: dbUser,
                 orderTime: theUserOrder.orderTime,
-                activity: "沒活動",
                 inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
                 if (err) return next(err);

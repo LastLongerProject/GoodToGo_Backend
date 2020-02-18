@@ -110,7 +110,6 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const storeID = options.storeID; // Delivery Sign Return NEED
     const rentToUser = options.rentToUser || null; // Rent NEED
     const inLineSystem = options.inLineSystem; // Rent NEED
-    const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -260,8 +259,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         cycleCtr: theContainer.cycleCtr,
                                         box: boxID,
                                         inLineSystem: theContainer.inLineSystem
-                                    },
-                                    activity
+                                    }
                                 });
 
                                 resolve({
@@ -302,4 +300,4 @@ function getOriUser(action, theContainer, rentToUser, cb) {
     }, cb);
 }
 
-module.exports = changeContainersState;
+module.exports = changeContainersState ;
