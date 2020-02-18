@@ -48,7 +48,6 @@ const thisModule = module.exports = {
                 });
             }, (err, userDict) => {
                 if (err) return cb(err);
-                debug.log('Users\' Status is Refresh');
                 cb(null, userDict);
             });
         });

@@ -225,7 +225,11 @@ module.exports = {
         });
     },
     refreshAllUserUsingStatus: function (sendNotice, cb) {
-        userTrade.refreshUserUsingStatus(sendNotice, null, cb);
+        userTrade.refreshUserUsingStatus(sendNotice, null, (err, data) => {
+            if (err) return cb(err);
+            debug.log('Users\' Status refresh');
+            cb(null, data)
+        });
     },
     solveUnusualUserOrder: function (cb) {
         UserOrder.find({
@@ -251,7 +255,9 @@ module.exports = {
                                 "container.id": aUserOrder.containerID,
                                 "oriUser.phone": oriUser.user.phone,
                                 "tradeType.action": "Return",
-                                "tradeTime":{'$gt':aUserOrder.orderTime}
+                                "tradeTime": {
+                                    '$gt': aUserOrder.orderTime
+                                }
                             }, {}, {
                                 sort: {
                                     tradeTime: -1
