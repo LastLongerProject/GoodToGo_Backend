@@ -228,7 +228,7 @@ module.exports = {
         userTrade.refreshUserUsingStatus(sendNotice, null, (err, data) => {
             if (err) return cb(err);
             debug.log('Users\' Status refresh');
-            cb(null, data)
+            cb(null, data);
         });
     },
     solveUnusualUserOrder: function (cb) {

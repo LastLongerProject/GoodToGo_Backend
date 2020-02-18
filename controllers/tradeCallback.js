@@ -93,7 +93,7 @@ module.exports = {
 
                         userTrade.refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
                             if (err) return debug.error(err);
-                            const overdueAmount = userDict[dbCustomer._id].overdueAmount;
+                            const overdueAmount = userDict[dbCustomer._id].summary.overdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
                             NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
                                 customer: dbCustomer

@@ -17,14 +17,8 @@ const DueStatus = require('../models/enums/userEnum').DueStatus;
 const getDueStatus = require('../models/computed/dueStatus').dueStatus;
 const UserOrderCatalog = require('../models/variable/userOrderCatalog');
 
-const ID = Object.freeze({
-    isRegistered: "idRegistered",
-    notRegistered: "idNotRegistered"
-});
-const ReduceBy = Object.freeze({
-    idRegistered: "idRegistered",
-    dueStatus: "dueStatus"
-});
+const ID = require('../models/enums/analyzedOrderEnum').ID;
+const ReduceBy = require('../models/enums/analyzedOrderEnum').ReduceBy;
 
 const thisModule = module.exports = {
     refreshUserUsingStatus: function (sendNotice, specificUser, cb) {
@@ -200,14 +194,14 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
         const now = Date.now();
         userOrderList.forEach(aUserOrder => {
             const userID = aUserOrder.user;
-            const analyzedUserOrder = userDict[userID];
+            const analyzedUserOrder = userDict[userID].analyzedUserOrder;
             const dueStatus = getDueStatus(aUserOrder.orderTime, analyzedUserOrder.dbUser.getPurchaseStatus(), now);
             const isIdRegistered = aUserOrder.containerID !== null ? ID.isRegistered : ID.notRegistered;
             analyzedUserOrder[isIdRegistered][dueStatus].push(aUserOrder);
         });
 
         for (let userID in userDict) {
-            const analyzedUserOrder = userDict[userID];
+            const analyzedUserOrder = userDict[userID].analyzedUserOrder;
             const dbUser = analyzedUserOrder.dbUser;
 
             const unregisteredAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.idRegistered, ID.notRegistered);
@@ -227,6 +221,9 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
                 overdueAmount
             };
 
+            Object.assign(userDict[userID], {
+                summary
+            });
             taskPerUser(dbUser, analyzedUserOrder, summary);
         }
         cb(null, userDict);
