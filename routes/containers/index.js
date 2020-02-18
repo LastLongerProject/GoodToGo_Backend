@@ -676,177 +676,85 @@ Function for renew/list api and renew/:id api
 
 */
 
-function Renew_Containers(dbStore,containers,storeID,boxID,orderTime){
-    return new Promise(function(resolve,reject){
-        new Promise(function(resolve,reject){
-            changeContainersState(
-                containers,
-                dbStore, {
-                    action: 'Return',
-                    newState: 3
-                }, {
-                    storeID,
-                    orderTime:orderTime,
-                    activity: "沒活動"
-                },
-                (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) reject({
-                        err:err
-                    });
-                    if (!tradeSuccess) reject({
-                        reply:reply
-                    });
-                    tradeCallback.return(tradeDetail, {
-                        storeID
-                    });
-                    let Return_reply=reply;
-                    resolve(Return_reply)
-                }
-            );
-        }).then(Return_reply=>{
-            new Promise(function(resolve,reject){
-                changeContainersState(
-                    containers,
-                    dbStore, {
-                        action: 'ReadyToClean',
-                        newState: 4
+function Renew_Containers(dbStore, containers, storeID, boxID, orderTime) {
+    return new Promise(function (resolve, reject) {
+        changeContainersState(containers, dbStore, {
+            action: 'Return',
+            newState: 3
+        }, {
+            storeID,
+            orderTime: orderTime,
+            activity: "沒活動"
+        }, (err, tradeSuccess, reply, tradeDetail) => {
+            if (err) return reject([err]);
+            if (!tradeSuccess) return reject([null, reply]);
+            tradeCallback.return(tradeDetail, {
+                storeID
+            });
+            return resolve([reply]);
+        });
+    }).then(replyList => new Promise(function (resolve, reject) {
+        changeContainersState(containers, dbStore, {
+            action: 'ReadyToClean',
+            newState: 4
+        }, {
+            orderTime: orderTime
+        }, (err, tradeSuccess, reply) => {
+            if (err) return reject([err]);
+            if (!tradeSuccess) return reject([null, reply]);
+            return resolve(replyList.push(reply));
+        });
+    })).then(replyList => new Promise(function (resolve, reject) {
+        redis.get('boxCtr', (err, boxCtr) => {
+            if (err) return reject([err]);
+            if (boxCtr == null) boxCtr = 1;
+            else boxCtr++;
+            redis.set('boxCtr', boxCtr, (err, reply) => {
+                if (err) return reject([err]);
+                if (reply !== 'OK') return reject([null, reply]);
+                redis.expire('boxCtr', Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000), (err, reply) => {
+                    if (err) return reject([err]);
+                    if (reply !== 1) return reject([null, reply]);
+                    var today = new Date();
+                    const boxID = today.getMonth() + 1 + intReLength(today.getDate(), 2) + intReLength(boxCtr, 3);
+                    changeContainersState(containers, dbStore, {
+                        action: 'Boxing',
+                        newState: 5
                     }, {
-                        orderTime:orderTime,
-                    },
-                    (err, tradeSuccess, reply) => {
-                        if (err) reject({
-                            err:err
-                        });
-                        if (!tradeSuccess) reject({
-                            reply:reply
-                        });
-                        resolve(Return_reply)
-                    }
-                );
-            }).
-            then(Return_reply=>{
-                new Promise(function(resolve,reject){
-                    let task=function(done){
-                        changeContainersState(
-                            containers,
-                            dbStore, {
-                                action: 'Boxing',
-                                newState: 5
-                            }, {
-                                boxID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) reject({
-                                    err:err
-                                });
-                                if (!tradeSuccess) reject({
-                                    reply:reply
-                                });
-                                done()
-                            }
-                        );
-                    }
-                    redis.get('boxCtr', (err, boxCtr) => {
-                        if (err) reject({
-                            err:err
-                        });
-                        if (boxCtr == null) boxCtr = 1;
-                        else boxCtr++;
-                        redis.set('boxCtr', boxCtr, (err, reply) => {
-                            if (err) reject({
-                                err:err
-                            });
-                            if (reply !== 'OK') reject({
-                                reply:reply
-                            });
-                            redis.expire(
-                                'boxCtr',
-                                Math.floor((dateCheckpoint(1).valueOf() - Date.now()) / 1000),
-                                (err, reply) => {
-                                    if (err) reject({
-                                        err:err
-                                    });
-                                    if (reply !== 1) reject({
-                                        reply:reply
-                                    });
-                                    var today = new Date();
-                                    boxID =
-                                        today.getMonth() +
-                                        1 +
-                                        intReLength(today.getDate(), 2) +
-                                        intReLength(boxCtr, 3);
-                                    task(()=>{
-                                        resolve(Return_reply)
-                                    })
-                                }
-                            );
-                        });
+                        boxID
+                    }, (err, tradeSuccess, reply) => {
+                        if (err) return reject([err]);
+                        if (!tradeSuccess) return reject([null, reply]);
+                        return resolve(replyList.push(reply));
                     });
-                }).then((Return_reply)=>{
-                    new Promise(function(resolve,reject){
-                        changeContainersState(
-                            containers,
-                            dbStore, {
-                                action: 'Delivery',
-                                newState: 0,
-                            }, {
-                                boxID,
-                                storeID,
-                            },
-                            (err, tradeSuccess, reply) => {
-                                if (err) reject({
-                                    err:err
-                                });
-                                if (!tradeSuccess) reject({
-                                    reply:reply
-                                });
-                                resolve(Return_reply)
-                            }
-                        );
-                    }).then((Return_reply)=>{
-                        new Promise(function(resolve,reject){
-                            changeContainersState(
-                                containers,
-                                dbStore, {
-                                    action: 'Sign',
-                                    newState: 1
-                                }, {
-                                    boxID,
-                                    storeID: storeID,
-                                },
-                                (err, tradeSuccess, reply) => {
-                                    if (err) reject({
-                                        err:err
-                                    });
-                                    if (!tradeSuccess) reject({
-                                        reply:reply
-                                    });
-                                    resolve(Return_reply)
-                                }
-                            );
-                        }).then(Return_reply=>{
-                            resolve(Return_reply);
-                        }).catch(err_messenge=>{
-                            if(err_messenge.err) reject(err_messenge)
-                            if(err_messenge.reply) reject(err_messenge)
-                        })
-                    }).catch(err_messenge=>{
-                        if(err_messenge.err) reject(err_messenge)
-                        if(err_messenge.reply) reject(err_messenge)
-                    })
-                }).catch(err_messenge=>{
-                    if(err_messenge.err) reject(err_messenge)
-                    if(err_messenge.reply) reject(err_messenge)
-                })
-            }).catch(err_messenge=>{
-                if(err_messenge.err) reject(err_messenge)
-                if(err_messenge.reply) reject(err_messenge)
-            })
-        }).catch(err_messenge=>{
-            if(err_messenge.err) reject(err_messenge)
-            if(err_messenge.reply) reject(err_messenge)
-        })
-    })
+                });
+            });
+        });
+    })).then(replyList => new Promise(function (resolve, reject) {
+        changeContainersState(containers, dbStore, {
+            action: 'Delivery',
+            newState: 0,
+        }, {
+            boxID,
+            storeID
+        }, (err, tradeSuccess, reply) => {
+            if (err) return reject([err]);
+            if (!tradeSuccess) return reject([null, reply]);
+            return resolve(replyList.push(reply));
+        });
+    })).then(replyList => new Promise(function (resolve, reject) {
+        changeContainersState(containers, dbStore, {
+            action: 'Sign',
+            newState: 1
+        }, {
+            boxID,
+            storeID
+        }, (err, tradeSuccess, reply) => {
+            if (err) return reject([err]);
+            if (!tradeSuccess) return reject([null, reply]);
+            return resolve(replyList.push(reply));
+        });
+    }));
 }
 /**
  * @apiName Containers renew container
@@ -881,7 +789,7 @@ router.post('/renew/list',
     regAsStore,
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbStore = req._user;
         if (!res._payload.orderTime)
             return res.status(403).json({
@@ -889,20 +797,22 @@ router.post('/renew/list',
                 type: 'renewContainerMessage',
                 message: 'Missing Order Time'
             });
-        let orderTime=res._payload.orderTime;
+        let orderTime = res._payload.orderTime;
         let containers = req.body.containers;
         const storeID = req.body.storeId;
         let boxID;
-        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
-        .then(Return_reply=>{
-            res.json(Return_reply);
-        })
-        .catch(err_messenge=>{
-            if(err_messenge.err) next(err_messenge.err);
-            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
-        })
+        Renew_Containers(dbStore, containers, storeID, boxID, orderTime)
+            .then(replyList => {
+                res.json({
+                    results: replyList
+                });
+            })
+            .catch(err => {
+                if (err[0] !== null) return next(err[0]);
+                return res.status(403).json(err[1]);
+            })
     }
-)
+);
 /**
  * @apiName Containers renew container
  * @apiGroup Containers
@@ -936,7 +846,7 @@ router.post('/renew/:id',
     regAsStore,
     regAsAdmin,
     validateRequest,
-    function(req, res, next) {
+    function (req, res, next) {
         let dbStore = req._user;
         if (!res._payload.orderTime)
             return res.status(403).json({
@@ -944,19 +854,19 @@ router.post('/renew/:id',
                 type: 'renewContainerMessage',
                 message: 'Missing Order Time'
             });
-        let orderTime=res._payload.orderTime;
+        let orderTime = res._payload.orderTime;
         let container = req.params.id;
         const storeID = req.body.storeId;
         let boxID;
         let containers = [container];
-        Renew_Containers(dbStore,containers,storeID,boxID,orderTime)
-        .then(Return_reply=>{
-            res.json(Return_reply);
-        })
-        .catch(err_messenge=>{
-            if(err_messenge.err) next(err_messenge.err);
-            if(err_messenge.reply) res.status(403).json(err_messenge.reply);
-        })
+        Renew_Containers(dbStore, containers, storeID, boxID, orderTime)
+            .then(Return_reply => {
+                res.json(Return_reply);
+            })
+            .catch(err_messenge => {
+                if (err_messenge.err) next(err_messenge.err);
+                if (err_messenge.reply) res.status(403).json(err_messenge.reply);
+            })
     }
 );
 /**
