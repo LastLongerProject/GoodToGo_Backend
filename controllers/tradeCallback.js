@@ -91,7 +91,10 @@ module.exports = {
                         const bonusPointActivity = pointDetail.bonusPointActivity;
                         const overdueReturn = pointDetail.overdueReturn;
 
-                        userTrade.refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
+                        userTrade.refreshUserUsingStatus(dbCustomer, {
+                            sendNotice: false,
+                            banOrUnbanUser: true
+                        }, (err, userDict) => {
                             if (err) return debug.error(err);
                             const overdueAmount = userDict[dbCustomer._id].summary.overdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;

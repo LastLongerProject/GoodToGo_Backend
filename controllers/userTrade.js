@@ -21,15 +21,19 @@ const ID = require('../models/enums/analyzedOrderEnum').ID;
 const ReduceBy = require('../models/enums/analyzedOrderEnum').ReduceBy;
 
 const thisModule = module.exports = {
-    refreshUserUsingStatus: function (sendNotice, specificUser, cb) {
+    refreshUserUsingStatus: function (specificUser, toggle, cb) {
+        const sendNotice = toggle.sendNotice || false;
+        const banOrUnbanUser = toggle.banOrUnbanUser || false;
         if (!(specificUser instanceof User)) specificUser = null;
         findUsersToCheckStatus(specificUser, (userDict, userObjectIDList) => {
             analyzeUserOrder(userDict, userObjectIDList, (dbUser, analyzedUserOrder, summary) => {
-                if (summary.hasOverdueContainer) {
-                    const overdueList = analyzedUserOrder[ID.isRegistered][DueStatus.OVERDUE].concat(analyzedUserOrder[ID.notRegistered][DueStatus.OVERDUE]);
-                    thisModule.banUser(dbUser, overdueList);
-                } else if (dbUser.bannedTimes <= 1) {
-                    thisModule.unbanUser(dbUser, true);
+                if (banOrUnbanUser) {
+                    if (summary.hasOverdueContainer) {
+                        const overdueList = analyzedUserOrder[ID.isRegistered][DueStatus.OVERDUE].concat(analyzedUserOrder[ID.notRegistered][DueStatus.OVERDUE]);
+                        thisModule.banUser(dbUser, overdueList);
+                    } else if (dbUser.bannedTimes <= 1) {
+                        thisModule.unbanUser(dbUser, true);
+                    }
                 }
                 if (sendNotice) {
                     let event = null;
@@ -208,14 +212,14 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
         userOrderList.forEach(aUserOrder => {
             const userID = aUserOrder.user;
             const analyzedUserOrder = userDict[userID].analyzedUserOrder;
-            const dueStatus = getDueStatus(aUserOrder.orderTime, analyzedUserOrder.dbUser.getPurchaseStatus(), now);
+            const dueStatus = getDueStatus(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
             const isIdRegistered = aUserOrder.containerID !== null ? ID.isRegistered : ID.notRegistered;
             analyzedUserOrder[isIdRegistered][dueStatus].push(aUserOrder);
         });
 
         for (let userID in userDict) {
             const analyzedUserOrder = userDict[userID].analyzedUserOrder;
-            const dbUser = analyzedUserOrder.dbUser;
+            const dbUser = userDict[userID].dbUser;
 
             const unregisteredAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.idRegistered, ID.notRegistered);
             const hasUnregisteredOrder = unregisteredAmount > 0;
@@ -227,13 +231,14 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
             const hasLastCallContainer = lastCallAmount > 0;
 
             const summary = {
+                unregisteredAmount,
                 hasUnregisteredOrder,
-                hasAlmostOverdueContainer,
-                hasOverdueContainer,
                 almostOverdueAmount,
+                hasAlmostOverdueContainer,
                 lastCallAmount,
+                hasLastCallContainer,
                 overdueAmount,
-                hasLastCallContainer
+                hasOverdueContainer
             };
 
             Object.assign(userDict[userID], {
@@ -247,7 +252,7 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
 
 function analyzedDataCounter(analyzedData, reduceBy, dataToReduce) {
     if (reduceBy === ReduceBy.idRegistered) {
-        return Object.values(analyzedData[dataToReduce]).reduce((accumulator, aList) => accumulator + aList.length);
+        return Object.values(analyzedData[dataToReduce]).reduce((accumulator, aList) => accumulator + aList.length, 0);
     } else if (reduceBy === ReduceBy.dueStatus) {
         let result = 0;
         const keyList = Object.keys(analyzedData);

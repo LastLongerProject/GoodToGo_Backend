@@ -225,7 +225,10 @@ module.exports = {
         });
     },
     refreshAllUserUsingStatus: function (sendNotice, cb) {
-        userTrade.refreshUserUsingStatus(sendNotice, null, (err, data) => {
+        userTrade.refreshUserUsingStatus(null, {
+            sendNotice,
+            banOrUnbanUser: true
+        }, (err, data) => {
             if (err) return cb(err);
             debug.log('Users\' Status refresh');
             cb(null, data);

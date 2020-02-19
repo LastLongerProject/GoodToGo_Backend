@@ -1144,8 +1144,14 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
             describe: "Can't find user"
         });
         userTrade.banUser(dbUser, null, byUser.user.phone);
-        res.json({
-            success: true
+        userTrade.refreshUserUsingStatus(dbUser, {
+            sendNotice: true,
+            banOrUnbanUser: false
+        }, err => {
+            if (err) return next(err);
+            res.json({
+                success: true
+            });
         });
     });
 });
@@ -1162,8 +1168,14 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             describe: "Can't find user"
         });
         userTrade.unbanUser(dbUser, false, byUser.user.phone);
-        res.json({
-            success: true
+        userTrade.refreshUserUsingStatus(dbUser, {
+            sendNotice: true,
+            banOrUnbanUser: false
+        }, err => {
+            if (err) return next(err);
+            res.json({
+                success: true
+            });
         });
     });
 });

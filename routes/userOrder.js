@@ -185,7 +185,10 @@ router.post('/add', validateLine, validateStoreCode, function (req, res, next) {
                     containerAmount,
                     time: now
                 });
-                userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(dbUser, {
+                    sendNotice: false,
+                    banOrUnbanUser: true
+                }, err => {
                     if (err) return debug.error(err);
                 });
             })
@@ -300,7 +303,10 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                     });
                 });
                 tradeCallback.rent(tradeDetail, null);
-                userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(dbUser, {
+                    sendNotice: false,
+                    banOrUnbanUser: true
+                }, err => {
                     if (err) return debug.error(err);
                 });
             });
@@ -472,7 +478,10 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
                     storeName: StoreDict[storeID].name
                 })
 
-                return userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                return userTrade.refreshUserUsingStatus(dbUser, {
+                    sendNotice: false,
+                    banOrUnbanUser: true
+                }, err => {
                     if (err) return debug.error(err);
                 });
             })
