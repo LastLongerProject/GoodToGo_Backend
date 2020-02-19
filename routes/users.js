@@ -19,7 +19,6 @@ const intReLength = require('../helpers/toolkit').intReLength;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
 
 const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
-const NotificationEvent = require('../helpers/notifications/enums/events');
 const SnsAppType = require('../helpers/notifications/enums/sns/appType');
 
 const redis = require('../models/redis');
@@ -32,7 +31,6 @@ const getGlobalUsedAmount = require('../models/computed/containerStatistic').glo
 
 const UserRole = require('../models/enums/userEnum').UserRole;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
-const NotificationCenter = require('../helpers/notifications/center');
 
 const setDefaultPassword = require('../config/keys').setDefaultPassword;
 

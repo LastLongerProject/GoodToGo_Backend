@@ -1,5 +1,3 @@
-const getDateCheckpoint = require('./toolkit').getDateCheckpoint;
-
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 const userUsingAmount = require('../models/computed/containerStatistic').line_user_using;
 const RentalQualification = require("../models/enums/userEnum").RentalQualification;
@@ -28,15 +26,17 @@ exports.getContainerHash = function (containerList, isOverview = false) {
     let hashValue
     let set
 
-    if (!isOverview) {
+    if(!isOverview) {
         const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
         set = new Set(containerList.map(container => containerDict[container]))
     } else {
-        set = new Set(containerList.map(content=>content.containerType))
+        set = new Set(containerList.map(content => content.containerType))
     }
 
-    hashValue = hash(set, {unorderedSets: true})
-    
+    hashValue = hash(set, {
+        unorderedSets: true
+    })
+
     return String(set.size) + hashValue
 }
 

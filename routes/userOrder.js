@@ -13,7 +13,6 @@ const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
