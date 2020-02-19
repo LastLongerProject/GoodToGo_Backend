@@ -229,9 +229,9 @@ module.exports = {
             sendNotice,
             banOrUnbanUser: true
         }, (err, data) => {
-            if (err) return cb(err);
+            if (cb) return cb(err, data);
+            if (err) return debug.error(err);
             debug.log('Users\' Status refresh');
-            cb(null, data);
         });
     },
     solveUnusualUserOrder: function (cb) {
@@ -244,73 +244,72 @@ module.exports = {
             if (err) return cb(err);
 
             Promise
-                .all(
-                    userOrderList.map(aUserOrder => new Promise((resolve, reject) => {
-                        User.findById(aUserOrder.user, (err, oriUser) => {
+                .all(userOrderList.map(aUserOrder => new Promise((resolve, reject) => {
+                    User.findById(aUserOrder.user, (err, oriUser) => {
+                        if (err) return reject(err);
+                        if (!oriUser) return resolve({
+                            success: false,
+                            orderID: aUserOrder.orderID,
+                            msg: `[FixUserOrder] Can't find oriUser, OrderID: ${aUserOrder.orderID}`
+                        });
+
+                        Trade.findOne({
+                            "container.id": aUserOrder.containerID,
+                            "oriUser.phone": oriUser.user.phone,
+                            "tradeType.action": "Return",
+                            "tradeTime": {
+                                '$gt': aUserOrder.orderTime
+                            }
+                        }, {}, {
+                            sort: {
+                                tradeTime: -1
+                            }
+                        }, function (err, theTrade) {
                             if (err) return reject(err);
-                            if (!oriUser) return resolve({
-                                success: false,
-                                orderID: aUserOrder.orderID,
-                                msg: `[FixUserOrder] Can't find oriUser, OrderID: ${aUserOrder.orderID}`
+                            if (!theTrade) return resolve({
+                                success: true,
+                                orderID: null,
+                                msg: `[FixUserOrder] Normal User Order, OrderID: ${aUserOrder.orderID}`
                             });
 
-                            Trade.findOne({
-                                "container.id": aUserOrder.containerID,
-                                "oriUser.phone": oriUser.user.phone,
-                                "tradeType.action": "Return",
-                                "tradeTime": {
-                                    '$gt': aUserOrder.orderTime
-                                }
-                            }, {}, {
-                                sort: {
-                                    tradeTime: -1
-                                }
-                            }, function (err, theTrade) {
+                            User.findOne({
+                                "user.phone": theTrade.newUser.phone
+                            }, (err, newUser) => {
                                 if (err) return reject(err);
-                                if (!theTrade) return resolve({
-                                    success: true,
-                                    orderID: null,
-                                    msg: `[FixUserOrder] Normal User Order, OrderID: ${aUserOrder.orderID}`
+                                if (!newUser) return resolve({
+                                    success: false,
+                                    orderID: aUserOrder.orderID,
+                                    msg: `[FixUserOrder] Can't find newUser, OrderID: ${aUserOrder.orderID}`
                                 });
 
-                                User.findOne({
-                                    "user.phone": theTrade.newUser.phone
-                                }, (err, newUser) => {
+                                Container.findOne({
+                                    "ID": theTrade.container.id
+                                }, (err, theContainer) => {
                                     if (err) return reject(err);
-                                    if (!newUser) return resolve({
+                                    if (!theContainer) return resolve({
                                         success: false,
                                         orderID: aUserOrder.orderID,
-                                        msg: `[FixUserOrder] Can't find newUser, OrderID: ${aUserOrder.orderID}`
+                                        msg: `[FixUserOrder] Can't find theContainer, OrderID: ${aUserOrder.orderID}`
                                     });
 
-                                    Container.findOne({
-                                        "ID": theTrade.container.id
-                                    }, (err, theContainer) => {
-                                        if (err) return reject(err);
-                                        if (!theContainer) return resolve({
-                                            success: false,
-                                            orderID: aUserOrder.orderID,
-                                            msg: `[FixUserOrder] Can't find theContainer, OrderID: ${aUserOrder.orderID}`
-                                        });
-
-                                        const tradeDetail = {
-                                            oriUser,
-                                            newUser,
-                                            container: theContainer
-                                        };
-                                        tradeCallback.return([tradeDetail], {
-                                            storeID: theTrade.newUser.storeID
-                                        });
-                                        resolve({
-                                            success: true,
-                                            orderID: aUserOrder.orderID,
-                                            msg: `[FixUserOrder] Try to fix UserOrder, OrderID: ${aUserOrder.orderID}`
-                                        });
+                                    const tradeDetail = {
+                                        oriUser,
+                                        newUser,
+                                        container: theContainer
+                                    };
+                                    tradeCallback.return([tradeDetail], {
+                                        storeID: theTrade.newUser.storeID
+                                    });
+                                    resolve({
+                                        success: true,
+                                        orderID: aUserOrder.orderID,
+                                        msg: `[FixUserOrder] Try to fix UserOrder, OrderID: ${aUserOrder.orderID}`
                                     });
                                 });
                             });
                         });
-                    })))
+                    });
+                })))
                 .then(results => {
                     const successUserOrder = [];
                     const failUserOrder = [];
@@ -332,7 +331,7 @@ module.exports = {
                         failMsg
                     });
                 })
-                .catch(cb)
+                .catch(cb);
         });
     },
     checkUserPoint: function (cb) {
