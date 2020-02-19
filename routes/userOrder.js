@@ -274,13 +274,13 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                         type: 'userOrderMessage',
                         message: 'Register ContainerID of UserOrder Success'
                     });
-                });
-                tradeCallback.rent(tradeDetail, null);
-                userTrade.refreshUserUsingStatus(dbUser, {
-                    sendNotice: false,
-                    banOrUnbanUser: true
-                }, err => {
-                    if (err) return debug.error(err);
+                    tradeCallback.rent(tradeDetail, null);
+                    userTrade.refreshUserUsingStatus(dbUser, {
+                        sendNotice: false,
+                        banOrUnbanUser: true
+                    }, err => {
+                        if (err) return debug.error(err);
+                    });
                 });
             });
         });
