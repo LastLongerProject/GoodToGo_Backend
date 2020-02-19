@@ -1,4 +1,4 @@
-const User = require('../../models/DB/userDB'); // load up the user model
+const User = require('../../../models/DB/userDB'); // load up the user model
 
 module.exports = {
     liff: function (req, res, next) {

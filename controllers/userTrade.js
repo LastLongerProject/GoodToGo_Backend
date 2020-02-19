@@ -3,19 +3,19 @@ const debug = require('../helpers/debugger')('userTrade');
 const couponTrade = require('./couponTrade');
 
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const UserTradeLog = require("../models/DB/userTradeLogDB");
 
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const TradeAction = require("../models/enums/userEnum").TradeAction;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 const DueStatus = require('../models/enums/userEnum').DueStatus;
 const getDueStatus = require('../models/computed/dueStatus').dueStatus;
-const UserOrderCatalog = require('../models/variable/userOrderCatalog');
+const UserOrderCatalog = require('../models/variables/userOrderCatalog');
 
 const ID = require('../models/enums/analyzedOrderEnum').ID;
 const ReduceBy = require('../models/enums/analyzedOrderEnum').ReduceBy;
@@ -126,7 +126,7 @@ const thisModule = module.exports = {
                     hasPurchase: true,
                     registerMethod: RegisterMethod.PURCHASE,
                     roles: {
-                        typeList: [UserRole.CUSTOMER]
+                        typeList: [RoleType.CUSTOMER]
                     }
                 });
                 newUser.save(err => {

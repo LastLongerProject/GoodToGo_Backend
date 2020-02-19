@@ -7,7 +7,7 @@ const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const PointLog = require('../models/DB/pointLogDB');
 
-const MyCoupon = require('../models/variable/coupon').myCoupon;
+const MyCoupon = require('../models/variables/coupon').myCoupon;
 
 const generateUUID = require('../helpers/tools').generateUUID;
 const bindFunction = require('../helpers/toolkit').bindFunction;

@@ -1,5 +1,9 @@
 const DataCacheFactory = require("../models/dataCacheFactory.js");
 const userUsingAmount = require('../models/computed/containerStatistic').line_user_using;
+const debug = require('../helpers/debugger')('tools');
+
+const User = require("../models/DB/userDB");
+const RoleType = require("../models/enums/userEnum").RoleType;
 const RentalQualification = require("../models/enums/userEnum").RentalQualification;
 const HoldingQuantityLimitation = require("../models/enums/userEnum").HoldingQuantityLimitation;
 const hash = require('object-hash');
@@ -42,6 +46,17 @@ exports.getContainerHash = function (containerList, isOverview = false) {
 
 exports.generateUUID = function () {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+function getStoreListInArea(stationID) {
+    const stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
+    return stationDict[stationID].storeList;
+}
+
+exports.getStoreListInArea = getStoreListInArea;
+
+exports.checkStoreIsInArea = function (storeID, stationID) {
+    return getStoreListInArea(stationID).indexOf(storeID) !== -1;
 };
 
 exports.userIsAvailableForRentContainer = function (dbUser, amountOrdered, byPassCheck, cb) {
@@ -98,3 +113,27 @@ exports.userIsAvailableForRentContainer = function (dbUser, amountOrdered, byPas
         });
     });
 };
+
+exports.getSystemBot = function (done) {
+    User.findOne({
+        "user.phone": "0900000000"
+    }, (err, dbBot) => {
+        if (err) return done(err);
+        if (!dbBot) {
+            dbBot = new User({
+                user: {
+                    phone: "0900000000",
+                    password: null,
+                    name: "GoodToGoBot"
+                }
+            });
+            dbBot.addRole(RoleType.BOT, {}, err => {
+                if (err) return debug.error(err);
+                dbBot.save(err => {
+                    if (err) return debug.error(err);
+                });
+            });
+        }
+        done(null, dbBot);
+    });
+}

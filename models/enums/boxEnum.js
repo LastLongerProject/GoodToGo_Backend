@@ -5,7 +5,8 @@ module.exports = {
         Delivering: "Delivering",
         Signed: "Signed",
         Stocked: "Stocked",
-        Archived: "Archived",
+        // Archived: "Archived",
+        Dispatching: "Dispatching"
     }),
     BoxAction: Object.freeze({
         Create: "Create",
@@ -16,7 +17,10 @@ module.exports = {
         Stock: "Stock",
         CancelArrival: "CancelArrival",
         ModifyDueDate: "ModifyDueDate",
-        Archive: "Archive",
-        Assign: "Assign"
+        // Archive: "Archive",
+        Assign: "Assign",
+        Dispatch: "Dispatch",
+        AcceptDispatch: "AcceptDispatch",
+        RejectDispatch: "RejectDispatch"
     })
 };

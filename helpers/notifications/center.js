@@ -1,10 +1,10 @@
 const debug = require("../debugger")("notification_center");
 
-const NotificationEvent = require("./enums/events");
-const SnsEvent = require("./enums/sns/events");
-const SnsAppType = require("./enums/sns/appType");
-const WebhookEvent = require("./enums/webhook/events");
-const SocketEvent = require("./enums/socket/events");
+const SnsEvent = require("../../models/enums/notificationEnum").SnsEvent;
+const SnsAppType = require("../../models/enums/notificationEnum").AppType;
+const SocketEvent = require("../../models/enums/notificationEnum").SocketEvent;
+const WebhookEvent = require("../../models/enums/notificationEnum").WebhookEvent;
+const NotificationEvent = require("../../models/enums/notificationEnum").CenterEvent;
 
 const pushBy = require("./push");
 
@@ -12,32 +12,19 @@ module.exports = {
     emit: function (event, target, data) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
-                if (target.clerk &&
-                    target.clerk.roles &&
-                    target.clerk.roles.clerk &&
-                    typeof target.clerk.roles.clerk.storeID !== "undefined") {
-                    pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target.clerk, data);
-                } else {
-                    debug.error(`Clerk Struc Invalid. Clerk: ${JSON.stringify(target.clerk)}`);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target, data);
                 break;
             case NotificationEvent.CONTAINER_RENT:
-                if (target.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target.customer, data);
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target.customer);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target, data);
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target);
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data);
                 break;
             case NotificationEvent.CONTAINER_RETURN:
-                if (target.customer) {
-                    pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data);
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer);
-                }
+                pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target, data);
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target);
                 break;
             case NotificationEvent.CONTAINER_RETURN_LINE:
-                if (target.customer) {
-                    pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target.customer, data);
-                }
+                pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target, data);
                 break;
             case NotificationEvent.USER_LAST_CALL:
                 pushBy.webhook(WebhookEvent.USER_LAST_CALL, target, data);

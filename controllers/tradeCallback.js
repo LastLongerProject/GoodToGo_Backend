@@ -7,7 +7,7 @@ const userTrade = require('../controllers/userTrade');
 const pointTrade = require('../controllers/pointTrade');
 
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 const generateUUID = require('../helpers/tools').generateUUID;
 
 module.exports = {
@@ -17,9 +17,7 @@ module.exports = {
                 aTradeDetail => aTradeDetail.newUser,
                 aTradeDetail => aTradeDetail.container)
             .forEach(aCustomerTradeDetail => {
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
-                    customer: aCustomerTradeDetail.customer
-                }, {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, aCustomerTradeDetail.customer, {
                     containerList: aCustomerTradeDetail.containerList
                 });
                 if (storeID === null) return;
@@ -58,9 +56,7 @@ module.exports = {
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
                 const containerList = aTradeDetail.containerList;
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
-                    customer: dbCustomer
-                }, {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, dbCustomer, {
                     containerList: containerList
                 });
 
@@ -98,9 +94,7 @@ module.exports = {
                             if (err) return debug.error(err);
                             const overdueAmount = userDict[dbCustomer._id].summary.overdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
-                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
-                                customer: dbCustomer
-                            }, {
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, dbCustomer, {
                                 conditions: {
                                     isPurchasedUser,
                                     isOverdueReturn,

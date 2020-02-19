@@ -5,12 +5,17 @@ const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
 const Coupon = require('../models/DB/couponDB');
+const Station = require('../models/DB/stationDB');
 const PlaceID = require('../models/DB/placeIdDB');
 const PointLog = require("../models/DB/pointLogDB");
 const Container = require('../models/DB/containerDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
+
+const RoleType = require('../models/enums/userEnum').RoleType;
+const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
+const ContainerAction = require('../models/enums/containerEnum').Action;
 
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
@@ -19,21 +24,21 @@ const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
 
 module.exports = {
-    storeListInit: function (cb) {
+    storeListCaching: function (cb) {
         storeListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
             debug.log('storeList init');
         });
     },
-    containerListInit: function (cb) {
+    containerListCaching: function (cb) {
         containerListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
             debug.log('containerList init');
         });
     },
-    couponListInit: function (cb) {
+    couponListCaching: function (cb) {
         couponListGenerator(err => {
             if (cb) return cb(err);
             if (err) return debug.error(err);
@@ -43,7 +48,7 @@ module.exports = {
     checkCouponIsExpired: function (cb) {
         const CouponTypeDict = DataCacheFactory.get(DataCacheFactory.keys.COUPON_TYPE);
         Coupon.find((err, couponList) => {
-            if (err) return debug.error(err);
+            if (err) return cb(err);
             const now = Date.now();
             couponList.forEach(aCoupon => {
                 if (!CouponTypeDict[aCoupon.couponType]) return;
@@ -59,8 +64,7 @@ module.exports = {
                     });
                 }
             });
-            if (cb) return cb(null);
-            debug.log('Expired Coupon is Check');
+            cb(null, 'Expired Coupon is Check');
         });
     },
     refreshStore: function (cb) {
@@ -69,6 +73,16 @@ module.exports = {
             storeListGenerator(err => {
                 if (err) return cb(err);
                 debug.log('storeList refresh');
+                cb(null, data);
+            });
+        });
+    },
+    refreshStation: function (cb) {
+        sheet.getStation((err, data) => {
+            if (err) return cb(err);
+            storeListGenerator(err => {
+                if (err) return cb(err);
+                debug.log('stationList refresh');
                 cb(null, data);
             });
         });
@@ -242,7 +256,6 @@ module.exports = {
             }
         }, (err, userOrderList) => {
             if (err) return cb(err);
-
             Promise
                 .all(userOrderList.map(aUserOrder => new Promise((resolve, reject) => {
                     User.findById(aUserOrder.user, (err, oriUser) => {
@@ -256,7 +269,7 @@ module.exports = {
                         Trade.findOne({
                             "container.id": aUserOrder.containerID,
                             "oriUser.phone": oriUser.user.phone,
-                            "tradeType.action": "Return",
+                            "tradeType.action": ContainerAction.RETURN,
                             "tradeTime": {
                                 '$gt': aUserOrder.orderTime
                             }
@@ -358,6 +371,82 @@ module.exports = {
                 }
             });
         });
+    },
+    migrateUserRoleStructure: function (cb) {
+        User.find({
+            "user.phone": {
+                $ne: undefined
+            }
+        }, (err, userList) => {
+            if (err) return cb(err);
+            Promise
+                .all(userList.map(aUser => new Promise((resolve, reject) => {
+                    const newRoleList = [];
+                    for (let aRoleKey in aUser.roles) {
+                        if (ORI_ROLE_TYPE.indexOf(aRoleKey) === -1 || !aUser.roles[aRoleKey]) continue;
+                        let theRoleKey = aRoleKey;
+                        let theRole = aUser.roles[theRoleKey];
+                        switch (theRoleKey) {
+                            case RoleType.CLERK:
+                                newRoleList.push({
+                                    roleType: RoleType.STORE,
+                                    storeID: theRole.storeID,
+                                    manager: theRole.manager
+                                });
+                                break;
+                            case RoleType.ADMIN:
+                                newRoleList.push({
+                                    roleType: RoleType.ADMIN,
+                                    asStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    asStationID: 0,
+                                    manager: theRole.manager
+                                });
+                                newRoleList.push({
+                                    roleType: RoleType.CLEAN_STATION,
+                                    stationID: 0,
+                                    manager: theRole.manager
+                                });
+                                break;
+                            case RoleType.BOT:
+                                newRoleList.push({
+                                    roleType: RoleType.ADMIN,
+                                    scopeID: theRole.scopeID,
+                                    rentFromStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    returnToStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                    reloadToStationID: aUser.roles.admin ? aUser.roles.admin.stationID : null
+                                });
+                                break;
+                            case RoleType.CUSTOMER:
+                                Object.assign(theRole, {
+                                    roleType: RoleType.CUSTOMER
+                                });
+                                newRoleList.push(theRole);
+                                break;
+                            default:
+                                reject(`Unknown Origin Role Type:[${theRoleKey}] - [${JSON.stringify(theRole)}]`);
+                        }
+                    }
+                    Promise
+                        .all(newRoleList.map(aNewRole => new Promise((innerResolve, innerReject) => {
+                            aUser.addRole(aNewRole.roleType, aNewRole, err => {
+                                if (err) return innerReject(err);
+                                innerResolve();
+                            });
+                        })))
+                        .then(() => {
+                            aUser.role = undefined;
+                            aUser.save(err => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                        })
+                        .catch(reject);
+                })))
+                .then(() => {
+                    cb(null, "Done User Role Migration");
+                })
+                .catch(cb);
+        });
     }
 }
 
@@ -370,24 +459,44 @@ function storeListGenerator(cb) {
         if (err) return cb(err);
         Store.find({}, {}, {
             sort: {
-                ID: 1
+                id: 1
             }
         }, (err, stores) => {
             if (err) return cb(err);
-            var storeDict = {};
-            places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
-            stores.forEach(aStore => {
-                if (storeDict[aStore.id]) Object.assign(storeDict[aStore.id], {
-                    img_info: aStore.img_info,
-                    photos_fromGoogle: aStore.photos_fromGoogle,
-                    url_fromGoogle: aStore.url_fromGoogle,
-                    address: aStore.address,
-                    opening_hours: aStore.opening_hours,
-                    location: aStore.location
-                })
+            Station.find({}, {}, {
+                sort: {
+                    ID: 1
+                }
+            }, (err, stations) => {
+                const storeDict = {};
+                const stationDict = {};
+                places.forEach(aPlace => storeDict[aPlace.ID] = aPlace);
+                stations.forEach(aStation => {
+                    stationDict[aStation.ID] = aStation;
+                    Object.assign(stationDict[aStation.ID], {
+                        storeList: []
+                    });
+                });
+                stores.forEach(aStore => {
+                    if (storeDict[aStore.id])
+                        Object.assign(storeDict[aStore.id], {
+                            img_info: aStore.img_info,
+                            photos_fromGoogle: aStore.photos_fromGoogle,
+                            url_fromGoogle: aStore.url_fromGoogle,
+                            address: aStore.address,
+                            opening_hours: aStore.opening_hours,
+                            location: aStore.location
+                        });
+                    const deliveryAreaList = aStore.delivery_area;
+                    deliveryAreaList.forEach(aArea => {
+                        if (stationDict[aArea])
+                            stationDict[aArea].storeList.push(aStore.id);
+                    });
+                });
+                DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
+                DataCacheFactory.set(DataCacheFactory.keys.STATION, stationDict);
+                cb();
             });
-            DataCacheFactory.set(DataCacheFactory.keys.STORE, storeDict);
-            cb();
         });
     });
 }

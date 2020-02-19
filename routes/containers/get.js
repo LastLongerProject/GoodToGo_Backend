@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../../helpers/debugger')('containers_get');
+const debug = require('../../helpers/debugger')('containers/get');
 
-const validateDefault = require('../../middlewares/validation/validateDefault');
-const validateRequest = require('../../middlewares/validation/validateRequest').JWT;
-const regAsStore = require('../../middlewares/validation/validateRequest').regAsStore;
-const regAsAdmin = require('../../middlewares/validation/validateRequest').regAsAdmin;
+const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsCleanStation = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 
 const baseUrl = require('../../config/config.js').serverUrl;
 
@@ -18,7 +18,10 @@ const intReLength = require('../../helpers/toolkit').intReLength;
 const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
-const UserRole = require('../../models/enums/userEnum').UserRole;
+const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerState = require('../../models/enums/containerEnum').State;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 
 const historyDays = 14;
 
@@ -84,7 +87,7 @@ router.get('/list', validateDefault, function (req, res, next) {
  * @api {get} /containers/get/toDelivery Get toDelivery list
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -119,59 +122,56 @@ router.get('/list', validateDefault, function (req, res, next) {
         }
  *
  */
-router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
+router.get('/toDelivery', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
-    process.nextTick(function () {
-        Box.find(function (err, boxList) {
-            if (err) return next(err);
-            if (boxList.length === 0) return res.json({
-                toDelivery: []
-            });
-            var boxArr = [];
-            var thisBox;
-            var thisType;
-            for (var i = 0; i < boxList.length; i++) {
-                thisBox = boxList[i].boxID;
-                var thisBoxTypeList = [];
-                var thisBoxContainerList = {};
-                for (var j = 0; j < boxList[i].containerList.length; j++) {
-                    thisType = containerDict[boxList[i].containerList[j]];
-                    if (thisBoxTypeList.indexOf(thisType) < 0) {
-                        thisBoxTypeList.push(thisType);
-                        thisBoxContainerList[thisType] = [];
-                    }
-                    thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+    Box.find(function (err, boxList) {
+        if (err) return next(err);
+        if (boxList.length === 0) return res.json({
+            toDelivery: []
+        });
+        var boxArr = [];
+        var thisBox;
+        var thisType;
+        for (var i = 0; i < boxList.length; i++) {
+            thisBox = boxList[i].boxID;
+            var thisBoxTypeList = [];
+            var thisBoxContainerList = {};
+            for (var j = 0; j < boxList[i].containerList.length; j++) {
+                thisType = containerDict[boxList[i].containerList[j]];
+                if (thisBoxTypeList.indexOf(thisType) < 0) {
+                    thisBoxTypeList.push(thisType);
+                    thisBoxContainerList[thisType] = [];
                 }
-                boxArr.push({
-                    boxID: thisBox,
-                    boxTime: boxList[i].updatedAt,
-                    phone: boxList[i].user,
-                    typeList: thisBoxTypeList,
-                    containerList: thisBoxContainerList,
-                    stocking: boxList[i].stocking,
-                    isDelivering: boxList[i].delivering,
-                    destinationStore: boxList[i].storeID
+                thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+            }
+            boxArr.push({
+                boxID: thisBox,
+                boxTime: boxList[i].updatedAt,
+                phone: boxList[i].user,
+                typeList: thisBoxTypeList,
+                containerList: thisBoxContainerList,
+                stocking: boxList[i].stocking,
+                isDelivering: boxList[i].delivering,
+                destinationStore: boxList[i].storeID
+            });
+        }
+
+        for (var i = 0; i < boxArr.length; i++) {
+            boxArr[i].containerOverview = [];
+            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+                boxArr[i].containerOverview.push({
+                    containerType: boxArr[i].typeList[j],
+                    amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
             }
-
-            for (var i = 0; i < boxArr.length; i++) {
-                boxArr[i].containerOverview = [];
-                for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                    boxArr[i].containerOverview.push({
-                        containerType: boxArr[i].typeList[j],
-                        amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
-                    });
-                }
-            }
-            boxArr.sort((a, b) => {
-                return b.boxTime - a.boxTime;
-            });
-            var resJSON = {
-                toDelivery: boxArr
-            };
-            res.json(resJSON);
+        }
+        boxArr.sort((a, b) => {
+            return b.boxTime - a.boxTime;
         });
+        var resJSON = {
+            toDelivery: boxArr
+        };
+        res.json(resJSON);
     });
 });
 
@@ -182,7 +182,7 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
  * @api {get} /containers/get/toDelivery Get delivery history
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -216,11 +216,10 @@ router.get('/toDelivery', regAsAdmin, validateRequest, function (req, res, next)
         }
  *
  */
-router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, next) {
-    var dbAdmin = req._user;
+router.get('/deliveryHistory', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
-        'tradeType.action': 'Sign',
+        'tradeType.action': ContainerAction.SIGN,
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
@@ -266,16 +265,16 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
             }
             thisBoxContainerList[thisType].push(list[i].container.id);
         }
-        for (var i = 0; i < boxArr.length; i++) {
+        for (let i = 0; i < boxArr.length; i++) {
             boxArr[i].containerOverview = [];
-            for (var j = 0; j < boxArr[i].typeList.length; j++) {
+            for (let j = 0; j < boxArr[i].typeList.length; j++) {
                 boxArr[i].containerOverview.push({
                     containerType: boxArr[i].typeList[j],
                     amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                 });
             }
         }
-        var resJSON = {
+        const resJSON = {
             pastDelivery: boxArr
         };
         res.json(resJSON);
@@ -289,7 +288,7 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
  * @api {get} /containers/get/reloadHistory Reload history
  * 
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
  * @apiPermission clerk
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -325,21 +324,27 @@ router.get('/deliveryHistory', regAsAdmin, validateRequest, function (req, res, 
         }
  *
  */
-router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (req, res, next) {
-    var dbUser = req._user;
+router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     var dbKey = req._key;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        next(error);
+    }
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     var queryCond;
     var queryDays;
     if (req.query.days && !isNaN(parseInt(req.query.days))) queryDays = req.query.days;
     else queryDays = historyDays;
-    if (dbKey.roleType === UserRole.CLERK)
+    if (dbKey.roleType === RoleType.STORE)
         queryCond = {
             '$or': [{
-                'tradeType.action': 'ReadyToClean',
-                'oriUser.storeID': dbUser.roles.clerk.storeID
+                'tradeType.action': ContainerAction.RELOAD,
+                'oriUser.storeID': thisStoreID
             }, {
-                'tradeType.action': 'UndoReadyToClean'
+                'tradeType.action': ContainerAction.UNDO_RELOAD
             }],
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)
@@ -348,7 +353,7 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
     else
         queryCond = {
             'tradeType.action': {
-                '$in': ['ReadyToClean', 'UndoReadyToClean']
+                '$in': [ContainerAction.RELOAD, ContainerAction.UNDO_RELOAD]
             },
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - queryDays)
@@ -375,17 +380,17 @@ router.get('/reloadHistory', regAsAdmin, regAsStore, validateRequest, function (
             tradeTimeDict[aTradeTime].sort((a, b) => a.oriUser.storeID - b.oriUser.storeID);
             tradeTimeDict[aTradeTime].forEach(theTrade => {
                 thisTypeName = typeDict[theTrade.container.typeCode].name;
-                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === 1)}`;
+                boxDictKey = `${theTrade.oriUser.storeID}-${theTrade.tradeTime}-${(theTrade.tradeType.oriState === ContainerState.READY_TO_USE)}`;
                 if (!boxDict[boxDictKey])
                     boxDict[boxDictKey] = {
                         boxTime: theTrade.tradeTime,
                         typeList: [],
                         containerList: {},
-                        cleanReload: (theTrade.tradeType.oriState === 1),
-                        phone: (dbKey.roleType === UserRole.CLERK) ? undefined : {
+                        cleanReload: (theTrade.tradeType.oriState === ContainerState.READY_TO_USE),
+                        phone: (dbKey.roleType === RoleType.STORE) ? undefined : {
                             reload: theTrade.newUser.phone
                         },
-                        from: (dbKey.roleType === UserRole.CLERK) ? undefined : theTrade.oriUser.storeID
+                        from: (dbKey.roleType === RoleType.STORE) ? undefined : theTrade.oriUser.storeID
                     };
                 if (boxDict[boxDictKey].typeList.indexOf(thisTypeName) === -1) {
                     boxDict[boxDictKey].typeList.push(thisTypeName);
