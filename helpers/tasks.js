@@ -12,6 +12,8 @@ const UserOrder = require('../models/DB/userOrderDB');
 const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
+const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
+
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
 
@@ -251,7 +253,9 @@ module.exports = {
                                 "container.id": aUserOrder.containerID,
                                 "oriUser.phone": oriUser.user.phone,
                                 "tradeType.action": "Return",
-                                "tradeTime":{'$gt':aUserOrder.orderTime}
+                                "tradeTime": {
+                                    '$gt': aUserOrder.orderTime
+                                }
                             }, {}, {
                                 sort: {
                                     tradeTime: -1
@@ -350,7 +354,8 @@ module.exports = {
                 }
             });
         });
-    }
+    },
+    reloadSuspendedNotifications
 }
 
 function storeListGenerator(cb) {
