@@ -19,7 +19,12 @@ class Pusher {
     }
 
     static inSilentMode() {
-        return true;
+        const now = new Date();
+        const hour = parseInt(now.toLocaleString('zh-tw', {
+            hour12: false,
+            timeZone: 'Asia/Taipei'
+        }).slice(10, 12));
+        return hour >= 22 || hour < 10;
     }
 
     suspend() {
