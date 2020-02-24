@@ -1149,6 +1149,8 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
             hasOverdueContainer: 9999,
             hasUnregisteredOrder: 9999,
             hasAlmostOverdueContainer: 9999
+        }, {
+            ignoreSilentMode: true
         });
         res.json({
             success: true
@@ -1173,6 +1175,8 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             hasOverdueContainer: 9999,
             hasUnregisteredOrder: 9999,
             hasAlmostOverdueContainer: 9999
+        }, {
+            ignoreSilentMode: true
         });
         res.json({
             success: true

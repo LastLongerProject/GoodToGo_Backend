@@ -24,14 +24,14 @@ module.exports = {
             case NotificationEvent.CONTAINER_RENT:
                 if (target.customer) {
                     pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target.customer, data, options).push();
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target.customer).push();
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target.customer, options).push();
                 }
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data, options).push();
                 break;
             case NotificationEvent.CONTAINER_RETURN:
                 if (target.customer) {
                     pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target.customer, data, options).push();
-                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer).push();
+                    pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target.customer, options).push();
                 }
                 break;
             case NotificationEvent.CONTAINER_RETURN_LINE:

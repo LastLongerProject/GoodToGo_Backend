@@ -21,6 +21,8 @@ module.exports = {
                     customer: aCustomerTradeDetail.customer
                 }, {
                     containerList: aCustomerTradeDetail.containerList
+                }, {
+                    ignoreSilentMode: true
                 });
                 if (storeID === null) return;
                 const now = Date.now();

@@ -80,6 +80,8 @@ const thisModule = module.exports = {
                         hasOverdueContainer,
                         hasUnregisteredOrder,
                         hasAlmostOverdueContainer
+                    }, {
+                        ignoreSilentMode: true
                     });
                 }
                 if (cb) return cb(null, userDict);

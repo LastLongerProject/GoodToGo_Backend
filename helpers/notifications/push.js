@@ -27,6 +27,15 @@ class Pusher {
         return hour >= 22 || hour < 10;
     }
 
+    push() {
+        const ignoreSilentMode = this.options.ignoreSilentMode || false;
+        if (!ignoreSilentMode && Pusher.inSilentMode()) {
+            this.suspend();
+        } else {
+            this.send();
+        }
+    }
+
     suspend() {
         const thisPusher = this;
         const storeNotificationToDB = function () {
@@ -48,15 +57,6 @@ class Pusher {
             });
         } else {
             storeNotificationToDB();
-        }
-    }
-
-    push() {
-        const ignoreSilentMode = this.options.ignoreSilentMode || false;
-        if (!ignoreSilentMode && Pusher.inSilentMode()) {
-            this.suspend();
-        } else {
-            this.send();
         }
     }
 
