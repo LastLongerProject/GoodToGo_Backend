@@ -14,6 +14,7 @@ module.exports = function UserOrderCatalog(dbUser) {
     }
     return Object.assign(this, {
         dbUser,
-        analyzedUserOrder
+        analyzedUserOrder,
+        deadlineList: []
     });
 }
