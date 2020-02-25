@@ -47,7 +47,7 @@
         "express-status-monitor": "^1.2.8",
         "googleapis": "^44.0.0",
         "helmet": "^3.9.0",
-        "jwt-simple": "^0.5.6",
+        "jsonwebtoken": "^8.5.1",
         "mongoose": "^5.7.5",
         "morgan": "^1.9.1",
         "object-hash": "^2.0.0",

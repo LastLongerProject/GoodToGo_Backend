@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
-const validateLine = require('../middlewares/validation/validateLine').all;
-const validateStoreCode = require('../middlewares/validation/validateUserOrder').storeCode;
+const validateLine = require('../middlewares/validation/authorization/validateLine').all;
+const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
 
 const userTrade = require('../controllers/userTrade');
 const tradeCallback = require('../controllers/tradeCallback');
@@ -12,13 +12,14 @@ const changeContainersState = require('../controllers/containerTrade');
 const intReLength = require('../helpers/toolkit').intReLength;
 
 const generateUUID = require('../helpers/tools').generateUUID;
+const getSystemBot = require('../helpers/tools').getSystemBot;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
-const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
-const DueDays = require('../models/enums/userEnum').DueDays;
+const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
 /**
@@ -65,9 +66,10 @@ router.get('/list', validateLine, function (req, res, next) {
         if (err) return next(err);
         let orderListWithoutID = {};
         let orderListWithID = [];
+        const now = Date.now();
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
-            const daysToDue = DueDays[dbUser.getPurchaseStatus()] - computeDaysOfUsing(aUserOrder.orderTime, Date.now());
+            const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -184,7 +186,10 @@ router.post('/add', validateLine, validateStoreCode, function (req, res, next) {
                     containerAmount,
                     time: now
                 });
-                userTrade.refreshUserUsingStatus(false, dbUser, err => {
+                userTrade.refreshUserUsingStatus(dbUser, {
+                    sendNotice: false,
+                    banOrUnbanUser: true
+                }, err => {
                     if (err) return debug.error(err);
                 });
             })
@@ -247,42 +252,14 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
             });
 
         theUserOrder.containerID = containerID;
-        User.findOne({
-            "user.phone": "0900000000"
-        }, (err, dbBot) => {
+        getSystemBot((err, dbBot) => {
             if (err) return next(err);
-            if (!dbBot) {
-                dbBot = new User({
-                    user: {
-                        phone: "0900000000",
-                        password: null,
-                        name: "GoodToGoBot"
-                    },
-                    roles: {
-                        typeList: ["bot", "clerk"],
-                        clerk: {
-                            storeID: 17,
-                            manager: false
-                        }
-                    }
-                });
-                dbBot.save(err => {
-                    if (err) debug.error(err);
-                });
-            }
-            if (!dbBot.roles.clerk) {
-                dbBot.roles.typeList.push("clerk");
-                dbBot.roles.clerk = {
-                    storeID: 17,
-                    manager: false
-                };
-            }
-            dbBot.roles.clerk.storeID = theUserOrder.storeID;
             changeContainersState(containerID, dbBot, {
-                action: "Rent",
-                newState: 2
+                action: ContainerAction.RENT,
+                newState: ContainerState.USING
             }, {
                 rentToUser: dbUser,
+                storeID: theUserOrder.storeID,
                 orderTime: theUserOrder.orderTime,
                 inLineSystem: true
             }, (err, tradeSuccess, reply, tradeDetail) => {
@@ -297,10 +274,13 @@ router.post('/registerContainer', validateLine, function (req, res, next) {
                         type: 'userOrderMessage',
                         message: 'Register ContainerID of UserOrder Success'
                     });
-                });
-                tradeCallback.rent(tradeDetail, null);
-                userTrade.refreshUserUsingStatus(false, dbUser, err => {
-                    if (err) return debug.error(err);
+                    tradeCallback.rent(tradeDetail, null);
+                    userTrade.refreshUserUsingStatus(dbUser, {
+                        sendNotice: false,
+                        banOrUnbanUser: true
+                    }, err => {
+                        if (err) return debug.error(err);
+                    });
                 });
             });
         });
@@ -351,7 +331,7 @@ router.post('/challenge/storeCode', validateLine, validateStoreCode, async (req,
  *      }
  */
 
-router.post('/addWithContainer', validateLine, validateStoreCode, async function (req, res, next) {
+router.post('/addWithContainer', validateLine, validateStoreCode, function (req, res, next) {
     const dbUser = req._user;
     let containers = req.body.containers;
     const bypassCheck = req.body.byCallback === true;
@@ -380,7 +360,7 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
 
     const containerAmount = containers.length;
 
-    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, async (err, isAvailable, detail) => {
+    userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
         if (err) return next(err);
         if (!isAvailable) {
             if (detail.rentalQualification === RentalQualification.BANNED)
@@ -405,83 +385,63 @@ router.post('/addWithContainer', validateLine, validateStoreCode, async function
         const storeID = req._storeID
         const now = Date.now();
 
-        let dbBot = await User.findOne({
-            "user.phone": "0900000000"
-        }) || await (new User({
-            user: {
-                phone: "0900000000",
-                password: null,
-                name: "GoodToGoBot"
-            },
-            roles: {
-                typeList: ["bot", "clerk"],
-                clerk: {
-                    storeID: 17,
-                    manager: false
-                }
-            }
-        }).save());
-
-        if (!dbBot.roles.clerk) {
-            dbBot.roles.typeList.push("clerk");
-            dbBot.roles.clerk = {
-                storeID: 17,
-                manager: false
-            };
-        }
-        dbBot.roles.clerk.storeID = storeID;
-
-        let userOrders = containers.map(id =>
-            new UserOrder({
-                orderID: generateUUID(),
-                user: dbUser._id,
-                containerID: id,
-                storeID,
-                orderTime: now
-            })
-        );
-
-        new Promise((resolve, reject) => {
-                changeContainersState(containers, dbBot, {
-                    action: "Rent",
-                    newState: 2
-                }, {
-                    rentToUser: dbUser,
-                    orderTime: now,
-                    activity: "沒活動",
-                    inLineSystem: true
-                }, (err, tradeSuccess, reply, tradeDetail) => {
-                    if (err) return next(err);
-                    return tradeSuccess ?
-                        resolve(tradeCallback.rent(tradeDetail, null)) :
-                        reject({
-                            status: 403,
-                            json: Object.assign(reply, {
-                                txt: "容器ID錯誤，請輸入正確容器 ID！"
-                            })
-                        })
-                });
-            })
-            .then(() => userOrders.map(order => order.save()))
-            .then(() => {
-                res.status(200).json({
-                    code: '???',
-                    type: 'userOrderMessage',
-                    message: 'Create user order with containers successfully',
-                    storeName: StoreDict[storeID].name
+        getSystemBot((err, dbBot) => {
+            if (err) return next(err);
+            let userOrders = containers.map(id =>
+                new UserOrder({
+                    orderID: generateUUID(),
+                    user: dbUser._id,
+                    containerID: id,
+                    storeID,
+                    orderTime: now
                 })
+            );
 
-                return userTrade.refreshUserUsingStatus(false, dbUser, err => {
-                    if (err) return debug.error(err);
+            new Promise((resolve, reject) => {
+                    changeContainersState(containers, dbBot, {
+                        action: ContainerAction.RENT,
+                        newState: ContainerState.USING
+                    }, {
+                        rentToUser: dbUser,
+                        storeID,
+                        orderTime: now,
+                        inLineSystem: true
+                    }, (err, tradeSuccess, reply, tradeDetail) => {
+                        if (err) return next(err);
+                        return tradeSuccess ?
+                            resolve(tradeCallback.rent(tradeDetail, null)) :
+                            reject({
+                                status: 403,
+                                json: Object.assign(reply, {
+                                    txt: "容器ID錯誤，請輸入正確容器 ID！"
+                                })
+                            });
+                    });
+                })
+                .then(() => userOrders.map(order => order.save()))
+                .then(() => {
+                    res.status(200).json({
+                        code: '???',
+                        type: 'userOrderMessage',
+                        message: 'Create user order with containers successfully',
+                        storeName: StoreDict[storeID].name
+                    });
+
+                    return userTrade.refreshUserUsingStatus(dbUser, {
+                        sendNotice: false,
+                        banOrUnbanUser: true
+                    }, err => {
+                        if (err) return debug.error(err);
+                    });
+                })
+                .catch(err => {
+                    if (err.status && err.json) {
+                        res.status(err.status).json(err.json);
+                    } else {
+                        next(err);
+                    }
                 });
-            })
-            .catch(err => {
-                if (err.status && err.json) {
-                    res.status(err.status).json(err.json)
-                } else {
-                    next(err)
-                }
-            })
+        });
     });
 });
 

@@ -1,11 +1,11 @@
 const fs = require("fs");
 const debug = require('../helpers/debugger')('bonusPointActivity');
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 
 const config = require("../config/config");
 
 const PointLog = require('../models/DB/pointLogDB');
-const DueDays = require('../models/enums/userEnum').DueDays;
+const DueStatus = require('../models/enums/userEnum').DueStatus;
+const getDueStatus = require('../models/computed/dueStatus').dueStatus;
 
 module.exports = {
     calculatePoint: function (dbUser, userOrders, cb) {
@@ -29,41 +29,43 @@ module.exports = {
 };
 
 function scanBonusPointActivity(dbUser, userOrders, cb) {
-    const returnAmount = userOrders.length;
-    const noBonusReply = {
-        point: returnAmount,
-        bonusPointActivity: null
-    };
+    const activityType = null;
     fs.readFile(`${config.staticFileDir}/assets/json/bonusPointActivity.json`, (err, data) => {
-        if (err) return cb(err, noBonusReply);
-        const activityDict = JSON.parse(data);
-        const activityType = "DOUBLE_POINT";
-        const activityDetail = activityDict[activityType];
-        if (!bonusPointActivityLogic[activityType] || !activityDetail)
-            return cb(null, noBonusReply);
-        const now = Date.now();
-        let overdueReturn = 0;
-        const totalPoint = userOrders.map(aUserOrder => {
-            const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[dbUser.getPurchaseStatus()];
-            if (daysOverDue > 0) {
-                overdueReturn++;
-                return 0;
+        let activityDict = null;
+        let activityDetail = null;
+        if (!err && activityType !== null && typeof data === "string") {
+            activityDict = JSON.parse(data);
+            if (activityDict.hasOwnProperty(activityType) && bonusPointActivityLogic[activityType]) {
+                activityDetail = activityDict[activityType];
             }
-            return 1;
-            /*
-            const storeIDOfRent = aUserOrder.storeID;
-            const rentTime = aUserOrder.orderTime;
-            const activityDetailOfStore = activityDetail.store[storeIDOfRent];
-            if (!activityDetailOfStore ||
-                activityDetailOfStore.startTime > rentTime ||
-                ((rentTime - activityDetailOfStore.startTime) > activityDetailOfStore.duration))
-                return 1;
-            return bonusPointActivityLogic[activityType](1);
-            */
+        }
+        let overdueReturn = 0;
+        const now = Date.now();
+        const totalPoint = userOrders.map(aUserOrder => {
+            let basePoint;
+            const dueStatus = getDueStatus(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
+            if (dueStatus === DueStatus.OVERDUE || dueStatus === DueStatus.LAST_CALL) {
+                overdueReturn++;
+                basePoint = 0;
+            } else {
+                basePoint = 1;
+            }
+            let fixedPoint = basePoint;
+            if (activityDetail !== null) {
+                const storeIDOfRent = aUserOrder.storeID;
+                const rentTime = aUserOrder.orderTime;
+                const activityDetailOfStore = activityDetail.store[storeIDOfRent];
+                if (activityDetailOfStore &&
+                    activityDetailOfStore.startTime < rentTime &&
+                    ((rentTime - activityDetailOfStore.startTime) < activityDetailOfStore.duration)) {
+                    fixedPoint = bonusPointActivityLogic[activityType](basePoint);
+                }
+            }
+            return fixedPoint;
         }).reduce((a, b) => a + b, 0);
         return cb(null, {
             point: totalPoint,
-            bonusPointActivity: totalPoint > returnAmount ? {
+            bonusPointActivity: activityDetail !== null ? {
                 name: activityDetail.name,
                 txt: activityDetail.txtForPointLog
             } : null,

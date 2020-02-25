@@ -3,12 +3,12 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('coupon');
 
 const couponTrade = require('../controllers/couponTrade');
-const validateLine = require('../middlewares/validation/validateLine').all;
+const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 
 const Coupon = require('../models/DB/couponDB');
 const CouponType = require('../models/DB/couponTypeDB');
-const MyCoupon = require('../models/reply/coupon').myCoupon;
-const CouponDetail = require('../models/reply/coupon').couponDetail;
+const MyCoupon = require('../models/variables/coupon').myCoupon;
+const CouponDetail = require('../models/variables/coupon').couponDetail;
 const CouponState = require('../models/enums/couponEnum').CouponState;
 const DataCacheFactory = require('../models/dataCacheFactory');
 

@@ -2,145 +2,99 @@ const debug = require('../helpers/debugger')('userTrade');
 
 const couponTrade = require('./couponTrade');
 
-const computeDaysOfUsing = require("../helpers/tools").computeDaysOfUsing;
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const UserTradeLog = require("../models/DB/userTradeLogDB");
 
-const DueDays = require('../models/enums/userEnum').DueDays;
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
 const TradeAction = require("../models/enums/userEnum").TradeAction;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
+const DueStatus = require('../models/enums/userEnum').DueStatus;
+const getDueStatus = require('../models/computed/dueStatus').dueStatus;
+const UserOrderCatalog = require('../models/variables/userOrderCatalog');
+
+const ID = require('../models/enums/analyzedOrderEnum').ID;
+const ReduceBy = require('../models/enums/analyzedOrderEnum').ReduceBy;
+
 const thisModule = module.exports = {
-    refreshUserUsingStatus: function (sendNotice, specificUser, cb) {
+    refreshUserUsingStatus: function (specificUser, toggle, cb) {
+        const sendNotice = toggle.sendNotice || false;
+        const banOrUnbanUser = toggle.banOrUnbanUser || false;
         if (!(specificUser instanceof User)) specificUser = null;
-        findUsersToCheckStatus(specificUser, reply => {
-            const userDict = reply.userDict;
-            const userObjectIDList = reply.userObjectIDList;
-            UserOrder.find({
-                "user": {
-                    "$in": userObjectIDList
-                },
-                "archived": false
-            }, (err, userOrderList) => {
-                if (err) return cb(err);
-
-                const now = Date.now();
-                userOrderList.forEach(aUserOrder => {
-                    const userID = aUserOrder.user;
-                    const purchaseStatus = userDict[userID].dbUser.getPurchaseStatus();
-                    const daysOverDue = computeDaysOfUsing(aUserOrder.orderTime, now) - DueDays[purchaseStatus];
-                    if (aUserOrder.containerID === null) {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idNotRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idNotRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idNotRegistered.others.push(aUserOrder);
-                        }
-                    } else {
-                        if (daysOverDue > 0) {
-                            userDict[userID].idRegistered.overdue.push(aUserOrder);
-                        } else if (daysOverDue === 0) {
-                            userDict[userID].idRegistered.almostOverdue.push(aUserOrder);
-                        } else {
-                            userDict[userID].idRegistered.others.push(aUserOrder);
-                        }
+        findUsersToCheckStatus(specificUser, (userDict, userObjectIDList) => {
+            analyzeUserOrder(userDict, userObjectIDList, (dbUser, analyzedUserOrder, summary) => {
+                if (banOrUnbanUser) {
+                    if (summary.hasOverdueContainer) {
+                        const overdueList = analyzedUserOrder[ID.isRegistered][DueStatus.OVERDUE].concat(analyzedUserOrder[ID.notRegistered][DueStatus.OVERDUE]);
+                        thisModule.banUser(dbUser, overdueList);
+                    } else if (dbUser.bannedTimes <= 1) {
+                        thisModule.unbanUser(dbUser, true);
                     }
-                });
-
-                for (let userID in userDict) {
-                    const classifiedOrder = userDict[userID];
-                    const dbUser = classifiedOrder.dbUser;
-                    const overdueAmount = classifiedOrder.idRegistered.overdue.length + classifiedOrder.idNotRegistered.overdue.length;
-                    const hasOverdueContainer = overdueAmount > 0;
-                    const hasUnregisteredOrder = classifiedOrder.idNotRegistered.overdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.almostOverdue.length > 0 ||
-                        classifiedOrder.idNotRegistered.others.length > 0;
-                    const almostOverdueAmount = classifiedOrder.idRegistered.almostOverdue.length + classifiedOrder.idNotRegistered.almostOverdue.length;
-                    const hasAlmostOverdueContainer = almostOverdueAmount > 0;
-                    if (hasOverdueContainer) {
-                        thisModule.banUser(dbUser, classifiedOrder.idRegistered.overdue.concat(classifiedOrder.idNotRegistered.overdue));
-                    } else {
-                        if (hasAlmostOverdueContainer && sendNotice) {
-                            thisModule.noticeUserWhoIsGoingToBeBanned(dbUser, almostOverdueAmount);
-                        }
-                        if (dbUser.bannedTimes <= 3) {
-                            thisModule.unbanUser(dbUser, false);
-                        }
-                    }
-                    classifiedOrder.overdueAmount = overdueAmount;
-                    classifiedOrder.almostOverdueAmount = almostOverdueAmount;
-                    NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-                        userIsBanned: dbUser.hasBanned,
-                        hasOverdueContainer,
-                        hasUnregisteredOrder,
-                        hasAlmostOverdueContainer
-                    }, {
-                        ignoreSilentMode: true
-                    });
                 }
-                if (cb) return cb(null, userDict);
-                debug.log('User Status is Refresh');
+                if (sendNotice) {
+                    let event = null;
+                    if (summary.hasLastCallContainer) {
+                        event = NotificationEvent.USER_LAST_CALL;
+                    } else if (summary.hasAlmostOverdueContainer) {
+                        event = NotificationEvent.USER_ALMOST_OVERDUE;
+                    }
+                    if (event !== null)
+                        thisModule.noticeUser(dbUser, event, {
+                            almostOverdueAmount: summary.almostOverdueAmount,
+                            lastCallAmount: summary.lastCallAmount
+                        });
+                }
+                NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
+                    userIsBanned: dbUser.hasBanned,
+                    hasOverdueContainer: summary.hasOverdueContainer,
+                    hasUnregisteredOrder: summary.hasUnregisteredOrder,
+                    hasAlmostOverdueContainer: summary.hasAlmostOverdueContainer
+                }, {
+                    ignoreSilentMode: true
+                });
+            }, (err, userDict) => {
+                if (err) return cb(err);
+                cb(null, userDict);
             });
         });
     },
-    banUser: function (dbUser, overdueDetailList, byUser) {
+    banUser: function (dbUser, overdueList, byUser) {
         if (!dbUser.hasBanned) {
             dbUser.hasBanned = true;
             dbUser.bannedTimes++;
             dbUser.save(err => {
                 if (err) return debug.error(err);
-                if (overdueDetailList !== null)
-                    UserTradeLog.create({
-                        "user": dbUser.user.phone,
-                        "action": TradeAction.BANNED,
-                        "describe": `Relevant Orders: [` +
-                            `${overdueDetailList.map(aOrder => `{Order: ${aOrder.orderID}, Container: ${aOrder.containerID}}`).join(", ")}` +
-                            `]`
-                    }, err => {
-                        if (err) return debug.error(err);
-                    });
-                else
-                    UserTradeLog.create({
-                        "user": dbUser.user.phone,
-                        "action": TradeAction.BANNED,
-                        "describe": `Manual, By: ${byUser}`
-                    }, err => {
-                        if (err) return debug.error(err);
-                    });
+                UserTradeLog.create({
+                    "user": dbUser.user.phone,
+                    "action": TradeAction.BANNED,
+                    "describe": (overdueList !== null) ?
+                        `Relevant Orders: [${overdueList.map(aOrder => `{Order: ${aOrder.orderID}, Container: ${aOrder.containerID}}`).join(", ")}]` : `Manual, By: ${byUser}`
+                }, err => {
+                    if (err) return debug.error(err);
+                });
             });
             NotificationCenter.emit(NotificationEvent.USER_BANNED, dbUser, {
                 bannedTimes: dbUser.bannedTimes,
-                overdueAmount: overdueDetailList === null ? -1 : overdueDetailList.length
+                overdueAmount: overdueList === null ? -1 : overdueList.length
             });
         }
     },
-    unbanUser: function (dbUser, isTest, byUser) {
+    unbanUser: function (dbUser, isAutoProcess, byUser) {
         if (dbUser.hasBanned) {
             dbUser.hasBanned = false;
             dbUser.save(err => {
                 if (err) return debug.error(err);
-                if (!isTest)
-                    UserTradeLog.create({
-                        "user": dbUser.user.phone,
-                        "action": TradeAction.UNBANNED,
-                        "describe": "By automatic process"
-                    }, err => {
-                        if (err) return debug.error(err);
-                    });
-                else
-                    UserTradeLog.create({
-                        "user": dbUser.user.phone,
-                        "action": TradeAction.UNBANNED,
-                        "describe": `Manual, By: ${byUser}`
-                    }, err => {
-                        if (err) return debug.error(err);
-                    });
+                UserTradeLog.create({
+                    "user": dbUser.user.phone,
+                    "action": TradeAction.UNBANNED,
+                    "describe": isAutoProcess ? "By automatic process" : `Manual, By: ${byUser}`
+                }, err => {
+                    if (err) return debug.error(err);
+                });
             });
             NotificationCenter.emit(NotificationEvent.USER_UNBANNED, dbUser, {
                 bannedTimes: dbUser.bannedTimes,
@@ -148,12 +102,15 @@ const thisModule = module.exports = {
             });
         }
     },
-    noticeUserWhoIsGoingToBeBanned: function (dbUser, almostOverdueAmount) {
+    noticeUser: function (dbUser, event, summary) {
         if (!dbUser.hasBanned) {
-            NotificationCenter.emit(NotificationEvent.USER_ALMOST_OVERDUE, dbUser, {
-                bannedTimes: dbUser.bannedTimes,
-                almostOverdueAmount
+            const data = {
+                bannedTimes: dbUser.bannedTimes
+            };
+            Object.assign(data, {
+                summary
             });
+            NotificationCenter.emit(event, dbUser, data);
         }
     },
     purchase: function (aUser, cb) {
@@ -171,7 +128,7 @@ const thisModule = module.exports = {
                     hasPurchase: true,
                     registerMethod: RegisterMethod.PURCHASE,
                     roles: {
-                        typeList: [UserRole.CUSTOMER]
+                        typeList: [RoleType.CUSTOMER]
                     }
                 });
                 newUser.save(err => {
@@ -224,25 +181,10 @@ function findUsersToCheckStatus(specificUser, cb) {
     if (specificUser) {
         const userID = specificUser._id;
         const userDict = {
-            [userID]: {
-                dbUser: specificUser,
-                idRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                },
-                idNotRegistered: {
-                    almostOverdue: [],
-                    overdue: [],
-                    others: []
-                }
-            }
+            [userID]: new UserOrderCatalog(specificUser)
         };
         const userObjectIDList = [userID];
-        return cb({
-            userDict,
-            userObjectIDList
-        });
+        return cb(userDict, userObjectIDList);
     } else {
         User.find({
             "agreeTerms": true
@@ -251,25 +193,76 @@ function findUsersToCheckStatus(specificUser, cb) {
             const userDict = {};
             const userObjectIDList = userList.map(aUser => {
                 const userID = aUser._id;
-                userDict[userID] = {
-                    dbUser: aUser,
-                    idRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    },
-                    idNotRegistered: {
-                        almostOverdue: [],
-                        overdue: [],
-                        others: []
-                    }
-                };
+                userDict[userID] = new UserOrderCatalog(aUser);
                 return userID;
             });
-            return cb({
-                userDict,
-                userObjectIDList
-            });
+            return cb(userDict, userObjectIDList);
         })
+    }
+}
+
+function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
+    UserOrder.find({
+        "user": {
+            "$in": userObjectIDList
+        },
+        "archived": false
+    }, (err, userOrderList) => {
+        if (err) return cb(err);
+
+        const now = Date.now();
+        userOrderList.forEach(aUserOrder => {
+            const userID = aUserOrder.user;
+            const analyzedUserOrder = userDict[userID].analyzedUserOrder;
+            const dueStatus = getDueStatus(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
+            const isIdRegistered = aUserOrder.containerID !== null ? ID.isRegistered : ID.notRegistered;
+            analyzedUserOrder[isIdRegistered][dueStatus].push(aUserOrder);
+        });
+
+        for (let userID in userDict) {
+            const analyzedUserOrder = userDict[userID].analyzedUserOrder;
+            const dbUser = userDict[userID].dbUser;
+
+            const unregisteredAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.idRegistered, ID.notRegistered);
+            const hasUnregisteredOrder = unregisteredAmount > 0;
+            const overdueAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.OVERDUE);
+            const hasOverdueContainer = overdueAmount > 0;
+            const almostOverdueAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.ALMOST_OVERDUE);
+            const hasAlmostOverdueContainer = almostOverdueAmount > 0;
+            const lastCallAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.LAST_CALL);
+            const hasLastCallContainer = lastCallAmount > 0;
+
+            const summary = {
+                unregisteredAmount,
+                hasUnregisteredOrder,
+                almostOverdueAmount,
+                hasAlmostOverdueContainer,
+                lastCallAmount,
+                hasLastCallContainer,
+                overdueAmount,
+                hasOverdueContainer
+            };
+
+            Object.assign(userDict[userID], {
+                summary
+            });
+            taskPerUser(dbUser, analyzedUserOrder, summary);
+        }
+        cb(null, userDict);
+    });
+}
+
+function analyzedDataCounter(analyzedData, reduceBy, dataToReduce) {
+    if (reduceBy === ReduceBy.idRegistered) {
+        return Object.values(analyzedData[dataToReduce]).reduce((accumulator, aList) => accumulator + aList.length, 0);
+    } else if (reduceBy === ReduceBy.dueStatus) {
+        let result = 0;
+        const keyList = Object.keys(analyzedData);
+        keyList.forEach(aKey => {
+            result += analyzedData[aKey][dataToReduce].length;
+        });
+        return result;
+    } else {
+        return 0;
     }
 }

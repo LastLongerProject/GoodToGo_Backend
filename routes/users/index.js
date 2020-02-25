@@ -1,366 +1,47 @@
 const express = require('express');
 const router = express.Router();
-const debug = require('../helpers/debugger')('users');
+const debug = require('../../helpers/debugger')('users/index');
 
-const userQuery = require('../controllers/userQuery');
-const userTrade = require('../controllers/userTrade');
-const pointTrade = require('../controllers/pointTrade');
-const couponTrade = require('../controllers/couponTrade');
+const userQuery = require('../../controllers/userQuery');
+const userTrade = require('../../controllers/userTrade');
+const pointTrade = require('../../controllers/pointTrade');
 
-const validateLine = require('../middlewares/validation/validateLine');
-const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
-const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const validateLine = require('../../middlewares/validation/authorization/validateLine');
+const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsBot = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsBot;
+const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsAdmin = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
 
-const intReLength = require('../helpers/toolkit').intReLength;
-const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
+const intReLength = require('../../helpers/toolkit').intReLength;
+const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
-const subscribeSNS = require('../helpers/aws/SNS').sns_subscribe;
-const NotificationEvent = require('../helpers/notifications/enums/events');
-const SnsAppType = require('../helpers/notifications/enums/sns/appType');
+const subscribeSNS = require('../../helpers/aws/SNS').sns_subscribe;
+const SnsAppType = require('../../models/enums/notificationEnum').AppType;
 
-const redis = require('../models/redis');
-const User = require('../models/DB/userDB');
-const Trade = require('../models/DB/tradeDB');
-const Coupon = require('../models/DB/couponDB');
-const PointLog = require('../models/DB/pointLogDB');
-const DataCacheFactory = require('../models/dataCacheFactory');
-const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
+const redis = require('../../models/redis');
+const User = require('../../models/DB/userDB');
+const Trade = require('../../models/DB/tradeDB');
+const Coupon = require('../../models/DB/couponDB');
+const PointLog = require('../../models/DB/pointLogDB');
+const DataCacheFactory = require('../../models/dataCacheFactory');
+const getGlobalUsedAmount = require('../../models/computed/containerStatistic').global_used;
+const RoleType = require('../../models/enums/userEnum').RoleType;
+const RoleElement = require('../../models/enums/userEnum').RoleElement;
+const ContainerAction = require('../../models/enums/containerEnum').Action;
 
-const UserRole = require('../models/enums/userEnum').UserRole;
-const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
-const NotificationCenter = require('../helpers/notifications/center');
+const setDefaultPassword = require('../../config/keys').setDefaultPassword;
 
-const setDefaultPassword = require('../config/keys').setDefaultPassword;
+const signupRoute = require("./signup");
+const roleRoute = require("./role");
 
-router.post(['/signup', '/signup/*'], function (req, res, next) {
-    req._options = {};
-    req._setSignupVerification = function (options) {
-        if (typeof options === "undefined") options = {};
-        req._options.passVerify = options.hasOwnProperty("passVerify") ? options.passVerify : false;
-        req._options.needVerified = options.hasOwnProperty("needVerified") ? options.needVerified : true;
-        req._options.passPhoneValidation = options.hasOwnProperty("passPhoneValidation") ? options.passPhoneValidation : false;
-    };
-    next();
-});
-
-/**
- * @apiName SignUp
- * @apiGroup Users
- * @apiPermission clerk
- *
- * @api {post} /users/signup Sign up for new user (step 1)
- * @apiUse DefaultSecurityMethod
-
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 205 Need Verification Code
- *     { 
- *          type: 'signupMessage',
- *          message: 'Send Again With Verification Code' 
- *     }
- * @apiUse SignupError
- */
-
-/**
- * @apiName SignUp (add verification code)
- * @apiGroup Users
- * @apiPermission clerk
- * 
- * @api {post} /users/signup Sign up for new user (step 2)
- * @apiUse DefaultSecurityMethod
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiParam {String} verification_code verification code from sms
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-
-router.post('/signup', validateDefault, function (req, res, next) {
-    // for CUSTOMER
-    req._options.registerMethod = RegisterMethod.CUSTOMER_APP;
-    userQuery.signup(req, function (err, user, info) {
-        if (err) {
-            return next(err);
-        } else if (!user) {
-            return res.status(401).json(info);
-        } else if (info.needVerificationCode) {
-            return res.status(205).json(info.body);
-        } else {
-            res.json(info.body);
-        }
-    });
-});
-
-/**
- * @apiName SignUp-Clerk
- * @apiGroup Users
- * @apiPermission manager
- *
- * @api {post} /users/signup/clerk Sign up for new clerk
- * @apiUse JWT
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * 
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-
-router.post(
-    '/signup/clerk',
-    regAsStoreManager,
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        // for CLERK
-        var dbUser = req._user;
-        var dbKey = req._key;
-        if (dbKey.roleType === UserRole.CLERK) {
-            req.body.role = {
-                typeCode: UserRole.CLERK,
-                manager: false,
-                storeID: dbUser.roles.clerk.storeID
-            };
-            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
-        } else if (dbKey.roleType === UserRole.ADMIN) {
-            req.body.role = {
-                typeCode: UserRole.ADMIN,
-                manager: false,
-                stationID: dbUser.roles.admin.stationID,
-            };
-            req._options.registerMethod = RegisterMethod.BY_ADMIN;
-        }
-        req._setSignupVerification({
-            needVerified: false,
-            passVerify: true
-        });
-        setDefaultPassword(req);
-        userQuery.signup(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else {
-                res.json(info.body);
-            }
-        });
-    }
-);
-
-/**
- * @apiName SignUp-Manager
- * @apiGroup Users
- * @apiPermission admin_manager
- *
- * @api {post} /users/signup/storeManager Sign up for new store manager
- * @apiUse JWT
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiParam {String} storeID store of the store manager.
- * 
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-
-router.post(
-    '/signup/storeManager',
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        // for CLERK
-        req.body.role = {
-            typeCode: UserRole.CLERK,
-            manager: true,
-            storeID: req.body.storeID
-        };
-        req._setSignupVerification({
-            needVerified: false,
-            passVerify: true,
-            passPhoneValidation: true
-        });
-        req._options.registerMethod = RegisterMethod.BY_ADMIN;
-        setDefaultPassword(req);
-        userQuery.signup(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else {
-                res.json(info.body);
-            }
-        });
-    }
-);
-
-/**
- * @apiName SignUp-LineUser
- * @apiGroup Users
- * @apiPermission none
- *
- * @api {post} /users/signup/lineUser Sign up for new line user
- * @apiUse DefaultSecurityMethod
- * 
- * @apiParam {String} line_liff_userID line_liff_userID of the User.
- * @apiParam {String} line_channel_userID line_channel_userID of the User.
- * @apiParam {String} phone phone of the User.
- * 
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 205 Need Verification Code
- *     { 
- *          type: 'signupMessage',
- *          message: 'Send Again With Verification Code' 
- *     }
- * @apiUse SignupError
- */
-
-/**
- * @apiName SignUp-LineUser (add verification code)
- * @apiGroup Users
- * @apiPermission none
- *
- * @api {post} /users/signup/lineUser Sign up for new line user (step 2)
- * @apiUse DefaultSecurityMethod
- * 
- * @apiParam {String} line_liff_userID line_liff_userID of the User.
- * @apiParam {String} line_channel_userID line_channel_userID of the User.
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} verification_code verification code from sms.
- * 
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded',
- *          userPurchaseStatus: String ("free_user" or "purchased_user")
- *     }
- * @apiUse SignupError
- */
-
-router.post(
-    '/signup/lineUser',
-    validateDefault,
-    function (req, res, next) {
-        req._options.agreeTerms = true;
-        req._options.registerMethod = RegisterMethod.LINE;
-        userQuery.signupLineUser(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else if (info.needVerificationCode) {
-                return res.status(205).json(info.body);
-            } else {
-                res.json(info.body);
-                couponTrade.welcomeCoupon(user, (err) => {
-                    if (err) debug.error(err);
-                });
-            }
-        });
-    }
-);
-
-router.post(
-    '/signup/lineUserRoot',
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        req._options.passVerify = true;
-        req._options.agreeTerms = true;
-        req._options.registerMethod = RegisterMethod.BY_ADMIN;
-        userQuery.signupLineUser(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else if (info.needVerificationCode) {
-                return res.status(205).json(info.body);
-            } else {
-                res.json(info.body);
-                couponTrade.welcomeCoupon(user, (err) => {
-                    if (err) debug.error(err);
-                });
-            }
-        });
-    }
-);
-
-/**
- * @apiName SignUp-Root
- * @apiGroup Users
- * @apiPermission admin_clerk
- *
- * @api {post} /users/signup/root Sign up for customer from admin or clerk
- * @apiUse JWT
- * 
- * @apiParam {String} phone phone of the User.
- * @apiParam {String} password password of the User.
- * @apiSuccessExample {json} Success-Response:
- *     HTTP/1.1 200 Signup Successfully
- *     { 
- *          type: 'signupMessage',
- *          message: 'Authentication succeeded' 
- *     }
- * @apiUse SignupError
- */
-router.post(
-    '/signup/root',
-    regAsStore,
-    regAsAdminManager,
-    validateRequest,
-    function (req, res, next) {
-        // for ADMIN and CLERK
-        var dbKey = req._key;
-        if (String(dbKey.roleType).startsWith(`${UserRole.CLERK}`)) {
-            req.body.role = {
-                typeCode: UserRole.CUSTOMER
-            };
-            req._options.registerMethod = RegisterMethod.CLECK_APP;
-        } else {
-            req._options.registerMethod = RegisterMethod.BY_ADMIN;
-        }
-        req._setSignupVerification({
-            needVerified: String(dbKey.roleType).startsWith(`${UserRole.CLERK}_`),
-            passVerify: true
-        });
-        setDefaultPassword(req);
-        userQuery.signup(req, function (err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.status(401).json(info);
-            } else {
-                res.json(info.body);
-            }
-        });
-    }
-);
+router.use('/signup', signupRoute);
+router.use('/role', roleRoute);
 
 /**
  * @apiName Login
  * @apiGroup Users
+ * @apiDescription See "Role" in <a href="#api-_">Auth</a>
  *
  * @api {post} /users/login User login
  * @apiUse DefaultSecurityMethod
@@ -376,13 +57,28 @@ router.post(
  *                  "typeList": [ //the list with ids that you can use
  *                      "admin"
  *                  ],
- *              "admin": {
- *                  "stationID": Number,
- *                  "manager": Boolean,
- *                  "apiKey": String,
- *                  "secretKey": String
- *              } // ids' info will store in its own object
- *          } 
+ *                  "admin": {
+ *                      "stationID": Number,
+ *                      "manager": Boolean,
+ *                      "apiKey": String,
+ *                      "secretKey": String
+ *                  } // ids' info will store in its own object
+ *              },
+ *              "roleList": [
+ *                  {
+ *                      "roleType": String,
+ *                      "apiKey": String,
+ *                      "secretKey": String,
+ *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+ *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "stationName": String,  // if [roleType] === "station"
+ *                      "boxable": String,  // if [roleType] === "station"
+ *                      "storeID": Number,  // if [roleType] === "store"
+ *                      "storeName": String,  // if [roleType] === "store"
+ *                      "group": String  // if [roleType] === "customer"
+ *                  }
+ *              ]
+ *          };
  *      }
  *     
  * @apiUse LoginError
@@ -390,6 +86,62 @@ router.post(
 
 router.post('/login', validateDefault, function (req, res, next) {
     userQuery.login(req, function (err, user, info) {
+        if (err) {
+            return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
+        } else {
+            res.header('Authorization', info.headers.Authorization);
+            res.json(info.body);
+        }
+    });
+});
+
+/**
+ * @apiName Fetch
+ * @apiGroup Users
+ * @apiDescription See "Role" in <a href="#api-_">Auth</a>
+ *
+ * @api {post} /users/fetchRole User Fetch Role List
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ *      HTTP/1.1 200 Login Successfully (res.header.authorization)
+ *      { 
+ *          **Decoded JWT**
+ *          payload = {
+ *              "roles": {
+ *                  "typeList": [ //the list with ids that you can use
+ *                      "admin"
+ *                  ],
+ *                  "admin": {
+ *                      "stationID": Number,
+ *                      "manager": Boolean,
+ *                      "apiKey": String,
+ *                      "secretKey": String
+ *                  } // ids' info will store in its own object
+ *              },
+ *              "roleList": [
+ *                  {
+ *                      "roleType": String,
+ *                      "apiKey": String,
+ *                      "secretKey": String,
+ *                      "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+ *                      "stationID": Number,  // if [roleType] === "station"
+ *                      "stationName": String,  // if [roleType] === "station"
+ *                      "boxable": String,  // if [roleType] === "station"
+ *                      "storeID": Number,  // if [roleType] === "store"
+ *                      "storeName": String,  // if [roleType] === "store"
+ *                      "group": String  // if [roleType] === "customer"
+ *                  }
+ *              ]
+ *          };
+ *      }
+ * @apiUse LoginError
+ */
+
+router.post('/fetchRole', validateRequest, function (req, res, next) {
+    userQuery.fetchRole(req, function (err, user, info) {
         if (err) {
             return next(err);
         } else if (!user) {
@@ -501,7 +253,9 @@ router.post('/forgotpassword', validateDefault, function (req, res, next) {
  * @apiUse ResetPwdError
  */
 
-router.post('/resetpassword', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/resetpassword', checkRoleIsAdmin({
+    "manager": true
+}), validateRequest, function (req, res, next) {
     setDefaultPassword(req, true);
     userQuery.resetPass(req, function (err, user, info) {
         if (err) {
@@ -552,6 +306,8 @@ router.post('/logout', validateRequest, function (req, res, next) {
  * 
  * @apiParam {String} botName bot name.
  * @apiParam {String} scopeID scope id.
+ * @apiParam {String} returnToStoreID set return to storeID.
+ * @apiParam {String} reloadToStationID set reload to stationID.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     { 
@@ -564,11 +320,7 @@ router.post('/logout', validateRequest, function (req, res, next) {
  *     }
  * @apiUse AddbotError
  */
-router.post('/addbot', regAsAdminManager, validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/addbot', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     userQuery.addBot(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -598,11 +350,7 @@ router.post('/addbot', regAsAdminManager, validateRequest, function (
  *          } 
  *     }
  */
-router.post('/createBotKey', regAsAdminManager, validateRequest, function (
-    req,
-    res,
-    next
-) {
+router.post('/createBotKey', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
@@ -700,12 +448,8 @@ router.post('/subscribeSNS', validateRequest, function (req, res, next) {
  *      }
  */
 
-router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
-    req,
-    res,
-    next
-) {
-    var key = req.headers.userapikey;
+router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateRequest, function (req, res, next) {
+    const key = req.headers.userapikey;
     redis.get('user_token:' + key, (err, reply) => {
         if (err) return next(err);
         if (!reply)
@@ -715,77 +459,67 @@ router.get('/data/byToken', regAsStore, regAsBot, validateRequest, function (
                 message: 'Rent Request Expired',
             });
         User.findOne({
-                'user.phone': reply,
-            },
-            (err, dbUser) => {
-                if (err) return next(err);
-                var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-                var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
-                Trade.find({
-                        $or: [{
-                                'tradeType.action': 'Rent',
-                                'newUser.phone': dbUser.user.phone,
-                            },
-                            {
-                                'tradeType.action': 'Return',
-                                'oriUser.phone': dbUser.user.phone,
-                            },
-                            {
-                                'tradeType.action': 'UndoReturn',
-                                'newUser.phone': dbUser.user.phone,
-                            },
-                        ],
+            'user.phone': reply,
+        }, (err, dbUser) => {
+            if (err) return next(err);
+            var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+            var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+            Trade.find({
+                $or: [{
+                        'tradeType.action': ContainerAction.RENT,
+                        'newUser.phone': dbUser.user.phone,
                     },
-                    function (err, tradeList) {
-                        if (err) return next(err);
+                    {
+                        'tradeType.action': ContainerAction.RETURN,
+                        'oriUser.phone': dbUser.user.phone,
+                    },
+                    {
+                        'tradeType.action': ContainerAction.UNDO_RETURN,
+                        'newUser.phone': dbUser.user.phone,
+                    },
+                ],
+            }, function (err, tradeList) {
+                if (err) return next(err);
 
-                        tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-                        cleanUndoTrade('Return', tradeList);
+                tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
+                cleanUndoTrade(ContainerAction.RETURN, tradeList);
 
-                        var containerKey;
-                        var tmpReturnedObject;
-                        var inUsedDict = {};
-                        var returnedList = [];
-                        tradeList.forEach(aTrade => {
-                            containerKey =
-                                aTrade.container.id + '-' + aTrade.container.cycleCtr;
-                            if (aTrade.tradeType.action === 'Rent') {
-                                inUsedDict[containerKey] = {
-                                    container: '#' + intReLength(aTrade.container.id, 3),
-                                    containerCode: aTrade.container.id,
-                                    time: aTrade.tradeTime,
-                                    type: containerType[aTrade.container.typeCode].name,
-                                    store: store[aTrade.oriUser.storeID].name,
-                                    cycle: aTrade.container.cycleCtr,
-                                    returned: false,
-                                };
-                            } else if (
-                                aTrade.tradeType.action === 'Return' &&
-                                inUsedDict[containerKey]
-                            ) {
-                                tmpReturnedObject = {};
-                                Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
-                                Object.assign(tmpReturnedObject, {
-                                    returned: true,
-                                    returnTime: aTrade.tradeTime,
-                                });
-                                delete tmpReturnedObject.cycle;
-                                delete inUsedDict[containerKey];
-                                returnedList.unshift(tmpReturnedObject);
-                            }
+                var containerKey;
+                var tmpReturnedObject;
+                var inUsedDict = {};
+                var returnedList = [];
+                tradeList.forEach(aTrade => {
+                    containerKey = aTrade.container.id + '-' + aTrade.container.cycleCtr;
+                    if (aTrade.tradeType.action === ContainerAction.RENT) {
+                        inUsedDict[containerKey] = {
+                            container: '#' + intReLength(aTrade.container.id, 3),
+                            containerCode: aTrade.container.id,
+                            time: aTrade.tradeTime,
+                            type: containerType[aTrade.container.typeCode].name,
+                            store: store[aTrade.oriUser.storeID].name,
+                            cycle: aTrade.container.cycleCtr,
+                            returned: false,
+                        };
+                    } else if (aTrade.tradeType.action === ContainerAction.RETURN && inUsedDict[containerKey]) {
+                        tmpReturnedObject = {};
+                        Object.assign(tmpReturnedObject, inUsedDict[containerKey]);
+                        Object.assign(tmpReturnedObject, {
+                            returned: true,
+                            returnTime: aTrade.tradeTime,
                         });
-
-                        var inUsedList = Object.values(inUsedDict).sort(
-                            (a, b) => b.time - a.time
-                        );
-                        res.json({
-                            usingAmount: inUsedList.length,
-                            data: inUsedList.concat(returnedList),
-                        });
+                        delete tmpReturnedObject.cycle;
+                        delete inUsedDict[containerKey];
+                        returnedList.unshift(tmpReturnedObject);
                     }
-                );
-            }
-        );
+                });
+
+                const inUsedList = Object.values(inUsedDict).sort((a, b) => b.time - a.time);
+                res.json({
+                    usingAmount: inUsedList.length,
+                    data: inUsedList.concat(returnedList),
+                });
+            });
+        });
     });
 });
 
@@ -820,15 +554,15 @@ router.get('/data', validateRequest, function (req, res, next) {
     var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
             $or: [{
-                    'tradeType.action': 'Rent',
+                    'tradeType.action': ContainerAction.RENT,
                     'newUser.phone': dbUser.user.phone,
                 },
                 {
-                    'tradeType.action': 'Return',
+                    'tradeType.action': ContainerAction.RETURN,
                     'oriUser.phone': dbUser.user.phone,
                 },
                 {
-                    'tradeType.action': 'UndoReturn',
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
                     'newUser.phone': dbUser.user.phone,
                 },
             ],
@@ -837,7 +571,7 @@ router.get('/data', validateRequest, function (req, res, next) {
             if (err) return next(err);
 
             tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-            cleanUndoTrade('Return', tradeList);
+            cleanUndoTrade(ContainerAction.RETURN, tradeList);
 
             var containerKey;
             var tmpReturnedObject;
@@ -845,7 +579,7 @@ router.get('/data', validateRequest, function (req, res, next) {
             var returnedList = [];
             tradeList.forEach(aTrade => {
                 containerKey = aTrade.container.id + '-' + aTrade.container.cycleCtr;
-                if (aTrade.tradeType.action === 'Rent') {
+                if (aTrade.tradeType.action === ContainerAction.RENT) {
                     inUsedDict[containerKey] = {
                         container: '#' + intReLength(aTrade.container.id, 3),
                         containerCode: aTrade.container.id,
@@ -856,7 +590,7 @@ router.get('/data', validateRequest, function (req, res, next) {
                         returned: false,
                     };
                 } else if (
-                    aTrade.tradeType.action === 'Return' &&
+                    aTrade.tradeType.action === ContainerAction.RETURN &&
                     inUsedDict[containerKey]
                 ) {
                     tmpReturnedObject = {};
@@ -947,10 +681,19 @@ router.get('/pointLog', validateLine.all, function (req, res, next) {
 
 router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
     var dbUser = req._user;
-
+    let theRole;
+    let userGroup;
+    try {
+        theRole = dbUser.findRole({
+            roleType: RoleType.CUSTOMER
+        });
+        userGroup = theRole.getElement(RoleElement.CUSTOMER_GROUP, false);
+    } catch (error) {
+        next(error);
+    }
     res.json({
         purchaseStatus: dbUser.getPurchaseStatus(),
-        userGroup: dbUser.roles.customer.group
+        userGroup
     });
 });
 
@@ -1007,12 +750,12 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     Trade.find({
         "$or": [{
                 "newUser.phone": dbUser.user.phone,
-                "tradeType.action": "Rent",
+                "tradeType.action": ContainerAction.RENT,
                 "container.inLineSystem": true
             },
             {
                 "oriUser.phone": dbUser.user.phone,
-                "tradeType.action": "Return"
+                "tradeType.action": ContainerAction.RETURN
             }
         ]
     }, {}, {
@@ -1026,14 +769,14 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         const intergratedTrade = {};
         tradeList.forEach(aTrade => {
             const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
-            if (aTrade.tradeType.action === "Rent") {
+            if (aTrade.tradeType.action === ContainerAction.RENT) {
                 rentHistory[tradeKey] = {
                     containerID: `#${aTrade.container.id}`,
                     containerType: ContainerTypeDict[aTrade.container.typeCode].name,
                     rentTime: aTrade.tradeTime,
                     rentStore: StoreDict[aTrade.oriUser.storeID].name
                 };
-            } else if (aTrade.tradeType.action === "Return") {
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 if (!rentHistory[tradeKey]) return;
                 intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
                     returnTime: aTrade.tradeTime,
@@ -1048,7 +791,7 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
     });
 });
 
-router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/addPoint/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userToAddPoint = req.params.phone;
 
     const pointMultiplier = parseInt(req.body.pointMultiplier);
@@ -1093,8 +836,7 @@ router.post('/addPoint/:phone', regAsAdminManager, validateRequest, function (re
     });
 });
 
-
-router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/unbindLineUser/:phone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const userToUnbind = req.params.phone;
     User.updateOne({
         "user.phone": userToUnbind
@@ -1112,7 +854,7 @@ router.post('/unbindLineUser/:phone', regAsAdminManager, validateRequest, functi
     });
 });
 
-router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/addPurchaseUsers', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const usersToAdd = req.body.userList;
     const tasks = usersToAdd.map(aUser => new Promise((resolve, reject) =>
         userTrade.purchase(aUser, (err, oriUser) => {
@@ -1132,7 +874,7 @@ router.post('/addPurchaseUsers', regAsAdminManager, validateRequest, function (r
         .catch(next);
 });
 
-router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+router.post("/banUser/:phone", checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
@@ -1144,21 +886,19 @@ router.post("/banUser/:phone", regAsAdminManager, validateRequest, (req, res, ne
             describe: "Can't find user"
         });
         userTrade.banUser(dbUser, null, byUser.user.phone);
-        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-            userIsBanned: dbUser.hasBanned,
-            hasOverdueContainer: 9999,
-            hasUnregisteredOrder: 9999,
-            hasAlmostOverdueContainer: 9999
-        }, {
-            ignoreSilentMode: true
-        });
-        res.json({
-            success: true
+        userTrade.refreshUserUsingStatus(dbUser, {
+            sendNotice: true,
+            banOrUnbanUser: false
+        }, err => {
+            if (err) return next(err);
+            res.json({
+                success: true
+            });
         });
     });
 });
 
-router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, next) => {
+router.post("/unbanUser/:phone", checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     const byUser = req._user;
     const userPhone = req.params.phone;
     User.findOne({
@@ -1169,17 +909,15 @@ router.post("/unbanUser/:phone", regAsAdminManager, validateRequest, (req, res, 
             success: false,
             describe: "Can't find user"
         });
-        userTrade.unbanUser(dbUser, true, byUser.user.phone);
-        NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
-            userIsBanned: dbUser.hasBanned,
-            hasOverdueContainer: 9999,
-            hasUnregisteredOrder: 9999,
-            hasAlmostOverdueContainer: 9999
-        }, {
-            ignoreSilentMode: true
-        });
-        res.json({
-            success: true
+        userTrade.unbanUser(dbUser, false, byUser.user.phone);
+        userTrade.refreshUserUsingStatus(dbUser, {
+            sendNotice: true,
+            banOrUnbanUser: false
+        }, err => {
+            if (err) return next(err);
+            res.json({
+                success: true
+            });
         });
     });
 });
