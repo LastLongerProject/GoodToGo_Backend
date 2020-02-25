@@ -1,3 +1,4 @@
+const dateCheckpoint = require('../../helpers/toolkit').dateCheckpoint;
 const getDateCheckpoint = require('../../helpers/toolkit').getDateCheckpoint;
 
 const DueDays = require('../enums/userEnum').DueDays;
@@ -26,5 +27,10 @@ module.exports = {
         else if (daysToDue === 0) return DueStatus.ALMOST_OVERDUE;
         else if (daysOverDue < UserLastCallDays) return DueStatus.LAST_CALL;
         else return DueStatus.OVERDUE;
+    },
+    deadline: function (dateToCompute, userPurchaseStatus, now = Date.now()) {
+        const UserDueDays = DueDays[userPurchaseStatus];
+        const UserLastCallDays = LastCallDays[userPurchaseStatus];
+        return dateCheckpoint(UserDueDays + UserLastCallDays - computeDaysOfUsing(dateToCompute, now) + 1);
     }
 };
