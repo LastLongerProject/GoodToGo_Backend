@@ -3,8 +3,8 @@ const fs = require("fs");
 const NotificationPreprocess = require("./preprocessor");
 const NotificationSender = require("./sender");
 
-const PushType = require("./enums/pushType");
-const WebhookEvent = require("./enums/webhook/events");
+const PushType = require("../../models/enums/notificationEnum").PushType;
+const WebhookEvent = require("../../models/enums/notificationEnum").WebhookEvent;
 const Notification = require("../../models/DB/notificationDB");
 
 const debug = require("../debugger")("notification_push");

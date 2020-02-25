@@ -3,6 +3,11 @@ module.exports = {
         CUSTOMER: "customer",
         SHOP: "shop"
     }),
+    PushType: Object.freeze({
+        SNS: "sns",
+        WEBHOOK: "webhook",
+        SOCKET: "socket"
+    }),
     CenterEvent: Object.freeze({
         CONTAINER_DELIVERY: "container_delivery",
         CONTAINER_RENT: "container_rent",
