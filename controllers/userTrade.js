@@ -15,7 +15,8 @@ const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
 
 const DueStatus = require('../models/enums/userEnum').DueStatus;
 const getDueStatus = require('../models/computed/dueStatus').dueStatus;
-const UserOrderCatalog = require('../models/variable/userOrderCatalog');
+const getDeadline = require('../models/computed/dueStatus').deadline;
+const UserOrderCatalog = require('../models/variables/userOrderCatalog');
 
 const ID = require('../models/enums/analyzedOrderEnum').ID;
 const ReduceBy = require('../models/enums/analyzedOrderEnum').ReduceBy;
@@ -45,7 +46,12 @@ const thisModule = module.exports = {
                     if (event !== null)
                         thisModule.noticeUser(dbUser, event, {
                             almostOverdueAmount: summary.almostOverdueAmount,
-                            lastCallAmount: summary.lastCallAmount
+                            lastCallAmount: summary.lastCallAmount,
+                            deadlineTxt: summary.closestDeadline.toLocaleString('en-US', {
+                                timeZone: 'Asia/Taipei',
+                                month: "2-digit",
+                                day: "2-digit"
+                            })
                         });
                 }
                 NotificationCenter.emit(NotificationEvent.USER_STATUS_UPDATE, dbUser, {
@@ -213,7 +219,9 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
             const userID = aUserOrder.user;
             const analyzedUserOrder = userDict[userID].analyzedUserOrder;
             const dueStatus = getDueStatus(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
+            const deadline = getDeadline(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
             const isIdRegistered = aUserOrder.containerID !== null ? ID.isRegistered : ID.notRegistered;
+            userDict[userID].deadlineList.push(deadline);
             analyzedUserOrder[isIdRegistered][dueStatus].push(aUserOrder);
         });
 
@@ -229,6 +237,7 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
             const hasAlmostOverdueContainer = almostOverdueAmount > 0;
             const lastCallAmount = analyzedDataCounter(analyzedUserOrder, ReduceBy.dueStatus, DueStatus.LAST_CALL);
             const hasLastCallContainer = lastCallAmount > 0;
+            const closestDeadline = userDict[userID].deadlineList.reduce((acc, loc) => acc < loc ? acc : loc, new Date("2200/01/01"));
 
             const summary = {
                 unregisteredAmount,
@@ -238,7 +247,8 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
                 lastCallAmount,
                 hasLastCallContainer,
                 overdueAmount,
-                hasOverdueContainer
+                hasOverdueContainer,
+                closestDeadline
             };
 
             Object.assign(userDict[userID], {
