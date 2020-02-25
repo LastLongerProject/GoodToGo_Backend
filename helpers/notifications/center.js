@@ -9,19 +9,19 @@ const NotificationEvent = require("../../models/enums/notificationEnum").CenterE
 const pushBy = require("./push");
 
 module.exports = {
-    emit: function (event, target, data, options = {}) {
+    emit: function (event, target, data = {}, options = {}) {
         switch (event) {
             case NotificationEvent.CONTAINER_DELIVERY:
                 pushBy.sns(SnsEvent.CONTAINER_DELIVERY, SnsAppType.SHOP, target, data, options).push();
                 break;
             case NotificationEvent.CONTAINER_RENT:
                 pushBy.sns(SnsEvent.CONTAINER_RENT, SnsAppType.CUSTOMER, target, data, options).push();
-                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target, options).push();
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RENT, target, data, options).push();
                 pushBy.socket(SocketEvent.GLOBAL_USAGE_UPDATE, data, options).push();
                 break;
             case NotificationEvent.CONTAINER_RETURN:
                 pushBy.sns(SnsEvent.CONTAINER_RETURN, SnsAppType.CUSTOMER, target, data, options).push();
-                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target, options).push();
+                pushBy.webhook(WebhookEvent.USER_USAGE_UPDATE_RETURN, target, data, options).push();
                 break;
             case NotificationEvent.CONTAINER_RETURN_LINE:
                 pushBy.webhook(WebhookEvent.USER_RETURN_CONTAINER_NEWSYSTEM, target, data, options).push();
