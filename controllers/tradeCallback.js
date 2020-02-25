@@ -19,6 +19,8 @@ module.exports = {
             .forEach(aCustomerTradeDetail => {
                 NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, aCustomerTradeDetail.customer, {
                     containerList: aCustomerTradeDetail.containerList
+                }, {
+                    ignoreSilentMode: true
                 });
                 if (storeID === null) return;
                 const now = Date.now();

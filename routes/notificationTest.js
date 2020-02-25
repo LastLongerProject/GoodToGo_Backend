@@ -21,9 +21,12 @@ const getFakeNotificationContext = function (cb) {
 router.post('/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
+        const ignoreSilentMode = req.query.ignoreSilentMode || false;
         let result = Object.keys(fakeNotificationContext).map(event => {
             if (!NotificationEvent[event]) return `[${event}] Fail with no Matched Event`;
-            NotificationCenter.emit(NotificationEvent[event], fakeNotificationContext[event].target, fakeNotificationContext[event].data);
+            NotificationCenter.emit(NotificationEvent[event], fakeNotificationContext[event].target, fakeNotificationContext[event].data, {
+                ignoreSilentMode
+            });
             return `[${event}] Emit!`;
         });
         res.json({
@@ -36,11 +39,14 @@ router.post('/event/:eventName', checkRoleIsAdmin(), validateRequest, function (
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
         const event = req.params.eventName || "null";
+        const ignoreSilentMode = req.query.ignoreSilentMode || false;
         let result;
         if (!NotificationEvent[event] || !fakeNotificationContext[event]) {
             result = `[${event}] Fail with no Matched Event`;
         } else {
-            NotificationCenter.emit(NotificationEvent[event], fakeNotificationContext[event].target, fakeNotificationContext[event].data);
+            NotificationCenter.emit(NotificationEvent[event], fakeNotificationContext[event].target, fakeNotificationContext[event].data, {
+                ignoreSilentMode
+            });
             result = `[${event}] Emit!`;
         }
         res.json({

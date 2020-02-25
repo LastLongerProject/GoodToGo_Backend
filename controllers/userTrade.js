@@ -59,6 +59,8 @@ const thisModule = module.exports = {
                     hasOverdueContainer: summary.hasOverdueContainer,
                     hasUnregisteredOrder: summary.hasUnregisteredOrder,
                     hasAlmostOverdueContainer: summary.hasAlmostOverdueContainer
+                }, {
+                    ignoreSilentMode: true
                 });
             }, (err, userDict) => {
                 if (err) return cb(err);

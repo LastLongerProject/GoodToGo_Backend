@@ -31,7 +31,7 @@ module.exports = function () {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 tasks.checkCouponIsExpired(generalCb);
-                tasks.refreshAllUserUsingStatus(false, generalCb);
+                tasks.refreshAllUserUsingStatus(true, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
@@ -90,7 +90,7 @@ module.exports = function () {
         setTimeout(function taskToDoAtTenInTheMorning() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Ten In The Morning] start');
-                tasks.refreshAllUserUsingStatus(true, generalCb);
+                tasks.reloadSuspendedNotifications(generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);

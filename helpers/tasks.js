@@ -14,8 +14,10 @@ const CouponType = require('../models/DB/couponTypeDB');
 const ContainerType = require('../models/DB/containerTypeDB');
 
 const RoleType = require('../models/enums/userEnum').RoleType;
-const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
+
+const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
 
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
@@ -447,7 +449,8 @@ module.exports = {
                 })
                 .catch(cb);
         });
-    }
+    },
+    reloadSuspendedNotifications
 }
 
 function storeListGenerator(cb) {
