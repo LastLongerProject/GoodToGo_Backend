@@ -20,10 +20,11 @@ class Pusher {
 
     static inSilentMode() {
         const now = new Date();
-        const hour = parseInt(now.toLocaleString('zh-tw', {
-            hour12: false,
-            timeZone: 'Asia/Taipei'
-        }).slice(10, 12));
+        const hour = parseInt(now.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            hour: "2-digit",
+            hour12: false
+        }).slice(0, 2));
         return hour >= 22 || hour < 10;
     }
 
