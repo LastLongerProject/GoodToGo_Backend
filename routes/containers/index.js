@@ -15,7 +15,6 @@ const ContainerAction = require('../../models/enums/containerEnum').Action;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 const getGlobalUsedAmount = require('../../models/computed/containerStatistic').global_used;
 
-const tasks = require('../../helpers/tasks');
 const userIsAvailableForRentContainer = require('../../helpers/tools').userIsAvailableForRentContainer;
 const validateStateChanging = require('../../helpers/toolkit').validateStateChanging;
 
@@ -515,80 +514,6 @@ router.get('/challenge/:action/:container', checkRoleIsStore(), checkRoleIsClean
                     message: 'Can be ' + action,
                 });
             }
-        });
-    });
-});
-
-router.post('/triggerTradeCallback/return/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
-    tasks.solveUnusualUserOrder((err, results) => {
-        if (err) return next(err);
-        res.json({
-            success: true,
-            msg: "Try To Fix Following User Order",
-            results
-        });
-    });
-});
-
-router.post('/triggerTradeCallback/return/:container/:userPhone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
-    const containerID = req.params.container;
-    const userPhone = req.params.userPhone;
-    Trade.findOne({
-        "container.id": containerID,
-        "oriUser.phone": userPhone,
-        "tradeType.action": ContainerAction.RETURN
-    }, {}, {
-        sort: {
-            tradeTime: -1
-        }
-    }, function (err, theTrade) {
-        if (err) return next(err);
-        if (!theTrade)
-            return res.status(403).json({
-                success: false,
-                msg: "Can't find that trade"
-            });
-        User.findOne({
-            "user.phone": theTrade.oriUser.phone
-        }, (err, oriUser) => {
-            if (err) return next(err);
-            if (!oriUser)
-                return res.status(403).json({
-                    success: false,
-                    msg: "Can't find oriUser"
-                });
-            User.findOne({
-                "user.phone": theTrade.newUser.phone
-            }, (err, newUser) => {
-                if (err) return next(err);
-                if (!newUser)
-                    return res.status(403).json({
-                        success: false,
-                        msg: "Can't find newUser"
-                    });
-                Container.findOne({
-                    "ID": theTrade.container.id
-                }, (err, theContainer) => {
-                    if (err) return next(err);
-                    if (!theContainer)
-                        return res.status(403).json({
-                            success: false,
-                            msg: "Can't find theContainer"
-                        });
-                    const tradeDetail = {
-                        oriUser,
-                        newUser,
-                        container: theContainer
-                    };
-                    tradeCallback.return([tradeDetail], {
-                        storeID: theTrade.newUser.storeID
-                    });
-                    res.json({
-                        success: true,
-                        msg: "Doing task"
-                    });
-                });
-            });
         });
     });
 });
