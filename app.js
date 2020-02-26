@@ -19,13 +19,13 @@ const logModel = require('./models/DB/logDB');
 const DataCacheFactory = require('./models/dataCacheFactory');
 const mSocket = require('./controllers/socket');
 const logSystem = require('./middlewares/logSystem');
+const task = require('./routes/task');
 const users = require('./routes/users');
 const stores = require('./routes/stores');
 const images = require('./routes/images');
 const manage = require('./routes/manage');
 const coupon = require('./routes/coupon');
 const userOrder = require('./routes/userOrder');
-const notificationTest = require('./routes/notificationTest');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
 
@@ -68,13 +68,13 @@ app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     next();
 });
+app.use('/task', task);
 app.use('/users', users);
 app.use('/stores', stores);
 app.use('/coupon', coupon);
 app.use('/userOrder', userOrder);
 app.use('/containers', containers);
 app.use('/deliveryList', deliveryList);
-app.use('/notificationTest', notificationTest);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
