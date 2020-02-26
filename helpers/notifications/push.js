@@ -150,7 +150,7 @@ module.exports = {
         return new SocketPusher(preprocessedMsg, options);
     },
     reloadSuspendedNotifications: function (cb) {
-        if (!Pusher.inSilentMode) {
+        if (!Pusher.inSilentMode()) {
             Notification.find((err, notifications) => {
                 if (err) return cb(err);
                 notifications.forEach(reload);
