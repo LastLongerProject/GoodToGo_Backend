@@ -3,18 +3,18 @@ const router = express.Router();
 const debug = require('../helpers/debugger')('notification_testing');
 const fs = require('fs');
 
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIsAdmin = require('../middlewares/validation/authorization/validateRequest').checkRoleIsAdmin;
 
 const tradeCallback = require('../controllers/tradeCallback');
 
 const tasks = require('../helpers/tasks');
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
 
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB.js');
 const Container = require('../models/DB/containerDB');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 
 const rootDir = require("../config/config").staticFileDir;
 
@@ -25,7 +25,7 @@ const getFakeNotificationContext = function (cb) {
     });
 };
 
-router.post('/notificationTest/all', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/notificationTest/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
         const ignoreSilentMode = req.query.ignoreSilentMode || false;
@@ -42,7 +42,7 @@ router.post('/notificationTest/all', regAsAdminManager, validateRequest, functio
     });
 });
 
-router.post('/notificationTest/event/:eventName', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/notificationTest/event/:eventName', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     getFakeNotificationContext((err, fakeNotificationContext) => {
         if (err) return next(err);
         const event = req.params.eventName || "null";
@@ -62,7 +62,7 @@ router.post('/notificationTest/event/:eventName', regAsAdminManager, validateReq
     });
 });
 
-router.post('/reloadSuspendedNotifications', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/reloadSuspendedNotifications', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     tasks.reloadSuspendedNotifications((err, results) => {
         if (err) return next(err);
         res.json({
@@ -72,7 +72,7 @@ router.post('/reloadSuspendedNotifications', regAsAdminManager, validateRequest,
     });
 });
 
-router.post('/tradeCallback/return/all', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/tradeCallback/return/all', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     tasks.solveUnusualUserOrder((err, results) => {
         if (err) return next(err);
         res.json({
@@ -83,7 +83,7 @@ router.post('/tradeCallback/return/all', regAsAdminManager, validateRequest, fun
     });
 });
 
-router.post('/tradeCallback/return/:container/:userPhone', regAsAdminManager, validateRequest, function (req, res, next) {
+router.post('/tradeCallback/return/:container/:userPhone', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const containerID = req.params.container;
     const userPhone = req.params.userPhone;
     Trade.findOne({
