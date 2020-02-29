@@ -319,11 +319,13 @@ router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateReque
                     }
                 });
                 break;
+            case RoleType.STORE:
+                break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     Store.find(query, {}, {
@@ -394,7 +396,7 @@ router.get('/clerkList', checkRoleIs([{
                 };
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
         return next(error);
@@ -467,7 +469,7 @@ router.post('/layoff/:id', checkRoleIs([{
                 storeID = dbRole.getElement(RoleElement.STORE_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
         return next(error);
@@ -548,7 +550,7 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
@@ -690,7 +692,7 @@ router.get('/openingTime', checkRoleIsStore(), validateRequest, function (req, r
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     Store.findOne({
         'id': thisStoreID,
@@ -724,7 +726,7 @@ router.post('/unsetDefaultOpeningTime', checkRoleIsStore(), validateRequest, fun
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     Store.findOne({
         'id': thisStoreID,
@@ -776,7 +778,7 @@ router.get('/getUser/:phone', checkRoleIs([{
                 thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
         return next(error);
@@ -856,7 +858,7 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     var rentedIdList = [];
     var resJson = {
@@ -946,7 +948,7 @@ router.post('/changeOpeningTime', checkRoleIsStore({
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     var newData = req.body;
     var days = newData.opening_hours;
@@ -1019,7 +1021,7 @@ router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
@@ -1152,7 +1154,7 @@ router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, re
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Promise
@@ -1218,7 +1220,7 @@ router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, 
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
@@ -1286,7 +1288,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     req.clearTimeout();
@@ -1477,7 +1479,7 @@ router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function 
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     let tradeQuery = {
         "tradeType.action": ContainerAction.RENT,
@@ -1546,7 +1548,7 @@ router.get('/performance', checkRoleIsStore(), validateRequest, function (req, r
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     Trade.find({
         'tradeType.action': ContainerAction.RENT,
@@ -1597,7 +1599,7 @@ router.get('/favorite', checkRoleIsStore(), validateRequest, function (req, res,
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const thisRedisKey = redisKey(thisStoreID);
     redis.exists(thisRedisKey, (err, keyIsExists) => {

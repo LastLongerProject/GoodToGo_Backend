@@ -115,10 +115,10 @@ router.post('/create/:storeID', checkRoleIsCleanStation(), validateRequest, fetc
                 stationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     if (!storeIsInArea(storeID, stationID))
@@ -185,10 +185,10 @@ router.post('/box/:boxID', checkRoleIsCleanStation(), validateRequest, validateB
                 stationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     const boxID = req.params.boxID;
@@ -350,10 +350,10 @@ router.post('/changeState/:boxID', checkRoleIsCleanStation(), validateRequest, v
                 });
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     Box.findOne({
@@ -743,9 +743,9 @@ router.get(
 
         let query = {
             stationID,
-            status: Array.isArray(boxStatus)
-                ? { $in: boxStatus }
-                : boxStatus
+            status: Array.isArray(boxStatus) ? {
+                $in: boxStatus
+            } : boxStatus
         };
 
         Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
@@ -948,10 +948,10 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     Box.findOne({
@@ -1079,10 +1079,10 @@ router.delete('/deleteBox/:boxID', checkRoleIsCleanStation(), validateRequest, f
                 thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     Box.findOne({
@@ -1185,10 +1185,10 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                 });
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     if (!needBoth) {
@@ -1313,7 +1313,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     try {
         thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const batch = parseInt(req.query.batch) || 0;
     const offset = parseInt(req.query.offset) || 0;
@@ -1435,9 +1435,9 @@ router.get(
 
         let query = {
             stationID: thisStationID,
-            status: Array.isArray(status) 
-                ? { $in: status }
-                : status
+            status: Array.isArray(status) ? {
+                $in: status
+            } : status
         }
 
         Box.aggregate([{

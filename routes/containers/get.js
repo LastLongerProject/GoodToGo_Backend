@@ -331,7 +331,7 @@ router.get('/reloadHistory', checkRoleIsStore(), checkRoleIsCleanStation(), vali
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     var typeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     var queryCond;

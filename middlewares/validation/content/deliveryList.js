@@ -58,7 +58,7 @@ function validateCreateApiContent(req, res, next) {
     try {
         thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     let boxList = req.body.boxList;
@@ -132,7 +132,7 @@ function validateStockApiContent(req, res, next) {
     try {
         thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
 
     let pass = validateBoxContent(boxContent, null, [

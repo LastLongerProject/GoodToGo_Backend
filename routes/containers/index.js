@@ -96,7 +96,7 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     const key = req.headers.userapikey;
     if (typeof key === 'undefined' || key.length === 0)
@@ -238,10 +238,10 @@ router.post('/return/:container', checkRoleIs([{
                 thisStoreID = dbRole.getElement(RoleElement.RETURN_TO_STORE_ID, false);
                 break;
             default:
-                next();
+                return next();
         }
     } catch (error) {
-        next(error);
+        return next(error);
     }
     if (container === 'list') container = req.body.containers;
     else container = [container];

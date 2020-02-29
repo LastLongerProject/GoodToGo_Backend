@@ -689,7 +689,7 @@ router.get('/purchaseStatus', validateLine.all, function (req, res, next) {
         });
         userGroup = theRole.getElement(RoleElement.CUSTOMER_GROUP, false);
     } catch (error) {
-        next(error);
+        return next(error);
     }
     res.json({
         purchaseStatus: dbUser.getPurchaseStatus(),
