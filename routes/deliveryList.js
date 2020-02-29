@@ -743,7 +743,9 @@ router.get(
 
         let query = {
             stationID,
-            'status': boxStatus
+            status: Array.isArray(boxStatus)
+                ? { $in: boxStatus }
+                : boxStatus
         };
 
         Object.keys(query).forEach(key => query[key] === undefined ? delete query[key] : '');
@@ -1416,13 +1418,6 @@ router.get(
     async function (req, res, next) {
         let status = req.query.boxStatus
         let storeID = parseInt(req.query.storeID) || null
-        let query = Array.isArray(status) ? {
-            status: {
-                $in: status
-            }
-        } : {
-            status
-        };
 
         const dbRole = req._thisRole;
         let thisStationID;
@@ -1438,6 +1433,15 @@ router.get(
         } catch (error) {
             next(error);
         }
+
+        let query = Array.isArray(status) ? {
+            stationID: thisStationID,
+            status: {
+                $in: status
+            }
+        } : {
+            status, stationID: thisStationID,
+        };
 
         if (storeID !== null) {
             if (!storeIsInArea(storeID, thisStationID))
