@@ -1288,7 +1288,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
         { 
             action: [
                 {
-                    "boxID": String,
+                    "boxID": Number,
                     "phone": String,
                     "containerList": [
                         Number,...
@@ -1343,7 +1343,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
     }, {
         $project: {
             boxID: "$boxID",
-            phone: "$phone",
+            phone: "$action.phone",
             containerList: "$containerList",
             timestamp: "$action.timestamps",
             action: "$action.boxAction",
