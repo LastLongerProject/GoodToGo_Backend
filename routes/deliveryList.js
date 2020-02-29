@@ -1417,7 +1417,6 @@ router.get(
     validateBoxStatus,
     async function (req, res, next) {
         let status = req.query.boxStatus
-        let storeID = parseInt(req.query.storeID) || null
 
         const dbRole = req._thisRole;
         let thisStationID;
@@ -1434,31 +1433,11 @@ router.get(
             next(error);
         }
 
-        let query = Array.isArray(status) ? {
+        let query = {
             stationID: thisStationID,
-            status: {
-                $in: status
-            }
-        } : {
-            status, stationID: thisStationID,
-        };
-
-        if (storeID !== null) {
-            if (!storeIsInArea(storeID, thisStationID))
-                return res.status(401).json({
-                    code: 'F016',
-                    type: 'DeliveryListMessage',
-                    message: "Store is not in your Area"
-                });
-            Object.assign(query, {
-                storeID
-            });
-        } else {
-            Object.assign(query, {
-                storeID: {
-                    "$in": getStoreListInArea(thisStationID)
-                }
-            });
+            status: Array.isArray(status) 
+                ? { $in: status }
+                : status
         }
 
         Box.aggregate([{
