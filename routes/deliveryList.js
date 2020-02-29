@@ -1158,7 +1158,6 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
     const needBoth = req.query.cleanReload === undefined
     const query = {
         'tradeType.action': 'ReadyToClean',
-        'oriUser.storeID': thisStoreID,
         'tradeTime': {
             '$gte': dateCheckpoint(1 - historyDays)
         }
@@ -1171,6 +1170,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
         switch (thisRoleType) {
             case RoleType.CLEAN_STATION:
                 thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                var storeIdList = getStoreListInArea(thisStationID);
                 Object.assign(query, {
                     'oriUser.storeID': {
                         "$in": storeIdList
@@ -1179,7 +1179,6 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                 break;
             case RoleType.STORE:
                 thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
-                var storeIdList = getStoreListInArea(thisStationID);
                 Object.assign(query, {
                     'oriUser.storeID': thisStoreID
                 });
