@@ -716,6 +716,7 @@ function parseSorter(rawValue) {
 
 router.get(
     '/box/list/query/:sorter',
+    checkRoleIsStore(),
     checkRoleIsCleanStation(),
     validateRequest,
     async function (req, res, next) {
@@ -727,12 +728,15 @@ router.get(
         const sorter = parseSorter(sorterRawValue)
 
         const dbRole = req._thisRole;
-        let stationID;
+        let stationID, storeID;
         const thisRoleType = dbRole.roleType;
         try {
             switch (thisRoleType) {
                 case RoleType.CLEAN_STATION:
                     stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                    break;
+                case RoleType.STORE:
+                    storeID = dbRole.getElement(RoleElement.STORE_ID, false);
                     break;
                 default:
                     next();
@@ -743,6 +747,7 @@ router.get(
 
         let query = {
             stationID,
+            storeID,
             status: Array.isArray(boxStatus) ? {
                 $in: boxStatus
             } : boxStatus
