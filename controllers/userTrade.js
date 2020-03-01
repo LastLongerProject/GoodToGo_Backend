@@ -9,6 +9,7 @@ const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const UserTradeLog = require("../models/DB/userTradeLogDB");
 
+const AUTO_UNBANNED_TIME = require('../models/enums/userEnum').AUTO_UNBANNED_TIME;
 const RoleType = require('../models/enums/userEnum').RoleType;
 const TradeAction = require("../models/enums/userEnum").TradeAction;
 const RegisterMethod = require('../models/enums/userEnum').RegisterMethod;
@@ -32,7 +33,7 @@ const thisModule = module.exports = {
                     if (summary.hasOverdueContainer) {
                         const overdueList = analyzedUserOrder[ID.isRegistered][DueStatus.OVERDUE].concat(analyzedUserOrder[ID.notRegistered][DueStatus.OVERDUE]);
                         thisModule.banUser(dbUser, overdueList);
-                    } else if (dbUser.bannedTimes <= 1) {
+                    } else if (dbUser.bannedTimes <= AUTO_UNBANNED_TIME) {
                         thisModule.unbanUser(dbUser, true);
                     }
                 }

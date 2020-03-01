@@ -1,4 +1,4 @@
-module.exports = {
+module.exports = Object.freeze({
     RoleType: Object.freeze({
         CLERK: "clerk",
         ADMIN: "admin",
@@ -66,5 +66,6 @@ module.exports = {
     HoldingQuantityLimitation: Object.freeze({
         FREE_USER: 6,
         PURCHASED_USER: -1
-    })
-};
+    }),
+    AUTO_UNBANNED_TIME: 3
+});
