@@ -466,16 +466,15 @@ function getLastStationIdInAction(box) {
 }
 
 function removeStoreIDfromBox(box, info) {
-    if (box.storeID !== null)
+    if (box.storeID !== null) {
         Object.assign(info, {
-            storeID: null,
-            $push: {
-                action: {
-                    storeID: {
-                        from: box.storeID,
-                        to: null
-                    }
-                }
+            storeID: null
+        });
+        Object.assign(info.$push.action, {
+            storeID: {
+                from: box.storeID,
+                to: null
             }
         });
+    }
 }
