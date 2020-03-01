@@ -8,7 +8,7 @@ const checkRoleIsAdmin = require('../../middlewares/validation/authorization/val
 const User = require('../../models/DB/userDB');
 
 /**
- * @apiName CheckRoleExistence
+ * @apiName CheckRoleExistence1
  * @apiGroup Users
  * @apiPermission customer
  * 
@@ -50,7 +50,7 @@ router.get('/checkIsExisted/:roleType', validateRequest, function (req, res, nex
 });
 
 /**
- * @apiName CheckRoleExistence
+ * @apiName CheckRoleExistence2
  * @apiGroup Users
  * @apiPermission admin_manager
  * 
