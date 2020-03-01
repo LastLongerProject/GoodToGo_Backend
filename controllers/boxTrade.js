@@ -191,7 +191,12 @@ let changeStateProcess = async function (element, box, phone) {
                 errorType: StateChangingError.MissingArg,
                 argumentNameList: missingArgList
             });
-        const stationID = element.destinationStationID;
+        const stationID = parseInt(element.destinationStationID);
+        if (stationID === box.stationID)
+            return Promise.resolve({
+                status: ProgramStatus.Error,
+                errorType: StateChangingError.ArgumentInvalid
+            });
         let info = {
             status: BoxStatus.Dispatching,
             stationID,
