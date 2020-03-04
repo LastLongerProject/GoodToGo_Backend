@@ -7,6 +7,7 @@ const Box = require('../../models/DB/boxDB');
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
 const Container = require('../../models/DB/containerDB');
+const UserRole = require('../../models/enums/userEnum').UserRole;
 const RentalQualification = require('../../models/enums/userEnum').RentalQualification;
 
 const getGlobalUsedAmount = require('../../models/variables/containerStatistic').global_used;
@@ -463,6 +464,7 @@ router.post(
     validateRequest,
     function (req, res, next) {
         var dbStore = req._user;
+        const dbKey = req._key;
         if (!res._payload.orderTime)
             return res.status(403).json({
                 code: 'F006',
@@ -488,7 +490,8 @@ router.post(
                 if (!tradeSuccess) return res.status(403).json(reply);
                 res.json(reply);
                 tradeCallback.return(tradeDetail, {
-                    storeID
+                    storeID,
+                    ignoreSilentMode: (dbKey.roleType === UserRole.BOT)
                 });
             }
         );
