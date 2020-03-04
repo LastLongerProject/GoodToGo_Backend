@@ -179,7 +179,7 @@ router.get('/toDelivery', checkRoleIsCleanStation(), validateRequest, function (
  * @apiName Containers get delivery history
  * @apiGroup Containers
  *
- * @api {get} /containers/get/toDelivery Get delivery history
+ * @api {get} /containers/get/deliveryHistory Get delivery history
  * 
  * @apiUse JWT
  * @apiPermission station

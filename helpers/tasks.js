@@ -1,6 +1,7 @@
 const debug = require('./debugger')('tasks');
 const DataCacheFactory = require("../models/dataCacheFactory");
 
+const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Trade = require('../models/DB/tradeDB');
 const Store = require('../models/DB/storeDB');
@@ -374,7 +375,38 @@ module.exports = {
             });
         });
     },
+    migrateBoxStructure: function (cb) {
+        Box.find((err, boxList) => {
+            if (err) return cb(err);
+            Promise
+                .all(boxList.map(aBox => new Promise((resolve, reject) => {
+                    if (aBox.storeID === 99999) aBox.storeID = null;
+                    if (aBox.stationID === null) aBox.stationID = 0;
+                    for (let actionIndex in aBox.action) {
+                        const theAction = aBox.action[actionIndex];
+                        if (typeof theAction.destinationStoreId !== "undefined") {
+                            Object.assign(theAction, {
+                                storeID: {
+                                    from: null,
+                                    to: theAction.destinationStoreId
+                                }
+                            });
+                            theAction.destinationStoreId = undefined;
+                        }
+                    }
+                })))
+                .then(() => {
+                    cb(null, "Done User Role Migration");
+                })
+                .catch(cb);
+        });
+    },
     migrateUserRoleStructure: function (cb) {
+        User.deleteMany({
+            "user.phone": undefined
+        }, err => {
+            if (err) return debug.error(err);
+        });
         User.find({
             "user.phone": {
                 $ne: undefined

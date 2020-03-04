@@ -22,6 +22,7 @@ var schema = mongoose.Schema({
         phone: String,
         boxStatus: String,
         boxAction: String,
+        destinationStoreId: Number,
         stationID: {
             from: Number,
             to: Number
