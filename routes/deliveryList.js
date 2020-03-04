@@ -1300,7 +1300,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                     "timestamp": Date,
                     "action": String, // ["getDispatch", "sendDispatch"]
                     "toStationID":Number,
-                    "boxAccepted": Boolean
+                    "boxAccepted": Boolean or null
                 },...
             ]
         }
@@ -1372,11 +1372,13 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
                 if (anAction.action === BoxAction.Dispatch) {
                     if (anAction.toStationID === thisStationID)
                         formattedAction.push(Object.assign(anAction, {
-                            action: DispatchStatus.GET_DISPATCH
+                            action: DispatchStatus.GET_DISPATCH,
+                            boxAccepted: null
                         }));
                     else
                         formattedAction.push(Object.assign(anAction, {
-                            action: DispatchStatus.SEND_DISPATCH
+                            action: DispatchStatus.SEND_DISPATCH,
+                            boxAccepted: null
                         }));
                 } else if (anAction.action === BoxAction.AcceptDispatch) {
                     const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
