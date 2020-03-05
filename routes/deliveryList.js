@@ -1018,18 +1018,21 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 if (info.storeID !== undefined || info.dueDate !== undefined) {
                     let assignAction = info.storeID && box.storeID !== info.storeID && {
                         phone: dbUser.user.phone,
-                        destinationStoreId: info.storeID,
+                        storeID: {
+                            from: box.storeID,
+                            to: info.storeID
+                        },
                         boxStatus: box.status,
                         boxAction: BoxAction.Assign,
                         timestamps: Date.now()
-                    }
+                    };
 
                     let modifyDateAction = info.dueDate && !isSameDay(info.dueDate, box.dueDate) && {
                         phone: dbUser.user.phone,
                         boxStatus: box.status,
                         boxAction: BoxAction.ModifyDueDate,
                         timestamps: Date.now()
-                    }
+                    };
 
                     info = {
                         ...info,
@@ -1039,7 +1042,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                                 $each: [modifyDateAction, assignAction].filter(e => e)
                             }
                         }
-                    }
+                    };
                 }
 
                 await box.update(info).exec();
@@ -1254,7 +1257,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                 timestamps: "$_id.timestamp"
             }]
         }
-    }])
+    }]);
 
     if (batch) {
         aggregate = aggregate.limit(batch)
@@ -1442,7 +1445,7 @@ router.get(
             status: Array.isArray(status) ? {
                 $in: status
             } : status
-        }
+        };
 
         Box.aggregate([{
                 $match: query
@@ -1493,7 +1496,7 @@ router.get(
                     ...overview,
                     containers: getDeliverContent(overview.containers)
                 });
-            })
+            });
     }
 );
 

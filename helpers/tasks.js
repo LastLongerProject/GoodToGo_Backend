@@ -394,6 +394,7 @@ module.exports = {
                             theAction.destinationStoreId = undefined;
                         }
                     }
+                    resolve();
                 })))
                 .then(() => {
                     cb(null, "Done User Role Migration");
