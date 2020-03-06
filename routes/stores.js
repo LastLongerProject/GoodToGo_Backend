@@ -33,6 +33,7 @@ const RoleElement = require('../models/enums/userEnum').RoleElement;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
 const ContainerAction = require('../models/enums/containerEnum').Action;
 const ContainerState = require('../models/enums/containerEnum').State;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
@@ -1027,7 +1028,7 @@ router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res
     const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Box.find({
         'storeID': thisStoreID,
-        'delivering': true
+        'status': BoxStatus.Delivering
     }, {}, {
         "sort": {
             "updatedAt": -1

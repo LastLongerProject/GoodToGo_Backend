@@ -391,7 +391,6 @@ module.exports = {
                                     to: theAction.destinationStoreId
                                 }
                             });
-                            theAction.destinationStoreId = undefined;
                         }
                     }
                     resolve();

@@ -1018,6 +1018,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 if (info.storeID !== undefined || info.dueDate !== undefined) {
                     let assignAction = info.storeID && box.storeID !== info.storeID && {
                         phone: dbUser.user.phone,
+                        destinationStoreId: info.storeID,
                         storeID: {
                             from: box.storeID,
                             to: info.storeID
