@@ -58,7 +58,7 @@ const historyDays = 14;
             [stationID]: String // "台南庫存"
         }
  */
-router.get('/stationDict', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+router.get('/stationDict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     Station.find({}, {}, {
         sort: {
             ID: 1
@@ -594,7 +594,9 @@ const Sorter = {
     DESCEND_ARRIVAL: 1 << 4,
     ASCEND_ARRIVAL: 1 << 5,
     DESCEND_CREATED_DATE: 1 << 6,
-    ASCEND_CREATED_DATE: 1 << 7
+    ASCEND_CREATED_DATE: 1 << 7,
+    DESCEND_UPDATED_DATE: 1 << 8,
+    ASCEND_UPDATED_DATE: 1 << 9,
 };
 
 async function createTextSearchQuery(keyword) {
@@ -660,6 +662,14 @@ function parseSorter(rawValue) {
             return {
                 "_id": -1
             };
+        case Sorter.ASCEND_UPDATED_DATE:
+            return {
+                "updatedAt": 1
+            }
+        case Sorter.DESCEND_UPDATED_DATE:
+            return {
+                "updatedAt": -1
+            }
         default:
             return {
                 "_id": 1
@@ -1304,7 +1314,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                     "timestamp": Date,
                     "action": String, // ["getDispatch", "sendDispatch"]
                     "toStationID":Number,
-                    "boxAccepted": Boolean
+                    "boxAccepted": Boolean or null
                 },...
             ]
         }
@@ -1376,11 +1386,13 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
                 if (anAction.action === BoxAction.Dispatch) {
                     if (anAction.toStationID === thisStationID)
                         formattedAction.push(Object.assign(anAction, {
-                            action: DispatchStatus.GET_DISPATCH
+                            action: DispatchStatus.GET_DISPATCH,
+                            boxAccepted: null
                         }));
                     else
                         formattedAction.push(Object.assign(anAction, {
-                            action: DispatchStatus.SEND_DISPATCH
+                            action: DispatchStatus.SEND_DISPATCH,
+                            boxAccepted: null
                         }));
                 } else if (anAction.action === BoxAction.AcceptDispatch) {
                     const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
