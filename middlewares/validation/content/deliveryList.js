@@ -1,18 +1,16 @@
-const timeFormatter = require('../../../helpers/toolkit').timeFormatter;
 const dayFormatter = require('../../../helpers/toolkit').dayFormatter;
 const monthFormatter = require('../../../helpers/toolkit').monthFormatter;
 const intReLength = require('../../../helpers/toolkit').intReLength;
 const Box = require('../../../models/DB/boxDB');
 const BoxStatus = require('../../../models/enums/boxEnum').BoxStatus;
 const BoxAction = require('../../../models/enums/boxEnum').BoxAction;
-const ErrorResponse = require('../../../models/enums/error')
-    .ErrorResponse;
+const RoleElement = require('../../../models/enums/userEnum').RoleElement;
+const ErrorResponse = require('../../../models/enums/error').ErrorResponse;
 const DataCacheFactory = require("../../../models/dataCacheFactory");
 const getDeliverContent = require('../../../helpers/tools.js').getDeliverContent;
 const getContainerHash = require('../../../helpers/tools').getContainerHash;
 const isSameDay = require('../../../helpers/toolkit').isSameDay;
 const redis = require("../../../models/redis");
-const hash = require('object-hash');
 
 const queue = require('queue')({
     concurrency: 1,
@@ -20,8 +18,8 @@ const queue = require('queue')({
 });
 
 let fullDateStringWithoutYear = function (date) {
-    dayFormatted = intReLength(dayFormatter(date), 2);
-    monthFormatted = intReLength(monthFormatter(date), 2);
+    const dayFormatted = intReLength(dayFormatter(date), 2);
+    const monthFormatted = intReLength(monthFormatter(date), 2);
 
     return monthFormatted + "/" + dayFormatted;
 }
@@ -32,14 +30,14 @@ function createBoxID(date, sequence, stationID) {
 }
 
 function fetchBoxCreation(req, res, next) {
-    queue.push((cb)=>{
+    queue.push((cb) => {
         redis.get("delivery_box_creation_amount", (error, string) => {
             let dict = JSON.parse(string || "{}");
             let now = new Date();
-            now.setDate(now.getDate()+8);
+            now.setDate(now.getDate() + 8);
             let sequence = dict.sequence;
             let _sequence = isSameDay(now, new Date(dict.date)) ? Number(sequence) + 1 : 1;
-            
+
             dict.sequence = _sequence;
             dict.date = now;
 
@@ -52,56 +50,69 @@ function fetchBoxCreation(req, res, next) {
 }
 
 function validateCreateApiContent(req, res, next) {
-    let boxArray = [];
-    let boxIDs = [];
+    const dbUser = req._user;
+    const phone = dbUser.user.phone;
+    const dbRole = req._thisRole;
+    let thisStationID;
+    try {
+        thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+
     let boxList = req.body.boxList;
-    let dbUser = req._user;
+    const storeID = parseInt(req.params.storeID);
+    if (boxList === undefined || !Array.isArray(boxList))
+        return res.status(403).json(ErrorResponse.H001_1);
+
     let date = new Date();
-
     let listID = fullDateStringWithoutYear(date).replace(/\//g, '');
-
     let index = req._sequence || 1;
 
-    if (boxList === undefined || !Array.isArray(boxList)) {
-        return res.status(403).json(ErrorResponse.H001_1);
-    } else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
+    let boxArray = [];
+    let boxIDs = [];
+    if (!stationIsBoxable(thisStationID))
+        return res.status(403).json(ErrorResponse.H013);
     for (let element of boxList) {
-
-        let pass = validateBoxListContent(element, BoxContentType.order, [
+        let pass = validateBoxContent(element, BoxContentType.order, [
             'boxName',
             'boxOrderContent',
             'dueDate'
         ]);
 
-        if (!pass.bool) {
+        if (!pass.bool)
             return res.status(403).json(ErrorResponse[pass.code]);
-        } else {
-            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
-            let box = new Box({
-                boxID: boxID,
-                boxName: element.boxName,
-                boxOrderContent: element.boxOrderContent,
-                containerHash: getContainerHash(element.boxOrderContent, true),
-                dueDate: element.dueDate,
-                storeID: parseInt(req.params.storeID),
-                action: [{
-                    phone: req.body.phone,
-                    boxStatus: BoxStatus.Created,
-                    boxAction: BoxAction.Create,
-                    timestamps: Date.now(),
-                } ],
-                user: {
-                    box: req.body.phone,
+        let boxID = parseInt(createBoxID(date, index++, thisStationID));
+        let box = new Box({
+            boxID: boxID,
+            boxName: element.boxName,
+            boxOrderContent: element.boxOrderContent,
+            containerHash: getContainerHash(element.boxOrderContent, true),
+            dueDate: element.dueDate,
+            storeID,
+            stationID: thisStationID,
+            action: [{
+                phone,
+                storeID: {
+                    from: null,
+                    to: storeID
                 },
-                status: BoxStatus.Created,
-            });
-            boxArray.push(box);
-            boxIDs.push(boxID);
-
-            index++;
-        }
+                destinationStoreId: storeID,
+                stationID: {
+                    from: null,
+                    to: thisStationID
+                },
+                boxStatus: BoxStatus.Created,
+                boxAction: BoxAction.Create,
+                timestamps: Date.now(),
+            }],
+            user: {
+                box: phone
+            },
+            status: BoxStatus.Created,
+        });
+        boxArray.push(box);
+        boxIDs.push(boxID);
     }
     req._listID = listID;
     req._boxArray = boxArray;
@@ -110,125 +121,90 @@ function validateCreateApiContent(req, res, next) {
 }
 
 function validateStockApiContent(req, res, next) {
-
-    let boxArray = [];
-    let boxIDs = [];
-    let boxList = req.body.boxList;
+    let boxContent = req.body.boxContent;
     let date = new Date();
-    let dbUser = req._user;
-    let storeID = req.params.storeID || 99999
-
     let index = req._sequence || 1;
 
-    if (boxList === undefined || !Array.isArray(boxList)) {
-        return res.status(403).json(ErrorResponse.H001_1);
-    } else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, null, [
-            'boxName',
-            'containerList'
-        ]);
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        } else {
-            let boxID = parseInt(createBoxID(date, index, dbUser.roles.admin.stationID));
-            let orderContent = getDeliverContent(element.containerList);
-            let box = new Box({
-                boxID: boxID,
-                boxName: element.boxName,
-                dueDate: Date.now(),
-                storeID: storeID,
-                boxOrderContent: orderContent,
-                containerList: element.containerList,
-                containerHash: getContainerHash(element.containerList),
-                action: [{
-                    phone: req.body.phone,
-                    boxStatus: BoxStatus.Boxing,
-                    boxAction: BoxAction.Pack,
-                    timestamps: Date.now(),
-                }, {
-                    phone: req.body.phone,
-                    boxStatus: BoxStatus.Stocked,
-                    boxAction: BoxAction.Stock,
-                    timestamps: Date.now()
-                }],
-                user: {
-                    box: req.body.phone,
-                },
-                status: BoxStatus.Stocked,
-            });
-            element.boxID = boxID;
-            boxArray.push(box);
-            boxIDs.push(boxID);
-            index++;
-        }
+    const dbUser = req._user;
+    const phone = dbUser.user.phone;
+    const dbRole = req._thisRole;
+    let thisStationID;
+    try {
+        thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+    } catch (error) {
+        return next(error);
     }
-    req._boxArray = boxArray;
-    req._boxIDs = boxIDs;
+
+    let pass = validateBoxContent(boxContent, null, [
+        'boxName',
+        'containerList'
+    ]);
+    if (!pass.bool)
+        return res.status(403).json(ErrorResponse[pass.code]);
+    if (!stationIsBoxable(thisStationID))
+        return res.status(403).json(ErrorResponse.H013);
+
+    let boxID = parseInt(createBoxID(date, index++, thisStationID));
+    let orderContent = getDeliverContent(boxContent.containerList);
+    let box = new Box({
+        boxID,
+        boxName: boxContent.boxName,
+        dueDate: Date.now(),
+        storeID: null,
+        stationID: thisStationID,
+        boxOrderContent: orderContent,
+        containerList: boxContent.containerList,
+        containerHash: getContainerHash(boxContent.containerList),
+        action: [{
+            phone,
+            stationID: {
+                from: null,
+                to: thisStationID
+            },
+            boxStatus: BoxStatus.Created,
+            boxAction: BoxAction.Create,
+            timestamps: Date.now(),
+        }, {
+            phone,
+            boxStatus: BoxStatus.Boxing,
+            boxAction: BoxAction.Pack,
+            timestamps: Date.now(),
+        }, {
+            phone,
+            boxStatus: BoxStatus.Stocked,
+            boxAction: BoxAction.Stock,
+            timestamps: Date.now()
+        }],
+        user: {
+            box: phone
+        },
+        status: BoxStatus.Stocked,
+    });
+
+    req._box = box;
     next();
 }
 
 function validateBoxingApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    else if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, null, [
-            'comment',
-            'containerList',
-            'ID',
-        ]);
-
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
+    let boxContent = req.body.boxContent;
+    let pass = validateBoxContent(boxContent, null, [
+        'comment',
+        'containerList'
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
     }
-
     next();
 }
 
 function validateChangeStateApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, BoxContentType.changeState, [
-            "id",
-            'newState',
-        ]);
-
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
+    let boxContent = req.body.boxContent;
+    let pass = validateBoxContent(boxContent, BoxContentType.changeState, [
+        'newState',
+    ]);
+    if (!pass.bool) {
+        return res.status(403).json(ErrorResponse[pass.code]);
     }
-
-    next();
-}
-
-function validateSignApiContent(req, res, next) {
-    let boxList = req.body.boxList;
-    if (boxList === undefined || !Array.isArray(boxList))
-        return res.status(403).json(ErrorResponse.H001_1);
-    if (req.body.phone === undefined)
-        return res.status(403).json(ErrorResponse.H001_2);
-
-    for (let element of boxList) {
-        let pass = validateBoxListContent(element, BoxContentType.changeState, [
-            "ID"
-        ]);
-
-        if (!pass.bool) {
-            return res.status(403).json(ErrorResponse[pass.code]);
-        }
-    }
-
     next();
 }
 
@@ -274,10 +250,10 @@ function validateBoxStatus(req, res, next) {
 
     if (boxStatus === undefined) {
         return res.status(422).json(ErrorResponse.F016_1)
-    } 
-    
+    }
+
     const isArray = Array.isArray(boxStatus)
-    if ((isArray && boxStatus.includes(status => !Object.values(BoxStatus).includes(status))) || 
+    if ((isArray && boxStatus.includes(status => !Object.values(BoxStatus).includes(status))) ||
         (!isArray && !Object.values(BoxStatus).includes(boxStatus))) {
         return res.status(422).json(ErrorResponse.F016_2)
     }
@@ -290,7 +266,6 @@ module.exports = {
     validateBoxingApiContent,
     validateStockApiContent,
     validateChangeStateApiContent,
-    validateSignApiContent,
     validateModifyApiContent,
     validateBoxStatus,
     fetchBoxCreation
@@ -301,7 +276,7 @@ let BoxContentType = Object.freeze({
     changeState: 'change state'
 });
 
-function validateBoxListContent(element, boxContentType, contents) {
+function validateBoxContent(element, boxContentType, contents) {
     for (let index in contents) {
         if (!(contents[index] in element)) {
             return {
@@ -346,4 +321,9 @@ function validateBoxListContent(element, boxContentType, contents) {
     return {
         bool: true,
     };
+}
+
+function stationIsBoxable(stationID) {
+    const stationDict = DataCacheFactory.get(DataCacheFactory.keys.STATION);
+    return stationDict[stationID].boxable;
 }

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const userDB = require('../../../models/DB/userDB');
 const UserKey = require('../../../models/DB/userKeysDB');
@@ -120,7 +120,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .post('/users/signup/clerk')
                 .set('Authorization', auth)
@@ -156,7 +156,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/users/signup/storeManager')
                 .set('Authorization', auth)
@@ -185,7 +185,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles['clerk_沒活動'].secretKey);
+            let auth = jwt.sign(payload, roles['clerk_沒活動'].secretKey);
             request(app)
                 .post('/users/signup/root')
                 .set('Authorization', auth)
@@ -221,7 +221,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.customer.secretKey);
+            let auth = jwt.sign(payload, roles.customer.secretKey);
             request(app)
                 .get('/users/data')
                 .set('Authorization', auth)
@@ -249,7 +249,7 @@ describe('api-users', function () {
                     exp: Date.now() + 86400000 * 3,
                 };
 
-                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                let auth = jwt.sign(payload, roles.clerk.secretKey);
                 request(app)
                     .get('/stores/getUser/0911789727')
                     .set('Authorization', auth)
@@ -278,7 +278,7 @@ describe('api-users', function () {
                     exp: Date.now() + 86400000 * 3,
                 };
 
-                let auth = jwt.encode(payload, roles.clerk.secretKey);
+                let auth = jwt.sign(payload, roles.clerk.secretKey);
                 request(app)
                     .get('/users/data/' + userapiKey)
                     .set('Authorization', auth)
@@ -306,7 +306,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/users/addbot')
                 .set('Authorization', auth)
@@ -338,7 +338,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/users/createBotKey')
                 .set('Authorization', auth)
@@ -378,7 +378,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/users/subscribeSNS')
                 .set('Authorization', auth)
@@ -407,7 +407,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.customer.secretKey);
+            let auth = jwt.sign(payload, roles.customer.secretKey);
             request(app)
                 .post('/users/modifypassword')
                 .set('Authorization', auth)
@@ -480,7 +480,7 @@ describe('api-users', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.customer.secretKey);
+            let auth = jwt.sign(payload, roles.customer.secretKey);
             request(app)
                 .post('/users/logout')
                 .set('Authorization', auth)

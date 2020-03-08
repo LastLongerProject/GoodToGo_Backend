@@ -40,6 +40,7 @@ var schema = mongoose.Schema({
     },
     category: Number,
     activity: Array,
+    delivery_area: Array,
     photos_fromGoogle: {
         type: String,
         default: null

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const makeHexString = require('../tool.js').makeHexString;
 const userDB = require('../../../models/DB/userDB');
@@ -102,7 +102,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/stores/dict')
                 .set('Authorization', auth)
@@ -126,7 +126,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/stores/clerkList')
                 .set('Authorization', auth)
@@ -160,7 +160,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/users/signup/clerk')
                 .set('Authorization', auth)
@@ -188,7 +188,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .post('/stores/layoff/0966666666')
                 .set('Authorization', auth)
@@ -219,7 +219,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/status')
                 .set('Authorization', auth)
@@ -247,7 +247,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/openingTime')
                 .set('Authorization', auth)
@@ -272,7 +272,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .post('/stores/unsetDefaultOpeningTime')
                 .set('Authorization', auth)
@@ -296,7 +296,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/checkUnReturned')
                 .set('Authorization', auth)
@@ -325,7 +325,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .post('/stores/changeOpeningTime')
                 .set('Authorization', auth)
@@ -361,7 +361,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/boxToSign')
                 .set('Authorization', auth)
@@ -393,7 +393,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/usedAmount')
                 .set('Authorization', auth)
@@ -418,7 +418,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/history')
                 .set('Authorization', auth)
@@ -445,7 +445,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/history/byContainerType')
                 .set('Authorization', auth)
@@ -476,7 +476,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/history/byCustomer')
                 .set('Authorization', auth)
@@ -506,7 +506,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/performance')
                 .set('Authorization', auth)
@@ -530,7 +530,7 @@ describe('api-stores', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.clerk.secretKey);
+            let auth = jwt.sign(payload, roles.clerk.secretKey);
             request(app)
                 .get('/stores/favorite')
                 .set('Authorization', auth)

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../config/secret_key.json');
 const Trade = require('../models/DB/tradeDB');
 const redis = require('../models/redis');

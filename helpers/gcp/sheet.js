@@ -10,6 +10,7 @@ const getDateCheckpoint = require('../toolkit').getDateCheckpoint;
 
 const Store = require('../../models/DB/storeDB');
 const PlaceID = require('../../models/DB/placeIdDB');
+const Station = require('../../models/DB/stationDB');
 const Container = require('../../models/DB/containerDB');
 const CouponType = require('../../models/DB/couponTypeDB');
 const ContainerType = require('../../models/DB/containerTypeDB');
@@ -172,11 +173,11 @@ module.exports = {
             sheets.spreadsheets.values.get({
                 auth: auth,
                 spreadsheetId: configs.store_sheet_ID,
-                range: 'active!A2:L',
+                range: 'active!A2:M',
             }, function (err, response) {
                 if (err) return debug.error('[Sheet API ERR (getStore)] Error: ' + err);
                 const rowsFromSheet = response.data.values;
-                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length >= 11));
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== "" && aRow[2] !== "" && aRow.length >= 13));
                 Promise
                     .all(validRows.map(aRow => new Promise((resolve, reject) => {
                         PlaceID.findOneAndUpdate({
@@ -192,7 +193,8 @@ module.exports = {
                             'project': aRow[8],
                             'active': aRow[9] === 'TRUE',
                             'category': aRow[10],
-                            'activity': aRow[11]
+                            'activity': aRow[11],
+                            'delivery_area': aRow[12].split(",") || [0]
                         }, {
                             upsert: true,
                             new: true
@@ -334,6 +336,36 @@ module.exports = {
                                 });
                         });
                     })
+                    .catch(cb);
+            });
+        });
+    },
+    getStation: function (cb) {
+        googleAuth(function getSheet(auth) {
+            sheets.spreadsheets.values.get({
+                auth: auth,
+                spreadsheetId: configs.store_sheet_ID,
+                range: 'StorageStation!A2:C',
+            }, function (err, response) {
+                if (err) return debug.error('[Sheet API ERR (getStation)] Error: ' + err);
+                const rowsFromSheet = response.data.values;
+                const validRows = rowsFromSheet.filter(aRow => (isNum.test(aRow[0]) && aRow[1] !== ""));
+                Promise
+                    .all(validRows.map(aRow => new Promise((resolve, reject) => {
+                        Station.findOneAndUpdate({
+                            'ID': aRow[0]
+                        }, {
+                            'name': aRow[1],
+                            'boxable': aRow[2] === 'TRUE'
+                        }, {
+                            upsert: true,
+                            new: true
+                        }, (err, afterUpdate) => {
+                            if (err) return reject(err);
+                            resolve(afterUpdate);
+                        });
+                    })))
+                    .then(stationList => cb(null, stationList))
                     .catch(cb);
             });
         });

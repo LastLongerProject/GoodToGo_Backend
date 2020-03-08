@@ -1,4 +1,4 @@
-const redis = require("../../models/redis");
+const redis = require("../../../models/redis");
 
 function iatGetDate(int) {
     var tmp = new Date();
@@ -30,14 +30,10 @@ module.exports = function (req, res, next) {
                 message: 'Token reply'
             });
         } else {
-            redis.set('reply_check:' + hashID + ':' + reqTime, 0, (err, reply) => {
+            redis.setex('reply_check:' + hashID + ':' + reqTime, 60 * 60 * 25, 0, (err, reply) => {
                 if (err) return next(err);
                 if (reply !== 'OK') return next(reply);
-                redis.expire('reply_check:' + hashID + ':' + reqTime, 60 * 60 * 25, (err, reply) => {
-                    if (err) return next(err);
-                    if (reply !== 1) return next(reply);
-                    next();
-                });
+                next();
             });
         }
     });

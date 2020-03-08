@@ -1,13 +1,12 @@
-const User = require('../models/DB/userDB');
-const UserKeys = require('../models/DB/userKeysDB');
-
-const tasks = require('./tasks');
-const dateCheckpoint = require('./toolkit').dateCheckpoint;
-
 const fs = require('fs');
-const ROOT_DIR = require('../config/config').rootDir;
 const crypto = require('crypto');
 const debug = require('./debugger')('scheduler');
+
+const tasks = require('./tasks');
+const UserKeys = require('../models/DB/userKeysDB');
+const ROOT_DIR = require('../config/config').rootDir;
+const getSystemBot = require('./tools').getSystemBot;
+const dateCheckpoint = require('./toolkit').dateCheckpoint;
 
 function generalCb(err) {
     if (err) return debug.error(err);
@@ -22,29 +21,9 @@ function driveCb(succeed, data) {
 }
 
 module.exports = function () {
-    User.findOne({
-        'user.phone': '0900000000'
-    }, (err, bot) => {
+    getSystemBot((err, dbBot) => {
         if (err) return debug.error(err);
-        if (!bot) {
-            bot = new User({
-                user: {
-                    phone: "0900000000",
-                    password: null,
-                    name: "GoodToGoBot"
-                },
-                roles: {
-                    typeList: ["bot", "clerk"],
-                    clerk: {
-                        storeID: 17,
-                        manager: false
-                    }
-                }
-            });
-            bot.save(err => {
-                if (err) debug.error(err);
-            });
-        }
+
         const shouldWait = dateCheckpoint(1) - Date.now();
         debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
 
@@ -61,8 +40,9 @@ module.exports = function () {
         setTimeout(function noneTimeSensitiveTask() {
             let taskList = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
-                setTimeout(tasks.refreshContainer, 0, bot, generalCb);
-                setTimeout(tasks.refreshStore, 1000 * 60 * 5, generalCb);
+                setTimeout(tasks.refreshContainer, 0, dbBot, generalCb);
+                setTimeout(tasks.refreshStore, 1000 * 60 * 3, generalCb);
+                setTimeout(tasks.refreshStation, 1000 * 60 * 5, generalCb);
                 setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, generalCb);
                 setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
@@ -74,7 +54,10 @@ module.exports = function () {
                         },
                         "roleType": {
                             "$ne": "bot"
-                        }
+                        },
+                        "userAgent": {
+                            "$ne": /^PostmanRuntime\/.*$/
+                        },
                     }, (err) => {
                         if (err) return debug.error(err);
                         debug.log('remove expire login');
@@ -98,6 +81,8 @@ module.exports = function () {
                     results.successMsg.forEach(debug.log);
                 });
                 setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
+                setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, generalCb);
+                setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);

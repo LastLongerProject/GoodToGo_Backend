@@ -118,14 +118,16 @@ require("./models/mongo")(mongoose, startServer);
 process.on('SIGINT', () => {
     debug.log('SIGINT signal received');
     let server = app.get('server');
-    server.close(function (err) {
-        if (err) {
-            debug.error(err);
-        }
-        mongoose.connection.close(function () {
-            debug.log('Mongoose connection disconnected');
+    if (typeof server !== "undefined") {
+        server.close(function (err) {
+            if (err) {
+                debug.error(err);
+            }
+            mongoose.connection.close(function () {
+                debug.log('Mongoose connection disconnected');
+            });
         });
-    });
+    }
 });
 
 function startServer() {

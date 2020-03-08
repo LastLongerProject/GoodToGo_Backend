@@ -1,10 +1,12 @@
 const Trade = require('../DB/tradeDB');
 const UserOrder = require('../DB/userOrderDB');
 
+const ContainerAction = require("../enums/containerEnum").Action;
+
 module.exports = {
     global_used: function (cb) {
         Trade.count({
-            "tradeType.action": "Return"
+            "tradeType.action": ContainerAction.RETURN
         }, function (err, count) {
             if (err) return cb(err);
             cb(null, count + 14642);

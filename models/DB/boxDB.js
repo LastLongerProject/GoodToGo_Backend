@@ -10,12 +10,27 @@ var schema = mongoose.Schema({
         amount: Number
     }],
     dueDate: Date,
-    storeID: Number,
+    storeID: {
+        type: Number,
+        default: null
+    },
+    stationID: {
+        type: Number,
+        default: null
+    },
     action: [{
         phone: String,
         boxStatus: String,
         boxAction: String,
         destinationStoreId: Number,
+        stationID: {
+            from: Number,
+            to: Number
+        },
+        storeID: {
+            from: Number,
+            to: Number
+        },
         timestamps: Date
     }],
     deliveringDate: Date,
@@ -24,6 +39,8 @@ var schema = mongoose.Schema({
     },
     containerList: [Number],
     containerHash: String,
+
+    // For legacy api version
     delivering: {
         type: Boolean,
         default: false
@@ -32,6 +49,7 @@ var schema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+
     status: String,
     error: {
         type: Boolean,
@@ -47,14 +65,25 @@ schema.index({
     "storeID": 1
 });
 schema.index({
+    "stationID": 1
+});
+schema.index({
     "boxID": 1
 });
 schema.index({
     "deliveringDate": -1
-})
+});
 schema.index({
     'containerHash': 1
-})
+});
+schema.index({
+    'action.boxAction': 1,
+    'action.stationID.from': 1
+});
+schema.index({
+    'action.boxAction': 1,
+    'action.stationID.to': 1
+});
 
 // create the model for users and expose it to our app
 module.exports = mongoose.model('Box', schema);

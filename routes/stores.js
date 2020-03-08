@@ -6,6 +6,7 @@ const redis = require("../models/redis");
 const DataCacheFactory = require("../models/dataCacheFactory");
 
 const baseUrl = require('../config/config.js').serverUrl;
+const getStoreListInArea = require('../helpers/tools').getStoreListInArea;
 const intReLength = require('../helpers/toolkit').intReLength;
 const timeFormatter = require('../helpers/toolkit').timeFormatter;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
@@ -13,24 +14,26 @@ const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const getDateCheckpoint = require('../helpers/toolkit').getDateCheckpoint;
 
-const validateDefault = require('../middlewares/validation/validateDefault');
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const regAsStore = require('../middlewares/validation/validateRequest').regAsStore;
-const regAsAdmin = require('../middlewares/validation/validateRequest').regAsAdmin;
-const regAsStoreManager = require('../middlewares/validation/validateRequest').regAsStoreManager;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
+const validateDefault = require('../middlewares/validation/authorization/validateDefault');
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
+const checkRoleIs = require('../middlewares/validation/authorization/validateRequest').checkRoleIs;
+const checkRoleIsStore = require('../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
+const checkRoleIsCleanStation = require('../middlewares/validation/authorization/validateRequest').checkRoleIsCleanStation;
 const Box = require('../models/DB/boxDB');
 const User = require('../models/DB/userDB');
 const Store = require('../models/DB/storeDB');
 const Trade = require('../models/DB/tradeDB');
 const Place = require('../models/DB/placeIdDB');
 const Container = require('../models/DB/containerDB');
-const getGlobalUsedAmount = require('../models/variables/containerStatistic').global_used;
-const getBookedAmount = require('../models/variables/containerStatistic').all_stores_booked;
+const getGlobalUsedAmount = require('../models/computed/containerStatistic').global_used;
+const getBookedAmount = require('../models/computed/containerStatistic').all_stores_booked;
 const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
-const UserRole = require('../models/enums/userEnum').UserRole;
+const RoleType = require('../models/enums/userEnum').RoleType;
+const RoleElement = require('../models/enums/userEnum').RoleElement;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
+const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
@@ -87,45 +90,43 @@ router.get('/list', validateDefault, function (req, res, next) {
         }
     };
     var tmpArr = [];
-    process.nextTick(function () {
-        Store.find({
-            "project": {
-                "$ne": "測試用"
-            },
-            "active": true
-        }, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            jsonData.globalAmount = 0;
+    Store.find({
+        "project": {
+            "$ne": "測試用"
+        },
+        "active": true
+    }, {}, {
+        sort: {
+            id: 1
+        }
+    }, function (err, storeList) {
+        if (err) return next(err);
+        jsonData.globalAmount = 0;
 
-            for (var i = 0; i < storeList.length; i++) {
-                var tmpOpening = [];
-                storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
-                for (var j = 0; j < storeList[i].opening_hours.length; j++)
-                    tmpOpening.push({
-                        close: storeList[i].opening_hours[j].close,
-                        open: storeList[i].opening_hours[j].open
-                    });
-                tmpArr.push({
-                    id: storeList[i].id,
-                    name: storeList[i].name,
-                    img_info: storeList[i].img_info,
-                    opening_hours: tmpOpening,
-                    contract: storeList[i].contract,
-                    location: storeList[i].location,
-                    address: storeList[i].address,
-                    type: storeList[i].type,
-                    category: storeList[i].category,
-                    testing: (storeList[i].project === '正興杯杯') ? false : true
+        for (var i = 0; i < storeList.length; i++) {
+            var tmpOpening = [];
+            storeList[i].img_info.img_src = `${baseUrl}/images/store/${storeList[i].id}?ver=${storeList[i].img_info.img_version}`;
+            for (var j = 0; j < storeList[i].opening_hours.length; j++)
+                tmpOpening.push({
+                    close: storeList[i].opening_hours[j].close,
+                    open: storeList[i].opening_hours[j].open
                 });
-            }
+            tmpArr.push({
+                id: storeList[i].id,
+                name: storeList[i].name,
+                img_info: storeList[i].img_info,
+                opening_hours: tmpOpening,
+                contract: storeList[i].contract,
+                location: storeList[i].location,
+                address: storeList[i].address,
+                type: storeList[i].type,
+                category: storeList[i].category,
+                testing: (storeList[i].project === '正興杯杯') ? false : true
+            });
+        }
 
-            jsonData.shop_data = tmpArr;
-            res.json(jsonData);
-        });
+        jsonData.shop_data = tmpArr;
+        res.json(jsonData);
     });
 });
 
@@ -290,7 +291,8 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
  *
  * @api {get} /stores/dict Get store dict
  * @apiUse JWT
- * @apiPermission admin
+ * @apiPermission station
+ * @apiPermission clerk
  * 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
@@ -302,18 +304,40 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
  * 
  */
 
-router.get('/dict', regAsStore, regAsAdmin, validateRequest, function (req, res, next) {
-    process.nextTick(function () {
-        Store.find({}, {}, {
-            sort: {
-                id: 1
-            }
-        }, function (err, storeList) {
-            if (err) return next(err);
-            let storeDict = {};
-            storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
-            res.json(storeDict);
-        });
+router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const query = {};
+
+    const dbRole = req._thisRole;
+    let thisStationID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                Object.assign(query, {
+                    id: {
+                        "$in": getStoreListInArea(thisStationID)
+                    }
+                });
+                break;
+            case RoleType.STORE:
+                break;
+            default:
+                return next();
+        }
+    } catch (error) {
+        return next(error);
+    }
+
+    Store.find(query, {}, {
+        sort: {
+            id: 1
+        }
+    }, function (err, storeList) {
+        if (err) return next(err);
+        let storeDict = {};
+        storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
+        res.json(storeDict);
     });
 });
 
@@ -336,39 +360,69 @@ router.get('/dict', regAsStore, regAsAdmin, validateRequest, function (req, res,
         }
  * 
  */
-router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, function (req, res, next) {
-    const dbUser = req._user;
-    const dbKey = req._key;
-    const TYPE_CODE = dbKey.roleType;
-    let condition;
-    switch (TYPE_CODE) {
-        case UserRole.ADMIN:
-            condition = {
-                'roles.admin.stationID': dbUser.roles.admin.stationID
-            };
-            break;
-        case UserRole.CLERK:
-            condition = {
-                'roles.clerk.storeID': dbUser.roles.clerk.storeID
-            };
-            break;
-        default:
-            next();
+router.get('/clerkList', checkRoleIs([{
+    roleType: RoleType.STORE,
+    condition: {
+        manager: true
     }
-    process.nextTick(function () {
-        User.find(condition, function (err, dbClerks) {
-            if (err) return next(err);
-            dbClerks.sort((a, b) => (a.roles[TYPE_CODE].manager === b.roles[TYPE_CODE].manager) ? 0 : a.roles[TYPE_CODE].manager ? -1 : 1);
+}, {
+    roleType: RoleType.CLEAN_STATION,
+    condition: {
+        manager: true
+    }
+}]), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    const thisRoleType = dbRole.roleType;
+    let condition;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                var stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                condition = {
+                    roleList: {
+                        $elemMatch: {
+                            stationID
+                        }
+                    }
+                };
+                break;
+            case RoleType.STORE:
+                var storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                condition = {
+                    roleList: {
+                        $elemMatch: {
+                            storeID
+                        }
+                    }
+                };
+                break;
+            default:
+                return next();
+        }
+    } catch (error) {
+        return next(error);
+    }
+    User.find(condition, function (err, dbClerks) {
+        if (err) return next(err);
+        try {
             res.json({
                 clerkList: dbClerks
                     .filter(aClerk => aClerk.user.phone !== undefined)
-                    .map(aClerk => ({
-                        phone: aClerk.user.phone,
-                        name: aClerk.user.name,
-                        isManager: aClerk.roles[TYPE_CODE].manager
-                    }))
+                    .map(aClerk => {
+                        const theRole = aClerk.findRole({
+                            roleType: thisRoleType
+                        });
+                        return {
+                            phone: aClerk.user.phone,
+                            name: aClerk.user.name,
+                            isManager: theRole.getElement(RoleElement.MANAGER, false)
+                        };
+                    })
+                    .sort((a, b) => (a.isManager === b.isManager) ? 0 : a.isManager ? -1 : 1)
             });
-        });
+        } catch (error) {
+            return next(error);
+        }
     });
 });
 
@@ -390,37 +444,74 @@ router.get('/clerkList', regAsStoreManager, regAsAdminManager, validateRequest, 
  * @apiUse LayoffError
  */
 
-router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var toLayoff = req.params.id;
-    process.nextTick(function () {
-        User.findOne({
-            'user.phone': toLayoff
-        }, function (err, clerk) {
+router.post('/layoff/:id', checkRoleIs([{
+    roleType: RoleType.STORE,
+    condition: {
+        manager: true
+    }
+}, {
+    roleType: RoleType.CLEAN_STATION,
+    condition: {
+        manager: true
+    }
+}]), validateRequest, function (req, res, next) {
+    const dbStore = req._user;
+    const dbRole = req._thisRole;
+    const thisRoleType = dbRole.roleType;
+    const toLayoff = req.params.id;
+    let storeID = null;
+    let stationID = null;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            case RoleType.STORE:
+                storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                break;
+            default:
+                return next();
+        }
+    } catch (error) {
+        return next(error);
+    }
+    User.findOne({
+        'user.phone': toLayoff
+    }, function (err, theUser) {
+        if (err) return next(err);
+        if (!theUser)
+            return res.status(403).json({
+                code: 'E001',
+                type: "userSearchingError",
+                message: "No User: [" + toLayoff + "] Found",
+                data: toLayoff
+            });
+        else if (theUser.user.phone === dbStore.user.phone)
+            return res.status(403).json({
+                code: 'E002',
+                type: "layoffError",
+                message: "Don't lay off yourself"
+            });
+        const doneRemoveRole = (err, roleDelete, detail) => {
             if (err) return next(err);
-            if (!clerk)
-                return res.status(403).json({
-                    code: 'E001',
-                    type: "userSearchingError",
-                    message: "No User: [" + toLayoff + "] Found",
-                    data: toLayoff
-                });
-            else if (clerk.user.phone === dbStore.user.phone)
-                return res.status(403).json({
-                    code: 'E002',
-                    type: "layoffError",
-                    message: "Don't lay off yourself"
-                });
-            clerk.roles.clerk = null;
-            clerk.roles.typeList.splice(clerk.roles.typeList.indexOf(UserRole.CLERK), 1);
-            clerk.save(function (err) {
+            if (!roleDelete) return next(detail);
+            theUser.save(function (err) {
                 if (err) return next(err);
                 res.json({
                     type: 'LayoffMessage',
                     message: 'Layoff succeed'
                 });
             });
-        });
+        };
+        if (storeID !== null) {
+            theUser.removeRole(RoleType.STORE, {
+                storeID
+            }, doneRemoveRole);
+        } else if (stationID !== null) {
+            theUser.removeRole(RoleType.CLEAN_STATION, {
+                stationID
+            }, doneRemoveRole);
+        }
     });
 });
 
@@ -453,14 +544,21 @@ router.post('/layoff/:id', regAsStoreManager, validateRequest, function (req, re
         }
  * 
  */
-router.get('/status', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbStore = req._user;
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
     var tmpToUseArr = [];
     var tmpToReloadArr = [];
     let lastUsed = [];
     var type = Object.values(DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE));
     var forLoopLength = (dbStore.project !== "正興杯杯" && dbStore.project !== "咖啡店連線") ? type.length : ((type.length < 2) ? type.length : 2);
-    for (var i = 0; i < forLoopLength; i++) {
+    for (let i = 0; i < forLoopLength; i++) {
         tmpToUseArr.push({
             typeCode: type[i].typeCode,
             name: type[i].name,
@@ -484,86 +582,83 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
         lostList: []
     };
     var tmpTypeCode;
-    process.nextTick(function () {
-        var containerQuery;
-        if (dbStore.roles.clerk.storeID === 17) {
-            containerQuery = {
-                "$or": [{
-                        'storeID': dbStore.roles.clerk.storeID,
-                        'active': true
-                    },
-                    {
-                        "ID": {
-                            "$in": DEMO_CONTAINER_ID_LIST
-                        }
+    var containerQuery;
+    if (thisStoreID === 17) {
+        containerQuery = {
+            "$or": [{
+                    'storeID': thisStoreID,
+                    'active': true
+                },
+                {
+                    "ID": {
+                        "$in": DEMO_CONTAINER_ID_LIST
                     }
-                ]
-            };
-        } else {
-            containerQuery = {
-                'storeID': dbStore.roles.clerk.storeID,
-                'active': true
+                }
+            ]
+        };
+    } else {
+        containerQuery = {
+            'storeID': thisStoreID,
+            'active': true
+        };
+    }
+    Container.find(containerQuery, function (err, containers) {
+        for (let container of containers) {
+            lastUsed[container.ID] = {
+                time: container.lastUsedAt.valueOf(),
+                status: container.statusCode
             };
         }
-        Container.find(containerQuery, function (err, containers) {
-            for (let container of containers) {
-                lastUsed[container.ID] = {
-                    time: container.lastUsedAt.valueOf(),
-                    status: container.statusCode
-                };
+        let now = new Date();
+        for (let containerID in lastUsed) {
+            var timeToNow = now - lastUsed[containerID].time;
+            if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
+                resJson.lostList.push(parseInt(containerID));
             }
-            let now = new Date();
-            for (let containerID in lastUsed) {
-                var timeToNow = now - lastUsed[containerID].time;
-                if ((lastUsed[containerID].status === 1 || lastUsed[containerID].status === 3) && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
-                    resJson.lostList.push(parseInt(containerID));
-                }
-            }
-
-            Trade.find({
-                'tradeTime': {
-                    '$gte': dateCheckpoint(0),
-                    '$lt': dateCheckpoint(1)
+        }
+        Trade.find({
+            'tradeTime': {
+                '$gte': dateCheckpoint(0),
+                '$lt': dateCheckpoint(1)
+            },
+            '$or': [{
+                    'tradeType.action': ContainerAction.RENT,
+                    'oriUser.storeID': thisStoreID
                 },
-                '$or': [{
-                        'tradeType.action': 'Rent',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    },
-                    {
-                        'tradeType.action': 'Return',
-                        'newUser.storeID': dbStore.roles.clerk.storeID
-                    },
-                    {
-                        'tradeType.action': 'UndoReturn',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    }
-                ]
-            }, function (err, trades) {
-                if (err) return next(err);
-                if (typeof containers !== 'undefined') {
-                    for (var i in containers) {
-                        tmpTypeCode = containers[i].typeCode;
-                        if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
-                        if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
-                            resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
-                            resJson.containers[tmpTypeCode].amount++;
-                        } else if (containers[i].statusCode === 3) {
-                            resJson.toReload[tmpTypeCode].IdList.push(containers[i].ID);
-                            resJson.toReload[tmpTypeCode].amount++;
-                        }
+                {
+                    'tradeType.action': ContainerAction.RETURN,
+                    'newUser.storeID': thisStoreID
+                },
+                {
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
+                    'oriUser.storeID': thisStoreID
+                }
+            ]
+        }, function (err, trades) {
+            if (err) return next(err);
+            if (typeof containers !== 'undefined') {
+                for (var i in containers) {
+                    tmpTypeCode = containers[i].typeCode;
+                    if (tmpTypeCode >= 2 && (dbStore.project === "正興杯杯" || dbStore.project === "咖啡店連線")) continue;
+                    if (containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) {
+                        resJson.containers[tmpTypeCode].IdList.push(containers[i].ID);
+                        resJson.containers[tmpTypeCode].amount++;
+                    } else if (containers[i].statusCode === 3) {
+                        resJson.toReload[tmpTypeCode].IdList.push(containers[i].ID);
+                        resJson.toReload[tmpTypeCode].amount++;
                     }
                 }
-                cleanUndoTrade("Return", trades);
-                if (typeof trades !== 'undefined') {
-                    for (var i in trades) {
-                        if (trades[i].tradeType.action === 'Rent')
-                            resJson.todayData.rent++;
-                        else if (trades[i].tradeType.action === 'Return')
-                            resJson.todayData.return++;
-                    }
+            }
+            cleanUndoTrade(ContainerAction.RETURN, trades);
+            if (typeof trades !== 'undefined') {
+                for (let i in trades) {
+                    if (trades[i].tradeType.action === ContainerAction.RENT)
+                        resJson.todayData.rent++;
+                    else if (trades[i].tradeType.action === ContainerAction.RETURN)
+                        resJson.todayData.return++;
                 }
-                res.json(resJson);
-            });
+            }
+            res.json(resJson);
         });
     });
 });
@@ -592,19 +687,23 @@ router.get('/status', regAsStore, validateRequest, function (req, res, next) {
         }
  * 
  */
-router.get('/openingTime', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    process.nextTick(function () {
-        Store.findOne({
-            'id': dbStore.roles.clerk.storeID,
-            'active': true
-        }, function (err, store) {
-            if (err) return next(err);
-            if (!store) return next('Mapping store ID failed');
-            res.json({
-                opening_hours: store.opening_hours,
-                isSync: !store.opening_default
-            });
+router.get('/openingTime', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    Store.findOne({
+        'id': thisStoreID,
+        'active': true
+    }, function (err, store) {
+        if (err) return next(err);
+        if (!store) return next('Mapping store ID failed');
+        res.json({
+            opening_hours: store.opening_hours,
+            isSync: !store.opening_default
         });
     });
 });
@@ -622,20 +721,24 @@ router.get('/openingTime', regAsStore, validateRequest, function (req, res, next
         { }
  * 
  */
-router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    process.nextTick(function () {
-        Store.findOne({
-            'id': dbStore.roles.clerk.storeID,
-            'active': true
-        }, function (err, store) {
+router.post('/unsetDefaultOpeningTime', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    Store.findOne({
+        'id': thisStoreID,
+        'active': true
+    }, function (err, store) {
+        if (err) return next(err);
+        if (!store) return next('Mapping store ID failed');
+        store.opening_default = false;
+        store.save((err) => {
             if (err) return next(err);
-            if (!store) return next('Mapping store ID failed');
-            store.opening_default = false;
-            store.save((err) => {
-                if (err) return next(err);
-                res.status(204).end();
-            });
+            res.status(204).end();
         });
     });
 });
@@ -659,62 +762,77 @@ router.post('/unsetDefaultOpeningTime', regAsStore, validateRequest, function (r
  * 
  * @apiUse RentalQualificationError
  */
-router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var phone = req.params.phone.replace(/tel:|-/g, "");
-    const thisRedisKey = redisKey(dbStore.roles.clerk.storeID); // BOT??
-    process.nextTick(function () {
-        User.findOne({
-            'user.phone': new RegExp(phone.toString() + '$', "i")
-        }, function (err, dbUser) {
-            if (err)
-                return next(err);
-            if (!dbUser)
-                return res.status(403).json({
-                    code: 'E001',
-                    type: "userSearchingError",
-                    message: "No User: [" + phone + "] Found",
-                    data: phone
-                });
-            userIsAvailableForRentContainer(dbUser, null, false, (err, isAvailable, detail) => {
-                if (err) return next(err);
-                if (!isAvailable) {
-                    if (detail.rentalQualification === RentalQualification.BANNED)
-                        return res.status(403).json({
-                            code: 'F005',
-                            type: 'userSearchingError',
-                            message: 'User is banned'
-                        });
-                    if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
-                        return res.status(403).json({
-                            code: 'F014',
-                            type: 'userSearchingError',
-                            message: 'User is Out of quota',
-                            data: {
-                                purchaseStatus: dbUser.getPurchaseStatus(),
-                                usingAmount: detail.data.usingAmount,
-                                holdingQuantityLimitation: detail.data.holdingQuantityLimitation
-                            }
-                        });
-                    else
-                        return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
-                }
-
-                var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                redis.set('user_token:' + token, dbUser.user.phone, (err, reply) => {
-                    if (err) return next(err);
-                    if (reply !== 'OK') return next(reply);
-                    redis.expire('user_token:' + token, 60 * 30, (err, replyNum) => {
-                        if (err) return next(err);
-                        if (replyNum !== 1) return next(replyNum);
-                        res.status(200).json({
-                            phone: dbUser.user.phone,
-                            apiKey: token,
-                            availableAmount: detail.data.availableAmount
-                        });
-                        redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
+router.get('/getUser/:phone', checkRoleIs([{
+    roleType: RoleType.STORE
+}, {
+    roleType: RoleType.BOT
+}]), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    const thisRoleType = dbRole.roleType;
+    let thisStoreID;
+    try {
+        switch (thisRoleType) {
+            case RoleType.BOT:
+                thisStoreID = dbRole.getElement(RoleElement.RENT_FROM_STORE_ID, true);
+                break;
+            case RoleType.STORE:
+                thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+                break;
+            default:
+                return next();
+        }
+    } catch (error) {
+        return next(error);
+    }
+    const phone = req.params.phone.replace(/tel:|-/g, "");
+    const thisRedisKey = thisStoreID === null ? null : redisKey(thisStoreID);
+    User.findOne({
+        'user.phone': new RegExp(phone.toString() + '$', "i")
+    }, function (err, dbUser) {
+        if (err)
+            return next(err);
+        if (!dbUser)
+            return res.status(403).json({
+                code: 'E001',
+                type: "userSearchingError",
+                message: "No User: [" + phone + "] Found",
+                data: phone
+            });
+        userIsAvailableForRentContainer(dbUser, null, false, (err, isAvailable, detail) => {
+            if (err) return next(err);
+            if (!isAvailable) {
+                if (detail.rentalQualification === RentalQualification.BANNED)
+                    return res.status(403).json({
+                        code: 'F005',
+                        type: 'userSearchingError',
+                        message: 'User is banned'
                     });
+                if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                    return res.status(403).json({
+                        code: 'F014',
+                        type: 'userSearchingError',
+                        message: 'User is Out of quota',
+                        data: {
+                            purchaseStatus: dbUser.getPurchaseStatus(),
+                            usingAmount: detail.data.usingAmount,
+                            holdingQuantityLimitation: detail.data.holdingQuantityLimitation
+                        }
+                    });
+                else
+                    return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+            }
+
+            var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
+            redis.setex('user_token:' + token, 60 * 30, dbUser.user.phone, (err, reply) => {
+                if (err) return next(err);
+                if (reply !== 'OK') return next(reply);
+                res.status(200).json({
+                    phone: dbUser.user.phone,
+                    apiKey: token,
+                    availableAmount: detail.data.availableAmount
                 });
+                if (thisRedisKey !== null)
+                    redis.zincrby(thisRedisKey, 1, dbUser.user.phone);
             });
         });
     });
@@ -735,15 +853,21 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
         }
  * 
  */
-router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
     var rentedIdList = [];
     var resJson = {
         data: []
     };
     Trade.find({
-        'tradeType.action': "Rent",
-        'oriUser.storeID': dbStore.roles.clerk.storeID
+        'tradeType.action': ContainerAction.RENT,
+        'oriUser.storeID': thisStoreID
     }, function (err, rentedList) {
         if (err) return next(err);
         rentedList.sort(function (a, b) {
@@ -752,7 +876,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
         for (var i in rentedList)
             rentedIdList.push(rentedList[i].container.id);
         Trade.find({
-            'tradeType.action': "Return",
+            'tradeType.action': ContainerAction.RETURN,
             'container.id': {
                 '$in': rentedIdList
             }
@@ -761,15 +885,15 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
             returnedList.sort(function (a, b) {
                 return b.tradeTime - a.tradeTime;
             });
-            for (var i in returnedList) {
-                var index = rentedList.findIndex(function (ele) {
+            for (let i in returnedList) {
+                let index = rentedList.findIndex(function (ele) {
                     return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
                 });
                 if (index !== -1) {
                     rentedList.splice(index, 1);
                 }
             }
-            for (var i in rentedList) {
+            for (let i in rentedList) {
                 resJson.data.push({
                     id: rentedList[i].container.id,
                     phone: rentedList[i].newUser.phone,
@@ -817,8 +941,16 @@ const dayFormat = /^[0-6]{1}$/;
         }
  * @apiUse ChangeOpeningTimeError
  */
-router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+router.post('/changeOpeningTime', checkRoleIsStore({
+    "manager": true
+}), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
     var newData = req.body;
     var days = newData.opening_hours;
     if (Array.isArray(days)) {
@@ -835,7 +967,7 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
             }
         }
         Store.findOne({
-            'id': dbStore.roles.clerk.storeID
+            'id': thisStoreID
         }, (err, aStore) => {
             if (err) return next(err);
             aStore.opening_hours = days;
@@ -884,111 +1016,115 @@ router.post('/changeOpeningTime', regAsStoreManager, validateRequest, function (
         }
  * 
  */
-router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    process.nextTick(function () {
-        var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
-        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
-        Box.find({
-            'storeID': dbStore.roles.clerk.storeID,
-            'delivering': true
-        }, {}, {
-            "sort": {
-                "updatedAt": -1
-            }
-        }, function (err, boxList) {
-            if (err) return next(err);
-            var boxArr = [];
-            if (boxList.length !== 0) {
-                var thisBox;
-                var thisType;
-                for (var i = 0; i < boxList.length; i++) {
-                    thisBox = boxList[i].boxID;
-                    var thisBoxTypeList = [];
-                    var thisBoxContainerList = {};
-                    for (var j = 0; j < boxList[i].containerList.length; j++) {
-                        thisType = containerDict[boxList[i].containerList[j]];
-                        if (thisBoxTypeList.indexOf(thisType) < 0) {
-                            thisBoxTypeList.push(thisType);
-                            thisBoxContainerList[thisType] = [];
-                        }
-                        thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+router.get('/boxToSign', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+    const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    Box.find({
+        'storeID': thisStoreID,
+        'status': BoxStatus.Delivering
+    }, {}, {
+        "sort": {
+            "updatedAt": -1
+        }
+    }, function (err, boxList) {
+        if (err) return next(err);
+        var boxArr = [];
+        if (boxList.length !== 0) {
+            var thisBox;
+            var thisType;
+            for (var i = 0; i < boxList.length; i++) {
+                thisBox = boxList[i].boxID;
+                var thisBoxTypeList = [];
+                var thisBoxContainerList = {};
+                for (var j = 0; j < boxList[i].containerList.length; j++) {
+                    thisType = containerDict[boxList[i].containerList[j]];
+                    if (thisBoxTypeList.indexOf(thisType) < 0) {
+                        thisBoxTypeList.push(thisType);
+                        thisBoxContainerList[thisType] = [];
                     }
-                    boxArr.push({
-                        boxID: thisBox,
-                        boxTime: boxList[i].updatedAt,
-                        typeList: thisBoxTypeList,
-                        containerList: thisBoxContainerList,
-                        isDelivering: false,
-                        destinationStore: boxList[i].storeID
+                    thisBoxContainerList[thisType].push(boxList[i].containerList[j]);
+                }
+                boxArr.push({
+                    boxID: thisBox,
+                    boxTime: boxList[i].updatedAt,
+                    typeList: thisBoxTypeList,
+                    containerList: thisBoxContainerList,
+                    isDelivering: false,
+                    destinationStore: boxList[i].storeID
+                });
+            }
+            for (let i = 0; i < boxArr.length; i++) {
+                boxArr[i].containerOverview = [];
+                for (let j = 0; j < boxArr[i].typeList.length; j++) {
+                    boxArr[i].containerOverview.push({
+                        containerType: boxArr[i].typeList[j],
+                        amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
                     });
                 }
-                for (var i = 0; i < boxArr.length; i++) {
-                    boxArr[i].containerOverview = [];
-                    for (var j = 0; j < boxArr[i].typeList.length; j++) {
-                        boxArr[i].containerOverview.push({
-                            containerType: boxArr[i].typeList[j],
-                            amount: boxArr[i].containerList[boxArr[i].typeList[j]].length
+            }
+        }
+        Trade.find({
+            'tradeType.action': ContainerAction.SIGN,
+            'newUser.storeID': thisStoreID,
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - historyDays)
+            }
+        }, function (err, list) {
+            if (err) return next(err);
+            if (list.length !== 0) {
+                list.sort((a, b) => b.tradeTime - a.tradeTime);
+                var boxHistoryArr = [];
+                var boxIDArr = [];
+                var thisBoxTypeList;
+                var thisBoxContainerList;
+                var lastIndex;
+                var nowIndex;
+                for (var i = 0; i < list.length; i++) {
+                    thisBox = list[i].container.box;
+                    thisType = type[list[i].container.typeCode].name;
+                    lastIndex = boxHistoryArr.length - 1;
+                    if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
+                        boxIDArr.push(thisBox);
+                        boxHistoryArr.push({
+                            boxID: thisBox,
+                            boxTime: list[i].tradeTime,
+                            typeList: [],
+                            containerList: {},
+                            isDelivering: true,
+                            destinationStore: list[i].newUser.storeID
+                        });
+                    }
+                    nowIndex = boxHistoryArr.length - 1;
+                    thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
+                    thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
+                    if (thisBoxTypeList.indexOf(thisType) < 0) {
+                        thisBoxTypeList.push(thisType);
+                        thisBoxContainerList[thisType] = [];
+                    }
+                    thisBoxContainerList[thisType].push(list[i].container.id);
+                }
+                for (let i = 0; i < boxHistoryArr.length; i++) {
+                    boxHistoryArr[i].containerOverview = [];
+                    for (let j = 0; j < boxHistoryArr[i].typeList.length; j++) {
+                        boxHistoryArr[i].containerOverview.push({
+                            containerType: boxHistoryArr[i].typeList[j],
+                            amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
                         });
                     }
                 }
+                boxArr = boxArr.concat(boxHistoryArr);
             }
-            Trade.find({
-                'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.roles.clerk.storeID,
-                'tradeTime': {
-                    '$gte': dateCheckpoint(1 - historyDays)
-                }
-            }, function (err, list) {
-                if (err) return next(err);
-                if (list.length !== 0) {
-                    list.sort((a, b) => b.tradeTime - a.tradeTime);
-                    var boxHistoryArr = [];
-                    var boxIDArr = [];
-                    var thisBoxTypeList;
-                    var thisBoxContainerList;
-                    var lastIndex;
-                    var nowIndex;
-                    for (var i = 0; i < list.length; i++) {
-                        thisBox = list[i].container.box;
-                        thisType = type[list[i].container.typeCode].name;
-                        lastIndex = boxHistoryArr.length - 1;
-                        if (lastIndex < 0 || boxHistoryArr[lastIndex].boxID !== thisBox || (boxHistoryArr[lastIndex].boxTime - list[i].tradeTime) !== 0) {
-                            boxIDArr.push(thisBox);
-                            boxHistoryArr.push({
-                                boxID: thisBox,
-                                boxTime: list[i].tradeTime,
-                                typeList: [],
-                                containerList: {},
-                                isDelivering: true,
-                                destinationStore: list[i].newUser.storeID
-                            });
-                        }
-                        nowIndex = boxHistoryArr.length - 1;
-                        thisBoxTypeList = boxHistoryArr[nowIndex].typeList;
-                        thisBoxContainerList = boxHistoryArr[nowIndex].containerList;
-                        if (thisBoxTypeList.indexOf(thisType) < 0) {
-                            thisBoxTypeList.push(thisType);
-                            thisBoxContainerList[thisType] = [];
-                        }
-                        thisBoxContainerList[thisType].push(list[i].container.id);
-                    }
-                    for (var i = 0; i < boxHistoryArr.length; i++) {
-                        boxHistoryArr[i].containerOverview = [];
-                        for (var j = 0; j < boxHistoryArr[i].typeList.length; j++) {
-                            boxHistoryArr[i].containerOverview.push({
-                                containerType: boxHistoryArr[i].typeList[j],
-                                amount: boxHistoryArr[i].containerList[boxHistoryArr[i].typeList[j]].length
-                            });
-                        }
-                    }
-                    boxArr = boxArr.concat(boxHistoryArr);
-                }
-                var resJSON = {
-                    toSign: boxArr
-                };
-                res.json(resJSON);
-            });
+            var resJSON = {
+                toSign: boxArr
+            };
+            res.json(resJSON);
         });
     });
 });
@@ -1013,44 +1149,48 @@ router.get('/boxToSign', regAsStore, validateRequest, function (req, res, next) 
         }
  * 
  */
-router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    process.nextTick(function () {
-        var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
-        Promise
-            .all([new Promise((resolve, reject) => {
-                    Trade.find({
-                        'tradeType.action': 'Rent',
-                        'oriUser.storeID': dbStore.roles.clerk.storeID
-                    }, (err, tradeList) => {
-                        if (err) return reject(err);
-                        var dataList = {};
-                        for (var aType in type) {
-                            dataList[type[aType].typeCode] = {
-                                typeCode: type[aType].typeCode,
-                                amount: 0
-                            };
-                        }
-                        for (var j = 0; j < tradeList.length; j++) {
-                            dataList[tradeList[j].container.typeCode].amount++;
-                        }
-                        resolve(dataList);
-                    });
-                }),
-                new Promise((resolve, reject) => {
-                    getGlobalUsedAmount((err, globalAmount) => {
-                        if (err) return reject(err);
-                        resolve(globalAmount);
-                    });
-                })
-            ])
-            .then((data) => {
-                res.json({
-                    store: Object.values(data[0]),
-                    total: data[1]
+router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    Promise
+        .all([new Promise((resolve, reject) => {
+                Trade.find({
+                    'tradeType.action': ContainerAction.RENT,
+                    'oriUser.storeID': thisStoreID
+                }, (err, tradeList) => {
+                    if (err) return reject(err);
+                    var dataList = {};
+                    for (var aType in type) {
+                        dataList[type[aType].typeCode] = {
+                            typeCode: type[aType].typeCode,
+                            amount: 0
+                        };
+                    }
+                    for (var j = 0; j < tradeList.length; j++) {
+                        dataList[tradeList[j].container.typeCode].amount++;
+                    }
+                    resolve(dataList);
                 });
-            }).catch(err => next(err));
-    });
+            }),
+            new Promise((resolve, reject) => {
+                getGlobalUsedAmount((err, globalAmount) => {
+                    if (err) return reject(err);
+                    resolve(globalAmount);
+                });
+            })
+        ])
+        .then((data) => {
+            res.json({
+                store: Object.values(data[0]),
+                total: data[1]
+            });
+        }).catch(err => next(err));
 });
 
 /**
@@ -1075,46 +1215,50 @@ router.get('/usedAmount', regAsStore, validateRequest, function (req, res, next)
         }
  * 
  */
-router.get('/history', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
-    process.nextTick(function () {
+router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    Trade.find({
+        'tradeTime': {
+            '$gte': dateCheckpoint(1 - historyDays),
+            '$lt': dateCheckpoint(1)
+        },
+        'tradeType.action': ContainerAction.RENT,
+        'oriUser.storeID': thisStoreID
+    }, function (err, rentTrades) {
+        if (err) return next(err);
         Trade.find({
             'tradeTime': {
                 '$gte': dateCheckpoint(1 - historyDays),
                 '$lt': dateCheckpoint(1)
             },
-            'tradeType.action': 'Rent',
-            'oriUser.storeID': dbStore.roles.clerk.storeID
-        }, function (err, rentTrades) {
+            'tradeType.action': ContainerAction.RETURN,
+            'newUser.storeID': thisStoreID
+        }, function (err, returnTrades) {
             if (err) return next(err);
-            Trade.find({
-                'tradeTime': {
-                    '$gte': dateCheckpoint(1 - historyDays),
-                    '$lt': dateCheckpoint(1)
-                },
-                'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.roles.clerk.storeID
-            }, function (err, returnTrades) {
-                if (err) return next(err);
-                if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                    parseHistory(rentTrades, 'Rent', type, function (parsedRent) {
-                        let resJson = {
-                            rentHistory: {
-                                amount: parsedRent.length,
-                                dataList: parsedRent
-                            }
+            if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
+                parseHistory(rentTrades, ContainerAction.RENT, type, function (parsedRent) {
+                    let resJson = {
+                        rentHistory: {
+                            amount: parsedRent.length,
+                            dataList: parsedRent
+                        }
+                    };
+                    parseHistory(returnTrades, ContainerAction.RETURN, type, function (parsedReturn) {
+                        resJson.returnHistory = {
+                            amount: parsedReturn.length,
+                            dataList: parsedReturn
                         };
-                        parseHistory(returnTrades, 'Return', type, function (parsedReturn) {
-                            resJson.returnHistory = {
-                                amount: parsedReturn.length,
-                                dataList: parsedReturn
-                            };
-                            res.json(resJson);
-                        });
+                        res.json(resJson);
                     });
-                }
-            });
+                });
+            }
         });
     });
 });
@@ -1139,36 +1283,42 @@ router.get('/history', regAsStore, validateRequest, function (req, res, next) {
         }
  * 
  */
-router.get('/history/byContainerType', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    var type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const type = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     req.clearTimeout();
     var tradeQuery = {
         '$or': [{
-                'tradeType.action': 'Sign',
-                'newUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.SIGN,
+                'newUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Rent',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Return',
-                'newUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.RETURN,
+                'newUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'Return',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.RETURN,
+                'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'UndoReturn',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.UNDO_RETURN,
+                'oriUser.storeID': thisStoreID
             },
             {
-                'tradeType.action': 'ReadyToClean',
+                'tradeType.action': ContainerAction.RELOAD,
             },
             {
-                'tradeType.action': 'UndoReadyToClean'
+                'tradeType.action': ContainerAction.UNDO_RELOAD
             }
         ]
     };
@@ -1186,7 +1336,7 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade(['Return', 'ReadyToClean'], tradeList);
+        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var storeLostTradesDict = {};
         var personalLostTradesDict = {};
@@ -1196,34 +1346,34 @@ router.get('/history/byContainerType', regAsStore, validateRequest, function (re
         var cleanReloadTrades = [];
         tradeList.forEach(aTrade => {
             let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-            if (aTrade.tradeType.action === "Sign") {
+            if (aTrade.tradeType.action === ContainerAction.SIGN) {
                 storeLostTradesDict[containerKey] = aTrade;
-            } else if (aTrade.tradeType.action === "Rent") {
+            } else if (aTrade.tradeType.action === ContainerAction.RENT) {
                 rentTrades.push(aTrade);
                 personalLostTradesDict[containerKey] = aTrade;
                 if (storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
-            } else if (aTrade.tradeType.action === "Return") {
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 returnTrades.push(aTrade);
-                if (aTrade.oriUser.storeID === dbStore.roles.clerk.storeID && storeLostTradesDict[containerKey]) {
+                if (aTrade.oriUser.storeID === thisStoreID && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
-                if (aTrade.newUser.storeID === dbStore.roles.clerk.storeID) {
+                if (aTrade.newUser.storeID === thisStoreID) {
                     storeLostTradesDict[containerKey] = aTrade;
                 }
                 if (personalLostTradesDict[containerKey]) {
                     delete personalLostTradesDict[containerKey];
                 }
-            } else if (aTrade.tradeType.action === "ReadyToClean") {
-                if (aTrade.tradeType.oriState === 1 && aTrade.oriUser.storeID === dbStore.roles.clerk.storeID) {
+            } else if (aTrade.tradeType.action === ContainerAction.RELOAD) {
+                if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE && aTrade.oriUser.storeID === thisStoreID) {
                     cleanReloadTrades.push(aTrade);
                     if (storeLostTradesDict[containerKey]) {
                         delete storeLostTradesDict[containerKey];
                     }
-                } else if (aTrade.tradeType.oriState === 3 && storeLostTradesDict[containerKey]) {
+                } else if (aTrade.tradeType.oriState === ContainerState.RETURNED && storeLostTradesDict[containerKey]) {
                     usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
@@ -1324,11 +1474,17 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
         }
  * 
  */
-router.get('/history/byCustomer', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
     let tradeQuery = {
-        "tradeType.action": "Rent",
-        'oriUser.storeID': dbStore.roles.clerk.storeID
+        "tradeType.action": ContainerAction.RENT,
+        'oriUser.storeID': thisStoreID
     };
     if (req.query.days)
         Object.assign(tradeQuery, {
@@ -1386,13 +1542,18 @@ router.get('/history/byCustomer', regAsStore, validateRequest, function (req, re
         }
  * 
  */
-router.get('/performance', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
+router.get('/performance', checkRoleIsStore(), validateRequest, function (req, res, next) {
     let orderBy = req.query.by;
-
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
     Trade.find({
-        'tradeType.action': 'Rent',
-        'oriUser.storeID': dbStore.roles.clerk.storeID
+        'tradeType.action': ContainerAction.RENT,
+        'oriUser.storeID': thisStoreID
     }, function (err, rentTrades) {
         if (err) return next(err);
         let clerkDict = {};
@@ -1433,9 +1594,15 @@ router.get('/performance', regAsStore, validateRequest, function (req, res, next
     }
  * 
  */
-router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
-    var dbStore = req._user;
-    const thisRedisKey = redisKey(dbStore.roles.clerk.storeID);
+router.get('/favorite', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const thisRedisKey = redisKey(thisStoreID);
     redis.exists(thisRedisKey, (err, keyIsExists) => {
         if (err) return next(err);
         if (keyIsExists) {
@@ -1459,8 +1626,8 @@ router.get('/favorite', regAsStore, validateRequest, function (req, res, next) {
             });
         } else {
             Trade.find({
-                'tradeType.action': 'Rent',
-                'oriUser.storeID': dbStore.roles.clerk.storeID
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
             }, function (err, rentTrades) {
                 if (err) return next(err);
                 if (typeof rentTrades !== 'undefined') {
@@ -1498,9 +1665,9 @@ function parseHistory(data, dataType, type, callback) {
     if (data.length === 0) return callback([]);
     else if (data.length === 1) {
         aHistory = data[0];
-        if (dataType === 'Rent')
+        if (dataType === ContainerAction.RENT)
             lastPhone = aHistory.newUser.phone;
-        else if (dataType === 'Return')
+        else if (dataType === ContainerAction.RETURN)
             lastPhone = aHistory.oriUser.phone;
     } else {
         data.sort(function (a, b) {
@@ -1513,15 +1680,15 @@ function parseHistory(data, dataType, type, callback) {
     for (var i = 1; i < data.length; i++) {
         aHistory = data[i];
         lastHistory = data[i - 1];
-        if (dataType === 'Rent') {
+        if (dataType === ContainerAction.RENT) {
             thisPhone = aHistory.newUser.phone;
             lastPhone = lastHistory.newUser.phone;
-        } else if (dataType === 'Return') {
+        } else if (dataType === ContainerAction.RETURN) {
             thisPhone = aHistory.oriUser.phone;
             lastPhone = lastHistory.oriUser.phone;
         }
         if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
-            phoneFormatted = (dataType === 'Return') ? '' : lastPhone;
+            phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : lastPhone;
             byOrderArr.push({
                 time: lastHistory.tradeTime,
                 phone: phoneFormatted,
@@ -1532,7 +1699,7 @@ function parseHistory(data, dataType, type, callback) {
         }
         tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type[aHistory.container.typeCode].name);
     }
-    phoneFormatted = (dataType === 'Return') ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
+    phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
         time: aHistory.tradeTime,
         phone: phoneFormatted,

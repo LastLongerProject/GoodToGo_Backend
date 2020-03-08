@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const Box = require('../../../models/DB/boxDB');
 
@@ -66,7 +66,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
 
             request(app)
                 .post('/deliveryList/create/17')
@@ -105,10 +105,10 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             Box.findOne({
-                boxName: "test_2"
-            }).exec()
+                    boxName: "test_2"
+                }).exec()
                 .then(box => {
                     console.log(box)
                     request(app)
@@ -148,7 +148,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/deliveryList/stock')
                 .set('Authorization', auth)
@@ -180,7 +180,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/deliveryList/changeState')
                 .set('Authorization', auth)
@@ -212,7 +212,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .post('/deliveryList/sign')
                 .set('Authorization', auth)
@@ -243,7 +243,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/deliveryList/box/list')
                 .set('Authorization', auth)
@@ -270,7 +270,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/deliveryList/box/list/Delivering')
                 .set('Authorization', auth)
@@ -297,7 +297,7 @@ describe('api-deliveryList', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/deliveryList/modifyBoxInfo/21914111')
                 .set('Authorization', auth)
