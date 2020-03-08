@@ -384,16 +384,21 @@ module.exports = {
                     if (aBox.stationID === null) aBox.stationID = 0;
                     for (let actionIndex in aBox.action) {
                         const theAction = aBox.action[actionIndex];
-                        if (typeof theAction.destinationStoreId !== "undefined") {
+                        if (typeof theAction.destinationStoreId !== "undefined" && typeof theAction.storeID === "undefined") {
                             Object.assign(theAction, {
                                 storeID: {
                                     from: null,
                                     to: theAction.destinationStoreId
                                 }
                             });
+                        } else if (typeof theAction.destinationStoreId === "undefined" && typeof theAction.storeID !== "undefined") {
+                            theAction.destinationStoreId = theAction.storeID.to;
                         }
                     }
-                    resolve();
+                    aBox.save(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
                 })))
                 .then(() => {
                     cb(null, "Done User Role Migration");
