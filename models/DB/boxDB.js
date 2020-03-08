@@ -22,6 +22,7 @@ var schema = mongoose.Schema({
         phone: String,
         boxStatus: String,
         boxAction: String,
+        destinationStoreId: Number,
         stationID: {
             from: Number,
             to: Number
@@ -38,6 +39,8 @@ var schema = mongoose.Schema({
     },
     containerList: [Number],
     containerHash: String,
+
+    // For legacy api version
     delivering: {
         type: Boolean,
         default: false
@@ -46,6 +49,7 @@ var schema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+
     status: String,
     error: {
         type: Boolean,

@@ -55,7 +55,7 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             }
         };
-        removeStoreIDfromBox(box, info);
+        modifyStoreIdOfBox(box, info, null);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -117,7 +117,7 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             }
         };
-        removeStoreIDfromBox(box, info);
+        modifyStoreIdOfBox(box, info, null);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -137,20 +137,16 @@ let changeStateProcess = async function (element, box, phone) {
         const storeID = validationResult.storeID;
         let info = {
             status: BoxStatus.Boxing,
-            storeID,
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Boxing,
                     boxAction: BoxAction.Deliver,
-                    storeID: {
-                        from: box.storeID,
-                        to: storeID
-                    },
                     timestamps: Date.now()
                 }
             }
         };
+        modifyStoreIdOfBox(box, info, storeID);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -199,21 +195,17 @@ let changeStateProcess = async function (element, box, phone) {
             });
         let info = {
             status: BoxStatus.Dispatching,
-            stationID,
             $push: {
                 action: {
                     phone: phone,
                     boxStatus: BoxStatus.Dispatching,
                     boxAction: BoxAction.Dispatch,
-                    stationID: {
-                        from: box.stationID,
-                        to: stationID
-                    },
                     timestamps: Date.now()
                 }
             }
         };
-        removeStoreIDfromBox(box, info);
+        modifyStationIdOfBox(box, info, stationID);
+        modifyStoreIdOfBox(box, info, null);
         return Promise.resolve({
             status: ProgramStatus.Success,
             message: "State is validate, update box after change container successfully",
@@ -229,21 +221,19 @@ let changeStateProcess = async function (element, box, phone) {
                 argumentNameList: missingArgList
             });
 
-        let info;
-        let boxAction = element.boxAction;
-        if (boxAction === BoxAction.AcceptDispatch) {
-            info = {
-                status: BoxStatus.Stocked,
-                $push: {
-                    action: {
-                        phone: phone,
-                        boxStatus: BoxStatus.Stocked,
-                        boxAction,
-                        timestamps: Date.now()
-                    }
+        let info = {
+            status: BoxStatus.Stocked,
+            $push: {
+                action: {
+                    phone: phone,
+                    boxStatus: BoxStatus.Stocked,
+                    boxAction,
+                    timestamps: Date.now()
                 }
-            };
-        } else if (boxAction === BoxAction.RejectDispatch) {
+            }
+        };
+        let boxAction = element.boxAction;
+        if (boxAction === BoxAction.RejectDispatch) {
             const stationID = getLastStationIdInAction(box).from;
             if (stationID === null)
                 return Promise.resolve({
@@ -251,23 +241,8 @@ let changeStateProcess = async function (element, box, phone) {
                     errorType: StateChangingError.Unknown,
                     message: `Element [stationID] can't be found in box's[${box.boxID}] action list`
                 });
-            info = {
-                status: BoxStatus.Stocked,
-                stationID,
-                $push: {
-                    action: {
-                        phone: phone,
-                        stationID: {
-                            from: box.stationID,
-                            to: stationID
-                        },
-                        boxStatus: BoxStatus.Stocked,
-                        boxAction,
-                        timestamps: Date.now()
-                    }
-                }
-            };
-        } else {
+            modifyStationIdOfBox(box, info, stationID);
+        } else if (boxAction !== BoxAction.AcceptDispatch) {
             return Promise.resolve({
                 status: ProgramStatus.Error,
                 errorType: StateChangingError.ArgumentInvalid,
@@ -303,8 +278,11 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
                         status: ProgramStatus.Error,
                         message: reply
                     });
+
+                // For legacy api version
                 aBox.delivering = true;
                 aBox.stocking = false;
+
                 aBox.user.delivery = dbAdmin.user.phone;
                 await aBox.update(boxInfo).exec();
                 return resolve({
@@ -328,7 +306,10 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
                         status: ProgramStatus.Error,
                         message: reply
                     });
+
+                // For legacy api version
                 aBox.delivering = false;
+
                 aBox.user.delivery = undefined;
                 await aBox.update(boxInfo).exec();
                 return resolve({
@@ -352,9 +333,12 @@ let containerStateFactory = async function (validatedStateChanging, aBox, dbAdmi
                         status: ProgramStatus.Error,
                         message: reply
                     });
+
+                // For legacy api version
                 aBox.delivering = false;
-                aBox.user.delivery = undefined;
                 aBox.stocking = true;
+
+                aBox.user.delivery = undefined;
                 await aBox.update(boxInfo).exec();
                 return resolve({
                     status: ProgramStatus.Success,
@@ -465,15 +449,30 @@ function getLastStationIdInAction(box) {
     return stationID;
 }
 
-function removeStoreIDfromBox(box, info) {
-    if (box.storeID !== null) {
+function modifyStoreIdOfBox(box, info, value) {
+    if (box.storeID !== value) {
         Object.assign(info, {
-            storeID: null
+            storeID: value
         });
         Object.assign(info.$push.action, {
             storeID: {
                 from: box.storeID,
-                to: null
+                to: value
+            },
+            destinationStoreId: value
+        });
+    }
+}
+
+function modifyStationIdOfBox(box, info, value) {
+    if (box.stationID !== value) {
+        Object.assign(info, {
+            stationID: value
+        });
+        Object.assign(info.$push.action, {
+            stationID: {
+                from: box.stationID,
+                to: value
             }
         });
     }
