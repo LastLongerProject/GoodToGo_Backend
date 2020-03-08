@@ -67,7 +67,7 @@
     "homepage": "https://github.com/BenjaminChenTW/GoodToGo_Backend#readme",
     "devDependencies": {
         "chai": "^4.2.0",
-        "eslint": "^5.16.0",
+        "eslint": "^6.8.0",
         "mocha": "^5.2.0",
         "nodemon": "^1.18.10",
         "should": "^13.2.3",
