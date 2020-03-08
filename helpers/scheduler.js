@@ -82,6 +82,7 @@ module.exports = function () {
                 });
                 setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
                 setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, generalCb);
+                setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, generalCb);
             };
             taskList();
             setInterval(taskList, 1000 * 60 * 60 * 24);
