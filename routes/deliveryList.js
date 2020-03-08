@@ -58,7 +58,7 @@ const historyDays = 14;
             [stationID]: String // "台南庫存"
         }
  */
-router.get('/stationDict', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+router.get('/stationDict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
     Station.find({}, {}, {
         sort: {
             ID: 1
