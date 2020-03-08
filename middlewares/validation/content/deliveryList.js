@@ -1,4 +1,3 @@
-const timeFormatter = require('../../../helpers/toolkit').timeFormatter;
 const dayFormatter = require('../../../helpers/toolkit').dayFormatter;
 const monthFormatter = require('../../../helpers/toolkit').monthFormatter;
 const intReLength = require('../../../helpers/toolkit').intReLength;
@@ -98,6 +97,7 @@ function validateCreateApiContent(req, res, next) {
                     from: null,
                     to: storeID
                 },
+                destinationStoreId: storeID,
                 stationID: {
                     from: null,
                     to: thisStationID
