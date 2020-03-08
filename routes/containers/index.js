@@ -259,7 +259,8 @@ router.post('/return/:container', checkRoleIs([{
             if (!tradeSuccess) return res.status(403).json(reply);
             res.json(reply);
             tradeCallback.return(tradeDetail, {
-                storeID: thisStoreID
+                storeID: thisStoreID,
+                ignoreSilentMode: (thisRoleType === RoleType.BOT)
             });
         }
     );

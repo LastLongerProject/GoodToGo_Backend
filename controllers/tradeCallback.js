@@ -38,9 +38,8 @@ module.exports = {
                 });
             });
     },
-    return: function (tradeDetail, options) {
+    return: function (tradeDetail, options = {}) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
-        if (!options) options = {};
         const toStore = typeof options.storeID === "undefined" ?
             tradeDetail[0].newUser.roles.clerk.storeID :
             options.storeID;
@@ -113,7 +112,7 @@ module.exports = {
                                     overdueReturnInThisTrade: overdueReturn,
                                     purchaseStatus: dbCustomer.getPurchaseStatus(),
                                 }
-                            });
+                            }, options);
                         });
 
                         pointTrade.sendPoint(point, dbCustomer, {
