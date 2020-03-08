@@ -594,7 +594,9 @@ const Sorter = {
     DESCEND_ARRIVAL: 1 << 4,
     ASCEND_ARRIVAL: 1 << 5,
     DESCEND_CREATED_DATE: 1 << 6,
-    ASCEND_CREATED_DATE: 1 << 7
+    ASCEND_CREATED_DATE: 1 << 7,
+    DESCEND_UPDATED_DATE: 1 << 8,
+    ASCEND_UPDATED_DATE: 1 << 9,
 };
 
 async function createTextSearchQuery(keyword) {
@@ -660,6 +662,14 @@ function parseSorter(rawValue) {
             return {
                 "_id": -1
             };
+        case Sorter.ASCEND_UPDATED_DATE:
+            return {
+                "updatedAt": 1
+            }
+        case Sorter.DESCEND_UPDATED_DATE:
+            return {
+                "updatedAt": -1
+            }
         default:
             return {
                 "_id": 1
