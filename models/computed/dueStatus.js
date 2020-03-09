@@ -20,12 +20,10 @@ module.exports = {
         const UserDueDays = DueDays[userPurchaseStatus];
         const UserLastCallDays = LastCallDays[userPurchaseStatus];
         const daysOfUsing = computeDaysOfUsing(dateToCompute, now);
-        const daysToDue = daysOfUsing - UserDueDays;
-        const daysOverDue = UserDueDays - daysOfUsing;
 
-        if (daysToDue < 0) return DueStatus.NOT_DUE;
-        else if (daysToDue === 0) return DueStatus.ALMOST_OVERDUE;
-        else if (daysOverDue < UserLastCallDays) return DueStatus.LAST_CALL;
+        if (daysOfUsing < UserDueDays) return DueStatus.NOT_DUE;
+        else if (daysOfUsing === UserDueDays) return DueStatus.ALMOST_OVERDUE;
+        else if (daysOfUsing <= (UserDueDays + UserLastCallDays)) return DueStatus.LAST_CALL;
         else return DueStatus.OVERDUE;
     },
     deadline: function (dateToCompute, userPurchaseStatus, now = Date.now()) {
