@@ -305,31 +305,7 @@ router.get('/list/:id', validateDefault, function (req, res, next) {
  */
 
 router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
-    const query = {};
-
-    const dbRole = req._thisRole;
-    let thisStationID;
-    let thisRoleType = dbRole.roleType;
-    try {
-        switch (thisRoleType) {
-            case RoleType.CLEAN_STATION:
-                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
-                Object.assign(query, {
-                    id: {
-                        "$in": getStoreListInArea(thisStationID)
-                    }
-                });
-                break;
-            case RoleType.STORE:
-                break;
-            default:
-                return next();
-        }
-    } catch (error) {
-        return next(error);
-    }
-
-    Store.find(query, {}, {
+    Store.find({}, {}, {
         sort: {
             id: 1
         }
@@ -338,6 +314,42 @@ router.get('/dict', checkRoleIsStore(), checkRoleIsCleanStation(), validateReque
         let storeDict = {};
         storeList.forEach(aStore => storeDict[aStore.id] = aStore.name);
         res.json(storeDict);
+    });
+});
+
+/**
+ * @apiName Store inZone
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/inZone Get store list in Station's Zone
+ * @apiUse JWT
+ * @apiPermission station
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            'storeIdList': [0, 1, 2,...] // Number, storeID
+        }
+ * 
+ */
+
+router.get('/inZone', checkRoleIsCleanStation(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStationID;
+    let thisRoleType = dbRole.roleType;
+    try {
+        switch (thisRoleType) {
+            case RoleType.CLEAN_STATION:
+                thisStationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                break;
+            default:
+                return next();
+        }
+    } catch (error) {
+        return next(error);
+    }
+    res.json({
+        storeIdList: getStoreListInArea(thisStationID)
     });
 });
 
