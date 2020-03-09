@@ -221,6 +221,7 @@ let changeStateProcess = async function (element, box, phone) {
                 argumentNameList: missingArgList
             });
 
+        let boxAction = element.boxAction;
         let info = {
             status: BoxStatus.Stocked,
             $push: {
@@ -232,7 +233,6 @@ let changeStateProcess = async function (element, box, phone) {
                 }
             }
         };
-        let boxAction = element.boxAction;
         if (boxAction === BoxAction.RejectDispatch) {
             const stationID = getLastStationIdInAction(box).from;
             if (stationID === null)
