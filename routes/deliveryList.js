@@ -665,15 +665,15 @@ function parseSorter(rawValue) {
         case Sorter.ASCEND_UPDATED_DATE:
             return {
                 "updatedAt": 1
-            }
-            case Sorter.DESCEND_UPDATED_DATE:
-                return {
-                    "updatedAt": -1
-                }
-                default:
-                    return {
-                        "_id": 1
-                    };
+            };
+        case Sorter.DESCEND_UPDATED_DATE:
+            return {
+                "updatedAt": -1
+            };
+        default:
+            return {
+                "_id": 1
+            };
     }
 }
 
