@@ -666,14 +666,14 @@ function parseSorter(rawValue) {
             return {
                 "updatedAt": 1
             }
-        case Sorter.DESCEND_UPDATED_DATE:
-            return {
-                "updatedAt": -1
-            }
-        default:
-            return {
-                "_id": 1
-            };
+            case Sorter.DESCEND_UPDATED_DATE:
+                return {
+                    "updatedAt": -1
+                }
+                default:
+                    return {
+                        "_id": 1
+                    };
     }
 }
 
@@ -1026,7 +1026,7 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                 };
 
                 if (info.storeID !== undefined || info.dueDate !== undefined) {
-                    let assignAction = info.storeID && box.storeID !== info.storeID && {
+                    let assignAction = (typeof info.storeID !== "undefined" && box.storeID !== info.storeID) ? {
                         phone: dbUser.user.phone,
                         destinationStoreId: info.storeID,
                         storeID: {
@@ -1036,18 +1036,18 @@ router.patch('/modifyBoxInfo/:boxID', checkRoleIsCleanStation(), validateRequest
                         boxStatus: box.status,
                         boxAction: BoxAction.Assign,
                         timestamps: Date.now()
-                    };
+                    } : null;
 
-                    let modifyDateAction = info.dueDate && !isSameDay(info.dueDate, box.dueDate) && {
+                    let modifyDateAction = (typeof info.dueDate !== "undefined" && !isSameDay(info.dueDate, box.dueDate)) ? {
                         phone: dbUser.user.phone,
                         boxStatus: box.status,
                         boxAction: BoxAction.ModifyDueDate,
                         timestamps: Date.now()
-                    };
+                    } : null;
 
                     info = {
                         ...info,
-                        deliveringDate: info.storeID && box.storeID !== info.storeID && Date.now(),
+                        deliveringDate: (typeof info.storeID !== "undefined" && box.storeID !== info.storeID) ? Date.now() : null,
                         $push: {
                             action: {
                                 $each: [modifyDateAction, assignAction].filter(e => e)
