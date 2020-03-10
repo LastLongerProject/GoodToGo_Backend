@@ -420,9 +420,10 @@ module.exports = {
             if (err) return cb(err);
             Promise
                 .all(userList.map(aUser => new Promise((resolve, reject) => {
-                    const newRoleList = [];
+                    let newRoleList = [];
                     for (let aRoleKey in aUser.roles) {
                         if (ORI_ROLE_TYPE.indexOf(aRoleKey) === -1 || !aUser.roles[aRoleKey]) continue;
+                        let isBot = false;
                         let theRoleKey = aRoleKey;
                         let theRole = aUser.roles[theRoleKey];
                         switch (theRoleKey) {
@@ -447,13 +448,7 @@ module.exports = {
                                 });
                                 break;
                             case RoleType.BOT:
-                                newRoleList.push({
-                                    roleType: RoleType.ADMIN,
-                                    scopeID: theRole.scopeID,
-                                    rentFromStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
-                                    returnToStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
-                                    reloadToStationID: aUser.roles.admin ? aUser.roles.admin.stationID : null
-                                });
+                                isBot = true;
                                 break;
                             case RoleType.CUSTOMER:
                                 Object.assign(theRole, {
@@ -463,6 +458,15 @@ module.exports = {
                                 break;
                             default:
                                 reject(`Unknown Origin Role Type:[${theRoleKey}] - [${JSON.stringify(theRole)}]`);
+                        }
+                        if (isBot) {
+                            newRoleList = [{
+                                roleType: RoleType.BOT,
+                                scopeID: theRole.scopeID,
+                                rentFromStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                returnToStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                reloadToStationID: aUser.roles.admin ? aUser.roles.admin.stationID : null
+                            }];
                         }
                     }
                     Promise

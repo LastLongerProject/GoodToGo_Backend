@@ -61,22 +61,22 @@ module.exports = {
                 if (isNaN(scopeID))
                     throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.SCOPE_ID, scopeID));
                 var rentFromStoreID = null;
-                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID)) {
+                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID) && options.rentFromStoreID !== null) {
                     rentFromStoreID = parseInt(options.rentFromStoreID);
                     if (isNaN(rentFromStoreID))
                         throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RENT_FROM_STORE_ID, rentFromStoreID));
                 }
                 var returnToStoreID = null;
-                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID)) {
+                if (options.hasOwnProperty(RoleElement.RETURN_TO_STORE_ID) && options.returnToStoreID !== null) {
                     returnToStoreID = parseInt(options.returnToStoreID);
                     if (isNaN(returnToStoreID))
                         throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RETURN_TO_STORE_ID, returnToStoreID));
                 }
                 var reloadToStationID = null;
-                if (options.hasOwnProperty(RoleElement.RELOAD_TO_STATION_ID)) {
+                if (options.hasOwnProperty(RoleElement.RELOAD_TO_STATION_ID) && options.reloadToStationID !== null) {
                     reloadToStationID = parseInt(options.reloadToStationID);
                     if (isNaN(reloadToStationID))
-                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RELOAD_TO_STATION_ID, returnToStoreID));
+                        throw new RoleCreationError(RoleCreationError.argInvalid(RoleType.BOT, RoleElement.RELOAD_TO_STATION_ID, reloadToStationID));
                 }
                 Object.assign(theRole, {
                     scopeID,
