@@ -186,6 +186,9 @@ function getElement(theRole, eleName, nullable = true) {
         case RoleElement.RETURN_TO_STORE_ID:
             if (theRole.roleType !== RoleType.BOT) return done(null);
             return done(theRole[RoleElement.RETURN_TO_STORE_ID]);
+        case RoleElement.RENT_FROM_STORE_ID:
+            if (theRole.roleType !== RoleType.BOT) return done(null);
+            return done(theRole[RoleElement.RENT_FROM_STORE_ID]);
         default:
             return done(null);
     }
