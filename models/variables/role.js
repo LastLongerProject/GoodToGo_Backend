@@ -183,6 +183,9 @@ function getElement(theRole, eleName, nullable = true) {
         case RoleElement.CUSTOMER_GROUP:
             if (theRole.roleType !== RoleType.CUSTOMER) return done(null);
             return done(theRole[RoleElement.CUSTOMER_GROUP]);
+        case RoleElement.RETURN_TO_STORE_ID:
+            if (theRole.roleType !== RoleType.BOT) return done(null);
+            return done(theRole[RoleElement.RETURN_TO_STORE_ID]);
         default:
             return done(null);
     }
