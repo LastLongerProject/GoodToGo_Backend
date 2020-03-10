@@ -303,7 +303,8 @@ module.exports = {
                                                         img_src: "https://app.goodtogo.tw/images/" + intReLength(aPlace.ID, 2),
                                                         img_version: 0
                                                     }
-                                                }
+                                                },
+                                                'delivery_area': aPlace.delivery_area
                                             }, {
                                                 upsert: true,
                                                 setDefaultsOnInsert: true,
