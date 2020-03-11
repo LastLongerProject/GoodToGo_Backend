@@ -226,9 +226,9 @@ schema.methods.getRoleByID = function (roleID) {
 schema.methods.findRole = function (condition) {
     let theRole = this.roleList.find(aRole => {
         for (let conditionKey in condition) {
-            if (!aRole[conditionKey] || aRole[conditionKey] !== condition[conditionKey]) return false;
-            return true;
+            if ((condition[conditionKey] !== undefined && aRole[conditionKey] === undefined) || aRole[conditionKey] !== condition[conditionKey]) return false;
         }
+        return true;
     });
     return new Role(theRole.roleType, theRole);
 };

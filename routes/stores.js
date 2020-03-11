@@ -386,10 +386,11 @@ router.get('/clerkList', checkRoleIs([{
     const dbRole = req._thisRole;
     const thisRoleType = dbRole.roleType;
     let condition;
+    let stationID, storeID;
     try {
         switch (thisRoleType) {
             case RoleType.CLEAN_STATION:
-                var stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
                 condition = {
                     roleList: {
                         $elemMatch: {
@@ -399,7 +400,7 @@ router.get('/clerkList', checkRoleIs([{
                 };
                 break;
             case RoleType.STORE:
-                var storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                storeID = dbRole.getElement(RoleElement.STORE_ID, false);
                 condition = {
                     roleList: {
                         $elemMatch: {
@@ -422,7 +423,9 @@ router.get('/clerkList', checkRoleIs([{
                     .filter(aClerk => aClerk.user.phone !== undefined)
                     .map(aClerk => {
                         const theRole = aClerk.findRole({
-                            roleType: thisRoleType
+                            roleType: thisRoleType,
+                            storeID,
+                            stationID
                         });
                         return {
                             phone: aClerk.user.phone,
