@@ -117,37 +117,31 @@ router.post('/clerk', checkRoleIsStore({
     });
     const dbRole = req._thisRole;
     const ROLE_TYPE = dbRole.roleType;
-    switch (ROLE_TYPE) {
-        case RoleType.CLEAN_STATION:
-            var stationID;
-            try {
-                stationID = dbRole.getElement(RoleElement.STATION_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            req.body.role = {
-                typeCode: RoleType.ADMIN,
-                manager: false,
-                stationID
-            };
-            req._options.registerMethod = RegisterMethod.BY_ADMIN;
-            break;
-        case RoleType.STORE:
-            var storeID;
-            try {
-                storeID = dbRole.getElement(RoleElement.STORE_ID, false);
-            } catch (error) {
-                return next(error);
-            }
-            req.body.role = {
-                typeCode: RoleType.STORE,
-                manager: false,
-                storeID
-            };
-            req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
-            break;
-        default:
-            next();
+    try {
+        switch (ROLE_TYPE) {
+            case RoleType.CLEAN_STATION:
+                var stationID = dbRole.getElement(RoleElement.STATION_ID, false);
+                req.body.role = {
+                    typeCode: RoleType.CLEAN_STATION,
+                    manager: false,
+                    stationID
+                };
+                req._options.registerMethod = RegisterMethod.STATION_APP_MANAGER;
+                break;
+            case RoleType.STORE:
+                var storeID = dbRole.getElement(RoleElement.STORE_ID, false);
+                req.body.role = {
+                    typeCode: RoleType.STORE,
+                    manager: false,
+                    storeID
+                };
+                req._options.registerMethod = RegisterMethod.CLECK_APP_MANAGER;
+                break;
+            default:
+                next();
+        }
+    } catch (error) {
+        return next(error);
     }
     req._options.preCheck = function () {
         if (req.body.phone === dbUser.user.phone)
@@ -342,8 +336,9 @@ router.post('/lineUserRoot', checkRoleIsAdmin(), validateRequest, function (req,
  */
 router.post('/root', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     // for ADMIN and CLERK
-    var dbKey = req._key;
-    if (String(dbKey.roleType).startsWith(`${RoleType.STORE}`)) {
+    const dbRole = req._thisRole;
+    const ROLE_TYPE = dbRole.roleType;
+    if (ROLE_TYPE === RoleType.STORE) {
         req.body.role = {
             typeCode: RoleType.CUSTOMER
         };
@@ -352,7 +347,7 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, fu
         req._options.registerMethod = RegisterMethod.BY_ADMIN;
     }
     req._setSignupVerification({
-        needVerified: String(dbKey.roleType).startsWith(`${RoleType.STORE}_`),
+        needVerified: ROLE_TYPE === RoleType.STORE,
         passVerify: true
     });
     setDefaultPassword(req);
