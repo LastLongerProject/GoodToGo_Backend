@@ -902,7 +902,12 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            data: Array 
+            data: [{
+                id: Number,
+                phone: String,
+                by: String,
+                rentedTime: Number // Millisecond
+            },...] 
         }
  * 
  */
@@ -975,7 +980,12 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                 }
             }
             res.json({
-                data: rentedList
+                data: rentedList.map(aRecord => ({
+                    id: aRecord.id,
+                    phone: aRecord.phone,
+                    by: aRecord.by,
+                    rentedTime: aRecord.rentedTime.getTime()
+                }))
             });
         });
     });
