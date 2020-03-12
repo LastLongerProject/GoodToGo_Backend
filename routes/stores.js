@@ -1340,6 +1340,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     let thisStoreID;
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+        console.log(thisStoreID)
     } catch (error) {
         return next(error);
     }
@@ -1426,7 +1427,6 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
                         delete storeLostTradesDict[containerKey];
                     }
                 } else if (aTrade.tradeType.oriState === ContainerState.RETURNED && storeLostTradesDict[containerKey]) {
-                    usedTrades.push(aTrade);
                     delete storeLostTradesDict[containerKey];
                 }
                 if (personalLostTradesDict[containerKey]) {
