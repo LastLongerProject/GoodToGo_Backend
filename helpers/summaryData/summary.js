@@ -107,6 +107,45 @@ module.exports={
                 })
         })
     },
+    StatusCode_1_Container:function(storeID){
+        return new Promise(function(resolve,reject){
+            ContainerDB.find({
+                'storeID':{'$in':storeID},
+                'statusCode':1
+            },(err,containers)=>{
+                if(err)reject(err)
+                let Containers_in_Status_1=containers.map(container=>[
+                    container.lastUsedAt.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    container.lastUsedAt.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
+                    container.conbineTo,
+                    container.ID,
+                    container.typeCode,
+                    container.storeID
+                ])
+                resolve(Containers_in_Status_1)
+            })
+        })
+    },
+    StatusCode_3_Container:function(storeID){
+        return new Promise(function(resolve,reject){
+            ContainerDB.find({
+                'storeID':{'$in':storeID},
+                'statusCode':3
+            },(err,containers)=>{
+                if(err)reject(err)
+                let Containers_in_Status_1=containers.map(container=>[
+                    container.lastUsedAt.toLocaleDateString('roc',{year: 'numeric', month: '2-digit', day: '2-digit'}),
+                    container.lastUsedAt.toLocaleTimeString('roc',{hour:'2-digit',minute:'2-digit',second:'2-digit' }),
+                    container.conbineTo,
+                    container.ID,
+                    container.typeCode,
+                    container.storeID
+                ])
+                resolve(Containers_in_Status_1)
+            })
+        })
+    },
+    
     Summary_Data_For_Store:function(storeID,startTime,endTime){
         return new Promise(function(resolve,reject){
             tradeDB.find({

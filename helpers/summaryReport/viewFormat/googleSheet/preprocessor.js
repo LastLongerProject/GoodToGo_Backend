@@ -57,11 +57,17 @@ module.exports = {
                 })
         })
     },
-    List_Of_User_Of_Containers: function (dataset) {
-        return Date_Time_Phone_ContainerID_ContainerType(dataset)
+    List_Of_User_Of_Containers:function(dataset){
+        return Date_Time_Phone_ContainerID_ContainerType(dataset,['借出日期','借出時間','使用者手機','容器ID','容器類別','storeID'])
     },
-    List_Of_Not_Return_Users: function (dataset) {
-        return Date_Time_Phone_ContainerID_ContainerType(dataset)
+    List_Of_Not_Return_Users:function(dataset){
+        return Date_Time_Phone_ContainerID_ContainerType(dataset,['借出日期','借出時間','使用者手機','容器ID','容器類別','storeID'])
+    },
+    List_Of_StatusCode_1_Container:function(dataset){
+        return Date_Time_Phone_ContainerID_ContainerType(dataset,['簽收日期','簽收時間','簽收者手機','容器ID','容器類別','storeID'])
+    },
+    List_Of_StatusCode_3_Container:function(dataset){
+        return Date_Time_Phone_ContainerID_ContainerType(dataset,['歸還日期','歸還時間','掃歸還手機','容器ID','容器類別','storeID'])
     },
     List_Of_Summary_For_Store: function (dataset, startTime) {
         return new Promise(function (resolve, reject) {
@@ -298,16 +304,21 @@ module.exports = {
 
 
 
-function Date_Time_Phone_ContainerID_ContainerType(dataset) {
-    return new Promise(function (resolve, reject) {
-        const typeCode = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
-        let data_list = [];
-        data_list.push(['借出日期', '借出時間', '使用者手機', '容器ID', '容器類別', 'storeID']);
-        dataset.forEach(data => {
-            data[2] = data[2].slice(0, 4) + '-xxx-' + data[2].slice(7, 10);
-            let containerTypeCode = data[4];
+function Date_Time_Phone_ContainerID_ContainerType(dataset,the_First_Row){
+    return new Promise(function(resolve,reject){
+        let data_list=[];
+        data_list.push(the_First_Row);
+        
+        dataset.forEach(data=>{
+            if(data[2].length===10){
+                data[2]=data[2].slice(0,4)+'-xxx-'+data[2].slice(7,10);
+            }else{
+                data[2]=data[2].slice(0,4)+'-'+data[2].slice(4,10);
+            }
+            let containerTypeCode=data[4];
             data[4] = typeCode[containerTypeCode].name;
             data_list.push(data);
+            
         })
         resolve(data_list);
     })

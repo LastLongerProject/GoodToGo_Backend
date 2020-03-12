@@ -51,6 +51,28 @@ module.exports={
             })
         })
     },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_StatusCode_1_Container:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            GoogleSheetRequest_Emit(data_List,sheetID,RangeClass.List_Of_StatusCode_1_Container)
+            .then(response=>{
+                resolve(response)
+            })
+            .catch(err=>{
+                reject(err)
+            })
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
+    List_Of_StatusCode_3_Container:function(data_List,sheetID){
+        return new Promise(function(resolve,reject){
+            GoogleSheetRequest_Emit(data_List,sheetID,RangeClass.List_Of_StatusCode_3_Container)
+            .then(response=>{
+                resolve(response)
+            })
+            .catch(err=>{
+                reject(err)
+            })
+        })
+    },//resolve(成功訊息) reject(失敗訊息)
     List_Of_Summary_For_Store:function(data_List,sheetID){
         return new Promise(function(resolve,reject){
             GoogleSheetRequest_Emit(data_List,sheetID,RangeClass.List_Of_Summary_For_Store)

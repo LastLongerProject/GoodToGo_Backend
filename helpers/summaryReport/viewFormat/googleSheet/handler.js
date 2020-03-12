@@ -132,6 +132,69 @@ module.exports={
             })
         })
     },
+    List_Of_StatusCode_1_Container:function(storeID,sheetID,startTime='2018-01-01',endTime=new Date()){
+        return new Promise((resolve,reject)=>{
+            let error_messenge;
+            const dataClass=DataClassEnums.StatusCode_1_Container;
+            startTime=new Date(startTime);
+            endTime=new Date(endTime);
+            DataSummary.get(dataClass,storeID,startTime,endTime).then(ori_data=>{
+                googleSheet_Preprocessor.List_Of_StatusCode_1_Container(ori_data)
+                .then(data_List=>{
+                    googleSheet_Sender.List_Of_StatusCode_1_Container(data_List,sheetID)
+                    .then(success_Messenge=>{
+                        resolve([null,success_Messenge])
+                    })
+                    .catch(err=>{
+                        error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.Sender :'+err;
+                        debug.error(error_messenge)
+                        resolve([error_messenge])
+                    })
+                }).catch(err=>{
+                    error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.preprocessor: '+err;
+                    debug.error(error_messenge)
+                    resolve([error_messenge])
+                })
+            })
+            .catch(err=>{
+                error_messenge='Error Messenge from DataSummary.summary: '+err;
+                debug.error(error_messenge)
+                resolve([error_messenge])
+            })
+        })
+    },
+    List_Of_StatusCode_3_Container:function(storeID,sheetID,startTime='2018-01-01',endTime=new Date()){
+        return new Promise((resolve,reject)=>{
+            let error_messenge;
+            const dataClass=DataClassEnums.StatusCode_3_Container;
+            startTime=new Date(startTime);
+            endTime=new Date(endTime);
+            DataSummary.get(dataClass,storeID,startTime,endTime).then(ori_data=>{
+                googleSheet_Preprocessor.List_Of_StatusCode_3_Container(ori_data)
+                .then(data_List=>{
+                    googleSheet_Sender.List_Of_StatusCode_3_Container(data_List,sheetID)
+                    .then(success_Messenge=>{
+                        resolve([null,success_Messenge])
+                    })
+                    .catch(err=>{
+                        error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.Sender :'+err;
+                        debug.error(error_messenge)
+                        resolve([error_messenge])
+                    })
+                }).catch(err=>{
+                    error_messenge='Error Messenge from DataReport.viewFormat.googleSheet.preprocessor: '+err;
+                    debug.error(error_messenge)
+                    resolve([error_messenge])
+                })
+            })
+            .catch(err=>{
+                error_messenge='Error Messenge from DataSummary.summary: '+err;
+                debug.error(error_messenge)
+                resolve([error_messenge])
+            })
+        })
+    },
+
     List_Of_Summary_For_Store:function(storeID,sheetID,startTime='2018-01-01',endTime=new Date()){
         return new Promise((resolve,reject)=>{
             let error_messenge;
