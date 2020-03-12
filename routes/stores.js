@@ -861,11 +861,11 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
                             code: 'F014',
                             type: 'userSearchingError',
                             message: 'User is Out of quota',
-                            data: {
+                            data: JSON.stringify({
                                 purchaseStatus: dbUser.getPurchaseStatus(),
                                 usingAmount: detail.data.usingAmount,
                                 holdingQuantityLimitation: detail.data.holdingQuantityLimitation
-                            }
+                            })
                         });
                     else
                         return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
