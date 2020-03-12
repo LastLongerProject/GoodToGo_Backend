@@ -864,7 +864,12 @@ router.get('/getUser/:phone', checkRoleIs([{
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            data: Array 
+            data: [{
+                id: Number,
+                phone: String,
+                by: String,
+                rentedTime: Number // Millisecond
+            },...] 
         }
  * 
  */
@@ -942,7 +947,12 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
                 }
             }
             res.json({
-                data: rentedList
+                data: rentedList.map(aRecord => ({
+                    id: aRecord.id,
+                    phone: aRecord.phone,
+                    by: aRecord.by,
+                    rentedTime: aRecord.rentedTime.getTime()
+                }))
             });
         });
     });
