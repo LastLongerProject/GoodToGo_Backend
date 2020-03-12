@@ -908,47 +908,75 @@ router.get('/getUser/:phone', regAsBot, regAsStore, validateRequest, function (r
  */
 router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, next) {
     var dbStore = req._user;
-    var rentedIdList = [];
-    var resJson = {
-        data: []
-    };
-    Trade.find({
-        'tradeType.action': "Rent",
-        'oriUser.storeID': dbStore.roles.clerk.storeID
-    }, function (err, rentedList) {
-        if (err) return next(err);
-        rentedList.sort(function (a, b) {
-            return b.tradeTime - a.tradeTime;
-        });
-        for (var i in rentedList)
-            rentedIdList.push(rentedList[i].container.id);
-        Trade.find({
-            'tradeType.action': "Return",
-            'container.id': {
-                '$in': rentedIdList
+    const thisStoreID = dbStore.roles.clerk.storeID;
+    Trade.aggregate([{
+        $match: {
+            'tradeType.action': "Rent",
+            'oriUser.storeID': thisStoreID
+        }
+    }, {
+        $sort: {
+            tradeTime: -1
+        }
+    }, {
+        $group: {
+            _id: "$container.id",
+            id: {
+                $last: "$container.id"
+            },
+            cycleCtr: {
+                $last: "$container.cycleCtr"
+            },
+            phone: {
+                $last: "$newUser.phone"
+            },
+            by: {
+                $last: "$oriUser.phone"
+            },
+            rentedTime: {
+                $last: "$tradeTime"
             }
-        }, function (err, returnedList) {
-            if (err) return next(err);
-            returnedList.sort(function (a, b) {
-                return b.tradeTime - a.tradeTime;
-            });
-            for (var i in returnedList) {
-                var index = rentedList.findIndex(function (ele) {
-                    return ele.container.id === returnedList[i].container.id && ele.container.cycleCtr === returnedList[i].container.cycleCtr;
-                });
-                if (index !== -1) {
-                    rentedList.splice(index, 1);
+        }
+    }, {
+        $sort: {
+            _id: 1
+        }
+    }], function (err, rentedList) {
+        if (err) return next(err);
+        let rentedIdList = rentedList.map(aRecord => aRecord._id);
+        Trade.aggregate([{
+            $match: {
+                'tradeType.action': "Return",
+                'container.id': {
+                    '$in': rentedIdList
                 }
             }
-            for (var i in rentedList) {
-                resJson.data.push({
-                    id: rentedList[i].container.id,
-                    phone: rentedList[i].newUser.phone,
-                    by: rentedList[i].oriUser.phone,
-                    rentedTime: rentedList[i].tradeTime.getTime()
-                });
+        }, {
+            $group: {
+                _id: "$container.id",
+                cycleCtr: {
+                    $last: "$container.cycleCtr"
+                }
             }
-            res.json(resJson);
+        }, {
+            $sort: {
+                "_id": 1
+            }
+        }], function (err, returnedList) {
+            if (err) return next(err);
+            let rentedIndex = 0;
+            for (let returnedIndex in returnedList) {
+                const theReturnedContainerID = returnedList[returnedIndex]._id;
+                while (rentedList[rentedIndex].id < theReturnedContainerID && rentedIndex < rentedList.length) {
+                    rentedIndex++;
+                }
+                if (rentedList[rentedIndex].id === theReturnedContainerID && rentedList[rentedIndex].cycleCtr <= returnedList[returnedIndex].cycleCtr) {
+                    rentedList.splice(rentedIndex, 1);
+                }
+            }
+            res.json({
+                data: rentedList
+            });
         });
     });
 });
