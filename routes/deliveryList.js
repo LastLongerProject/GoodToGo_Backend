@@ -1314,6 +1314,7 @@ router.get('/reloadHistory', checkRoleIsCleanStation(), checkRoleIsStore(), vali
                     "timestamp": Date,
                     "action": String, // ["getDispatch", "sendDispatch"]
                     "toStationID":Number,
+                    "fromStationID":Number,
                     "boxAccepted": Boolean or null
                 },...
             ]
@@ -1365,7 +1366,8 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
             containerList: "$containerList",
             timestamp: "$action.timestamps",
             action: "$action.boxAction",
-            toStationID: "$action.stationID.to"
+            toStationID: "$action.stationID.to",
+            fromStationID: "$action.stationID.from"
         }
     }])
 
