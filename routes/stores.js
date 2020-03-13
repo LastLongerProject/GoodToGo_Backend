@@ -1340,7 +1340,6 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     let thisStoreID;
     try {
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
-        console.log(thisStoreID)
     } catch (error) {
         return next(error);
     }
