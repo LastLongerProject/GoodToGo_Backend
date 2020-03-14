@@ -340,7 +340,8 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, fu
     const ROLE_TYPE = dbRole.roleType;
     if (ROLE_TYPE === RoleType.STORE) {
         req.body.role = {
-            typeCode: RoleType.CUSTOMER
+            typeCode: RoleType.CUSTOMER,
+            group: req.body.group || "GoodToGo_member"
         };
         req._options.registerMethod = RegisterMethod.CLECK_APP;
     } else {
