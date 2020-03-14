@@ -811,7 +811,7 @@ router.get('/getUser/:phone', checkRoleIs([{
                 code: 'E001',
                 type: "userSearchingError",
                 message: "No User: [" + phone + "] Found",
-                data: phone
+                data: { phone } // FIXME: unify the data type of 'data' field
             });
         userIsAvailableForRentContainer(dbUser, null, false, (err, isAvailable, detail) => {
             if (err) return next(err);
