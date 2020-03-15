@@ -316,9 +316,9 @@ router.post('/stock', checkRoleIsCleanStation(), validateRequest, fetchBoxCreati
     {
         boxContent: {
             newState: String, // State:['Boxing', 'Delivering', 'Signed', 'Stocked', 'Dispatching'], if you wanna sign a box, use sign api
-            [destinationStationID]: Number, // Needed when state changing is (6), (8)
+            [destinationStationID]: Number, // Needed when state changing is (6), (7)
             [destinationStoreID]: Number, // Needed when state changing is (4)
-            [boxAction]: String // Needed when state changing is (6), (8); Action: ['AcceptDispatch', 'RejectDispatch']
+            [boxAction]: String // Needed when state changing is (6), (7); Action: ['AcceptDispatch', 'RejectDispatch']
         }
     }
  * @apiSuccessExample {json} Success-Response:
