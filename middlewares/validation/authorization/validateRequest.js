@@ -24,6 +24,8 @@ function isAuthorized(req, dbUser, dbKey) {
         if (!Array.isArray(rolesToCheck) || rolesToCheck.length === 0) return true;
         for (let conditionIndex in rolesToCheck) {
             let aCondition = rolesToCheck[conditionIndex];
+            if (aCondition.roleType === RoleType.STORE) aCondition.roleType = RoleType.CLERK;
+            else if (aCondition.roleType === RoleType.CLEAN_STATION) aCondition.roleType = RoleType.ADMIN;
             if (RoleTypes[aCondition.roleType] && String(thisKeyRole).startsWith(aCondition.roleType)) {
                 if (aCondition.condition && aCondition.condition.manager) {
                     return RoleTypes[aCondition.roleType].manager === true;
