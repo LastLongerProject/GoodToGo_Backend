@@ -811,7 +811,9 @@ router.get('/getUser/:phone', checkRoleIs([{
                 code: 'E001',
                 type: "userSearchingError",
                 message: "No User: [" + phone + "] Found",
-                data: { phone } // FIXME: unify the data type of 'data' field
+                data: {
+                    phone
+                } // FIXME: unify the data type of 'data' field
             });
         userIsAvailableForRentContainer(dbUser, null, false, (err, isAvailable, detail) => {
             if (err) return next(err);
@@ -888,7 +890,7 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
         }
     }, {
         $sort: {
-            tradeTime: -1
+            tradeTime: 1
         }
     }, {
         $group: {
@@ -924,6 +926,10 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
                 }
             }
         }, {
+            $sort: {
+                tradeTime: 1
+            }
+        }, {
             $group: {
                 _id: "$container.id",
                 cycleCtr: {
@@ -947,7 +953,7 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
                 }
             }
             res.json({
-                data: rentedList.map(aRecord => ({
+                data: rentedList.sort((a, b) => b.rentedTime - a.rentedTime).map(aRecord => ({
                     id: aRecord.id,
                     phone: aRecord.phone,
                     by: aRecord.by,
