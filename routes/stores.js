@@ -921,7 +921,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
         }
     }, {
         $sort: {
-            tradeTime: -1
+            tradeTime: 1
         }
     }, {
         $group: {
@@ -957,6 +957,10 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                 }
             }
         }, {
+            $sort: {
+                tradeTime: 1
+            }
+        }, {
             $group: {
                 _id: "$container.id",
                 cycleCtr: {
@@ -980,7 +984,7 @@ router.get('/checkUnReturned', regAsStore, validateRequest, function (req, res, 
                 }
             }
             res.json({
-                data: rentedList.map(aRecord => ({
+                data: rentedList.sort((a, b) => b.rentedTime - a.rentedTime).map(aRecord => ({
                     id: aRecord.id,
                     phone: aRecord.phone,
                     by: aRecord.by,
