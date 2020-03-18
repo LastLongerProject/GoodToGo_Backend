@@ -1383,6 +1383,7 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
         .exec((err, actions) => {
             if (err) return next(err);
             const formattedAction = [];
+            const resolvedAction = [];
             actions.forEach(anAction => {
                 if (anAction.action === BoxAction.Dispatch) {
                     if (anAction.toStationID === thisStationID)
@@ -1397,19 +1398,18 @@ router.get('/dispatchHistory', checkRoleIsCleanStation(), validateRequest, funct
                         }));
                 } else if (anAction.action === BoxAction.AcceptDispatch) {
                     const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
-                    formattedAction[index]
-                    Object.assign(formattedAction[index], {
+                    resolvedAction.unshift(Object.assign(formattedAction.splice(index, 1)[0], {
                         boxAccepted: true
-                    });
+                    }));
                 } else if (anAction.action === BoxAction.RejectDispatch) {
                     const index = findLastIndexOf(formattedAction, anFormattedAction => anFormattedAction.boxID === anAction.boxID);
-                    Object.assign(formattedAction[index], {
+                    resolvedAction.unshift(Object.assign(formattedAction.splice(index, 1)[0], {
                         boxAccepted: false
-                    });
+                    }));
                 }
             });
             res.status(200).json({
-                action: formattedAction
+                action: resolvedAction
             });
         });
 });
