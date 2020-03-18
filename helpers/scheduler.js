@@ -24,7 +24,8 @@ module.exports = function () {
     getSystemBot((err, dbBot) => {
         if (err) return debug.error(err);
 
-        const shouldWait = dateCheckpoint(1) - Date.now();
+        const now = Date.now();
+        const shouldWait = dateCheckpoint(1) - now;
         debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
 
         setTimeout(function timeSensitiveTask() {

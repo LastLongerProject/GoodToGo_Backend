@@ -71,6 +71,7 @@ let changeStateProcess = async function (element, box, phone) {
             });
         let info = {
             status: BoxStatus.Delivering,
+            deliveringDate: Date.now(),
             $push: {
                 action: {
                     phone: phone,

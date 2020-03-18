@@ -33,7 +33,6 @@ var schema = mongoose.Schema({
         },
         timestamps: Date
     }],
-    deliveringDate: Date,
     user: {
         box: String
     },
@@ -41,6 +40,7 @@ var schema = mongoose.Schema({
     containerHash: String,
 
     // For legacy api version
+    deliveringDate: Date,
     delivering: {
         type: Boolean,
         default: false
