@@ -20,7 +20,10 @@ var schema = mongoose.Schema({
         },
         lineId: String,
         line_liff_userID: String,
-        line_channel_userID: String
+        line_channel_userID:  {
+            type: String,
+            default: null
+        }
     },
     role: Object,
     roles: {

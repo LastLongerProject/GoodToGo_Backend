@@ -29,6 +29,7 @@ class Pusher {
     }
 
     push() {
+        if (this.preprocessedMsg === null) return null;
         const ignoreSilentMode = this.options.ignoreSilentMode || false;
         if (!ignoreSilentMode && Pusher.inSilentMode()) {
             this.suspend();
