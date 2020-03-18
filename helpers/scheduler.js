@@ -20,13 +20,35 @@ function driveCb(succeed, data) {
     }
 }
 
+const MILLISECONDS_OF_AN_HOUR = 1000 * 60 * 60;
+const MILLISECONDS_OF_A_DAY = MILLISECONDS_OF_AN_HOUR * 24;
+
+function getShouldWait(scheduledHour, hourNow, MILLISECONDS_TO_NEXT_DAY) {
+    if (hourNow >= scheduledHour) {
+        return MILLISECONDS_TO_NEXT_DAY + MILLISECONDS_OF_AN_HOUR * scheduledHour;
+    } else {
+        return MILLISECONDS_TO_NEXT_DAY - MILLISECONDS_OF_AN_HOUR * (24 - scheduledHour);
+    }
+}
+
 module.exports = function () {
     getSystemBot((err, dbBot) => {
         if (err) return debug.error(err);
 
-        const now = Date.now();
-        const shouldWait = dateCheckpoint(1) - now;
-        debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
+        const now = new Date();
+        const MILLISECONDS_TO_NEXT_DAY = dateCheckpoint(1) - now;
+        const hourNow = parseInt(now.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            hour: "2-digit",
+            hour12: false
+        }).slice(0, 2));
+
+        const shouldWait = {
+            MIDNIGHT: getShouldWait(0, hourNow, MILLISECONDS_TO_NEXT_DAY),
+            ONE_IN_THE_MORNING: getShouldWait(1, hourNow, MILLISECONDS_TO_NEXT_DAY),
+            TEN_IN_THE_MORNING: getShouldWait(10, hourNow, MILLISECONDS_TO_NEXT_DAY)
+        };
+        debug.log(`[Scheduler | Setting] First task will start in ${Math.floor(Math.min(...Object.values(shouldWait)) / 1000)} seconds`);
 
         setTimeout(function timeSensitiveTask() {
             let taskList = function taskList() {
@@ -35,8 +57,8 @@ module.exports = function () {
                 tasks.refreshAllUserUsingStatus(true, generalCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.MIDNIGHT);
 
         setTimeout(function noneTimeSensitiveTask() {
             let taskList = function () {
@@ -86,8 +108,8 @@ module.exports = function () {
                 setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, generalCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait + 1000 * 60 * 60);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.ONE_IN_THE_MORNING);
 
         setTimeout(function taskToDoAtTenInTheMorning() {
             let taskList = function taskList() {
@@ -95,7 +117,7 @@ module.exports = function () {
                 tasks.reloadSuspendedNotifications(generalCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait + 1000 * 60 * 60 * 10);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.TEN_IN_THE_MORNING);
     });
 };
