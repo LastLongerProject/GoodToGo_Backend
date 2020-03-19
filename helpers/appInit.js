@@ -35,10 +35,8 @@ module.exports = {
     afterStartUp: function () {
         if (process.env.NODE_ENV) {
             const ENV = process.env.NODE_ENV.replace(/"|\s/g, "");
-            if (ENV === "testing") {
+            if (ENV === "testing" || ENV === "development") {
                 scheduler();
-            } else if (ENV === "development") {
-                debug.log("Development Server no scheduler");
             } else {
                 debug.log(`${ENV} Server no scheduler`);
             }
