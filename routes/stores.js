@@ -1469,13 +1469,13 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     });
 });
 
-function newTypeArrGeneratorFunction(type) {
+function newTypeArrGeneratorFunction(ContainerType) {
     return function () {
         var tmpArr = [];
-        for (var aType in type) {
+        for (var aType in ContainerType) {
             tmpArr.push({
-                typeCode: type[aType].typeCode,
-                name: type[aType].name,
+                typeCode: ContainerType[aType].typeCode,
+                name: ContainerType[aType].name,
                 // IdList: [],
                 amount: 0
             });
@@ -1509,6 +1509,190 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
                     // resultArr[resultArr.length - 1].data[tmpTypeCode].IdList.push(theTrade.container.id);
                     resultArr[resultArr.length - 1].data[tmpTypeCode].amount++;
                     resultArr[resultArr.length - 1].amount++;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @apiName Store history by container type
+ * @apiGroup Stores
+ *
+ * @api {get} /stores/history/byContainerType/csv Get history by container type
+ * @apiUse JWT
+ * @apiPermission clerk
+ * 
+ * @apiSuccessExample {csv}
+ * 
+ */
+router.get('/history/byContainerType/csv', checkRoleIsStore(), validateRequest, function (req, res, next) {
+    const dbRole = req._thisRole;
+    let thisStoreID;
+    try {
+        thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
+    } catch (error) {
+        return next(error);
+    }
+    const ContainerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    req.clearTimeout();
+    var tradeQuery = {
+        '$or': [{
+                'tradeType.action': ContainerAction.SIGN,
+                'newUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.RETURN,
+                'newUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.RETURN,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RETURN,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.RELOAD,
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RELOAD
+            }
+        ]
+    };
+    if (req.query.days)
+        Object.assign(tradeQuery, {
+            'tradeTime': {
+                '$gte': dateCheckpoint(1 - parseInt(req.query.days)),
+                '$lt': dateCheckpoint(1)
+            }
+        });
+    Trade.find(tradeQuery, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    }, function (err, tradeList) {
+        if (err) return next(err);
+
+        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
+
+        var storeLostTradesDict = {};
+        var usedTrades = [];
+        tradeList.forEach(aTrade => {
+            let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
+            if (aTrade.tradeType.action === ContainerAction.SIGN) {
+                storeLostTradesDict[containerKey] = aTrade;
+            } else if (aTrade.tradeType.action === ContainerAction.RENT) {
+                if (storeLostTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete storeLostTradesDict[containerKey];
+                }
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
+                if (aTrade.oriUser.storeID === thisStoreID && storeLostTradesDict[containerKey]) {
+                    usedTrades.push(aTrade);
+                    delete storeLostTradesDict[containerKey];
+                }
+                if (aTrade.newUser.storeID === thisStoreID) {
+                    storeLostTradesDict[containerKey] = aTrade;
+                }
+            } else if (aTrade.tradeType.action === ContainerAction.RELOAD) {
+                if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE && aTrade.oriUser.storeID === thisStoreID) {
+                    if (storeLostTradesDict[containerKey]) {
+                        delete storeLostTradesDict[containerKey];
+                    }
+                } else if (aTrade.tradeType.oriState === ContainerState.RETURNED && storeLostTradesDict[containerKey]) {
+                    delete storeLostTradesDict[containerKey];
+                }
+            }
+        });
+
+        const usedHistory = [];
+        const order = ["_rowName"];
+        usedHistory.push({
+            _rowName: "容器種類"
+        });
+        for (var aType in ContainerType) {
+            usedHistory[0][ContainerType[aType].typeCode] = ContainerType[aType].name;
+            order.push(ContainerType[aType].typeCode);
+        }
+
+        const newTypeArrGenerator = newTypeArrGeneratorFunction_forCSV(ContainerType);
+        usageByDateByTypeGenerator_forCSV(newTypeArrGenerator, usedTrades, usedHistory);
+        usedHistory.push({
+            _rowName: "加總"
+        });
+        const last = usedHistory.length - 1;
+        const emptyColIndex = [];
+        for (let i = 0; i < Object.keys(ContainerType).length; i++) {
+            let colSum = 0;
+            for (let j = 1; j < usedHistory.length - 1; j++) {
+                colSum += usedHistory[j][i];
+            }
+            if (colSum === 0) {
+                emptyColIndex.push(i);
+                for (let j = 0; j < usedHistory.length - 1; j++) {
+                    delete usedHistory[j][i];
+                }
+            } else {
+                usedHistory[last][i] = colSum;
+            }
+        }
+        for (let i = emptyColIndex.length - 1; i >= 0; i--) {
+            order.splice(emptyColIndex[i] + 1, 1);
+        }
+        const formattedCSV = usedHistory.map(aRow => objectToArrayByOrder(aRow, order).join(",")).join("\n");
+
+        const dateString = new Date().toLocaleDateString("zh-TW", {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            timeZone: 'Asia/Taipei'
+        }).replace("/", "-");
+        res.attachment(`Store_${thisStoreID}_${dateString}.csv`);
+        res.send("\uFEFF" + formattedCSV);
+    });
+});
+
+function objectToArrayByOrder(object, order) {
+    const result = [];
+    for (let i in order) {
+        result.push(object[order[i]]);
+    }
+    return result;
+}
+
+function newTypeArrGeneratorFunction_forCSV(ContainerType) {
+    return function (_rowName) {
+        var tmp = {
+            _rowName
+        };
+        for (var aType in ContainerType) {
+            tmp[ContainerType[aType].typeCode] = 0;
+        }
+        return tmp;
+    };
+}
+
+function usageByDateByTypeGenerator_forCSV(newTypeArrGenerator, arrToParse, resultArr) {
+    if (arrToParse.length > 0) {
+        var tmpTypeCode;
+        var checkpoint = getDateCheckpoint(arrToParse[0].tradeTime);
+        resultArr.push(newTypeArrGenerator(fullDateString(checkpoint)));
+        for (var i = 0; i < arrToParse.length; i++) {
+            let theTrade = arrToParse[i];
+            if (theTrade.tradeTime - checkpoint > 1000 * 60 * 60 * 24) {
+                checkpoint = getDateCheckpoint(theTrade.tradeTime);
+                resultArr.push(newTypeArrGenerator(fullDateString(checkpoint)));
+                i--;
+            } else {
+                if (theTrade.container) {
+                    tmpTypeCode = theTrade.container.typeCode;
+                    resultArr[resultArr.length - 1][tmpTypeCode]++;
                 }
             }
         }
