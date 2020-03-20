@@ -114,9 +114,7 @@ const thisModule = module.exports = {
             const data = {
                 bannedTimes: dbUser.bannedTimes
             };
-            Object.assign(data, {
-                summary
-            });
+            Object.assign(data, summary);
             NotificationCenter.emit(event, dbUser, data);
         }
     },
