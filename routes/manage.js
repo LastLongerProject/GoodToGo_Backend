@@ -482,28 +482,24 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                     }
                 }
             }
+            containers = undefined;
 
             redis.get(CACHE.shop, (err, reply) => {
                 if (err) return next(err);
                 let dataCached = {};
                 if (reply !== null) dataCached = JSON.parse(reply);
 
-                if (dataCached.activeStoreNameList) {
-                    for (var aCachedStoreIndex in activeStoreList) {
-                        var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
-                        if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
-                            debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
-                            dataCached = {};
-                            break;
-                        }
-                    }
-                }
                 if (dataCached.timestamp)
                     tradeQuery.tradeTime = {
                         "$gt": new Date(dataCached.timestamp)
                     };
 
-                Trade.find(tradeQuery, {}, {
+                Trade.find(tradeQuery, {
+                    tradeTime: 1,
+                    tradeType: 1,
+                    newUser: 1,
+                    container: 1
+                }, {
                     sort: {
                         tradeTime: 1
                     }
@@ -531,6 +527,8 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                             delete unusedContainer[containerKey];
                         }
                     }
+                    tradeList = undefined;
+
                     for (let unusedContainerRecord in unusedContainer) {
                         if (!storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID))
                             delete unusedContainer[unusedContainerRecord];
@@ -586,14 +584,12 @@ router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, nex
                     });
 
                     if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                        var activeStoreNameList = activeStoreList.map(ele => ele.name);
                         var timestamp = now - MILLISECONDS_OF_A_WEEK;
                         var toCache = {
                             timestamp,
                             cachedAt: Date.now(),
                             usedContainer,
-                            unusedContainer,
-                            activeStoreNameList
+                            unusedContainer
                         };
                         redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
                             if (err) return debug.error(CACHE.shop, err);
