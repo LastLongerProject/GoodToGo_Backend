@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const NotificationPreprocess = require("./preprocessor");
 const NotificationSender = require("./sender");
+const webhookThrottle = require("./lib/webhookThrottle")(NotificationSender.webhook);
 
 const PushType = require("../../models/enums/notificationEnum").PushType;
 const WebhookEvent = require("../../models/enums/notificationEnum").WebhookEvent;
@@ -91,12 +92,11 @@ class WebhookPusher extends Pusher {
         fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
             if (err)
                 return debug.error(err);
-            let sender = NotificationSender.webhook(this.preprocessedMsg);
             webhookSubmission = JSON.parse(webhookSubmission);
             webhookSubmission.client.forEach(aClient => {
                 if ((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||
                     (Array.isArray(aClient.event_listened) && aClient.event_listened.indexOf(this.options.event) !== -1)) {
-                    sender(aClient.url);
+                    webhookThrottle(aClient.url, this.preprocessedMsg);
                 }
             });
         });
