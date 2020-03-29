@@ -372,6 +372,7 @@ module.exports = {
                     if (userDict[userID].dbUser.point !== userDict[userID].computedPoint)
                         userTrade.fixPoint(userDict[userID].dbUser, userDict[userID].computedPoint);
                 }
+                cb(null, "User Point Checked");
             });
         });
     },
@@ -401,7 +402,7 @@ module.exports = {
                     });
                 })))
                 .then(() => {
-                    cb(null, "Done User Role Migration");
+                    cb(null, "Done Box Structure Migration");
                 })
                 .catch(cb);
         });

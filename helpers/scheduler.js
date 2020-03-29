@@ -12,6 +12,11 @@ function generalCb(err) {
     if (err) return debug.error(err);
 }
 
+function logCb(err, msg) {
+    if (err) return debug.error(err);
+    if (msg) return debug.log(msg);
+}
+
 function driveCb(succeed, data) {
     if (succeed) {
         debug.log(data.type + ' succeed');
@@ -79,8 +84,8 @@ module.exports = function () {
                             "$ne": "bot"
                         },
                         "userAgent": {
-                            "$ne": /^PostmanRuntime\/.*$/
-                        },
+                            "$not": /^PostmanRuntime\/\d*\.\d*\.\d*$/
+                        }
                     }, (err) => {
                         if (err) return debug.error(err);
                         debug.log('remove expire login');
@@ -103,9 +108,9 @@ module.exports = function () {
                     results.failMsg.forEach(debug.error);
                     results.successMsg.forEach(debug.log);
                 });
-                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
-                setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, generalCb);
-                setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, generalCb);
+                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, logCb);
+                setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, logCb);
+                setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, logCb);
             };
             taskList();
             setInterval(taskList, MILLISECONDS_OF_A_DAY);
