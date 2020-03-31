@@ -3,9 +3,7 @@ const config = require('../config/config');
 const debug = require('../helpers/debugger')('redis');
 
 const redis = require('redis');
-const redisClient = redis.createClient(6379, config.redisUrl, {
-    password: config.redisPass
-});
+const redisClient = redis.createClient(config.redisdbUrl, config.redisdbOptions);
 redisClient.on('ready', function () {
     debug.log('redisDB ready');
 });
