@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../app');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const secret = require('../../../config/secret_key.json');
 const Trade = require('../../../models/DB/tradeDB');
 
@@ -66,7 +66,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/index')
                 .set('Authorization', auth)
@@ -98,7 +98,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/shop')
                 .set('Authorization', auth)
@@ -132,7 +132,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/shopDetail?id=12')
                 .set('Authorization', auth)
@@ -159,7 +159,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/shopDetail/byCustomer?id=12')
                 .set('Authorization', auth)
@@ -185,7 +185,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/user')
                 .set('Authorization', auth)
@@ -214,7 +214,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/userDetail?id=0905519292')
                 .set('Authorization', auth)
@@ -242,7 +242,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/container')
                 .set('Authorization', auth)
@@ -269,7 +269,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/containerDetail?id=3')
                 .set('Authorization', auth)
@@ -297,7 +297,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/console')
                 .set('Authorization', auth)
@@ -323,7 +323,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .get('/manage/shopSummary')
                 .set('Authorization', auth)
@@ -349,7 +349,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/store')
                 .set('Authorization', auth)
@@ -376,7 +376,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/container')
                 .set('Authorization', auth)
@@ -403,7 +403,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/activity')
                 .set('Authorization', auth)
@@ -430,7 +430,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/storeImg/1')
                 .set('Authorization', auth)
@@ -459,7 +459,7 @@ describe('api-manage', function () {
                 exp: Date.now() + 86400000 * 3,
             };
 
-            let auth = jwt.encode(payload, roles.admin.secretKey);
+            let auth = jwt.sign(payload, roles.admin.secretKey);
             request(app)
                 .patch('/manage/refresh/containerIcon/1')
                 .set('Authorization', auth)

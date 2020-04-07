@@ -1,41 +1,43 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const debug = require('../helpers/debugger')('manager');
+const debug = require("../helpers/debugger")("manager");
 const redis = require("../models/redis");
 
-const SocketNamespace = require('../controllers/socket').namespace;
-const generateSocketToken = require('../controllers/socket').generateToken;
+const SocketNamespace = require("../controllers/socket").namespace;
+const generateSocketToken = require("../controllers/socket").generateToken;
 
-const validateRequest = require('../middlewares/validation/validateRequest').JWT;
-const regAsAdminManager = require('../middlewares/validation/validateRequest').regAsAdminManager;
-const regAsBot = require('../middlewares/validation/validateRequest').regAsBot;
-const refreshStore = require('../helpers/tasks').refreshStore;
-const refreshStoreImg = require('../helpers/tasks').refreshStoreImg;
-const refreshContainer = require('../helpers/tasks').refreshContainer;
-const refreshActivity = require('../helpers/tasks').refreshActivity;
-const refreshCoupon = require('../helpers/tasks').refreshCoupon;
-const refreshCouponImage = require('../helpers/tasks').refreshCouponImage;
-const refreshContainerIcon = require('../helpers/tasks').refreshContainerIcon;
-const cleanUndo = require('../helpers/toolkit').cleanUndoTrade;
-const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
-const fullDateString = require('../helpers/toolkit').fullDateString;
-const getWeekCheckpoint = require('../helpers/toolkit').getWeekCheckpoint;
+const validateRequest = require("../middlewares/validation/authorization/validateRequest").JWT;
+const checkRoleIsAdmin = require("../middlewares/validation/authorization/validateRequest").checkRoleIsAdmin;
+const checkRoleIsBot = require("../middlewares/validation/authorization/validateRequest").checkRoleIsBot;
+const refreshStore = require("../helpers/tasks").refreshStore;
+const refreshCoupon = require("../helpers/tasks").refreshCoupon;
+const refreshStation = require("../helpers/tasks").refreshStation;
+const refreshStoreImg = require("../helpers/tasks").refreshStoreImg;
+const refreshContainer = require("../helpers/tasks").refreshContainer;
+const refreshCouponImage = require("../helpers/tasks").refreshCouponImage;
+const refreshContainerIcon = require("../helpers/tasks").refreshContainerIcon;
+const cleanUndo = require("../helpers/toolkit").cleanUndoTrade;
+const dateCheckpoint = require("../helpers/toolkit").dateCheckpoint;
+const fullDateString = require("../helpers/toolkit").fullDateString;
+const getWeekCheckpoint = require("../helpers/toolkit").getWeekCheckpoint;
 const updateSummary = require("../helpers/gcp/sheet").updateSummary;
+const summaryReport = require('../helpers/summaryReport/viewFormat/googleSheet/handler');
 
-const Box = require('../models/DB/boxDB');
-const User = require('../models/DB/userDB');
-const Store = require('../models/DB/storeDB');
-const Trade = require('../models/DB/tradeDB');
-const Container = require('../models/DB/containerDB');
+const Box = require("../models/DB/boxDB");
+const User = require("../models/DB/userDB");
+const Store = require("../models/DB/storeDB");
+const Trade = require("../models/DB/tradeDB");
+const Container = require("../models/DB/containerDB");
+const ContainerAction = require("../models/enums/containerEnum").Action;
+const ContainerState = require("../models/enums/containerEnum").State;
+const ContainerActionTranslation = require("../models/enums/containerEnum").ActionTranslation;
 const DataCacheFactory = require("../models/dataCacheFactory");
-
-const { validateCreateApiContent, fetchBoxCreation } = require('../middlewares/validation/deliveryList/contentValidation.js')
 
 const MILLISECONDS_OF_A_WEEK = 1000 * 60 * 60 * 24 * 7;
 const MILLISECONDS_OF_A_DAY = 1000 * 60 * 60 * 24;
 const MILLISECONDS_OF_LOST_CONTAINER_SHOP = MILLISECONDS_OF_A_DAY * 31;
 const MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER = MILLISECONDS_OF_A_DAY * 7;
-const DEMO_CONTAINER_ID_LIST = require('../config/config').demoContainers;
+const DEMO_CONTAINER_ID_LIST = require("../config/config").demoContainers;
 
 const CACHE = {
     index: "manage_cache:index",
@@ -45,10 +47,9 @@ const CACHE = {
 };
 
 const BOXID = /簽收 \[BOX #(\d*)\]/i;
-const baseUrl = require("../config/config").serverBaseUrl + "/manager";
+const baseUrl = require("../config/config").serverUrl + "/manager";
 
-router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
-
+router.get("/socketToken", checkRoleIsAdmin(), validateRequest, generateSocketToken(SocketNamespace.SERVER_EVENT));
 
 /**
  * @apiName Manage index
@@ -87,7 +88,15 @@ router.get('/socketToken', regAsAdminManager, validateRequest, generateSocketTok
         }
  * 
  */
-router.get('/index', regAsAdminManager, validateRequest, function (req, res, next) {
+const CONTAINER_ACTION_FROM_SIGN_TO_RELOAD = [
+    ContainerAction.SIGN,
+    ContainerAction.RENT,
+    ContainerAction.RETURN,
+    ContainerAction.UNDO_RETURN,
+    ContainerAction.RELOAD,
+    ContainerAction.UNDO_RELOAD
+];
+router.get("/index", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var result = {
         summary: {
             userAmount: 0,
@@ -122,8 +131,8 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
             if (err) return next(err);
             result.summary.storeAmount = storeAmount;
             var tradeQuery = {
-                'tradeType.action': {
-                    '$in': ['Sign', 'Rent', 'Return', 'UndoReturn', 'ReadyToClean', 'UndoReadyToClean']
+                "tradeType.action": {
+                    "$in": CONTAINER_ACTION_FROM_SIGN_TO_RELOAD
                 }
             };
 
@@ -134,7 +143,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
 
                 if (dataCached.timestamp)
                     tradeQuery.tradeTime = {
-                        '$gte': new Date(dataCached.timestamp)
+                        "$gte": new Date(dataCached.timestamp)
                     };
 
                 Trade.find(tradeQuery, function (err, tradeList) {
@@ -143,7 +152,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                     tradeList.sort((a, b) => {
                         return a.tradeTime - b.tradeTime;
                     });
-                    cleanUndo(['Return', 'ReadyToClean'], tradeList);
+                    cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
                     var now = Date.now();
                     var thisWeekCheckpoint = getWeekCheckpoint().valueOf();
@@ -165,16 +174,16 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
                                 time: aTrade.tradeTime.valueOf(),
                                 action: aTrade.tradeType.action
                             };
-                            if (aTrade.tradeType.action === "Sign") {
+                            if (aTrade.tradeType.action === ContainerAction.SIGN) {
                                 signedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: aTrade.newUser.storeID
                                 };
-                            } else if (aTrade.tradeType.action === "Rent") {
+                            } else if (aTrade.tradeType.action === ContainerAction.RENT) {
                                 rentedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf()
                                 };
-                            } else if (aTrade.tradeType.action === "Return") {
+                            } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                                 var recent = aTrade.tradeTime > thisWeekCheckpoint;
                                 result.shopHistorySummary.usedAmount++;
                                 if (recent) {
@@ -212,10 +221,10 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
 
                     for (var containerID in lastUsed) {
                         var timeToNow = now - lastUsed[containerID].time;
-                        if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
+                        if ((lastUsed[containerID].action === ContainerAction.SIGN || lastUsed[containerID].action === ContainerAction.RETURN) &&
                             timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                             result.shopHistorySummary.shopLostAmount++;
-                        } else if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                        } else if (lastUsed[containerID].action === ContainerAction.RENT && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                             result.shopHistorySummary.customerLostAmount++;
                             if (lastUsed[containerID].time > thisWeekCheckpoint)
                                 result.shopRecentHistorySummary.customerLostAmount++;
@@ -268,7 +277,7 @@ router.get('/index', regAsAdminManager, validateRequest, function (req, res, nex
     });
 });
 
-router.get('/search', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/search", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var fields = req.query.fields.split(",");
     var searchTxt = req.query.txt;
     var txtArr = searchTxt.split(" ").filter(ele => ele !== "");
@@ -278,7 +287,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
         regExp = new RegExp(regExpTxt, "gi");
     } catch (error) {
         return res.status(403).json({
-            code: '???',
+            code: "???",
             type: "ManageMessage",
             message: "Search Txt Err"
         });
@@ -298,7 +307,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
             "_id": 0
         }),
         container: Container.find({
-            '$where': regExp.toString() + ".test(this.ID)"
+            "$where": regExp.toString() + ".test(this.ID)"
         }).select({
             "ID": 1,
             "typeCode": 1,
@@ -351,7 +360,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
                     switch (fieldName) {
                         case "user":
                             dataList.forEach((aUser) => {
-                                if (aUser.hasOwnProperty('id') && aUser.id === -1)
+                                if (aUser.hasOwnProperty("id") && aUser.id === -1)
                                     result[fieldName].list.push(aUser);
                                 else
                                     result[fieldName].list.push({
@@ -362,7 +371,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
                             break;
                         case "shop":
                             dataList.forEach((aShop) => {
-                                if (aShop.hasOwnProperty('id') && aShop.id === -1)
+                                if (aShop.hasOwnProperty("id") && aShop.id === -1)
                                     result[fieldName].list.push(aShop);
                                 else
                                     result[fieldName].list.push({
@@ -373,7 +382,7 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
                             break;
                         case "container":
                             dataList.forEach((aContainer) => {
-                                if (aContainer.hasOwnProperty('id') && aContainer.id === -1)
+                                if (aContainer.hasOwnProperty("id") && aContainer.id === -1)
                                     result[fieldName].list.push(aContainer);
                                 else
                                     result[fieldName].list.push({
@@ -418,7 +427,13 @@ router.get('/search', regAsAdminManager, validateRequest, function (req, res, ne
         }
  * 
  */
-router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next) {
+const CONTAINER_ACTION_SIGN_AND_RENT_AND_RELOAD = [
+    ContainerAction.SIGN,
+    ContainerAction.RENT,
+    ContainerAction.RELOAD,
+    ContainerAction.UNDO_RELOAD
+];
+router.get("/shop", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     Store.find({
         active: true
     }, function (err, activeStoreList) {
@@ -436,15 +451,16 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
             };
         });
         var tradeQuery = {
-            'tradeType.action': {
-                '$in': ['Sign', 'Rent', 'ReadyToClean', 'UndoReadyToClean']
+            "tradeType.action": {
+                "$in": CONTAINER_ACTION_SIGN_AND_RENT_AND_RELOAD
             }
         };
 
         Container.find({
-            'active': true
+            "active": true
         }, function (err, containers) {
-            if (typeof containers !== 'undefined') {
+            if (err) return next(err);
+            if (typeof containers !== "undefined") {
                 for (let container of containers) {
                     if (container.storeID || container.storeID === 0) {
                         if (!lastUsed[container.storeID]) lastUsed[container.storeID] = {};
@@ -455,59 +471,54 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                     }
                 }
                 let now = Date.now();
-                for (var i in containers) {
+                for (let i in containers) {
                     if (containers[i].storeID || containers[i].storeID === 0) {
-                        var timeToNow = now - lastUsed[containers[i].storeID][containers[i].ID].time;
-                        tmpTypeCode = containers[i].typeCode;
+                        let timeToNow = now - lastUsed[containers[i].storeID][containers[i].ID].time;
                         if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) && timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                             if (storeIdDict[String(containers[i].storeID)]) {
-                                storeIdDict[String(containers[i].storeID)]['toUsedAmount']++;
+                                storeIdDict[String(containers[i].storeID)]["toUsedAmount"]++;
                             }
                         }
                     }
                 }
             }
+            containers = undefined;
 
             redis.get(CACHE.shop, (err, reply) => {
                 if (err) return next(err);
                 let dataCached = {};
                 if (reply !== null) dataCached = JSON.parse(reply);
 
-                if (dataCached.activeStoreNameList) {
-                    for (var aCachedStoreIndex in activeStoreList) {
-                        var aCachedStoreName = activeStoreList[aCachedStoreIndex].name;
-                        if (dataCached.activeStoreNameList.indexOf(aCachedStoreName) === -1) {
-                            debug.log("[" + CACHE.shop + "] New Store(" + aCachedStoreName + ")! Start Cache Refresh!");
-                            dataCached = {};
-                            break;
-                        }
-                    }
-                }
                 if (dataCached.timestamp)
                     tradeQuery.tradeTime = {
-                        '$gt': new Date(dataCached.timestamp)
+                        "$gt": new Date(dataCached.timestamp)
                     };
 
-                Trade.find(tradeQuery, {}, {
+                Trade.find(tradeQuery, {
+                    tradeTime: 1,
+                    tradeType: 1,
+                    newUser: 1,
+                    container: 1
+                }, {
                     sort: {
                         tradeTime: 1
                     }
                 }, function (err, tradeList) {
                     if (err) return next(err);
 
-                    cleanUndo('ReadyToClean', tradeList);
+                    cleanUndo(ContainerAction.RELOAD, tradeList);
 
                     let usedContainer = dataCached.usedContainer || {};
                     let unusedContainer = dataCached.unusedContainer || {};
                     for (let aTrade of tradeList) {
                         let containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                        if (aTrade.tradeType.action === "Sign" && storeIdDict[aTrade.newUser.storeID]) {
+                        if (aTrade.tradeType.action === ContainerAction.SIGN && storeIdDict[aTrade.newUser.storeID]) {
                             unusedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: aTrade.newUser.storeID
                             };
-                        } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && unusedContainer[containerKey]) {
-                            if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && unusedContainer[containerKey]) {
+                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                                 usedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: unusedContainer[containerKey].storeID
@@ -516,8 +527,10 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                             delete unusedContainer[containerKey];
                         }
                     }
+                    tradeList = undefined;
+
                     for (let unusedContainerRecord in unusedContainer) {
-                        if (storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID)) {} else
+                        if (!storeIdDict.hasOwnProperty(unusedContainer[unusedContainerRecord].storeID))
                             delete unusedContainer[unusedContainerRecord];
                     }
 
@@ -571,14 +584,12 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
                     });
 
                     if (Object.keys(dataCached).length === 0 || (now - dataCached.cachedAt) > MILLISECONDS_OF_A_DAY) {
-                        var activeStoreNameList = activeStoreList.map(ele => ele.name);
                         var timestamp = now - MILLISECONDS_OF_A_WEEK;
                         var toCache = {
                             timestamp,
                             cachedAt: Date.now(),
                             usedContainer,
-                            unusedContainer,
-                            activeStoreNameList
+                            unusedContainer
                         };
                         redis.set(CACHE.shop, JSON.stringify(toCache), (err, reply) => {
                             if (err) return debug.error(CACHE.shop, err);
@@ -615,7 +626,7 @@ router.get('/shop', regAsAdminManager, validateRequest, function (req, res, next
  * 
  */
 
-router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
@@ -628,27 +639,27 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
         };
 
         var tradeQuery = {
-            '$or': [{
-                    'tradeType.action': 'Sign',
-                    'newUser.storeID': STORE_ID
+            "$or": [{
+                    "tradeType.action": ContainerAction.SIGN,
+                    "newUser.storeID": STORE_ID
                 },
                 {
-                    'tradeType.action': 'Rent',
-                    'oriUser.storeID': STORE_ID
+                    "tradeType.action": ContainerAction.RENT,
+                    "oriUser.storeID": STORE_ID
                 },
                 {
-                    'tradeType.action': 'Return',
-                    'newUser.storeID': STORE_ID
+                    "tradeType.action": ContainerAction.RETURN,
+                    "newUser.storeID": STORE_ID
                 },
                 {
-                    'tradeType.action': 'UndoReturn',
-                    'oriUser.storeID': STORE_ID
+                    "tradeType.action": ContainerAction.UNDO_RETURN,
+                    "oriUser.storeID": STORE_ID
                 },
                 {
-                    'tradeType.action': 'ReadyToClean',
+                    "tradeType.action": ContainerAction.RELOAD,
                 },
                 {
-                    'tradeType.action': 'UndoReadyToClean'
+                    "tradeType.action": ContainerAction.UNDO_RELOAD
                 }
             ]
         };
@@ -660,7 +671,7 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
         }, function (err, tradeList) {
             if (err) return next(err);
 
-            cleanUndo(['Return', 'ReadyToClean'], tradeList);
+            cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
             var lastUsed = {};
             var usedContainer = {};
@@ -674,13 +685,13 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
                     time: aTrade.tradeTime.valueOf(),
                     action: aTrade.tradeType.action
                 };
-                if (aTrade.tradeType.action === "Sign") {
+                if (aTrade.tradeType.action === ContainerAction.SIGN) {
                     unusedContainer[containerKey] = {
                         time: aTrade.tradeTime.valueOf(),
                         storeID: aTrade.newUser.storeID
                     };
-                } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
-                    if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && containerKey in unusedContainer) {
+                    if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                         usedContainer[containerKey] = {
                             user: aTrade.newUser.phone,
                             time: aTrade.tradeTime.valueOf(),
@@ -705,7 +716,7 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
             var now = Date.now();
             for (var containerID in lastUsed) {
                 var timeToNow = now - lastUsed[containerID].time;
-                if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                if (lastUsed[containerID].action === ContainerAction.RENT && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                     if (result.customersDetail.every(element => {
                             if (element.phone === lastUsed[containerID].newUser) element.lostAmount++;
                             return element.phone !== lastUsed[containerID].newUser
@@ -743,7 +754,7 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
             totalAmount: Number,
             joinedDate: Date,
             contactNickname: String,
-            contactPhone: '09XXXXXXXX',
+            contactPhone: "09XXXXXXXX",
             weekAverage: Number,
             shopLostAmount: Number,
             customerLostAmount: Number,
@@ -751,25 +762,25 @@ router.get('/shopDetail/byCustomer', regAsAdminManager, validateRequest, functio
             [ 
                 { 
                     time: Date,
-                    action: '歸還',
-                    content: '野餐方碗 x 2',
-                    contentDetail: '野餐方碗\n#xx01、#xx02',
-                    owner: '好盒器基地',
-                    by: '09xx-***-xxx' 
+                    action: "歸還",
+                    content: "野餐方碗 x 2",
+                    contentDetail: "野餐方碗\n#xx01、#xx02",
+                    owner: "好盒器基地",
+                    by: "09xx-***-xxx" 
                 },
                     ...
             ],
             chartData:
             [ 
-                [ '週', '數量' ],
-                [ 'Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)', 8 ],
+                [ "週", "數量" ],
+                [ "Mon Dec 25 2017 16:00:00 GMT+0800 (GMT+08:00)", 8 ],
                 ...
             ]
         }
  * 
  */
 
-router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     if (!req.query.id) return next();
     const STORE_ID = parseInt(req.query.id);
     Store.findOne({
@@ -800,8 +811,8 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
         if (STORE_ID === 17) {
             containerQuery = {
                 "$or": [{
-                        'storeID': STORE_ID,
-                        'active': true
+                        "storeID": STORE_ID,
+                        "active": true
                     },
                     {
                         "ID": {
@@ -812,8 +823,8 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             };
         } else {
             containerQuery = {
-                'storeID': STORE_ID,
-                'active': true
+                "storeID": STORE_ID,
+                "active": true
             };
         }
         Container.find(containerQuery, function (err, containers) {
@@ -831,10 +842,9 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 }
             }
 
-            if (typeof containers !== 'undefined') {
+            if (typeof containers !== "undefined") {
                 for (var i in containers) {
                     var timeToNow = now - lastUsed[containers[i].ID].time;
-                    tmpTypeCode = containers[i].typeCode;
                     if ((containers[i].statusCode === 1 || DEMO_CONTAINER_ID_LIST.indexOf(containers[i].ID) !== -1) && timeToNow < MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                         result.toUsedAmount++;
                     }
@@ -842,27 +852,27 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
             }
 
             var tradeQuery = {
-                '$or': [{
-                        'tradeType.action': 'Sign',
-                        'newUser.storeID': STORE_ID
+                "$or": [{
+                        "tradeType.action": ContainerAction.SIGN,
+                        "newUser.storeID": STORE_ID
                     },
                     {
-                        'tradeType.action': 'Rent',
-                        'oriUser.storeID': STORE_ID
+                        "tradeType.action": ContainerAction.RENT,
+                        "oriUser.storeID": STORE_ID
                     },
                     {
-                        'tradeType.action': 'Return',
-                        'newUser.storeID': STORE_ID
+                        "tradeType.action": ContainerAction.RETURN,
+                        "newUser.storeID": STORE_ID
                     },
                     {
-                        'tradeType.action': 'UndoReturn',
-                        'oriUser.storeID': STORE_ID
+                        "tradeType.action": ContainerAction.UNDO_RETURN,
+                        "oriUser.storeID": STORE_ID
                     },
                     {
-                        'tradeType.action': 'ReadyToClean',
+                        "tradeType.action": ContainerAction.RELOAD,
                     },
                     {
-                        'tradeType.action': 'UndoReadyToClean'
+                        "tradeType.action": ContainerAction.UNDO_RELOAD
                     }
                 ]
             };
@@ -875,7 +885,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
 
                 if (dataCached.timestamp)
                     tradeQuery.tradeTime = {
-                        '$gt': new Date(dataCached.timestamp)
+                        "$gt": new Date(dataCached.timestamp)
                     };
                 Trade.find(tradeQuery, {}, {
                     sort: {
@@ -884,7 +894,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                 }, function (err, tradeList) {
                     if (err) return next(err);
 
-                    cleanUndo(['Return', 'ReadyToClean'], tradeList);
+                    cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
                     var lastUsed = dataCached.lastUsed || {};
                     var usedContainer = dataCached.usedContainer || {};
@@ -897,13 +907,13 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                             time: aTrade.tradeTime.valueOf(),
                             action: aTrade.tradeType.action
                         };
-                        if (aTrade.tradeType.action === "Sign") {
+                        if (aTrade.tradeType.action === ContainerAction.SIGN) {
                             unusedContainer[containerKey] = {
                                 time: aTrade.tradeTime.valueOf(),
                                 storeID: aTrade.newUser.storeID
                             };
-                        } else if ((aTrade.tradeType.action === "Rent" || aTrade.tradeType.action === "ReadyToClean") && containerKey in unusedContainer) {
-                            if (aTrade.tradeType.action === "Rent" || (aTrade.tradeType.action === "ReadyToClean" && aTrade.tradeType.oriState === 3)) {
+                        } else if ((aTrade.tradeType.action === ContainerAction.RENT || aTrade.tradeType.action === ContainerAction.RELOAD) && containerKey in unusedContainer) {
+                            if (aTrade.tradeType.action === ContainerAction.RENT || (aTrade.tradeType.action === ContainerAction.RELOAD && aTrade.tradeType.oriState === ContainerState.RETURNED)) {
                                 usedContainer[containerKey] = {
                                     time: aTrade.tradeTime.valueOf(),
                                     storeID: unusedContainer[containerKey].storeID
@@ -911,7 +921,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                             }
                             delete unusedContainer[containerKey];
                         }
-                        if (aTrade.tradeType.action === "Sign") {
+                        if (aTrade.tradeType.action === ContainerAction.SIGN) {
                             if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && BOXID.test(result.history[0].action) &&
                                 result.history[0].action.match(BOXID)[1] == aTrade.container.box) {
                                 addContent(result.history[0], aTrade);
@@ -929,7 +939,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                                     by: aTrade.newUser.name || phoneEncoder(aTrade.newUser.phone)
                                 });
                             }
-                        } else if (aTrade.tradeType.action === "Rent") {
+                        } else if (aTrade.tradeType.action === ContainerAction.RENT) {
                             if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "借出") {
                                 addContent(result.history[0], aTrade);
                             } else {
@@ -946,7 +956,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                                     by: aTrade.oriUser.name || phoneEncoder(aTrade.oriUser.phone)
                                 });
                             }
-                        } else if (aTrade.tradeType.action === "Return") {
+                        } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                             if (result.history[0] && result.history[0].time.valueOf() === aTrade.tradeTime.valueOf() && result.history[0].action === "歸還") {
                                 addContent(result.history[0], aTrade);
                             } else {
@@ -990,7 +1000,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                     var now = Date.now();
                     for (var containerID in lastUsed) {
                         var timeToNow = now - lastUsed[containerID].time;
-                        if (lastUsed[containerID].action === "Rent" && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
+                        if (lastUsed[containerID].action === ContainerAction.RENT && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                             result.customerLostAmount++;
                         }
                     }
@@ -1042,14 +1052,10 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
                             unusedContainer,
                             history: result.history
                         };
-                        redis.set(cacheKey, JSON.stringify(toCache), (err, reply) => {
+                        redis.setex(cacheKey, MILLISECONDS_OF_A_WEEK * 2, JSON.stringify(toCache), (err, reply) => {
                             if (err) return debug.error(cacheKey, err);
                             if (reply != "OK") return debug.error(cacheKey, reply);
                             debug.log("[" + cacheKey + "] Cached!");
-                            redis.expire(cacheKey, MILLISECONDS_OF_A_WEEK * 2, (err, reply) => {
-                                if (err) return debug.error(err);
-                                if (reply !== 1) return debug.error(reply);
-                            });
                         });
                     }
                 });
@@ -1087,7 +1093,7 @@ router.get('/shopDetail', regAsAdminManager, validateRequest, function (req, res
         }
  * 
  */
-router.get('/user', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/user", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var result = {
         totalUserAmount: 0,
         totalUsageAmount: 0,
@@ -1116,7 +1122,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
         var tradeQuery = {
             "tradeType.action": {
-                "$in": ["Rent", "Return", 'UndoReturn']
+                "$in": [ContainerAction.RENT, ContainerAction.RETURN, ContainerAction.UNDO_RETURN]
             }
         };
 
@@ -1127,7 +1133,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
             if (dataCached.timestamp)
                 tradeQuery.tradeTime = {
-                    '$gte': new Date(dataCached.timestamp)
+                    "$gte": new Date(dataCached.timestamp)
                 };
 
             if (Object.keys(dataCached).length !== 0) {
@@ -1138,7 +1144,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
             Trade.find(tradeQuery, (err, tradeList) => {
                 if (err) return next(err);
                 tradeList.sort((a, b) => (a.tradeTime - b.tradeTime));
-                cleanUndo("Return", tradeList);
+                cleanUndo(ContainerAction.RETURN, tradeList);
 
                 var containerKey;
                 var weeklyAmount = dataCached.weeklyAmount || {};
@@ -1149,12 +1155,12 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
 
                 tradeList.forEach(aTrade => {
                     containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                    if (aTrade.tradeType.action === "Rent" && userUsingDict[aTrade.newUser.phone]) {
+                    if (aTrade.tradeType.action === ContainerAction.RENT && userUsingDict[aTrade.newUser.phone]) {
                         userUsingDict[aTrade.newUser.phone][containerKey] = {
                             time: aTrade.tradeTime.valueOf()
                         };
                         userDict[aTrade.newUser.phone].totalUsageAmount++;
-                    } else if (aTrade.tradeType.action === "Return" && userUsingDict[aTrade.oriUser.phone]) {
+                    } else if (aTrade.tradeType.action === ContainerAction.RETURN && userUsingDict[aTrade.oriUser.phone]) {
                         if (!weekCheckpoint) {
                             weekCheckpoint = getWeekCheckpoint(aTrade.tradeTime);
                             if (!weeklyAmount[weekCheckpoint]) weeklyAmount[weekCheckpoint] = 0;
@@ -1166,7 +1172,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
                         if (aTrade.tradeTime >= weekCheckpoint) weeklyAmount[weekCheckpoint]++;
                         result.totalUsageAmount++;
                         if (now - aTrade.tradeTime <= MILLISECONDS_OF_A_WEEK) recentTotalUsageAmount++;
-                        if (aTrade.tradeType.oriState === 2 && userUsingDict[aTrade.oriUser.phone][containerKey])
+                        if (aTrade.tradeType.oriState === ContainerState.USING && userUsingDict[aTrade.oriUser.phone][containerKey])
                             delete userUsingDict[aTrade.oriUser.phone][containerKey];
                     }
                 });
@@ -1234,7 +1240,7 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
             lostAmount: Number,
             totalUsageAmount: Number,
             joinedDate: Date,
-            joinedMethod: '店鋪 (方糖咖啡)',
+            joinedMethod: "店鋪 (方糖咖啡)",
             recentAmount: Number,
             recentAmountPercentage: Number,
             weekAverage: Number,
@@ -1255,13 +1261,13 @@ router.get('/user', regAsAdminManager, validateRequest, function (req, res, next
         }
  * 
  */
-router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/userDetail", checkRoleIsBot(), checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const USER_ID = req.query.id;
     var containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
     var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     User.findOne({
-        'user.phone': USER_ID
+        "user.phone": USER_ID
     }, (err, theUser) => {
         if (err || !theUser) return next(err);
         var result = {
@@ -1286,24 +1292,24 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
         };
 
         var tradeQuery = {
-            '$or': [{
-                    'tradeType.action': 'Rent',
-                    'newUser.phone': theUser.user.phone
+            "$or": [{
+                    "tradeType.action": ContainerAction.RENT,
+                    "newUser.phone": theUser.user.phone
                 },
                 {
-                    'tradeType.action': 'Return',
-                    'oriUser.phone': theUser.user.phone
+                    "tradeType.action": ContainerAction.RETURN,
+                    "oriUser.phone": theUser.user.phone
                 },
                 {
-                    'tradeType.action': 'UndoReturn',
-                    'newUser.phone': theUser.user.phone
+                    "tradeType.action": ContainerAction.UNDO_RETURN,
+                    "newUser.phone": theUser.user.phone
                 }
             ]
         };
         Trade.find(tradeQuery, (err, tradeList) => {
             if (err) return next(err);
             tradeList.sort((a, b) => (a.tradeTime - b.tradeTime));
-            cleanUndo('Return', tradeList);
+            cleanUndo(ContainerAction.RETURN, tradeList);
 
             var now = Date.now();
             var containerKey;
@@ -1312,7 +1318,7 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
             var weekCheckpoint = null;
             tradeList.forEach((aTrade) => {
                 containerKey = aTrade.container.id + "-" + aTrade.container.cycleCtr;
-                if (aTrade.tradeType.action === "Rent") {
+                if (aTrade.tradeType.action === ContainerAction.RENT) {
                     tradeDict[containerKey] = {
                         containerType: containerDict[aTrade.container.id],
                         containerID: "#" + aTrade.container.id,
@@ -1329,7 +1335,7 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
                     }
                     weeklyAmount[weekCheckpoint]++;
                     result.totalUsageAmount++;
-                } else if (aTrade.tradeType.action === "Return" && tradeDict[containerKey]) {
+                } else if (aTrade.tradeType.action === ContainerAction.RETURN && tradeDict[containerKey]) {
                     tradeDict[containerKey].returnTime = aTrade.tradeTime;
                     tradeDict[containerKey].returnPlace = storeDict[aTrade.newUser.storeID].name;
                     tradeDict[containerKey].usingDuration = aTrade.tradeTime - tradeDict[containerKey].rentTime;
@@ -1385,7 +1391,7 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
             [ 
                 { 
                     id: Number,
-                    type: '12oz 玻璃杯',
+                    type: "12oz 玻璃杯",
                     totalAmount: Number,
                     toUsedAmount: Number,
                     usingAmount: Number,
@@ -1401,13 +1407,13 @@ router.get('/userDetail', regAsBot, regAsAdminManager, validateRequest, function
         }
  * 
  */
-router.get('/container', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/container", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     Container.find({
-        'active': true
+        "active": true
     }, (err, containerList) => {
         if (err) return next(err);
         Box.find({
-            'stocking': true
+            "stocking": true
         }, (err, stockedBoxList) => {
             if (err) return next(err);
 
@@ -1480,19 +1486,7 @@ const statusTxtDict = {
     4: "庫存",
     5: "待配送"
 };
-const actionTxtDict = {
-    "Delivery": "配送",
-    "CancelDelivery": "取消配送",
-    "Sign": "簽收",
-    "UnSign": "取消簽收",
-    "Rent": "借出",
-    "Return": "歸還",
-    "UndoReturn": "取消歸還",
-    "ReadyToClean": "回收",
-    "UndoReadyToClean": "取消回收",
-    "Boxing": "裝箱",
-    "Unboxing": "取消裝箱"
-};
+const actionTxtDict = ContainerActionTranslation;
 
 /**
  * @apiName Manage container detail
@@ -1505,30 +1499,30 @@ const actionTxtDict = {
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            containerID: '#3',
+            containerID: "#3",
             containerType: { 
-                txt: '12oz 玻璃杯', 
+                txt: "12oz 玻璃杯", 
                 code: 0 
             },
             reuseTime: 1,
-            status: '庫存',
-            bindedUser: '09**-***-***',
+            status: "庫存",
+            bindedUser: "09**-***-***",
             joinedDate: Date,
             history:
             [ 
                 { 
                     tradeTime: Date,
-                    action: '回收',
-                    newUser: '09**-***-***',
-                    oriUser: '09**-***-***',
-                    comment: '' 
+                    action: "回收",
+                    newUser: "09**-***-***",
+                    oriUser: "09**-***-***",
+                    comment: "" 
                 },
                 ...
             ]
         }
  * 
  */
-router.get('/containerDetail', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/containerDetail", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     if (!req.query.id) return res.status(404).end();
     const CONTAINER_ID = req.query.id;
     var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
@@ -1585,7 +1579,7 @@ router.get('/containerDetail', regAsAdminManager, validateRequest, function (req
         {}
  * 
  */
-router.get('/console', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/console", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     res.json({});
 });
 
@@ -1603,7 +1597,7 @@ router.get('/console', regAsAdminManager, validateRequest, function (req, res, n
         {}
  * 
  */
-router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, res, next) {
+router.get("/shopSummary", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     const storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     let storesSummary = {};
     let storesTmpData = {};
@@ -1621,8 +1615,8 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
     }
 
     Trade.find({
-        'tradeType.action': {
-            '$in': ['Sign', 'Rent', 'Return', 'UndoReturn', 'ReadyToClean', 'UndoReadyToClean']
+        "tradeType.action": {
+            "$in": CONTAINER_ACTION_FROM_SIGN_TO_RELOAD
         }
     }, {}, {
         sort: {
@@ -1632,7 +1626,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
         if (err) return next(err);
 
         debug.log("[Manage/shopSummary] Get DB Response!");
-        cleanUndo(['Return', 'ReadyToClean'], tradeList);
+        cleanUndo([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var lastUsed = {};
         var unusedContainer = {};
@@ -1644,22 +1638,22 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
                 action: aTrade.tradeType.action,
                 storeID: aTrade.newUser.storeID
             };
-            if (aTrade.tradeType.action === "Sign") {
+            if (aTrade.tradeType.action === ContainerAction.SIGN) {
                 unusedContainer[containerKey] = {
                     time: aTrade.tradeTime,
                     storeID: aTrade.newUser.storeID
                 };
-            } else if (aTrade.tradeType.action === "Return" && containerKey in unusedContainer) {
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN && containerKey in unusedContainer) {
                 let rentFromStoreID = unusedContainer[containerKey].storeID;
                 let returnFromStoreID = aTrade.newUser.storeID;
                 let storeDiff = rentFromStoreID !== returnFromStoreID;
                 storesTmpData[rentFromStoreID].push({
-                    tradeType: "Rent",
+                    tradeType: ContainerAction.RENT,
                     time: unusedContainer[containerKey].time,
                     diffStore: storeDiff
                 });
                 storesTmpData[returnFromStoreID].push({
-                    tradeType: "Return",
+                    tradeType: ContainerAction.RETURN,
                     time: aTrade.tradeTime,
                     diffStore: storeDiff
                 });
@@ -1671,7 +1665,7 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
         var now = Date.now();
         for (var containerID in lastUsed) {
             var timeToNow = now - lastUsed[containerID].time;
-            if ((lastUsed[containerID].action === "Sign" || lastUsed[containerID].action === "Return") &&
+            if ((lastUsed[containerID].action === ContainerAction.SIGN || lastUsed[containerID].action === ContainerAction.RETURN) &&
                 timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_SHOP) {
                 storesTmpData[lastUsed[containerID].storeID].push({
                     tradeType: "Lost",
@@ -1707,11 +1701,11 @@ router.get('/shopSummary', regAsAdminManager, validateRequest, function (req, re
                         toSummaryRecord = theStoreSummary.dataRaws[theStoreSummary.dataRaws.length - 1];
                     }
                     if ((theTradeRecord.time - weekCheckpoint) < MILLISECONDS_OF_A_WEEK) {
-                        if (theTradeRecord.tradeType === "Rent") {
+                        if (theTradeRecord.tradeType === ContainerAction.RENT) {
                             toSummaryRecord.rent_weeklyAmount++;
                             if (theTradeRecord.diffStore)
                                 toSummaryRecord.rent_returnToDiffStore++;
-                        } else if (theTradeRecord.tradeType === "Return") {
+                        } else if (theTradeRecord.tradeType === ContainerAction.RETURN) {
                             toSummaryRecord.return_weeklyAmount++;
                             if (theTradeRecord.diffStore)
                                 toSummaryRecord.return_rentFromDiffStore++;
@@ -1775,145 +1769,6 @@ function addContent(lastHistory, newHistory) {
         lastHistory.contentDetail[newHistory.container.typeCode] = ["#" + newHistory.container.id];
 }
 
-router.post(
-    '/create/:storeID',
-    regAsAdminManager,
-    validateRequest,
-    fetchBoxCreation,
-    validateCreateApiContent,
-    function (req, res, next) {
-        let creator = req.body.phone;
-        let storeID = parseInt(req.params.storeID);
-
-        Promise.all(req._boxArray.map(box => box.save()))
-            .then(success => {
-                let list = new DeliveryList({
-                    listID: req._listID,
-                    boxList: req._boxIDs,
-                    storeID,
-                    creator: creator,
-                });
-                list.save().then(result => {
-                    return res.status(200).json({
-                        type: 'CreateMessage',
-                        message: 'Create delivery list successfully',
-                        boxIDs: req._boxIDs,
-                    });
-                });
-            })
-            .catch(err => {
-                debug.error(err);
-                return res.status(500).json(ErrorResponse.H006);
-            });
-    }
-);
-
-router.get(
-    '/box/list',
-    regAsAdminManager,
-    validateRequest,
-    async function (req, res, next) {
-        let result = [];
-        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        for (let i = 0; i < Object.keys(storeList).length; i++) {
-            result.push({
-                storeID: Number(Object.keys(storeList)[i]),
-                boxObjs: []
-            });
-        }
-        Box.find({}, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (!String(box.storeID)) continue;
-
-                result.forEach(obj => {
-                    if (String(obj.storeID) === String(box.storeID)) {
-                        obj.boxObjs.push({
-                            ID: box.boxID,
-                            boxName: box.boxName || "",
-                            dueDate: box.dueDate || "",
-                            status: box.status || "",
-                            action: box.action || [],
-                            deliverContent: getDeliverContent(box.containerList),
-                            orderContent: box.boxOrderContent || [],
-                            containerList: box.containerList,
-                            user: box.user,
-                            comment: box.comment || ""
-                        });
-                    }
-                });
-            }
-            result = result.filter(obj => {
-                return obj.boxObjs.length > 0;
-            });
-            return res.status(200).json(result);
-        });
-    }
-);
-
-router.get(
-    '/box/list/:status',
-    regAsAdminManager,
-    validateRequest,
-    async function (req, res, next) {
-        let result = [];
-        let storeList = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-        let boxStatus = req.params.status;
-        for (let i = 0; i < Object.keys(storeList).length; i++) {
-            result.push({
-                storeID: Number(Object.keys(storeList)[i]),
-                boxObjs: []
-            });
-        }
-        Box.find({
-            'status': boxStatus
-        }, (err, boxes) => {
-            if (err) return next(err);
-            for (let box of boxes) {
-                if (!String(box.storeID)) continue;
-
-                result.forEach(obj => {
-                    if (String(obj.storeID) === String(box.storeID)) {
-                        obj.boxObjs.push({
-                            ID: box.boxID,
-                            boxName: box.boxName || "",
-                            dueDate: box.dueDate || "",
-                            status: box.status || "",
-                            action: box.action || [],
-                            deliverContent: getDeliverContent(box.containerList),
-                            orderContent: box.boxOrderContent || [],
-                            containerList: box.containerList,
-                            user: box.user,
-                            comment: box.comment || ""
-                        });
-                    }
-                });
-            }
-            result = result.filter(obj => {
-                return obj.boxObjs.length > 0;
-            });
-            return res.status(200).json(result);
-        });
-    }
-);
-
-router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function (req, res, next) {
-    let boxID = req.params.boxID;
-    let dbAdmin = req._user;
-
-    Box.remove({
-            boxID
-        })
-        .exec()
-        .then(_ => res.status(200).json({
-            type: "DeleteMessage",
-            message: "Delete successfully"
-        })).catch(err => {
-            debug.error(err);
-            return next(err);
-        });
-});
-
 /**
  * @apiName Manage refresh store
  * @apiGroup Manage
@@ -1925,16 +1780,43 @@ router.delete('/deleteBox/:boxID', regAsAdminManager, validateRequest, function 
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            "success": true
+            "success": true,
+            "updatedStoresAmount": Number
         }
  * 
  */
-router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch("/refresh/store", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     refreshStore(function (err, data) {
         if (err) return next(err);
         res.json({
             "success": true,
             "updatedStoresAmount": data.length
+        });
+    });
+});
+
+/**
+ * @apiName Manage refresh station
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/refresh/station Refresh station
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            "success": true,
+            "updatedStationsAmount": Number
+        }
+ * 
+ */
+router.patch("/refresh/station", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    refreshStation(function (err, data) {
+        if (err) return next(err);
+        res.json({
+            "success": true,
+            "updatedStationsAmount": data.length
         });
     });
 });
@@ -1954,33 +1836,9 @@ router.patch('/refresh/store', regAsAdminManager, validateRequest, function (req
         }
  * 
  */
-router.patch('/refresh/container', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch("/refresh/container", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     var dbAdmin = req._user;
     refreshContainer(dbAdmin, function (err) {
-        if (err) return next(err);
-        res.json({
-            "success": true
-        });
-    });
-});
-
-/**
- * @apiName Manage refresh activity
- * @apiGroup Manage
- *
- * @api {patch} /manage/refresh/activity Refresh container
- * @apiPermission admin_manager
- * @apiUse JWT
- * 
- * @apiSuccessExample {json} Success-Response:
-        HTTP/1.1 200 
-        {
-            "success": true
-        }
- * 
- */
-router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (req, res, next) {
-    refreshActivity(function (err) {
         if (err) return next(err);
         res.json({
             "success": true
@@ -1999,11 +1857,12 @@ router.patch('/refresh/activity', regAsAdminManager, validateRequest, function (
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         {
-            "success": true
+            "success": true,
+            "data": Array // Coupon Type List
         }
  * 
  */
-router.patch('/refresh/couponType', regAsAdminManager, validateRequest, function (req, res, next) {
+router.patch("/refresh/couponType", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     refreshCoupon((err, data) => {
         if (err) return next(err);
         res.json({
@@ -2024,18 +1883,18 @@ router.patch('/refresh/couponType', regAsAdminManager, validateRequest, function
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            type: 'refreshStoreImg',
-            message: 'refresh succeed',
+            type: "refreshStoreImg",
+            message: "refresh succeed",
             data:
             [ 
-                '00000.jpg',
+                "00000.jpg",
                 ...
             ] 
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
-    var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
+router.patch("/refresh/storeImg/:forceRenew", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    var forceRenew = (req.params.forceRenew === "1" || req.params.forceRenew === "true");
     refreshStoreImg(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
@@ -2052,18 +1911,18 @@ router.patch('/refresh/storeImg/:forceRenew', regAsAdminManager, validateRequest
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            type: 'refreshContainerIcon',
-            message: 'refresh succeed',
+            type: "refreshContainerIcon",
+            message: "refresh succeed",
             data:
             [ 
-                '08@3x.png',
+                "08@3x.png",
                 ...
             ] 
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/containerIcon/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
-    var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
+router.patch("/refresh/containerIcon/:forceRenew", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    var forceRenew = (req.params.forceRenew === "1" || req.params.forceRenew === "true");
     refreshContainerIcon(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
@@ -2080,21 +1939,50 @@ router.patch('/refresh/containerIcon/:forceRenew', regAsAdminManager, validateRe
  * @apiSuccessExample {json} Success-Response:
         HTTP/1.1 200 
         { 
-            type: 'refreshCouponImage',
-            message: 'refresh succeed',
+            type: "refreshCouponImage",
+            message: "refresh succeed",
             data:
             [ 
-                '08@3x.png',
+                "08@3x.png",
                 ...
             ] 
         }
  * @apiError 403 Response data
  */
-router.patch('/refresh/couponImage/:forceRenew', regAsAdminManager, validateRequest, function (req, res, next) {
-    var forceRenew = (req.params.forceRenew === '1' || req.params.forceRenew === 'true');
+router.patch("/refresh/couponImage/:forceRenew", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    var forceRenew = (req.params.forceRenew === "1" || req.params.forceRenew === "true");
     refreshCouponImage(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
     });
 });
+
+router.get('/summaryData/googlesheet/:storeID/:sheetID', checkRoleIsAdmin(), validateRequest, (req, res, next) => {
+    let storeID = Number(req.params.storeID);
+    let sheetID = req.params.sheetID;
+    Promise.all([
+            summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID, sheetID),
+            summaryReport.List_Of_Containers_Be_Used(storeID, sheetID),
+            summaryReport.List_Of_User_Of_Containers(storeID, sheetID),
+            summaryReport.List_Of_Not_Return_Users(storeID, sheetID)
+        ])
+        .then(messenges => {
+            let err_messenge = [];
+            for (let index in messenges) {
+                if (messenges[index][0]) {
+                    err_messenge.push({
+                        which_function: index,
+                        error_messenge: messenges[index][0]
+                    })
+                }
+            }
+            if (err_messenge.length === 0) {
+                res.status(200).json({
+                    success: true
+                })
+            } else {
+                next(err_messenge)
+            }
+        })
+})
 
 module.exports = router;

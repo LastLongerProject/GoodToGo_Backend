@@ -20,11 +20,11 @@ module.exports = {
 }
 
 function startDownloading() {
-    if (taskQueue.length > 0 && downloadingCtr <= CONCURRENT_LIMIT) {
+    if (taskQueue.length > 0 && downloadingCtr < CONCURRENT_LIMIT) {
         let theTask = taskQueue.shift();
         downloadingCtr++;
         downloadImg(theTask);
-        if (downloadingCtr <= CONCURRENT_LIMIT) startDownloading();
+        startDownloading();
     }
 }
 
@@ -37,6 +37,10 @@ function downloadImg(theTask) {
     const storeID = theTask.storeID;
     const ref = theTask.ref;
     const fileName = intReLength(storeID, 5) + '_google.jpg';
+    // setTimeout(()=>{
+    //     console.log(`Concurrent: [${downloadingCtr}]｜Get ${fileName} from ${ref}`);
+    //     finishDownloading();
+    // },0);
     request({
             method: 'get',
             url: BASE_URL,

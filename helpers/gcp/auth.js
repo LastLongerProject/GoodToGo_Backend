@@ -46,7 +46,7 @@ function getNewToken(oAuth2Client, callback) {
         access_type: 'offline',
         scope: SCOPES,
     });
-    console.log('Authorize this app by visiting this url:', authUrl);
+    debug.log('Authorize this app by visiting this url:', authUrl);
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
@@ -54,12 +54,12 @@ function getNewToken(oAuth2Client, callback) {
     rl.question('Enter the code from that page here: ', (code) => {
         rl.close();
         oAuth2Client.getToken(code, (err, token) => {
-            if (err) return console.error('Error while trying to retrieve access token', err);
+            if (err) return debug.error('Error while trying to retrieve access token', err);
             oAuth2Client.setCredentials(token);
             // Store the token to disk for later program executions
             fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-                if (err) console.error(err);
-                console.log('Token stored to', TOKEN_PATH);
+                if (err) debug.error(err);
+                debug.log('Token stored to', TOKEN_PATH);
             });
             callback(oAuth2Client);
         });

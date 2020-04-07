@@ -4,7 +4,8 @@ var schema = mongoose.Schema({
     listID: String,
     creator: String,
     boxList: Array,
-    destinationStoreID: Number
+    storeID: Number,
+    stationID: Number
 }, {
     timestamps: true,
     usePushEach: true

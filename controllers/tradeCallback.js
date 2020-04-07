@@ -7,7 +7,7 @@ const userTrade = require('../controllers/userTrade');
 const pointTrade = require('../controllers/pointTrade');
 
 const NotificationCenter = require('../helpers/notifications/center');
-const NotificationEvent = require('../helpers/notifications/enums/events');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
 const generateUUID = require('../helpers/tools').generateUUID;
 
 module.exports = {
@@ -17,10 +17,10 @@ module.exports = {
                 aTradeDetail => aTradeDetail.newUser,
                 aTradeDetail => aTradeDetail.container)
             .forEach(aCustomerTradeDetail => {
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, {
-                    customer: aCustomerTradeDetail.customer
-                }, {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RENT, aCustomerTradeDetail.customer, {
                     containerList: aCustomerTradeDetail.containerList
+                }, {
+                    ignoreSilentMode: true
                 });
                 if (storeID === null) return;
                 const now = Date.now();
@@ -38,9 +38,8 @@ module.exports = {
                 });
             });
     },
-    return: function (tradeDetail, options) {
+    return: function (tradeDetail, options = {}) {
         if (tradeDetailIsEmpty(tradeDetail)) return;
-        if (!options) options = {};
         const toStore = typeof options.storeID === "undefined" ?
             tradeDetail[0].newUser.roles.clerk.storeID :
             options.storeID;
@@ -58,9 +57,7 @@ module.exports = {
             .forEach(aTradeDetail => {
                 const dbCustomer = aTradeDetail.customer;
                 const containerList = aTradeDetail.containerList;
-                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, {
-                    customer: dbCustomer
-                }, {
+                NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN, dbCustomer, {
                     containerList: containerList
                 });
 
@@ -91,13 +88,14 @@ module.exports = {
                         const bonusPointActivity = pointDetail.bonusPointActivity;
                         const overdueReturn = pointDetail.overdueReturn;
 
-                        userTrade.refreshUserUsingStatus(false, dbCustomer, (err, userDict) => {
+                        userTrade.refreshUserUsingStatus(dbCustomer, {
+                            sendNotice: false,
+                            banOrUnbanUser: true
+                        }, (err, userDict) => {
                             if (err) return debug.error(err);
-                            const overdueAmount = userDict[dbCustomer._id].overdueAmount;
+                            const overdueAmount = userDict[dbCustomer._id].summary.overdueAmount;
                             const isBannedAfterReturn = dbCustomer.hasBanned;
-                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, {
-                                customer: dbCustomer
-                            }, {
+                            NotificationCenter.emit(NotificationEvent.CONTAINER_RETURN_LINE, dbCustomer, {
                                 conditions: {
                                     isPurchasedUser,
                                     isOverdueReturn,
@@ -114,7 +112,7 @@ module.exports = {
                                     overdueReturnInThisTrade: overdueReturn,
                                     purchaseStatus: dbCustomer.getPurchaseStatus(),
                                 }
-                            });
+                            }, options);
                         });
 
                         pointTrade.sendPoint(point, dbCustomer, {

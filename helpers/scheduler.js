@@ -1,16 +1,20 @@
-const User = require('../models/DB/userDB');
-const UserKeys = require('../models/DB/userKeysDB');
-
-const tasks = require('./tasks');
-const dateCheckpoint = require('./toolkit').dateCheckpoint;
-
 const fs = require('fs');
-const ROOT_DIR = require('../config/config').rootDir;
 const crypto = require('crypto');
 const debug = require('./debugger')('scheduler');
 
+const tasks = require('./tasks');
+const UserKeys = require('../models/DB/userKeysDB');
+const ROOT_DIR = require('../config/config').rootDir;
+const getSystemBot = require('./tools').getSystemBot;
+const dateCheckpoint = require('./toolkit').dateCheckpoint;
+
 function generalCb(err) {
     if (err) return debug.error(err);
+}
+
+function logCb(err, msg) {
+    if (err) return debug.error(err);
+    if (msg) return debug.log(msg);
 }
 
 function driveCb(succeed, data) {
@@ -21,49 +25,52 @@ function driveCb(succeed, data) {
     }
 }
 
+const MILLISECONDS_OF_AN_HOUR = 1000 * 60 * 60;
+const MILLISECONDS_OF_A_DAY = MILLISECONDS_OF_AN_HOUR * 24;
+
+function getShouldWait(scheduledHour, hourNow, MILLISECONDS_TO_NEXT_DAY) {
+    if (hourNow >= scheduledHour) {
+        return MILLISECONDS_TO_NEXT_DAY + MILLISECONDS_OF_AN_HOUR * scheduledHour;
+    } else {
+        return MILLISECONDS_TO_NEXT_DAY - MILLISECONDS_OF_AN_HOUR * (24 - scheduledHour);
+    }
+}
+
 module.exports = function () {
-    User.findOne({
-        'user.phone': '0900000000'
-    }, (err, bot) => {
+    getSystemBot((err, dbBot) => {
         if (err) return debug.error(err);
-        if (!bot) {
-            bot = new User({
-                user: {
-                    phone: "0900000000",
-                    password: null,
-                    name: "GoodToGoBot"
-                },
-                roles: {
-                    typeList: ["bot", "clerk"],
-                    clerk: {
-                        storeID: 17,
-                        manager: false
-                    }
-                }
-            });
-            bot.save(err => {
-                if (err) debug.error(err);
-            });
-        }
-        const shouldWait = dateCheckpoint(1) - Date.now();
-        debug.log(`[Scheduler | Setting] First task will start in ${shouldWait / 1000} seconds`);
+
+        const now = new Date();
+        const MILLISECONDS_TO_NEXT_DAY = dateCheckpoint(1) - now;
+        const hourNow = parseInt(now.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            hour: "2-digit",
+            hour12: false
+        }).slice(0, 2));
+
+        const shouldWait = {
+            MIDNIGHT: getShouldWait(0, hourNow, MILLISECONDS_TO_NEXT_DAY),
+            ONE_IN_THE_MORNING: getShouldWait(1, hourNow, MILLISECONDS_TO_NEXT_DAY),
+            TEN_IN_THE_MORNING: getShouldWait(10, hourNow, MILLISECONDS_TO_NEXT_DAY)
+        };
+        debug.log(`[Scheduler | Setting] First task will start in ${Math.floor(Math.min(...Object.values(shouldWait)) / 1000)} seconds`);
 
         setTimeout(function timeSensitiveTask() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Time-Sensitive] start');
                 tasks.checkCouponIsExpired(generalCb);
-                tasks.refreshAllUserUsingStatus(false, generalCb);
+                tasks.refreshAllUserUsingStatus(true, generalCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.MIDNIGHT);
 
         setTimeout(function noneTimeSensitiveTask() {
             let taskList = function () {
                 debug.log('[Scheduler | None-Time-Sensitive] start');
-                setTimeout(tasks.refreshContainer, 0, bot, generalCb);
-                setTimeout(tasks.refreshStore, 1000 * 60 * 5, generalCb);
-                setTimeout(tasks.refreshActivity, 1000 * 60 * 7, generalCb);
+                setTimeout(tasks.refreshContainer, 0, dbBot, generalCb);
+                setTimeout(tasks.refreshStore, 1000 * 60 * 3, generalCb);
+                setTimeout(tasks.refreshStation, 1000 * 60 * 5, generalCb);
                 setTimeout(tasks.refreshCoupon, 1000 * 60 * 8, generalCb);
                 setTimeout(tasks.refreshContainerIcon, 1000 * 60 * 10, false, driveCb);
                 setTimeout(tasks.refreshStoreImg, 1000 * 60 * 15, false, driveCb);
@@ -75,6 +82,9 @@ module.exports = function () {
                         },
                         "roleType": {
                             "$ne": "bot"
+                        },
+                        "userAgent": {
+                            "$not": /^PostmanRuntime\/\d*\.\d*\.\d*$/
                         }
                     }, (err) => {
                         if (err) return debug.error(err);
@@ -98,19 +108,21 @@ module.exports = function () {
                     results.failMsg.forEach(debug.error);
                     results.successMsg.forEach(debug.log);
                 });
-                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, generalCb);
+                setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, logCb);
+                setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, logCb);
+                setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, logCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait + 1000 * 60 * 60);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.ONE_IN_THE_MORNING);
 
         setTimeout(function taskToDoAtTenInTheMorning() {
             let taskList = function taskList() {
                 debug.log('[Scheduler | Ten In The Morning] start');
-                tasks.refreshAllUserUsingStatus(true, generalCb);
+                tasks.reloadSuspendedNotifications(generalCb);
             };
             taskList();
-            setInterval(taskList, 1000 * 60 * 60 * 24);
-        }, shouldWait + 1000 * 60 * 60 * 10);
+            setInterval(taskList, MILLISECONDS_OF_A_DAY);
+        }, shouldWait.TEN_IN_THE_MORNING);
     });
 };

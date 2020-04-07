@@ -1,0 +1,10 @@
+module.exports=Object.freeze({
+    Containers_Not_Return:"Containers_Not_Return",
+    Containers_Be_Used:"Containers_Be_Used",
+    User_Of_Containers:"User_Of_Containers",
+    Not_Return_Users:"Not_Return_Users",
+    Summary_Data_For_Store:"Summary_Data_For_Store",
+    User_Not_Return_For_Store:"User_Not_Return_For_Store",
+    Users_Of_Store:"Users_Of_Store",
+    Rent_UnLogRent_Return_For_Store:"Rent_UnLogRent_Return_For_Store"
+})

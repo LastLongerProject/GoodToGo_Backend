@@ -12,6 +12,8 @@ const Container = require('../models/DB/containerDB');
 const Trade = require('../models/DB/tradeDB');
 const User = require('../models/DB/userDB');
 const Box = require('../models/DB/boxDB');
+const Action = require('../models/enums/containerEnum').Action;
+const State = require('../models/enums/containerEnum').State;
 
 const status = ['delivering', 'readyToUse', 'rented', 'returned', 'notClean', 'boxed'];
 const REAL_ID_RANGE = 99900;
@@ -107,10 +109,9 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
     const tradeTime = stateChanging.tradeTime;
     const options = option || {};
     const boxID = options.boxID; // Boxing Delivery Sign NEED
-    const storeID = options.storeID; // Delivery Sign Return NEED
+    const storeID = options.storeID; // Delivery Sign Rent Return NEED
     const rentToUser = options.rentToUser || null; // Rent NEED
     const inLineSystem = options.inLineSystem; // Rent NEED
-    const activity = options.activity || null; // Deliver NEED
     const bypassStateValidation = options.bypassStateValidation || false;
     const containerTypeDict = consts.containerTypeDict;
     return function trade(aContainer) {
@@ -155,19 +156,16 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                         });
                     const newState = stateChanging.newState;
                     const oriState = theContainer.statusCode;
-
-                    if (action === 'Rent' && theContainer.storeID !== newUser.roles.clerk.storeID)
+                    if (action === Action.RENT && theContainer.storeID !== storeID)
                         return reject({
                             code: 'F010',
                             message: "Container not belone to user's store"
                         });
-
-                    if (action === 'Return' && oriState === 3) // 髒杯回收時已經被歸還過
+                    else if (action === Action.RETURN && oriState === State.RETURNED) // 髒杯回收時已經被歸還過
                         return resolve({
                             ID: aContainerId,
                             txt: "Already Return"
                         });
-
                     validateStateChanging(bypassStateValidation, oriState, newState, function (succeed) {
                         if (!succeed) {
                             let errorList = [aContainerId, oriState, newState];
@@ -181,7 +179,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 errorDict
                             };
 
-                            if (oriState === 0 || oriState === 1) {
+                            if (oriState === State.DELIVERING || oriState === State.READY_TO_USE) {
                                 Box.findOne({
                                     'containerList': {
                                         '$all': [aContainerId]
@@ -210,33 +208,31 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                 }
 
                                 let storeID_newUser, storeID_oriUser;
-                                if (action === 'Sign') {
-                                    if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 代簽收
-                                    else storeID_newUser = newUser.roles.clerk.storeID;
-                                } else if (action === 'Rent') {
+                                if (action === Action.SIGN) {
+                                    storeID_newUser = storeID;
+                                } else if (action === Action.RENT) {
                                     let tmp = oriUser;
                                     oriUser = newUser;
                                     newUser = tmp;
-                                    storeID_oriUser = oriUser.roles.clerk.storeID;
-                                } else if (action === 'Return') {
-                                    if (typeof storeID !== 'undefined') storeID_newUser = storeID; // 髒杯回收代歸還
-                                    else storeID_newUser = newUser.roles.clerk.storeID;
+                                    storeID_oriUser = storeID;
+                                } else if (action === Action.RETURN) {
+                                    storeID_newUser = storeID;
                                     if (typeof theContainer.storeID !== 'undefined') storeID_oriUser = theContainer.storeID; // 髒杯回收未借出
-                                } else if (action === 'ReadyToClean') {
+                                } else if (action === Action.RELOAD) {
                                     storeID_oriUser = theContainer.storeID;
-                                } else if (action === 'Delivery') {
+                                } else if (action === Action.DELIVERY) {
                                     storeID_newUser = storeID;
                                     theContainer.cycleCtr++;
-                                } else if (action === 'CancelDelivery' || action === 'UnSign') {
+                                } else if (action === Action.CANCEL_DELIVERY || action === Action.UNSIGN) {
                                     theContainer.cycleCtr--;
-                                } else if (action === 'Boxing') {
+                                } else if (action === Action.BOXING) {
                                     theContainer.boxID = boxID;
                                 }
                                 theContainer.statusCode = newState;
                                 theContainer.conbineTo = newUser.user.phone;
                                 theContainer.lastUsedAt = Date.now();
                                 theContainer.inLineSystem = inLineSystem;
-                                if (action === 'Sign' || action === 'Return') theContainer.storeID = storeID_newUser;
+                                if (action === Action.SIGN || action === Action.RETURN) theContainer.storeID = storeID_newUser;
                                 else theContainer.storeID = null;
 
                                 let newTrade = new Trade({
@@ -260,8 +256,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                         cycleCtr: theContainer.cycleCtr,
                                         box: boxID,
                                         inLineSystem: theContainer.inLineSystem
-                                    },
-                                    activity
+                                    }
                                 });
 
                                 resolve({
@@ -280,7 +275,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
                                             });
                                         });
                                     },
-                                    tradeDetail: action === "Rent" || (action === "Return" && oriState === 2) ? {
+                                    tradeDetail: action === Action.RENT || (action === Action.RETURN && oriState === State.USING) ? {
                                         oriUser,
                                         newUser,
                                         container: theContainer
@@ -296,7 +291,7 @@ function stateChangingTask(reqUser, stateChanging, option, consts) {
 }
 
 function getOriUser(action, theContainer, rentToUser, cb) {
-    if (action === "Rent" && rentToUser) return cb(null, rentToUser);
+    if (action === Action.RENT && rentToUser) return cb(null, rentToUser);
     else return User.findOne({
         'user.phone': theContainer.conbineTo
     }, cb);

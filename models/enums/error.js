@@ -47,7 +47,7 @@ let ErrorResponse = Object.freeze({
     H005_3: {
         code: 'H005_3',
         type: "CreateMessage",
-        message: "Data format invalid (Update Stocked to Boxing need provide destinationStoreId)"
+        message: "Data format invalid"
     },
     H005_4: {
         code: 'H005_4',
@@ -85,10 +85,15 @@ let ErrorResponse = Object.freeze({
         message: "Box update failed, plz contact developer"
     },
     H012: {
-        code: "H011",
+        code: "H012",
         type: "ModifyMessage",
         message: "ContainerList and boxDeliverContent need to be modified at the same time, and should correspond to each other"
-    }, 
+    },
+    H013: {
+        code: "H013",
+        type: "CreateMessage",
+        message: "You shall not box a box"
+    },
     F016_1: {
         code: "F016",
         type: "Missing parameters",

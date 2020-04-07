@@ -8,19 +8,19 @@ module.exports = {
         Promise
             .all([
                 new Promise((resolve, reject) => {
-                    tasks.containerListInit(err => {
+                    tasks.containerListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    tasks.storeListInit(err => {
+                    tasks.storeListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });
                 }),
                 new Promise((resolve, reject) => {
-                    tasks.couponListInit(err => {
+                    tasks.couponListCaching(err => {
                         if (err) return reject(err);
                         resolve();
                     });
@@ -35,15 +35,13 @@ module.exports = {
     afterStartUp: function () {
         if (process.env.NODE_ENV) {
             const ENV = process.env.NODE_ENV.replace(/"|\s/g, "");
-            if (ENV === "testing") {
+            if (ENV === "testing" || ENV === "develop") {
                 scheduler();
             } else if (ENV === "development") {
                 debug.log("Development Server no scheduler");
             } else {
                 debug.log(`${ENV} Server no scheduler`);
             }
-        } else {
-            debug.log("Undefined Server no scheduler");
         }
 
         Promise
@@ -59,6 +57,18 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
+                }),
+                new Promise((resolve, reject) => {
+                    tasks.migrateUserRoleStructure(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
+                }),
+                new Promise((resolve, reject) => {
+                    tasks.migrateBoxStructure(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
                 })
             ])
             .then(() => {
@@ -66,4 +76,4 @@ module.exports = {
             })
             .catch(debug.error);
     }
-};
+}
