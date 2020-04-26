@@ -16,6 +16,7 @@ const checkRoleIsAdmin = require('../../middlewares/validation/authorization/val
 const intReLength = require('../../helpers/toolkit').intReLength;
 const cleanUndoTrade = require('../../helpers/toolkit').cleanUndoTrade;
 
+const sendSMS = require("../../helpers/aws/SNS").sms_now;
 const subscribeSNS = require('../../helpers/aws/SNS').sns_subscribe;
 const SnsAppType = require('../../models/enums/notificationEnum').AppType;
 
@@ -31,6 +32,7 @@ const RoleElement = require('../../models/enums/userEnum').RoleElement;
 const ContainerAction = require('../../models/enums/containerEnum').Action;
 
 const setDefaultPassword = require('../../config/keys').setDefaultPassword;
+const getVerificationCode = require('../../config/keys').getVerificationCode;
 
 const signupRoute = require("./signup");
 const roleRoute = require("./role");
@@ -211,7 +213,7 @@ router.post('/modifypassword', validateRequest, function (req, res, next) {
  * 
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} new_password new password of the User.
- * @apiParam {String} verification code from sms
+ * @apiParam {String} verification_code verification code from sms
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 Signup Successfully
  *     { 
@@ -293,6 +295,48 @@ router.post('/logout', validateRequest, function (req, res, next) {
         } else {
             res.json(info);
         }
+    });
+});
+
+/**
+ * @apiName SendVerificationCode
+ * @apiGroup Users
+ * @apiPermission admin
+ *
+ * @api {post} /users/sendCode Send Verification Code to User Manually
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiSuccessExample {json} Success-Response:
+    HTTP/1.1 200 Signup Successfully
+    { 
+        type: 'signupMessage',
+        message: 'Send succeeded',
+        code: Number
+    }
+ * @apiUse SignupError
+ */
+router.post('/sendCode', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    const phone = req.body.phone;
+    if (userQuery.phoneIsNotValid(phone))
+        return res.status(401).json({
+            code: 'D009',
+            type: 'resetPassMessage',
+            message: 'Phone is not valid'
+        });
+    const newCode = getVerificationCode();
+    sendSMS(`+886${phone.substr(1, 10)}`, `您的好盒器註冊驗證碼為：${newCode}，請於1天內完成驗證。`, function (err, snsMsg) {
+        if (err) return next(err);
+        const ttl = new Date();
+        ttl.setSeconds(ttl.getSeconds() + 60 * 60 * 24);
+        userQuery.setVerificationCode(phone, newCode, ttl, err => {
+            if (err) return next(err);
+            res.json({
+                type: 'signupMessage',
+                message: 'Send succeeded',
+                code: newCode
+            });
+        });
     });
 });
 

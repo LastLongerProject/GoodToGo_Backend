@@ -65,9 +65,8 @@ function delVerificationCode(phone, done) {
         if (err) return done(err);
         const keysToDel = reply[1];
         if (keysToDel.length === 0) return done(null);
-        redis.del(keysToDel, (err, reply) => {
+        redis.del(keysToDel, err => {
             if (err) return done(err);
-            if (reply !== 1) return done("delReply: " + reply);
             return done(null);
         });
     });
