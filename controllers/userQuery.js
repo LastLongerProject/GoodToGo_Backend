@@ -629,10 +629,11 @@ module.exports = {
             });
         });
     },
-    setVerificationCode
+    setVerificationCode,
+    phoneIsNotValid
 };
 
-function phoneIsNotValid(phone, passPhoneValidation) {
+function phoneIsNotValid(phone, passPhoneValidation = false) {
     return typeof phone !== 'string' || (!passPhoneValidation && !(isMobilePhone(phone) || isStudentID(phone)));
 }
 
