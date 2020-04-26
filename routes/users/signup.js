@@ -5,6 +5,8 @@ const debug = require('../../helpers/debugger')('users/signup');
 const userQuery = require('../../controllers/userQuery');
 const couponTrade = require('../../controllers/couponTrade');
 
+const sendSMS = require("../../helpers/aws/SNS").sms_now;
+
 const validateDefault = require('../../middlewares/validation/authorization/validateDefault');
 const validateRequest = require('../../middlewares/validation/authorization/validateRequest').JWT;
 const checkRoleIsStore = require('../../middlewares/validation/authorization/validateRequest').checkRoleIsStore;
@@ -16,6 +18,7 @@ const RoleElement = require('../../models/enums/userEnum').RoleElement;
 const RegisterMethod = require('../../models/enums/userEnum').RegisterMethod;
 
 const setDefaultPassword = require('../../config/keys').setDefaultPassword;
+const getVerificationCode = require('../../config/keys').getVerificationCode;
 
 router.use(function (req, res, next) {
     req._options = {};
@@ -360,6 +363,48 @@ router.post('/root', checkRoleIsStore(), checkRoleIsAdmin(), validateRequest, fu
         } else {
             res.json(info.body);
         }
+    });
+});
+
+/**
+ * @apiName SendVerificationCode
+ * @apiGroup Users
+ * @apiPermission admin
+ *
+ * @api {post} /users/signup/sendCode Send Verification Code to User Manually
+ * @apiUse JWT
+ * 
+ * @apiParam {String} phone phone of the User.
+ * @apiSuccessExample {json} Success-Response:
+    HTTP/1.1 200 Signup Successfully
+    { 
+        type: 'signupMessage',
+        message: 'Send succeeded',
+        code: Number
+    }
+ * @apiUse SignupError
+ */
+router.post('/sendCode', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    const phone = req.body.phone;
+    if (userQuery.phoneIsNotValid(phone))
+        return res.status(401).json({
+            code: 'D009',
+            type: 'resetPassMessage',
+            message: 'Phone is not valid'
+        });
+    const newCode = getVerificationCode();
+    sendSMS(`+886${phone.substr(1, 10)}`, `您的好盒器註冊驗證碼為：${newCode}，請於1天內完成驗證。`, function (err, snsMsg) {
+        if (err) return next(err);
+        const ttl = new Date();
+        ttl.setSeconds(ttl.getSeconds() + 60 * 60 * 24);
+        userQuery.setVerificationCode(phone, newCode, ttl, err => {
+            if (err) return next(err);
+            res.json({
+                type: 'signupMessage',
+                message: 'Send succeeded',
+                code: newCode
+            });
+        });
     });
 });
 
