@@ -54,7 +54,6 @@ function setVerificationCode(phone, newCode, ttl, done) {
 function checkVerificationCode(phone, verificationCode, done) {
     redis.get(`user_verifying:${phone}:${verificationCode}`, (err, reply) => {
         if (err) return done(err);
-        console.log(reply, typeof reply)
         if (reply === null) return done(null, VerificationCodeStatus.NOT_FOUND);
         else if (new Date(reply).valueOf() < new Date().valueOf()) return done(null, VerificationCodeStatus.EXPIRED);
         return done(null, VerificationCodeStatus.VALID);
@@ -66,7 +65,6 @@ function delVerificationCode(phone, done) {
         if (err) return done(err);
         const keysToDel = reply[1];
         if (keysToDel.length === 0) return done(null);
-        console.log(keysToDel)
         redis.del(keysToDel, (err, reply) => {
             if (err) return done(err);
             if (reply !== 1) return done("delReply: " + reply);

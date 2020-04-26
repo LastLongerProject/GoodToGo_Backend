@@ -1523,7 +1523,8 @@ function usageByDateByTypeGenerator(newTypeArrGenerator, arrToParse, resultArr) 
  * @apiUse JWT
  * @apiPermission clerk
  * 
- * @apiSuccessExample {csv}
+ * @apiSuccessExample {csv}Success-Response:
+    HTTP/1.1 200 
  * 
  */
 router.get('/history/byContainerType/csv', checkRoleIsStore(), validateRequest, function (req, res, next) {
