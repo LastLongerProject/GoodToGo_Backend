@@ -26,7 +26,7 @@ let fullDateStringWithoutYear = function (date) {
 
 function createBoxID(date, sequence, stationID) {
     let dateString = fullDateStringWithoutYear(date).replace(/\//g, '');
-    return dateString + String(stationID) + intReLength(sequence, 3);
+    return dateString + String(stationID) + intReLength(sequence, 4);
 }
 
 function fetchBoxCreation(req, res, next) {
