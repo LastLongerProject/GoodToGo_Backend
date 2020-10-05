@@ -51,7 +51,7 @@ module.exports = Object.freeze({
         AVAILABLE: "available"
     }),
     DueDays: Object.freeze({ // Remember to add one
-        free_user: 2,
+        free_user: 4,
         purchased_user: 8
     }),
     LastCallDays: Object.freeze({

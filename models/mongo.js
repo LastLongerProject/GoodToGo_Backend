@@ -9,7 +9,7 @@ module.exports = function (mongoose, done) {
     mongoose.connect(config.mongodbUrl, config.mongodbOptions, function (err) {
         if (err) throw err;
         debug.log('mongoDB connect succeed');
-        // require('../tmp/changeUserStruc.js')
+        // require('../tmp/removeOldLog.js')
         appInit.beforeStartUp(() => {
             done();
             appInit.afterStartUp();
