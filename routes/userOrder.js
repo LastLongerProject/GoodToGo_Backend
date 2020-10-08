@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
 
@@ -15,6 +16,7 @@ const generateUUID = require('../helpers/tools').generateUUID;
 const getSystemBot = require('../helpers/tools').getSystemBot;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
+const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const ContainerAction = require('../models/enums/containerEnum').Action;
 const ContainerState = require('../models/enums/containerEnum').State;
@@ -102,6 +104,111 @@ router.get('/list', validateLine, function (req, res, next) {
         });
     });
 });
+
+/**
+ * @apiName AddUserOrderByBot
+ * @apiGroup UserOrder
+ * 
+ * @api {post} /userOrder/addByBot Add User Order
+ * @apiUse LINE
+ * 
+ * @apiParam {String} storeCode storeCode.
+ * @apiParam {String} phone phone
+ * @apiParam {Number} containerAmount containerAmount.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          storeName: String,
+ *          containerAmount: Number,
+ *          time: Date
+ *      }
+ */
+
+router.post('/addByBot', validateRequest, validateStoreCode, function (req, res, next) {
+    const bypassCheck = false;
+    const storeCode = req.body.storeCode;
+    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+    const containerAmount = parseInt(req.body.containerAmount);
+    const phone = req.body.phone;
+
+    if (isNaN(containerAmount) || containerAmount <= 0 || !phone)
+        return res.status(403).json({
+            code: 'L002',
+            type: 'userOrderMessage',
+            message: `Content not in Correct Format.\n` +
+                `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}, phone: ${phone}`,
+            txt: "系統維修中>< 請稍後再試！"
+        });
+
+    User.findOne({ "user.phone": phone })
+        .then((dbUser) => {
+            userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
+                if (err)
+                    return next(err);
+                if (!isAvailable) {
+                    if (detail.rentalQualification === RentalQualification.BANNED)
+                        return res.status(403).json({
+                            code: 'L001',
+                            type: 'userOrderMessage',
+                            message: `User is Banned.`,
+                            txt: dbUser.getBannedTxt("借用")
+                        });
+                    if (detail.rentalQualification === RentalQualification.OUT_OF_QUOTA)
+                        return res.status(403).json({
+                            code: 'L004',
+                            type: 'userOrderMessage',
+                            message: `ContainerAmount is Over Quantity Limitation. \n` +
+                                `ContainerAmount: ${containerAmount}, UsingAmount: ${detail.data.usingAmount}`,
+                            txt: `您最多只能借 ${detail.data.holdingQuantityLimitation} 個容器`
+                        });
+                    else
+                        return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
+                }
+        
+                const storeID = req._storeID;
+                const funcList = [];
+                const now = Date.now();
+                for (let i = 0; i < containerAmount; i++) {
+                    funcList.push(new Promise((resolve, reject) => {
+                        let newOrder = new UserOrder({
+                            orderID: generateUUID(),
+                            user: dbUser._id,
+                            storeID,
+                            orderTime: now
+                        });
+                        newOrder.save((err) => {
+                            if (err) return reject(err);
+                            resolve();
+                        });
+                    }));
+                }
+                Promise
+                    .all(funcList)
+                    .then(() => {
+                        res.json({
+                            storeName: StoreDict[storeID].name,
+                            containerAmount,
+                            time: now
+                        });
+                        userTrade.refreshUserUsingStatus(dbUser, {
+                            sendNotice: false,
+                            banOrUnbanUser: true
+                        }, err => {
+                            if (err) return debug.error(err);
+                        });
+                    })
+                    .catch(next);
+            });
+        })
+        .catch((err) => {
+            return res.status(401).json({
+                code: 'D005',
+                type: 'loginMessage',
+                message: 'No user found'
+            })
+        });
+});
+
 
 /**
  * @apiName AddUserOrder
