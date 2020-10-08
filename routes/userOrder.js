@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const debug = require('../helpers/debugger')('userOrder');
 
+const checkRoleIsBot = require('../middlewares/validation/authorization/validateRequest').checkRoleIsBot;
 const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
@@ -124,7 +125,7 @@ router.get('/list', validateLine, function (req, res, next) {
  *      }
  */
 
-router.post('/addByBot', validateRequest, validateStoreCode, function (req, res, next) {
+router.post('/addByBot', checkRoleIsBot(), validateRequest, validateStoreCode, function (req, res, next) {
     const bypassCheck = false;
     const storeCode = req.body.storeCode;
     const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
@@ -202,9 +203,12 @@ router.post('/addByBot', validateRequest, validateStoreCode, function (req, res,
         })
         .catch((err) => {
             return res.status(401).json({
-                code: 'D005',
-                type: 'loginMessage',
-                message: 'No user found'
+                code: 'E001',
+                type: "userSearchingError",
+                message: "No User: [" + phone + "] Found",
+                data: {
+                    phone
+                }
             })
         });
 });
