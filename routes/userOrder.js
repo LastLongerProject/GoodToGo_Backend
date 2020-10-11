@@ -213,7 +213,6 @@ router.post('/addByBot', checkRoleIsBot(), validateRequest, validateStoreCode, f
         });
 });
 
-
 /**
  * @apiName AddUserOrder
  * @apiGroup UserOrder
