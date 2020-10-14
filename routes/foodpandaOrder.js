@@ -15,104 +15,87 @@ const DataCacheFactory = require('../models/dataCacheFactory');
 const { generateUUID } = require('../helpers/tools');
 
 router.post('/', validateRequest, validateLine, validateStoreCode, (req, res, next) => {
-    const {phone, userOrders} = req.body;
-    
-    User.findOne({ "user.phone": phone })
-        .then((user) => {
-            UserOrder.find({
-                "orderID": { $in: userOrders },
-                "user": user._id
-            })
-                .then(orders => {
-                    if (orders.length !== userOrders.length) {
-                        return res.status(403).json({
-                            code: 'L021',
-                            type: 'validatingUserOrder',
-                            message: 'User Order not found'
-                        })
-                    }
+    const { orderID, userOrders} = req.body;
+    const user = req._user;
 
-                    const foodpandaOrder = new FoodpandaOrder();
-                    foodpandaOrder.orderID = generateUUID();
-                    foodpandaOrder.user = user;
-                    foodpandaOrder.userOrders = orders;
-                    foodpandaOrder.storeID = req._storeID;
+    UserOrder.find({
+        "orderID": { $in: userOrders },
+        "user": user._id
+    })
+        .then(orders => {
+            if (orders.length !== userOrders.length) {
+                return res.status(403).json({
+                    code: 'L021',
+                    type: 'validatingUserOrder',
+                    message: 'User Order not found'
+                })
+            }
 
-                    return foodpandaOrder.save();
-                })
-                .then( _ => {
-                    return res.status(200).json()
-                })
-                .catch((_) => {
-                    return res.status(403).json({
-                        code: 'L021',
-                        type: 'validatingUserOrder',
-                        message: 'User Order not found'
-                    })
-                })
+            const foodpandaOrder = new FoodpandaOrder();
+            foodpandaOrder.orderID = orderID;
+            foodpandaOrder.user = user;
+            foodpandaOrder.userOrders = orders;
+            foodpandaOrder.storeID = req._storeID;
+
+            return foodpandaOrder.save();
+        })
+        .then( _ => {
+            return res.status(200).json()
         })
         .catch((_) => {
-            return res.status(401).json({
-                code: 'B002',
-                type: 'validatingUser',
-                message: 'User not Found'
+            return res.status(403).json({
+                code: 'L021',
+                type: 'validatingUserOrder',
+                message: 'User Order not found'
             })
         })
 })
 
 router.patch('/', validateRequest, validateLine, validateStoreCode, (res, req, next) => {
-    const { phone, userOrders, order } = req.body;
+    const { userOrders, order } = req.body;
+    const user = req._user;
 
-    User.findOne({ "user.phone": phone })
-        .then((user) => {
-            UserOrder.find({
-                "orderID": { $in: userOrders },
-                "user": user._id
-            })
-                .exec()
-                .then(orders => {
-                    if (orders.length !== userOrders.length) {
-                        return res.status(403).json({
-                            code: 'L021',
-                            type: 'validatingUserOrder',
-                            message: 'User Order not found'
-                        })
-                    }
+    UserOrder.find({
+        "orderID": { $in: userOrders },
+        "user": user._id
+    })
+        .exec()
+        .then(orders => {
+            if (orders.length !== userOrders.length) {
+                return res.status(403).json({
+                    code: 'L021',
+                    type: 'validatingUserOrder',
+                    message: 'User Order not found'
+                })
+            }
 
-                    return FoodpandaOrder
-                        .findOne({ orderID: order })
-                        .then((foodpandaOrder) => {
-                            foodpandaOrder.userOrders = orders
-                        })
-                        .catch(_ => {
-                            return res.status(403).json({
-                                code: 'L022',
-                                type: 'validatingFoodpandaOrder',
-                                message: 'Foodpanda Order not found'
-                            })
-                        })
+            return FoodpandaOrder
+                .findOne({ orderID: order })
+                .then((foodpandaOrder) => {
+                    foodpandaOrder.userOrders = orders
                 })
-                .then( _ => {
-                    return res.status(200).json()
-                })
-                .catch((_) => {
+                .catch(_ => {
                     return res.status(403).json({
-                        code: 'L021',
-                        type: 'validatingUserOrder',
-                        message: 'User Order not found'
+                        code: 'L022',
+                        type: 'validatingFoodpandaOrder',
+                        message: 'Foodpanda Order not found'
                     })
                 })
         })
+        .then( _ => {
+            return res.status(200).json()
+        })
         .catch((_) => {
-            return res.status(401).json({
-                code: 'B002',
-                type: 'validatingUser',
-                message: 'User not Found'
+            return res.status(403).json({
+                code: 'L021',
+                type: 'validatingUserOrder',
+                message: 'User Order not found'
             })
         })
 })
 
 router.put('/archive', validateRequest, validateLine, (req, res, next) => {
+    const { order, message } = req.body
 
 })
 
