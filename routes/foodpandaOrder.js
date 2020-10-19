@@ -16,6 +16,13 @@ const config = require("../config/config");
 const DataCacheFactory = require('../models/dataCacheFactory');
 const { generateUUID } = require('../helpers/tools');
 
+const mapFoodpandaOrderToPlainObject = (foodpandaOrder) => ({
+    orderID: order.orderID,
+    userOrders: order.userOrders,
+    storeID: order.storeID,
+    archived: order.archived
+})
+
 router.post('/', validateRequest, validateLine, validateStoreCode, (req, res, next) => {
     const { orderID, userOrders} = req.body;
     const user = req._user;
@@ -42,14 +49,10 @@ router.post('/', validateRequest, validateLine, validateStoreCode, (req, res, ne
             return foodpandaOrder.save();
         })
         .then( _ => {
-            return res.status(200).json()
+            return res.status(200).send()
         })
-        .catch((_) => {
-            return res.status(403).json({
-                code: 'L021',
-                type: 'validatingUserOrder',
-                message: 'User Order not found'
-            })
+        .catch( err => {
+            return res.status(422).json(err)
         })
 })
 
@@ -85,14 +88,10 @@ router.patch('/', validateRequest, validateLine, validateStoreCode, (res, req, n
                 })
         })
         .then( _ => {
-            return res.status(200).json()
+            return res.status(200).send()
         })
-        .catch((_) => {
-            return res.status(403).json({
-                code: 'L021',
-                type: 'validatingUserOrder',
-                message: 'User Order not found'
-            })
+        .catch( err => {
+            return res.status(422).json(err)
         })
 })
 
@@ -103,6 +102,10 @@ const sendLineMessage = (lineId, message) => {
 }
 
 setInterval(() => {
+    if (messages.length === 0) {
+        return
+    }
+
     fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
         if (err)
             return debug.error(err);
@@ -147,13 +150,57 @@ router.put('/archive', validateRequest, validateLine, (req, res, next) => {
         })
         .then(_ => {
             sendLineMessage(req._user.line_liff_userID, message);
+            return res.status(200).send()
         })
-        .catch(_ => {
-            return res.status(403).json({
-                code: 'L022',
-                type: 'validatingFoodpandaOrder',
-                message: 'Foodpanda Order not found'
-            })
+        .catch( err => {
+            return res.status(422).json(err)
+        })
+})
+
+router.get('/all', validateRequest, validateLine, (req, res, next) => {
+    const user = req._user
+    const archived = req.query.archived
+    const query = archived  === undefined 
+        ? {
+            "user": user._id
+        }
+        : {
+            "user": user._id,
+            "archived": archived
+        }
+
+    FoodpandaOrder
+        .find(query)
+        .exec()
+        .then(orders => {
+            return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
+        })
+        .catch( err => {
+            return res.status(422).json(err)
+        })
+})
+
+router.get('/:id', validateRequest, validateLine, (req, res, next) => {
+    const orderID = req.params.id
+
+    if (typeof orderID !== 'string' || orderID.length === 0) {
+        return res.status(403).json({
+            code: 'L024',
+            type: 'validatingFoodpandaOrder',
+            message: 'illegal orderID'
+        })
+    }
+
+    FoodpandaOrder.findOne({
+        "orderID": orderID
+    })
+        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
+        .exec()
+        .then((order) => {
+            return res.send(mapFoodpandaOrderToPlainObject(order))
+        })
+        .catch( err => {
+            return res.status(422).json(err)
         })
 })
 
