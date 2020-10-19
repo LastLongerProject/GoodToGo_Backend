@@ -176,9 +176,6 @@ router.get('/all', validateLine, (req, res, next) => {
             console.log(orders)
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
         })
-        .catch( err => {
-            return res.status(422).json(err)
-        })
 })
 
 router.get('/:id', validateLine, (req, res, next) => {
