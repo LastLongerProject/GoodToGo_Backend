@@ -16,7 +16,7 @@ const config = require("../config/config");
 const DataCacheFactory = require('../models/dataCacheFactory');
 const { generateUUID } = require('../helpers/tools');
 
-const mapFoodpandaOrderToPlainObject = (foodpandaOrder) => ({
+const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
     userOrders: order.userOrders,
     storeID: order.storeID,
@@ -175,6 +175,9 @@ router.get('/all', validateLine, (req, res, next) => {
         .then(orders => {
             console.log(orders)
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
+        })
+        .catch( err => {
+            return res.status(422).json(err)
         })
 })
 
