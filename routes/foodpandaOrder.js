@@ -168,11 +168,12 @@ router.get('/all', validateLine, (req, res, next) => {
             "user": user._id,
             "archived": archived
         }
-
+    console.log(query)
     FoodpandaOrder
         .find(query)
         .exec()
         .then(orders => {
+            console.log(orders)
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
         })
         .catch( err => {
@@ -192,7 +193,8 @@ router.get('/:id', validateLine, (req, res, next) => {
     }
 
     FoodpandaOrder.findOne({
-        "orderID": orderID
+        "orderID": orderID,
+        "user": req._user._id
     })
         .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
         .exec()
