@@ -23,7 +23,7 @@ const mapFoodpandaOrderToPlainObject = (foodpandaOrder) => ({
     archived: order.archived
 })
 
-router.post('/add', validateRequest, validateLine, validateStoreCode, (req, res, next) => {
+router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
     const { orderID, userOrders} = req.body;
     const user = req._user;
 
@@ -56,7 +56,7 @@ router.post('/add', validateRequest, validateLine, validateStoreCode, (req, res,
         })
 })
 
-router.patch('/update', validateRequest, validateLine, validateStoreCode, (res, req, next) => {
+router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
     const { userOrders, order } = req.body;
     const user = req._user;
 
@@ -125,7 +125,7 @@ setInterval(() => {
     });
 }, 1000)
 
-router.put('/archive', validateRequest, validateLine, (req, res, next) => {
+router.put('/archive', validateLine, (req, res, next) => {
     const { order, message } = req.body
 
     FoodpandaOrder.findOne({
@@ -157,7 +157,7 @@ router.put('/archive', validateRequest, validateLine, (req, res, next) => {
         })
 })
 
-router.get('/all', validateRequest, validateLine, (req, res, next) => {
+router.get('/all', validateLine, (req, res, next) => {
     const user = req._user
     const archived = req.query.archived
     const query = archived  === undefined 
@@ -180,7 +180,7 @@ router.get('/all', validateRequest, validateLine, (req, res, next) => {
         })
 })
 
-router.get('/:id', validateRequest, validateLine, (req, res, next) => {
+router.get('/:id', validateLine, (req, res, next) => {
     const orderID = req.params.id
 
     if (typeof orderID !== 'string' || orderID.length === 0) {
