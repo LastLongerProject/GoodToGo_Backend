@@ -23,7 +23,7 @@ const mapFoodpandaOrderToPlainObject = (foodpandaOrder) => ({
     archived: order.archived
 })
 
-router.post('/', validateRequest, validateLine, validateStoreCode, (req, res, next) => {
+router.post('/add', validateRequest, validateLine, validateStoreCode, (req, res, next) => {
     const { orderID, userOrders} = req.body;
     const user = req._user;
 
@@ -56,7 +56,7 @@ router.post('/', validateRequest, validateLine, validateStoreCode, (req, res, ne
         })
 })
 
-router.patch('/', validateRequest, validateLine, validateStoreCode, (res, req, next) => {
+router.patch('/update', validateRequest, validateLine, validateStoreCode, (res, req, next) => {
     const { userOrders, order } = req.body;
     const user = req._user;
 
