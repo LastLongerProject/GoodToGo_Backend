@@ -219,7 +219,7 @@ router.get('/:id', validateLine, (req, res, next) => {
             return res.send(mapFoodpandaOrderToPlainObject(order))
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(404).json(err)
         })
 })
 
