@@ -128,7 +128,7 @@ setInterval(() => {
             return debug.error(err);
         webhookSubmission = JSON.parse(webhookSubmission);
         request
-            .post(webhookSubmission.message, {
+            .post(webhookSubmission.message.url, {
                 messages
             })
             .then(() => {
