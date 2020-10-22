@@ -68,6 +68,14 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
     const { userOrders, order } = req.body;
     const user = req._user;
 
+    if (userOrders.length === 0) {
+        return res.status(403).json({
+            code: 'L025',
+            type: 'validatingUserOrders',
+            message: 'You should at least assign one user order'
+        })
+    }
+
     UserOrder.find({
         "orderID": { $in: userOrders },
         "user": user._id
@@ -179,6 +187,7 @@ router.get('/all', validateLine, (req, res, next) => {
     console.log(query)
     FoodpandaOrder
         .find(query)
+        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
         .exec()
         .then(orders => {
             console.log(orders)
