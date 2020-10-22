@@ -51,7 +51,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
             const foodpandaOrder = new FoodpandaOrder();
             foodpandaOrder.orderID = orderID;
             foodpandaOrder.user = user;
-            foodpandaOrder.userOrders = orders;
+            foodpandaOrder.userOrders = orders.map(order=>order._id);
             foodpandaOrder.storeID = req._storeID;
 
             return foodpandaOrder.save();
@@ -85,7 +85,7 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
             return FoodpandaOrder
                 .findOne({ orderID: order })
                 .then((foodpandaOrder) => {
-                    foodpandaOrder.userOrders = orders
+                    foodpandaOrder.userOrders = orders.map(order=>order._id)
                 })
                 .catch(_ => {
                     return res.status(403).json({
