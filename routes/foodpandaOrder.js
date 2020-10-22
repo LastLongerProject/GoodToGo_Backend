@@ -24,8 +24,16 @@ const mapFoodpandaOrderToPlainObject = (order) => ({
 })
 
 router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
-    const { orderID, userOrders} = req.body;
+    const { orderID, userOrders } = req.body;
     const user = req._user;
+
+    if (userOrders.length === 0) {
+        return res.status(403).json({
+            code: 'L025',
+            type: 'validatingUserOrders',
+            message: 'You should at least assign one user order'
+        })
+    }
 
     UserOrder.find({
         "orderID": { $in: userOrders },
