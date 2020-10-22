@@ -115,6 +115,7 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
 let messages = []
 
 const sendLineMessage = (lineId, message) => {
+    debug.log(`Send message to ${lineId}`)
     messages.push({ lineId, message })
 }
 
