@@ -162,7 +162,7 @@ router.put('/archive', validateLine, (req, res, next) => {
             return foodpandaOrder.save()
         })
         .then(_ => {
-            sendLineMessage(req._user.line_channel_userID | req._user.line_liff_userID, message);
+            sendLineMessage(req._user.user.line_channel_userID | req._user.user.line_liff_userID, message);
             return res.status(200).send()
         })
         .catch( err => {
