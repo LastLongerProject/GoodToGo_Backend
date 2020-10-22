@@ -48,6 +48,7 @@ module.exports = Object.freeze({
     RentalQualification: Object.freeze({
         BANNED: "banned",
         OUT_OF_QUOTA: "out_of_quota",
+        PERMISSION_DENIED: "permission_denied",
         AVAILABLE: "available"
     }),
     DueDays: Object.freeze({ // Remember to add one
