@@ -163,7 +163,7 @@ router.put('/archive', validateLine, (req, res, next) => {
         })
         .then(_ => {
             console.log(req._user, req._user.user, message)
-            sendLineMessage(req._user.user.line_channel_userID | req._user.user.line_liff_userID, message);
+            sendLineMessage(req._user.user.line_channel_userID || req._user.user.line_liff_userID, message);
             return res.status(200).send()
         })
         .catch( err => {
