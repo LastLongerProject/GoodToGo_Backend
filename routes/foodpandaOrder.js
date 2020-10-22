@@ -127,18 +127,13 @@ setInterval(() => {
         if (err)
             return debug.error(err);
         webhookSubmission = JSON.parse(webhookSubmission);
-        webhookSubmission.client.forEach(aClient => {
-            if ((typeof aClient.event_listened === "string" && aClient.event_listened === "all") ||
-                (Array.isArray(aClient.event_listened) && aClient.event_listened.indexOf(this.options.event) !== -1)) {
-                    request
-                    .post(aClient.url, {
-                        messages
-                    })
-                    .then(() => {
-                        messages = []
-                    })
-            }
-        });
+        request
+            .post(webhookSubmission.message, {
+                messages
+            })
+            .then(() => {
+                messages = []
+            })
     });
 }, 1000)
 
