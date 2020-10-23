@@ -784,8 +784,11 @@ router.get('/getUser/:phone', checkRoleIs([{
 }]), validateRequest, function (req, res, next) {
     const dbRole = req._thisRole;
     const thisRoleType = dbRole.roleType;
+    let thisStoreCategory;
     let thisStoreID;
     try {
+        thisStoreCategory = dbRole.getElement(RoleElement.STORE_CATEGORY, false);
+
         switch (thisRoleType) {
             case RoleType.BOT:
                 thisStoreID = dbRole.getElement(RoleElement.RENT_FROM_STORE_ID, true);
@@ -839,6 +842,14 @@ router.get('/getUser/:phone', checkRoleIs([{
                     return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
             }
 
+            if (thisStoreCategory === 0 && (dbUser.agreeTerms === false)) {
+                return res.status(403).json({
+                    code: 'F017',
+                    type: 'userSearchingError',
+                    message: 'The user is not verified'
+                });
+            }
+            
             var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
             redis.setex('user_token:' + token, 60 * 30, dbUser.user.phone, (err, reply) => {
                 if (err) return next(err);
