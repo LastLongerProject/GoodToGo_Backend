@@ -8,6 +8,7 @@ module.exports = Object.freeze({
         CLEAN_STATION: "station"
     }),
     RoleElement: Object.freeze({
+        STORE_CATEGORY: 'category',
         STORE_ID: "storeID",
         STORE_NAME: "storeName",
         STATION_ID: "stationID",
