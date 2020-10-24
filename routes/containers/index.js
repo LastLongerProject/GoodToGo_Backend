@@ -156,7 +156,7 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                         return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
                 }
 
-                if (thisStoreCategory === 0 && (theCustomer.agreeTerms === false)) {
+                if (thisStoreCategory === 0 && theCustomer.hasVerified === false) {
                     return res.status(403).json({
                         code: 'F017',
                         type: 'userSearchingError',

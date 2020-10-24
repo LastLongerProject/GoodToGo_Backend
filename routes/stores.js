@@ -842,7 +842,7 @@ router.get('/getUser/:phone', checkRoleIs([{
                     return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
             }
 
-            if (thisStoreCategory === 0 && (dbUser.agreeTerms === false)) {
+            if (thisStoreCategory === 0 && dbUser.hasVerified === false) {
                 return res.status(403).json({
                     code: 'F017',
                     type: 'userSearchingError',
