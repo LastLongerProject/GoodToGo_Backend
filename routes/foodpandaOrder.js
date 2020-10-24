@@ -61,7 +61,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -108,7 +108,7 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -166,7 +166,7 @@ router.put('/archive', validateLine, (req, res, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -191,7 +191,7 @@ router.get('/all', validateLine, (req, res, next) => {
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -216,7 +216,7 @@ router.get('/:id', validateLine, (req, res, next) => {
             return res.send(mapFoodpandaOrderToPlainObject(order))
         })
         .catch( err => {
-            return res.status(404).json(err)
+            return res.status(404).send(err)
         })
 })
 
