@@ -5,17 +5,12 @@ const request = require('axios');
 
 const debug = require('../helpers/debugger')('foodpandaOrder');
 
-const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
 
 const FoodpandaOrder = require('../models/DB/foodpandaOrderDB');
 const UserOrder = require('../models/DB/userOrderDB');
-const User = require('../models/DB/userDB');
 const config = require("../config/config");
-
-const DataCacheFactory = require('../models/dataCacheFactory');
-const { generateUUID } = require('../helpers/tools');
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
