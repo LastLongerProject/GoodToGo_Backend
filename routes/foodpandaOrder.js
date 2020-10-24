@@ -5,17 +5,12 @@ const request = require('axios');
 
 const debug = require('../helpers/debugger')('foodpandaOrder');
 
-const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 const validateLine = require('../middlewares/validation/authorization/validateLine').all;
 const validateStoreCode = require('../middlewares/validation/content/userOrder').storeCode;
 
 const FoodpandaOrder = require('../models/DB/foodpandaOrderDB');
 const UserOrder = require('../models/DB/userOrderDB');
-const User = require('../models/DB/userDB');
 const config = require("../config/config");
-
-const DataCacheFactory = require('../models/dataCacheFactory');
-const { generateUUID } = require('../helpers/tools');
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
@@ -61,7 +56,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -108,7 +103,7 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -166,7 +161,7 @@ router.put('/archive', validateLine, (req, res, next) => {
             return res.status(200).send()
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -191,7 +186,7 @@ router.get('/all', validateLine, (req, res, next) => {
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
         })
         .catch( err => {
-            return res.status(422).json(err)
+            return res.status(422).send(err)
         })
 })
 
@@ -216,7 +211,7 @@ router.get('/:id', validateLine, (req, res, next) => {
             return res.send(mapFoodpandaOrderToPlainObject(order))
         })
         .catch( err => {
-            return res.status(404).json(err)
+            return res.status(404).send(err)
         })
 })
 
