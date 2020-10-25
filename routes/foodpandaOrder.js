@@ -186,9 +186,9 @@ router.get('/candidates', validateLine, (req, res, next) => {
         .find({
             "archived": false
         })
-        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
+        .populate({ path: 'userOrders', select: 'orderID containerID storeID archived orderTime -_id'})
         .exec()
-        .then(orders => {
+        .then(orders => {            
             return res.send(orders.filter(order => order.userOrders.find(o => o.archived === false) === undefined).map(order => mapFoodpandaOrderToPlainObject(order)))
         })
 })
@@ -207,7 +207,7 @@ router.get('/all', validateLine, (req, res, next) => {
     
     FoodpandaOrder
         .find(query)
-        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
+        .populate({ path: 'userOrders', select: 'orderID containerID storeID archived orderTime -_id'})
         .exec()
         .then(orders => {
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
@@ -232,7 +232,7 @@ router.get('/:id', validateLine, (req, res, next) => {
         "orderID": orderID,
         "user": req._user._id
     })
-        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
+        .populate({ path: 'userOrders', select: 'orderID containerID storeID archived orderTime -_id'})
         .exec()
         .then((order) => {
             return res.send(mapFoodpandaOrderToPlainObject(order))
