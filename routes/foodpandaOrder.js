@@ -181,6 +181,18 @@ router.put('/archive', validateLine, (req, res, next) => {
         })
 })
 
+router.get('/candidates', validateLine, (req, res, next) => {
+    FoodpandaOrder
+        .find({
+            "archived": false
+        })
+        .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
+        .exec()
+        .then(orders => {
+            return res.send(orders.filter(order => order.userOrders.find(o => o.archived === false) === undefined).map(order => mapFoodpandaOrderToPlainObject(order)))
+        })
+})
+
 router.get('/all', validateLine, (req, res, next) => {
     const user = req._user
     const archived = req.query.archived
