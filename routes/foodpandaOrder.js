@@ -52,7 +52,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
         "user": user._id
     })
         .then(orders => {
-            if (orders.length !== userOrders.length) {
+            if (orders.filter(order=>order.storeID === req._storeID).length !== userOrders.length) {
                 return res.status(403).json({
                     code: 'L021',
                     type: 'validatingUserOrder',
@@ -204,13 +204,12 @@ router.get('/all', validateLine, (req, res, next) => {
             "user": user._id,
             "archived": archived
         }
-    console.log(query)
+    
     FoodpandaOrder
         .find(query)
         .populate({ path: 'userOrders', select: 'containerID storeID archived orderTime'})
         .exec()
         .then(orders => {
-            console.log(orders)
             return res.send(orders.map(order => mapFoodpandaOrderToPlainObject(order)))
         })
         .catch( err => {
