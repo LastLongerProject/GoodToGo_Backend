@@ -48,6 +48,7 @@ const DataCacheFactory = require('../models/dataCacheFactory');
  *	        ],
  *	        orderListWithID : [
  *		    {
+ *              orderID : String,
  *			    containerID : String, // #001
  *			    containerType : String, // 12oz 玻璃杯
  *			    orderTime : Date,
@@ -88,6 +89,7 @@ router.get('/list', validateLine, function (req, res, next) {
                 }
             } else {
                 let aFormattedUserOrder = {
+                    orderID: aUserOrder.orderID,
                     containerID: `#${intReLength(aUserOrder.containerID, 4)}`,
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
