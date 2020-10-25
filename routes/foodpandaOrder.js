@@ -23,16 +23,29 @@ router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     const { foodpandaOrderID } = req.params
     
     if (foodpandaOrderID === 'test-test') {
-        return res.status(404).json({
+        return res.status(403).json({
             code: 'L026',
             type: 'validatingFoodpandaOrder',
             message: 'Illegal FoodpandaOrder'
         })
     }
 
-    return res.json({
-        storeCode: "0173"
+    FoodpandaOrder.findOne({
+        "orderID": foodpandaOrderID
     })
+        .exec()
+        .then(order => {
+            return res.status(403).json({
+                code: 'L027',
+                type: 'validatingFoodpandaOrder',
+                message: 'Order had been registered'
+            })
+        })
+        .catch( err => {
+            return res.json({
+                storeCode: "0173"
+            })
+        })
 })
 
 router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
