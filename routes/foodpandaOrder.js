@@ -35,16 +35,20 @@ router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     })
         .exec()
         .then(order => {
-            return res.status(403).json({
-                code: 'L027',
-                type: 'validatingFoodpandaOrder',
-                message: 'Order had been registered'
-            })
-        })
-        .catch( err => {
+            if (order) {
+                return res.status(403).json({
+                    code: 'L027',
+                    type: 'validatingFoodpandaOrder',
+                    message: 'Order had been registered'
+                })  
+            }
+
             return res.json({
                 storeCode: "0173"
             })
+        })
+        .catch( err => {
+            return res.status(422).send(err)
         })
 })
 
