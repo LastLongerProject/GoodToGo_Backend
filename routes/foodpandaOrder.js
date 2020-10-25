@@ -19,6 +19,22 @@ const mapFoodpandaOrderToPlainObject = (order) => ({
     archived: order.archived
 })
 
+router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
+    const { foodpandaOrderID } = req.params
+    
+    if (foodpandaOrderID === 'test-test') {
+        return res.status(404).json({
+            code: 'L026',
+            type: 'validatingFoodpandaOrder',
+            message: 'Illegal FoodpandaOrder'
+        })
+    }
+
+    return res.json({
+        storeCode: "0173"
+    })
+})
+
 router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
     const { orderID, userOrders } = req.body;
     const user = req._user;
