@@ -33,13 +33,18 @@ router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     FoodpandaOrder.findOne({
         "orderID": foodpandaOrderID
     })
+        .populate({ path: 'userOrders', select: 'containerID -_id'})
         .exec()
         .then(order => {
             if (order) {
                 return res.status(403).json({
                     code: 'L027',
                     type: 'validatingFoodpandaOrder',
-                    message: 'Order had been registered'
+                    message: 'Order had been registered',
+                    data: {
+                        orderId: order.orderID,
+                        containers: order.userOrders.map(userOrder => userOrder.containerID)
+                    }
                 })  
             }
 
