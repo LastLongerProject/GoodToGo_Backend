@@ -344,6 +344,35 @@ router.get('/all', validateLine, (req, res, next) => {
         })
 })
 
+router.delete('/:id', validateLine, (req, res, next) => {
+    queue.push(cb => {
+        const orderID = req.params.id
+
+        if (typeof orderID !== 'string' || orderID.length === 0) {
+            return res.status(403).json({
+                code: 'L024',
+                type: 'validatingFoodpandaOrder',
+                message: 'illegal orderID'
+            })
+        }
+
+        FoodpandaOrder.findOneAndDelete({
+            "orderID": orderID,
+            "user": req._user._id
+        })
+            .exec()
+            .then(order => {
+                order.userOrders.forEach(userOrderID => {
+                    redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
+                })
+            })
+            .catch((err) => {
+                return res.status(404).json(err)
+            })
+            .then(() => cb())
+    })
+})
+
 router.get('/:id', validateLine, (req, res, next) => {
     const orderID = req.params.id
 
