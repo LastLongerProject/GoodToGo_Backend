@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const request = require('axios');
-
+const redis = require('../models/redis');
 const debug = require('../helpers/debugger')('foodpandaOrder');
 
 const validateLine = require('../middlewares/validation/authorization/validateLine').all;
@@ -112,7 +112,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
                     }
                 })
             }
-            
+
             UserOrder.find({
                 "orderID": { $in: userOrders },
                 "user": user._id
@@ -125,17 +125,50 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
                             message: 'User Order not found'
                         })
                     }
-        
-                    const foodpandaOrder = new FoodpandaOrder();
-                    foodpandaOrder.orderID = orderID;
-                    foodpandaOrder.user = user;
-                    foodpandaOrder.userOrders = orders.map(order=>order._id);
-                    foodpandaOrder.storeID = req._storeID;
-        
-                    return foodpandaOrder.save();
+
+                    const promises = userOrders.map(userOrderID => {
+                        new Promise((resolve, reject) => {
+                            redis.get(`foodpandaOrder:usedUserOrders:${userOrderID}`, (err, string) => {
+                                if (err) {
+                                    return reject(err)
+                                }
+                                return resolve(string)
+                            })
+                        })
+                            .then(string => {
+                                if (string === 'true') {
+                                    return false
+                                }
+                                return true
+                            })
+                    })
+
+                    return Promise.all(promises)
+                        .then(values => {
+                            if (values.includes(false)) {
+                                return res.status(403).json({
+                                    code: 'L028',
+                                    type: 'validatingUserOrder',
+                                    message: 'User Order has been registered'
+                                })
+                            }
+                        })
+                        .then(() => {
+                            const foodpandaOrder = new FoodpandaOrder();
+                            foodpandaOrder.orderID = orderID;
+                            foodpandaOrder.user = user;
+                            foodpandaOrder.userOrders = orders.map(order=>order._id);
+                            foodpandaOrder.storeID = req._storeID;
+                
+                            return foodpandaOrder.save();
+                        })
                 })
                 .then( _ => {
-                    return res.status(200).send()
+                    userOrders.forEach(userOrderID => {
+                        redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'true')
+                    })
+                    
+                    res.status(200).send()
                 })
                 .catch( err => {
                     return res.status(422).send(err)
