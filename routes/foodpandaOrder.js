@@ -362,9 +362,11 @@ router.delete('/:id', validateLine, (req, res, next) => {
         })
             .exec()
             .then(order => {
+                console.log(order.userOrders)
                 order.userOrders.forEach(userOrderID => {
                     redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
                 })
+                return res.status(200).send()
             })
             .catch((err) => {
                 return res.status(404).json(err)
