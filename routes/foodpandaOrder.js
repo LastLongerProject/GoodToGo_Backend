@@ -385,7 +385,7 @@ router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, n
     UserOrder.find({
         "storeID": storeID,
         "user": req._user._id,
-        "archieved": false,
+        "archived": false,
         "containerID": { $ne: null } 
     })
         .exec()
