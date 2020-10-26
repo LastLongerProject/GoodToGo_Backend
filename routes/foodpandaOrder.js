@@ -101,17 +101,18 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
         .populate({ path: 'userOrders', select: 'containerID -_id'})
         .exec()
         .then(order => {
-            return res.status(403).json({
-                code: 'L027',
-                type: 'validatingFoodpandaOrder',
-                message: 'Order had been registered',
-                data: {
-                    orderId: order.orderID,
-                    containers: order.userOrders.map(userOrder => userOrder.containerID)
-                }
-            })
-        })
-        .catch(() => {
+            if (order) {
+                return res.status(403).json({
+                    code: 'L027',
+                    type: 'validatingFoodpandaOrder',
+                    message: 'Order had been registered',
+                    data: {
+                        orderId: order.orderID,
+                        containers: order.userOrders.map(userOrder => userOrder.containerID)
+                    }
+                })
+            }
+            
             UserOrder.find({
                 "orderID": { $in: userOrders },
                 "user": user._id
@@ -139,6 +140,9 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
                 .catch( err => {
                     return res.status(422).send(err)
                 })
+        })
+        .catch(err => {
+            return res.status(422).json(err)
         })
 })
 
