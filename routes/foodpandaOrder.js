@@ -378,31 +378,6 @@ router.delete('/:id', validateLine, (req, res, next) => {
     })
 })
 
-router.get('/:id', validateLine, (req, res, next) => {
-    const orderID = req.params.id
-
-    if (typeof orderID !== 'string' || orderID.length === 0) {
-        return res.status(403).json({
-            code: 'L024',
-            type: 'validatingFoodpandaOrder',
-            message: 'illegal orderID'
-        })
-    }
-
-    FoodpandaOrder.findOne({
-        "orderID": orderID,
-        "user": req._user._id
-    })
-        .populate({ path: 'userOrders', select: 'orderID containerID storeID archived orderTime -_id'})
-        .exec()
-        .then((order) => {
-            return res.send(mapFoodpandaOrderToPlainObject(order))
-        })
-        .catch( err => {
-            return res.status(404).send(err)
-        })
-})
-
 router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, next) => {
     const storeID = req._storeID
     const now = Date.now()
@@ -433,6 +408,31 @@ router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, n
             return res.send(orders)
         })
         .catch(err => res.status(422).send(err))
+})
+
+router.get('/:id', validateLine, (req, res, next) => {
+    const orderID = req.params.id
+
+    if (typeof orderID !== 'string' || orderID.length === 0) {
+        return res.status(403).json({
+            code: 'L024',
+            type: 'validatingFoodpandaOrder',
+            message: 'illegal orderID'
+        })
+    }
+
+    FoodpandaOrder.findOne({
+        "orderID": orderID,
+        "user": req._user._id
+    })
+        .populate({ path: 'userOrders', select: 'orderID containerID storeID archived orderTime -_id'})
+        .exec()
+        .then((order) => {
+            return res.send(mapFoodpandaOrderToPlainObject(order))
+        })
+        .catch( err => {
+            return res.status(404).send(err)
+        })
 })
 
 module.exports = router;
