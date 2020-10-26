@@ -94,6 +94,7 @@ router.get('/list', validateLine, function (req, res, next) {
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
                     storeName: StoreDict[aUserOrder.storeID].name,
+                    storeID: aUserOrder.storeID,
                     daysToDue
                 };
                 orderListWithID.push(aFormattedUserOrder);
