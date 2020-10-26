@@ -360,11 +360,12 @@ router.delete('/:id', validateLine, (req, res, next) => {
             "orderID": orderID,
             "user": req._user._id
         })
+            .populate({ path: 'userOrders', select: 'orderID -_id'})
             .exec()
             .then(order => {
                 console.log(order.userOrders)
-                order.userOrders.forEach(userOrderID => {
-                    redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
+                order.userOrders.forEach(userOrder => {
+                    redis.set(`foodpandaOrder:usedUserOrders:${userOrder.orderID}`, 'false')
                 })
                 return res.status(200).send()
             })
