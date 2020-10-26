@@ -11,6 +11,9 @@ const validateStoreCode = require('../middlewares/validation/content/userOrder')
 const FoodpandaOrder = require('../models/DB/foodpandaOrderDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const config = require("../config/config");
+const { intReLength } = require('../helpers/toolkit');
+const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
+const DataCacheFactory = require('../models/dataCacheFactory');
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
@@ -398,6 +401,38 @@ router.get('/:id', validateLine, (req, res, next) => {
         .catch( err => {
             return res.status(404).send(err)
         })
+})
+
+router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, next) => {
+    const storeID = req._storeID
+    const now = Date.now()
+
+    UserOrder.find({
+        "storeID": storeID,
+        "user": req._user._id,
+        "archieved": false,
+        "containerID": { $ne: null } 
+    })
+        .exec()
+        .then(userOrders => {
+            const orders = userOrders.map(userOrder => {
+                const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+                const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+                const daysToDue = computeDaysToDue(userOrder.orderTime, req._user.getPurchaseStatus(), now);
+                return ({
+                    orderID: userOrder.orderID,
+                    containerID: `#${intReLength(userOrder.containerID, 4)}`,
+                    containerType: ContainerDict[userOrder.containerID],
+                    orderTime: userOrder.orderTime,
+                    storeName: StoreDict[userOrder.storeID].name,
+                    storeID: userOrder.storeID,
+                    daysToDue
+                })
+            })
+
+            return res.send(orders)
+        })
+        .catch(err => res.status(422).send(err))
 })
 
 module.exports = router;
