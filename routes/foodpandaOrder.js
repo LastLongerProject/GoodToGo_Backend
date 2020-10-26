@@ -19,6 +19,11 @@ const mapFoodpandaOrderToPlainObject = (order) => ({
     archived: order.archived
 })
 
+const queue = require('queue')({
+    concurrency: 1,
+    autostart: true
+});
+
 const foodpandaOrderIDStoreCodeMap = {
     "z0lf": "2324",
     "h3cs": "2337",
@@ -85,145 +90,161 @@ router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
 })
 
 router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
-    const { orderID, userOrders } = req.body;
-    const user = req._user;
+    queue.push(cb => {
+        const { orderID, userOrders } = req.body;
+        const user = req._user;
 
-    if (userOrders.length === 0) {
-        return res.status(403).json({
-            code: 'L025',
-            type: 'validatingUserOrders',
-            message: 'You should at least assign one user order'
-        })
-    }
-
-    FoodpandaOrder
-        .findOne({"orderID": orderID})
-        .populate({ path: 'userOrders', select: 'containerID -_id'})
-        .exec()
-        .then(order => {
-            if (order) {
-                return res.status(403).json({
-                    code: 'L027',
-                    type: 'validatingFoodpandaOrder',
-                    message: 'Order had been registered',
-                    data: {
-                        orderId: order.orderID,
-                        containers: order.userOrders.map(userOrder => userOrder.containerID)
-                    }
-                })
-            }
-
-            UserOrder.find({
-                "orderID": { $in: userOrders },
-                "user": user._id
+        if (userOrders.length === 0) {
+            return res.status(403).json({
+                code: 'L025',
+                type: 'validatingUserOrders',
+                message: 'You should at least assign one user order'
             })
-                .then(orders => {
-                    if (orders.filter(order=>order.storeID === req._storeID).length !== userOrders.length) {
-                        return res.status(403).json({
-                            code: 'L021',
-                            type: 'validatingUserOrder',
-                            message: 'User Order not found'
-                        })
-                    }
+        }
 
-                    const promises = userOrders.map(userOrderID => {
-                        new Promise((resolve, reject) => {
-                            redis.get(`foodpandaOrder:usedUserOrders:${userOrderID}`, (err, string) => {
-                                if (err) {
-                                    return reject(err)
-                                }
-                                return resolve(string)
-                            })
-                        })
-                            .then(string => {
-                                if (string === 'true') {
-                                    return false
-                                }
-                                return true
-                            })
+        FoodpandaOrder
+            .findOne({"orderID": orderID})
+            .populate({ path: 'userOrders', select: 'containerID -_id'})
+            .exec()
+            .then(order => {
+                if (order) {
+                    return res.status(403).json({
+                        code: 'L027',
+                        type: 'validatingFoodpandaOrder',
+                        message: 'Order had been registered',
+                        data: {
+                            orderId: order.orderID,
+                            containers: order.userOrders.map(userOrder => userOrder.containerID)
+                        }
                     })
+                }
 
-                    return Promise.all(promises)
-                        .then(values => {
-                            if (values.includes(false)) {
-                                throw {
-                                    code: 'L028',
-                                    type: 'validatingUserOrder',
-                                    message: 'User Order has been registered'
-                                }
-                            }
-                        })
-                        .then(result => {
-                            const foodpandaOrder = new FoodpandaOrder();
-                            foodpandaOrder.orderID = orderID;
-                            foodpandaOrder.user = user;
-                            foodpandaOrder.userOrders = orders.map(order=>order._id);
-                            foodpandaOrder.storeID = req._storeID;
-                
-                            return foodpandaOrder.save();
-                        })
+                UserOrder.find({
+                    "orderID": { $in: userOrders },
+                    "user": user._id
                 })
-                .then( _ => {
-                    userOrders.forEach(userOrderID => {
-                        redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'true')
-                    })
+                    .then(orders => {
+                        if (orders.filter(order=>order.storeID === req._storeID).length !== userOrders.length) {
+                            return res.status(403).json({
+                                code: 'L021',
+                                type: 'validatingUserOrder',
+                                message: 'User Order not found'
+                            })
+                        }
+
+                        const promises = userOrders.map(userOrderID => {
+                            return new Promise((resolve, reject) => {
+                                redis.get(`foodpandaOrder:usedUserOrders:${userOrderID}`, (err, string) => {
+                                    if (err) {
+                                        return reject(err)
+                                    }
+                                    return resolve(string)
+                                })
+                            })
+                                .then(string => {
+                                    if (string === 'true') {
+                                        return false
+                                    }
+                                    return true
+                                })
+                        })
+
+                        return Promise.all(promises)
+                            .then(values => {
+                                if (values.includes(false)) {
+                                    throw {
+                                        code: 'L028',
+                                        type: 'validatingUserOrder',
+                                        message: 'User Order has been registered'
+                                    }
+                                }
+                            })
+                            .then(_ => {
+                                const foodpandaOrder = new FoodpandaOrder();
+                                foodpandaOrder.orderID = orderID;
+                                foodpandaOrder.user = user;
+                                foodpandaOrder.userOrders = orders.map(order=>order._id);
+                                foodpandaOrder.storeID = req._storeID;
                     
-                    res.status(200).send()
-                })
-                .catch( err => {
-                    return res.status(typeof err.code === 'string' ? 403 : 422).send(err)
-                })
-        })
-        .catch(err => {
-            return res.status(422).json(err)
-        })
+                                return foodpandaOrder.save();
+                            })
+                    })
+                    .then( _ => {
+                        userOrders.forEach(userOrderID => {
+                            redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'true')
+                        })
+                        
+                        res.status(200).send()
+                    })
+                    .catch( err => {
+                        return res.status(typeof err.code === 'string' ? 403 : 422).send(err)
+                    })
+            })
+            .catch(err => {
+                return res.status(422).json(err)
+            })
+            .then(() => cb())
+    })
 })
 
 router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
-    const { userOrders, order } = req.body;
-    const user = req._user;
+    queue.push(cb => {
+        const { userOrders, order } = req.body;
+        const user = req._user;
 
-    if (userOrders.length === 0) {
-        return res.status(403).json({
-            code: 'L025',
-            type: 'validatingUserOrders',
-            message: 'You should at least assign one user order'
+        if (userOrders.length === 0) {
+            return res.status(403).json({
+                code: 'L025',
+                type: 'validatingUserOrders',
+                message: 'You should at least assign one user order'
+            })
+        }
+
+        UserOrder.find({
+            "orderID": { $in: userOrders },
+            "user": user._id
         })
-    }
-
-    UserOrder.find({
-        "orderID": { $in: userOrders },
-        "user": user._id
-    })
-        .exec()
-        .then(orders => {
-            if (orders.length !== userOrders.length) {
-                return res.status(403).json({
-                    code: 'L021',
-                    type: 'validatingUserOrder',
-                    message: 'User Order not found'
-                })
-            }
-
-            return FoodpandaOrder
-                .findOne({ orderID: order })
-                .then((foodpandaOrder) => {
-                    foodpandaOrder.userOrders = orders.map(order=>order._id)
-                })
-                .catch(_ => {
+            .exec()
+            .then(orders => {
+                if (orders.length !== userOrders.length) {
                     return res.status(403).json({
-                        code: 'L022',
-                        type: 'validatingFoodpandaOrder',
-                        message: 'Foodpanda Order not found'
+                        code: 'L021',
+                        type: 'validatingUserOrder',
+                        message: 'User Order not found'
                     })
-                })
-        })
-        .then( _ => {
-            return res.status(200).send()
-        })
-        .catch( err => {
-            return res.status(422).send(err)
-        })
+                }
+                let originOrders = []
+                return FoodpandaOrder
+                    .findOne({ orderID: order })
+                    .then((foodpandaOrder) => {
+                        originOrders = foodpandaOrder.userOrders
+                        foodpandaOrder.userOrders = orders.map(order=>order._id)
+                        return foodpandaOrder.save()
+                    })
+                    .then(() => {
+                        originOrders.forEach(userOrderID => {
+                            redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
+                        })
+                        userOrders.forEach(userOrderID => {
+                            redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'true')
+                        })
+                    })
+                    .catch(_ => {
+                        return res.status(403).json({
+                            code: 'L022',
+                            type: 'validatingFoodpandaOrder',
+                            message: 'Foodpanda Order not found'
+                        })
+                    })
+            })
+            .then( _ => {
+                return res.status(200).send()
+            })
+            .catch( err => {
+                return res.status(422).send(err)
+            })
+            .then(() => cb())
+    })
 })
 
 let messages = []
@@ -253,35 +274,38 @@ setInterval(() => {
 }, 1000)
 
 router.put('/archive', validateLine, (req, res, next) => {
-    const { order, message } = req.body
+    queue.push(cb => {
+        const { order, message } = req.body
 
-    FoodpandaOrder.findOne({
-        "orderID": order,
-        "user": req._user._id
+        FoodpandaOrder.findOne({
+            "orderID": order,
+            "user": req._user._id
+        })
+            .populate([{ path: 'userOrders', select: 'archived'}])
+            .exec()
+            .then((foodpandaOrder) => {
+                const shouldFail = foodpandaOrder.userOrders.map((userOrder) => userOrder.archived).includes(false);
+
+                if (shouldFail) {
+                    return res.status(403).json({
+                        code: 'L023',
+                        type: 'validatingFoodpandaOrder',
+                        message: 'User Orders not finished'
+                    })
+                }
+
+                foodpandaOrder.archived = true;
+                return foodpandaOrder.save()
+            })
+            .then(_ => {
+                sendLineMessage(req._user.user.line_channel_userID || req._user.user.line_liff_userID, message);
+                return res.status(200).send()
+            })
+            .catch( err => {
+                return res.status(422).send(err)
+            })
+            .then(() => cb())
     })
-        .populate([{ path: 'userOrders', select: 'archived'}])
-        .exec()
-        .then((foodpandaOrder) => {
-            const shouldFail = foodpandaOrder.userOrders.map((userOrder) => userOrder.archived).includes(false);
-
-            if (shouldFail) {
-                return res.status(403).json({
-                    code: 'L023',
-                    type: 'validatingFoodpandaOrder',
-                    message: 'User Orders not finished'
-                })
-            }
-
-            foodpandaOrder.archived = true;
-            return foodpandaOrder.save()
-        })
-        .then(_ => {
-            sendLineMessage(req._user.user.line_channel_userID || req._user.user.line_liff_userID, message);
-            return res.status(200).send()
-        })
-        .catch( err => {
-            return res.status(422).send(err)
-        })
 })
 
 router.get('/candidates', validateLine, (req, res, next) => {
