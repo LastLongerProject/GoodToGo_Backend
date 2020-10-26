@@ -146,14 +146,14 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
                     return Promise.all(promises)
                         .then(values => {
                             if (values.includes(false)) {
-                                return res.status(403).json({
+                                throw {
                                     code: 'L028',
                                     type: 'validatingUserOrder',
                                     message: 'User Order has been registered'
-                                })
+                                }
                             }
                         })
-                        .then(() => {
+                        .then(result => {
                             const foodpandaOrder = new FoodpandaOrder();
                             foodpandaOrder.orderID = orderID;
                             foodpandaOrder.user = user;
@@ -171,7 +171,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
                     res.status(200).send()
                 })
                 .catch( err => {
-                    return res.status(422).send(err)
+                    return res.status(typeof err.code === 'string' ? 403 : 422).send(err)
                 })
         })
         .catch(err => {
