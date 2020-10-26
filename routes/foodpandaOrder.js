@@ -69,32 +69,48 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
         })
     }
 
-    UserOrder.find({
-        "orderID": { $in: userOrders },
-        "user": user._id
-    })
-        .then(orders => {
-            if (orders.filter(order=>order.storeID === req._storeID).length !== userOrders.length) {
-                return res.status(403).json({
-                    code: 'L021',
-                    type: 'validatingUserOrder',
-                    message: 'User Order not found'
+    FoodpandaOrder
+        .findOne({"orderID": orderID})
+        .exec()
+        .then(order => {
+            return res.status(403).json({
+                code: 'L027',
+                type: 'validatingFoodpandaOrder',
+                message: 'Order had been registered',
+                data: {
+                    orderId: order.orderID,
+                    containers: order.userOrders.map(userOrder => userOrder.containerID)
+                }
+            })
+        })
+        .catch(() => {
+            UserOrder.find({
+                "orderID": { $in: userOrders },
+                "user": user._id
+            })
+                .then(orders => {
+                    if (orders.filter(order=>order.storeID === req._storeID).length !== userOrders.length) {
+                        return res.status(403).json({
+                            code: 'L021',
+                            type: 'validatingUserOrder',
+                            message: 'User Order not found'
+                        })
+                    }
+        
+                    const foodpandaOrder = new FoodpandaOrder();
+                    foodpandaOrder.orderID = orderID;
+                    foodpandaOrder.user = user;
+                    foodpandaOrder.userOrders = orders.map(order=>order._id);
+                    foodpandaOrder.storeID = req._storeID;
+        
+                    return foodpandaOrder.save();
                 })
-            }
-
-            const foodpandaOrder = new FoodpandaOrder();
-            foodpandaOrder.orderID = orderID;
-            foodpandaOrder.user = user;
-            foodpandaOrder.userOrders = orders.map(order=>order._id);
-            foodpandaOrder.storeID = req._storeID;
-
-            return foodpandaOrder.save();
-        })
-        .then( _ => {
-            return res.status(200).send()
-        })
-        .catch( err => {
-            return res.status(422).send(err)
+                .then( _ => {
+                    return res.status(200).send()
+                })
+                .catch( err => {
+                    return res.status(422).send(err)
+                })
         })
 })
 
