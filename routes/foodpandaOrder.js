@@ -11,7 +11,6 @@ const validateStoreCode = require('../middlewares/validation/content/userOrder')
 const FoodpandaOrder = require('../models/DB/foodpandaOrderDB');
 const UserOrder = require('../models/DB/userOrderDB');
 const config = require("../config/config");
-const { chat_v1 } = require('googleapis');
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
@@ -360,17 +359,17 @@ router.delete('/:id', validateLine, (req, res, next) => {
         FoodpandaOrder.findOneAndDelete({
             "orderID": orderID,
             "user": req._user._id
-        }, (err, order) => {
-            if (err) {
-                return res.status(404).json(err)
-            }
-
-            order.userOrders.forEach(userOrderID => {
-                redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
-            })
-
-            cb()
         })
+            .exec()
+            .then(order => {
+                order.userOrders.forEach(userOrderID => {
+                    redis.set(`foodpandaOrder:usedUserOrders:${userOrderID}`, 'false')
+                })
+            })
+            .catch((err) => {
+                return res.status(404).json(err)
+            })
+            .then(() => cb())
     })
 })
 
