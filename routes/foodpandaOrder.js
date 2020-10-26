@@ -71,6 +71,7 @@ router.post('/add', validateLine, validateStoreCode, (req, res, next) => {
 
     FoodpandaOrder
         .findOne({"orderID": orderID})
+        .populate({ path: 'userOrders', select: 'containerID -_id'})
         .exec()
         .then(order => {
             return res.status(403).json({
