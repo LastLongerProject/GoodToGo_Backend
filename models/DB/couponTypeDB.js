@@ -86,6 +86,11 @@ schema.statics.generateStrucNotice = function (extraContent, extraNotice, cb) {
                     .reduce((acc, val) => acc.concat(val), [])
                     .concat(templates.generalNoticeArr)
             });
+        } else {
+            formattedNotice.push({
+                title: templates.noticeTitle,
+                list: templates.generalNoticeArr
+            });
         }
         cb(null, formattedNotice);
     });
