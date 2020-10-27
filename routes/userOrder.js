@@ -25,6 +25,9 @@ const RentalQualification = require('../models/enums/userEnum').RentalQualificat
 const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
 
+const NotificationCenter = require('../helpers/notifications/center');
+const NotificationEvent = require('../models/enums/notificationEnum').CenterEvent;
+
 /**
  * @apiName DataForLine
  * @apiGroup UserOrder
@@ -180,6 +183,7 @@ router.post('/addByBot', checkRoleIsBot(), validateRequest, validateStoreCode, f
                         newOrder.save((err) => {
                             if (err) return reject(err);
                             resolve();
+                            NotificationCenter.emit(NotificationEvent.USER_ORDER_CREATED_BY_BOT, dbUser, { orderID: newOrder.orderID })
                         });
                     }));
                 }
