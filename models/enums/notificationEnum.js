@@ -18,7 +18,8 @@ module.exports = {
         USER_BANNED: "user_banned",
         USER_UNBANNED: "user_unbanned",
         USER_STATUS_UPDATE: "user_status_update",
-        USER_PURCHASED: "user_purchased"
+        USER_PURCHASED: "user_purchased",
+        USER_ORDER_CREATED_BY_BOT: "user_order_created_by_bot",
     }),
     SnsEvent: Object.freeze({
         CONTAINER_DELIVERY: "container_delivery",
@@ -37,7 +38,8 @@ module.exports = {
         USER_BANNED: "user_banned",
         USER_UNBANNED: "user_unbanned",
         USER_STATUS_UPDATE: "user_status_update",
-        USER_PURCHASED: "user_purchased"
+        USER_PURCHASED: "user_purchased",
+        USER_ORDER_CREATED_BY_BOT: "user_order_created_by_bot",
     }),
     PostbackAction: Object.freeze({
         BOX_DELIVERY: "BOX_DELIVERY",

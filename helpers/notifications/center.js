@@ -44,6 +44,9 @@ module.exports = {
             case NotificationEvent.USER_STATUS_UPDATE:
                 pushBy.webhook(WebhookEvent.USER_STATUS_UPDATE, target, data, options).push();
                 break;
+            case NotificationEvent.USER_ORDER_CREATED_BY_BOT:
+                pushBy.webhook(WebhookEvent.USER_ORDER_CREATED_BY_BOT, target, data, options).push();
+                break;
         }
     }
 };
