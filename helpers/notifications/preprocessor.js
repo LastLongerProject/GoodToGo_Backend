@@ -91,10 +91,11 @@ module.exports = {
                 case WebhookEvent.USER_UNBANNED:
                 case WebhookEvent.USER_PURCHASED:
                 case WebhookEvent.USER_STATUS_UPDATE:
-                    if (target.user.line_channel_userID === null)
+                case WebhookEvent.USER_ORDER_CREATED_BY_BOT:
+                    if (target.user.line_channel_userID === null && target.user.line_liff_userID === null)
                         return null;
                     Object.assign(para, {
-                        lineID: target.user.line_channel_userID
+                        lineID: target.user.line_channel_userID || target.user.line_liff_userID
                     });
                     break;
             }
