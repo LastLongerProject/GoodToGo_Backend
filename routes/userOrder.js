@@ -183,7 +183,7 @@ router.post('/addByBot', checkRoleIsBot(), validateRequest, validateStoreCode, f
                         });
                         newOrder.save((err) => {
                             if (err) return reject(err);
-                            NotificationCenter.emit(NotificationEvent.USER_ORDER_CREATED_BY_BOT, dbUser, { orderID: newOrder.orderID }, {
+                            NotificationCenter.emit(NotificationEvent.USER_ORDER_CREATED_BY_BOT, dbUser, { orderID: newOrder.orderID, lineID: dbUser.user.line_channel_userID }, {
                                 ignoreSilentMode: true
                             })
                             resolve();
