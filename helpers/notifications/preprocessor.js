@@ -91,6 +91,7 @@ module.exports = {
                 case WebhookEvent.USER_UNBANNED:
                 case WebhookEvent.USER_PURCHASED:
                 case WebhookEvent.USER_STATUS_UPDATE:
+                case WebhookEvent.USER_ORDER_CREATED_BY_BOT:
                     if (target.user.line_channel_userID === null)
                         return null;
                     Object.assign(para, {
