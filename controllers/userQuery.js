@@ -554,7 +554,7 @@ module.exports = {
             User.count({
                 roleList: {
                     $elemMatch: {
-                        typeCode: RoleType.BOT
+                        roleType: RoleType.BOT
                     }
                 }
             }, function (err, botAmount) {
