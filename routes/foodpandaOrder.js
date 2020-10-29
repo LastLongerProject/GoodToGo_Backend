@@ -56,7 +56,7 @@ router.get('/stores', validateLine, (req, res, next) => {
     const storeIDs = Object.values(foodpandaOrderIDStoreCodeMap)
         .map(storeCode => Number.parseInt(storeCode.slice(0, -1), 10))
 
-    return res.send(storeIDs)
+    return res.json({ids: storeIDs})
 })
 
 router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
