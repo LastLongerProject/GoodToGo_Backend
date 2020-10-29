@@ -389,21 +389,37 @@ router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, n
         "containerID": { $ne: null } 
     })
         .exec()
-        .then(userOrders => {
-            const orders = userOrders.map(userOrder => {
-                const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-                const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
-                const daysToDue = computeDaysToDue(userOrder.orderTime, req._user.getPurchaseStatus(), now);
-                return ({
-                    orderID: userOrder.orderID,
-                    containerID: `#${intReLength(userOrder.containerID, 4)}`,
-                    containerType: ContainerDict[userOrder.containerID],
-                    orderTime: userOrder.orderTime,
-                    storeName: StoreDict[userOrder.storeID].name,
-                    storeID: userOrder.storeID,
-                    daysToDue
+        .then( (userOrders) => {
+            return Promise.all(userOrders.map(userOrder => {
+                return new Promise((resolve, reject) => {
+                    redis.get(`foodpandaOrder:usedUserOrders:${userOrder.orderID}`, (err, string) => {
+                        if (err) reject(err)
+
+                        resolve({
+                            ...userOrder,
+                            hasBinded: string === 'true' ? true : false
+                        })
+                    })
                 })
-            })
+            }))
+        })
+        .then(userOrders => {
+            const orders = userOrders
+                .filter(userOrder => userOrder.hasBinded === false)
+                .map(userOrder => {
+                    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+                    const ContainerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE);
+                    const daysToDue = computeDaysToDue(userOrder.orderTime, req._user.getPurchaseStatus(), now);
+                    return ({
+                        orderID: userOrder.orderID,
+                        containerID: `#${intReLength(userOrder.containerID, 4)}`,
+                        containerType: ContainerDict[userOrder.containerID],
+                        orderTime: userOrder.orderTime,
+                        storeName: StoreDict[userOrder.storeID].name,
+                        storeID: userOrder.storeID,
+                        daysToDue
+                    })
+                })
 
             return res.send(orders)
         })
