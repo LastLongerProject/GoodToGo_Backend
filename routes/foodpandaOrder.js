@@ -52,6 +52,13 @@ const foodpandaOrderIDStoreCodeMap = {
     "o1dx": "2502",
 }
 
+router.get('/stores', validateLine, (req, res, next) => {
+    const storeIDs = Object.values(foodpandaOrderIDStoreCodeMap)
+        .map(storeCode => Number.parseInt(storeCode.slice(0, -1), 10))
+
+    return res.send(storeIDs)
+})
+
 router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     const { foodpandaOrderID } = req.params
     const segments = foodpandaOrderID.split('-')
