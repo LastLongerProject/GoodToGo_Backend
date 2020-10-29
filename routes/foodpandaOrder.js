@@ -396,7 +396,7 @@ router.get('/qualifiedUserOrders', validateLine, validateStoreCode, (req, res, n
                         if (err) reject(err)
 
                         resolve({
-                            ...userOrder,
+                            ...userOrder._doc,
                             hasBinded: string === 'true' ? true : false
                         })
                     })
