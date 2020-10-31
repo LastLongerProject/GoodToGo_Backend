@@ -268,7 +268,7 @@ router.get('/list/forLineMap', function (req, res, next) {
                 if (aStore.img_info && aStore.img_info.img_version !== 0) photo = `${baseUrl}/images/store/${aStore.ID}?ver=${aStore.img_info.img_version}`;
                 else if (aStore.photos_fromGoogle !== null) photo = `${baseUrl}/images/store/${aStore.ID}?ref=${aStore.photos_fromGoogle}`;
                 return {
-                    id: aStore.id,
+                    id: aStore.ID,
                     placeid: aStore.placeID,
                     name: aStore.name,
                     photo,
