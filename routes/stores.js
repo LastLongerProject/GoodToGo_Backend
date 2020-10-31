@@ -172,7 +172,7 @@ router.get('/list', validateDefault, function (req, res, next) {
 router.get('/list/forOfficialPage', function (req, res, next) {
     Place.find({
         "project": {
-            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛", "foodpanda"]
         },
         "active": true
     }, ["ID"], {
