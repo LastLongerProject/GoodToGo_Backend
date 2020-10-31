@@ -27,30 +27,7 @@ const queue = require('queue')({
     autostart: true
 });
 
-const foodpandaOrderIDStoreCodeMap = {
-    "z0lf": "2324",
-    "h3cs": "2337",
-    "y1iz": "0526",
-    "d3gx": "2353",
-    "f4sa": "2366",
-    "e5mr": "2379",
-    "y0vc": "2382",
-    "d3zi": "2395",
-    "z9wp": "2400",
-    "u4lx": "2413",
-    "a8ba": "0788",
-    "f7cv": "2340",
-    "z9ae": "2426",
-    "y7ph": "0026",
-    "y2in": "2439",
-    "z2st": "2442",
-    "a2qj": "2455",
-    "q4ug": "2468",
-    "a7wu": "2471",
-    "z2cl": "2484",
-    "b8ig": "2497",
-    "o1dx": "2502",
-}
+const foodpandaOrderIDStoreCodeMap = require('../config/foodpanda.json').idMap
 
 router.get('/stores', validateLine, (req, res, next) => {
     const storeIDs = Object.values(foodpandaOrderIDStoreCodeMap)
