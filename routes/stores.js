@@ -280,7 +280,8 @@ router.get('/list/forLineMap', function (req, res, next) {
                     geometry_location: aStore.location,
                     borrow: aStore.contract.borrowable,
                     return: aStore.contract.returnable,
-                    type: aStore.type
+                    type: aStore.type,
+                    project: aStore.project,
                 };
             })
         });
