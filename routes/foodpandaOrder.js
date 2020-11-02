@@ -27,10 +27,10 @@ const queue = require('queue')({
     autostart: true
 });
 
-const foodpandaOrderIDStoreCodeMap = require('../config/foodpanda.json').idMap
+const getFoodpandaOrderIDStoreCodeMap = () => require('../config/foodpanda.json').idMap;
 
 router.get('/stores', validateLine, (req, res, next) => {
-    const storeIDs = Object.values(foodpandaOrderIDStoreCodeMap)
+    const storeIDs = Object.values(getFoodpandaOrderIDStoreCodeMap())
         .map(storeCode => Number.parseInt(storeCode.slice(0, -1), 10))
 
     return res.json({ids: storeIDs})
@@ -39,7 +39,7 @@ router.get('/stores', validateLine, (req, res, next) => {
 router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     const { foodpandaOrderID } = req.params
     const segments = foodpandaOrderID.split('-')
-    const storeCode = foodpandaOrderIDStoreCodeMap[segments[0]]
+    const storeCode = getFoodpandaOrderIDStoreCodeMap()[segments[0]]
 
     if (segments.length !== 2 || typeof storeCode !== 'string') {
         return res.status(403).json({
