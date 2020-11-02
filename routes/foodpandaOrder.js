@@ -256,10 +256,19 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
                     })
                 }
 
+                if (foodpandaOrder.userOrders.length === 0) {
+                    return res.status(403).json({
+                        code: 'L025',
+                        type: 'validatingUserOrders',
+                        message: 'You should at least assign one user order'
+                    })
+                }
+
                 foodpandaOrder.archived = true;
                 return foodpandaOrder.save()
             })
             .then(_ => {
+                const lineId = req._user.user.line_channel_userID || req._user.user.line_liff_userID
                 return new Promise((resolve, reject) => {
                     fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
                         if (err) return reject(err);
@@ -267,8 +276,7 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
                         request
                             .post(webhookSubmission.message.url, {
                                 messages: [{ 
-                                    lineId: req._user.user.line_channel_userID || req._user.user.line_liff_userID, 
-                                    message: message 
+                                    lineId, message
                                 }]
                             })
                             .then(() => {
