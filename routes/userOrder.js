@@ -92,7 +92,6 @@ router.get('/list', validateLine, function (req, res, next) {
                 }
             } else {
                 let aFormattedUserOrder = {
-                    orderID: aUserOrder.orderID,
                     containerID: `#${intReLength(aUserOrder.containerID, 4)}`,
                     containerType: ContainerDict[aUserOrder.containerID],
                     orderTime: aUserOrder.orderTime,
