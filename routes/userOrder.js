@@ -51,6 +51,7 @@ const NotificationEvent = require('../models/enums/notificationEnum').CenterEven
  *	        ],
  *	        orderListWithID : [
  *		    {
+ *              orderID : String,
  *			    containerID : String, // #001
  *			    containerType : String, // 12oz 玻璃杯
  *			    orderTime : Date,
@@ -218,7 +219,6 @@ router.post('/addByBot', checkRoleIsBot(), validateRequest, validateStoreCode, f
             })
         });
 });
-
 
 /**
  * @apiName AddUserOrder

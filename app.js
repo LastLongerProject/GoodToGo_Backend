@@ -28,6 +28,7 @@ const coupon = require('./routes/coupon');
 const userOrder = require('./routes/userOrder');
 const deliveryList = require('./routes/deliveryList.js');
 const containers = require('./routes/containers');
+const foodpandaOrder = require('./routes/foodpandaOrder');
 
 const app = express();
 let io = require('socket.io');
@@ -75,6 +76,7 @@ app.use('/coupon', coupon);
 app.use('/userOrder', userOrder);
 app.use('/containers', containers);
 app.use('/deliveryList', deliveryList);
+app.use('/foodpandaOrder', foodpandaOrder)
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
