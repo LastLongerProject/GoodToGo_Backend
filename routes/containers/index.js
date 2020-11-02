@@ -93,7 +93,9 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
     const dbRole = req._thisRole;
     let container = req.params.container;
     let thisStoreID;
+    let thisStoreCategory;
     try {
+        thisStoreCategory = dbRole.getElement(RoleElement.STORE_CATEGORY, false);
         thisStoreID = dbRole.getElement(RoleElement.STORE_ID, false);
     } catch (error) {
         return next(error);
@@ -153,6 +155,15 @@ router.post('/rent/:container', checkRoleIsStore(), validateRequest, function (r
                     else
                         return next(new Error("User is not available for renting container because of UNKNOWN REASON"));
                 }
+
+                if (thisStoreCategory === 0 && theCustomer.hasVerified === false) {
+                    return res.status(403).json({
+                        code: 'F017',
+                        type: 'userSearchingError',
+                        message: 'The user is not verified'
+                    });
+                }
+
                 changeContainersState(container, dbStore, {
                     action: ContainerAction.RENT,
                     newState: ContainerState.USING

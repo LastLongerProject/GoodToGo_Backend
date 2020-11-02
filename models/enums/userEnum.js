@@ -8,6 +8,7 @@ module.exports = Object.freeze({
         CLEAN_STATION: "station"
     }),
     RoleElement: Object.freeze({
+        STORE_CATEGORY: 'category',
         STORE_ID: "storeID",
         STORE_NAME: "storeName",
         STATION_ID: "stationID",
@@ -48,6 +49,7 @@ module.exports = Object.freeze({
     RentalQualification: Object.freeze({
         BANNED: "banned",
         OUT_OF_QUOTA: "out_of_quota",
+        PERMISSION_DENIED: "permission_denied",
         AVAILABLE: "available"
     }),
     DueDays: Object.freeze({ // Remember to add one

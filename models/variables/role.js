@@ -153,6 +153,12 @@ function getElement(theRole, eleName, nullable = true) {
         } else return result;
     };
     switch (eleName) {
+        case RoleElement.STORE_CATEGORY:
+            if (theRole.roleType !== RoleType.STORE) return done(null);
+            var storeDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
+            var theStore = storeDict[theRole[RoleElement.STORE_ID]];
+            if (theStore) return done(theStore.category);
+            else return done("找不到店家");
         case RoleElement.STORE_ID:
             if (theRole.roleType !== RoleType.STORE) return done(null);
             return done(theRole[RoleElement.STORE_ID]);
