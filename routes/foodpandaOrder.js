@@ -15,7 +15,7 @@ const { intReLength } = require('../helpers/toolkit');
 const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
 const { checkRoleIsAdmin } = require('../middlewares/validation/authorization/validateRequest');
-const validateRequest = require('../middlewares/validation/authorization/validateRequest');
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
