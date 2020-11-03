@@ -14,6 +14,8 @@ const config = require("../config/config");
 const { intReLength } = require('../helpers/toolkit');
 const computeDaysToDue = require('../models/computed/dueStatus').daysToDue;
 const DataCacheFactory = require('../models/dataCacheFactory');
+const { checkRoleIsAdmin } = require('../middlewares/validation/authorization/validateRequest');
+const validateRequest = require('../middlewares/validation/authorization/validateRequest').JWT;
 
 const mapFoodpandaOrderToPlainObject = (order) => ({
     orderID: order.orderID,
@@ -27,10 +29,10 @@ const queue = require('queue')({
     autostart: true
 });
 
-const foodpandaOrderIDStoreCodeMap = require('../config/foodpanda.json').idMap
+const getFoodpandaOrderIDStoreCodeMap = () => require('../config/foodpanda.json').idMap;
 
 router.get('/stores', validateLine, (req, res, next) => {
-    const storeIDs = Object.values(foodpandaOrderIDStoreCodeMap)
+    const storeIDs = Object.values(getFoodpandaOrderIDStoreCodeMap())
         .map(storeCode => Number.parseInt(storeCode.slice(0, -1), 10))
 
     return res.json({ids: storeIDs})
@@ -39,7 +41,7 @@ router.get('/stores', validateLine, (req, res, next) => {
 router.get('/challenge/:foodpandaOrderID', validateLine, (req, res, next) => {
     const { foodpandaOrderID } = req.params
     const segments = foodpandaOrderID.split('-')
-    const storeCode = foodpandaOrderIDStoreCodeMap[segments[0]]
+    const storeCode = getFoodpandaOrderIDStoreCodeMap()[segments[0]]
 
     if (segments.length !== 2 || typeof storeCode !== 'string') {
         return res.status(403).json({
@@ -234,39 +236,12 @@ router.patch('/update', validateLine, validateStoreCode, (res, req, next) => {
     })
 })
 
-let messages = []
-
-const sendLineMessage = (lineId, message) => {
-    debug.log(`Send message to ${lineId}`)
-    messages.push({ lineId, message })
-}
-
-setInterval(() => {
-    if (messages.length === 0) {
-        return
-    }
-
-    fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
-        if (err)
-            return debug.error(err);
-        webhookSubmission = JSON.parse(webhookSubmission);
-        request
-            .post(webhookSubmission.message.url, {
-                messages
-            })
-            .then(() => {
-                messages = []
-            })
-    });
-}, 1000)
-
-router.put('/archive', validateLine, (req, res, next) => {
+router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     queue.push(cb => {
         const { order, message } = req.body
 
         FoodpandaOrder.findOne({
             "orderID": order,
-            "user": req._user._id
         })
             .populate([{ path: 'userOrders', select: 'archived'}])
             .exec()
@@ -281,11 +256,41 @@ router.put('/archive', validateLine, (req, res, next) => {
                     })
                 }
 
+                if (foodpandaOrder.userOrders.length === 0) {
+                    return res.status(403).json({
+                        code: 'L025',
+                        type: 'validatingUserOrders',
+                        message: 'You should at least assign one user order'
+                    })
+                }
+
                 foodpandaOrder.archived = true;
                 return foodpandaOrder.save()
             })
             .then(_ => {
-                sendLineMessage(req._user.user.line_channel_userID || req._user.user.line_liff_userID, message);
+                const lineId = req._user.user.line_channel_userID || req._user.user.line_liff_userID
+                return new Promise((resolve, reject) => {
+                    fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
+                        if (err) return reject(err);
+                        webhookSubmission = JSON.parse(webhookSubmission);
+                        request
+                            .post(webhookSubmission.message.url, {
+                                messages: [{ 
+                                    lineId, message
+                                }]
+                            })
+                            .then(() => {
+                                debug.log(`Send Line message to ${lineId}`)
+                                resolve()
+                            })
+                            .catch((err) => {
+                                debug.error(`Send Line message failed: ${err}`)
+                                reject(err)
+                            })
+                    });
+                })
+            })
+            .then(() => {
                 return res.status(200).send()
             })
             .catch( err => {
@@ -295,7 +300,7 @@ router.put('/archive', validateLine, (req, res, next) => {
     })
 })
 
-router.get('/candidates', validateLine, (req, res, next) => {
+router.get('/candidates', checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     FoodpandaOrder
         .find({
             "archived": false
