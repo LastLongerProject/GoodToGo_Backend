@@ -336,7 +336,7 @@ router.get('/all', validateLine, (req, res, next) => {
         })
 })
 
-router.delete('/:id', validateLine, (req, res, next) => {
+router.delete('/:id', checkRoleIsAdmin(), validateRequest, (req, res, next) => {
     queue.push(cb => {
         const orderID = req.params.id
 
@@ -350,7 +350,6 @@ router.delete('/:id', validateLine, (req, res, next) => {
 
         FoodpandaOrder.findOneAndDelete({
             "orderID": orderID,
-            "user": req._user._id
         })
             .populate({ path: 'userOrders', select: 'orderID -_id'})
             .exec()
