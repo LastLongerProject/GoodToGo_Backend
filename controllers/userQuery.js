@@ -589,7 +589,7 @@ module.exports = {
     },
     createBotKey: function (req, done) {
         User.findOne({
-            'user.name': req.body.bot,
+            'user.phone': req.body.bot,
             'role.typeCode': RoleType.BOT
         }, function (err, theBot) {
             if (err) return done(err);

@@ -398,6 +398,8 @@ router.post('/createBotKey', checkRoleIsAdmin(), validateRequest, function (req,
     userQuery.createBotKey(req, function (err, user, info) {
         if (err) {
             return next(err);
+        } else if (!user) {
+            return res.status(401).json(info);
         } else {
             res.json(info.body);
         }
