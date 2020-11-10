@@ -6,10 +6,11 @@ const appInit = require('../helpers/appInit');
 module.exports = function (mongoose, done) {
     mongoose.set('useNewUrlParser', true);
     mongoose.set('useCreateIndex', true);
+    mongoose.set('useUnifiedTopology', true);
     mongoose.connect(config.mongodbUrl, config.mongodbOptions, function (err) {
-        if (err) throw err;
+        if (err) return done(err);
         debug.log('mongoDB connect succeed');
-        // require('../tmp/removeOldLog.js')
+        // require('../tmp/changeUserStruc.js')
         appInit.beforeStartUp(() => {
             done();
             appInit.afterStartUp();

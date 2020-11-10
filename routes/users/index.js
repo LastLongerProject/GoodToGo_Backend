@@ -379,19 +379,20 @@ router.post('/addbot', checkRoleIsAdmin(), validateRequest, function (req, res, 
  * @apiGroup Users
  * @apiPermission admin_manager
  *
- * @api {post} /users/createBotKey Create new key pair for bot 
+ * @api {post} /users/createBotKey Fetch new key pair for bot 
  * @apiUse JWT
  * 
- * @apiParam {String} bot bot name.
+ * @apiParam {String} bot bot ID.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     { 
  *          type: 'signupMessage',
  *          message: 'Authentication succeeded',
- *          keys: {
+ *          keys: [{
  *              apiKey: String,
- *              secretKey: String
- *          } 
+ *              secretKey: String,
+ *              roleID: String
+ *          },...]
  *     }
  */
 router.post('/createBotKey', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
@@ -403,6 +404,59 @@ router.post('/createBotKey', checkRoleIsAdmin(), validateRequest, function (req,
         } else {
             res.json(info.body);
         }
+    });
+});
+
+/**
+ * @apiName ChangeBotRole
+ * @apiGroup Users
+ * @apiPermission admin_manager
+ *
+ * @api {post} /users/changeBotRole Change bot's role setting
+ * @apiUse JWT
+ * 
+ * @apiParam {String} bot bot name.
+ * @apiParam {Number} rentFromStoreID StoreID for Rent.
+ * @apiParam {Number} returnToStoreID StoreID for Return.
+ * @apiParam {Number} reloadToStationID StationID for Reload.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     { 
+ *          type: 'changeBotRoleMessage',
+ *          message: 'ChangeBotRole succeeded'
+ *     }
+ */
+router.post('/changeBotRole', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    if (!typeof req.body.bot === "string" ||
+        !(req.body.rentFromStoreID === null || typeof req.body.rentFromStoreID === "number") ||
+        !(req.body.returnToStoreID === null || typeof req.body.returnToStoreID === "number") ||
+        !(req.body.reloadToStationID === null || typeof req.body.reloadToStationID === "number"))
+        return res.status(401).json({
+            code: 'D???',
+            type: 'changeBotRoleMessage',
+            message: 'Content is not complete'
+        });
+    User.findOne({
+        "user.phone": req.body.bot
+    }, (err, dbBot) => {
+        if (err) return next(err);
+        dbBot.roles.bot.rentFromStoreID = req.body.rentFromStoreID;
+        dbBot.roleList[0].rentFromStoreID = req.body.rentFromStoreID;
+        dbBot.roles.bot.returnToStoreID = req.body.returnToStoreID;
+        dbBot.roleList[0].returnToStoreID = req.body.returnToStoreID;
+        dbBot.roles.bot.reloadToStationID = req.body.reloadToStationID;
+        dbBot.roleList[0].reloadToStationID = req.body.reloadToStationID;
+        if (dbBot.roles.clerk)
+            dbBot.roles.clerk.storeID = req.body.returnToStoreID;
+        dbBot.markModified('roles');
+        dbBot.markModified('roleList');
+        dbBot.save(err => {
+            if (err) return next(err);
+            res.json({
+                type: 'changeBotRoleMessage',
+                message: 'ChangeBotRole succeeded',
+            });
+        });
     });
 });
 

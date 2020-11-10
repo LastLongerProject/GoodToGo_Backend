@@ -589,8 +589,7 @@ module.exports = {
     },
     createBotKey: function (req, done) {
         User.findOne({
-            'user.phone': req.body.bot,
-            'role.typeCode': RoleType.BOT
+            'user.phone': req.body.bot
         }, function (err, theBot) {
             if (err) return done(err);
             if (!theBot)
@@ -645,30 +644,43 @@ function isStudentID(phone) {
 }
 
 function createBotKey(theBot, ua, done) {
-    keys.apiKey(function (err, returnKeys) {
-        if (err) return done(err);
-        UserKeys.findOneAndUpdate({
-            'phone': theBot.user.phone,
-            'roleType': RoleType.BOT,
-            'user': theBot._id
-        }, {
-            'secretKey': returnKeys.secretKey,
-            'userAgent': ua,
-            '$setOnInsert': {
-                'apiKey': returnKeys.apiKey
-            }
-        }, {
-            new: true,
-            upsert: true,
-            setDefaultsOnInsert: true
-        }, (err, keyPair) => {
+    Promise
+        .all(theBot.roleList
+            .filter(aRole => aRole.roleType === RoleType.BOT)
+            .map(aRole => new Promise((resolve, reject) => {
+                keys.keyPair(function (err, returnKeys) {
+                    if (err) return reject(err);
+                    UserKeys.findOneAndUpdate({
+                        'phone': theBot.user.phone,
+                        'roleID': aRole.roleID,
+                        'roleType': aRole.roleType
+                    }, {
+                        'secretKey': returnKeys.secretKey,
+                        'userAgent': ua,
+                        '$setOnInsert': {
+                            'apiKey': returnKeys.apiKey,
+                            'user': theBot._id,
+                        }
+                    }, {
+                        new: true,
+                        upsert: true,
+                        setDefaultsOnInsert: true
+                    }, (err, keyPair) => {
+                        if (err) return reject(err);
+                        resolve({
+                            apiKey: keyPair.apiKey,
+                            secretKey: keyPair.secretKey,
+                            roleID: keyPair.roleID
+                        });
+                    });
+                });
+            })))
+        .then((keyPairList) => {
+            return done(null, keyPairList);
+        })
+        .catch((err) => {
             if (err) return done(err);
-            done(null, {
-                apiKey: returnKeys.apiKey,
-                secretKey: returnKeys.secretKey
-            });
         });
-    });
 }
 
 function fetchUserKeys(dbUser, cid, ua, done) {
