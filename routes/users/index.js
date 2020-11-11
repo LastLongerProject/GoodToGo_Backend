@@ -440,6 +440,8 @@ router.post('/changeBotRole', checkRoleIsAdmin(), validateRequest, function (req
         "user.phone": req.body.bot
     }, (err, dbBot) => {
         if (err) return next(err);
+        if (dbBot.roleList[0].roleType !== RoleType.BOT) 
+            return next(new Error("Unknown Error: Bot's Role Structure in Database is invalid."))
         dbBot.roles.bot.rentFromStoreID = req.body.rentFromStoreID;
         dbBot.roleList[0].rentFromStoreID = req.body.rentFromStoreID;
         dbBot.roles.bot.returnToStoreID = req.body.returnToStoreID;
