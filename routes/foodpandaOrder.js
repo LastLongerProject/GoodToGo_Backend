@@ -243,7 +243,7 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
         FoodpandaOrder.findOne({
             "orderID": order,
         })
-            .populate([{ path: 'userOrders', select: 'archived'}])
+            .populate([{ path: 'userOrders', select: 'archived'}, { path: 'user', select: 'user'}])
             .exec()
             .then((foodpandaOrder) => {
                 const shouldFail = foodpandaOrder.userOrders.map((userOrder) => userOrder.archived).includes(false);
@@ -267,27 +267,29 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
                 foodpandaOrder.archived = true;
                 return foodpandaOrder.save()
             })
-            .then(_ => {
+            .then(foodpandaOrder => {
+                console.log(foodpandaOrder.user.user)
                 const lineId = req._user.user.line_channel_userID || req._user.user.line_liff_userID
                 return new Promise((resolve, reject) => {
-                    fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
-                        if (err) return reject(err);
-                        webhookSubmission = JSON.parse(webhookSubmission);
-                        request
-                            .post(webhookSubmission.message.url, {
-                                messages: [{ 
-                                    lineId, message
-                                }]
-                            })
-                            .then(() => {
-                                debug.log(`Send Line message to ${lineId}`)
-                                resolve()
-                            })
-                            .catch((err) => {
-                                debug.error(`Send Line message failed: ${err}`)
-                                reject(err)
-                            })
-                    });
+                    resolve()
+                    // fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
+                    //     if (err) return reject(err);
+                    //     webhookSubmission = JSON.parse(webhookSubmission);
+                    //     request
+                    //         .post(webhookSubmission.message.url, {
+                    //             messages: [{ 
+                    //                 lineId, message
+                    //             }]
+                    //         })
+                    //         .then(() => {
+                    //             debug.log(`Send Line message to ${lineId}`)
+                    //             resolve()
+                    //         })
+                    //         .catch((err) => {
+                    //             debug.error(`Send Line message failed: ${err}`)
+                    //             reject(err)
+                    //         })
+                    // });
                 })
             })
             .then(() => {
