@@ -243,7 +243,7 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
         FoodpandaOrder.findOne({
             "orderID": order,
         })
-            .populate([{ path: 'userOrders', select: 'archived'}])
+            .populate([{ path: 'userOrders', select: 'archived'}, { path: 'user', select: 'user'}])
             .exec()
             .then((foodpandaOrder) => {
                 const shouldFail = foodpandaOrder.userOrders.map((userOrder) => userOrder.archived).includes(false);
@@ -267,8 +267,9 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
                 foodpandaOrder.archived = true;
                 return foodpandaOrder.save()
             })
-            .then(_ => {
-                const lineId = req._user.user.line_channel_userID || req._user.user.line_liff_userID
+            .then(foodpandaOrder => {
+                const user = foodpandaOrder.user.user
+                const lineId = user.line_channel_userID || user.line_liff_userID
                 return new Promise((resolve, reject) => {
                     fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
                         if (err) return reject(err);
