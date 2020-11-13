@@ -132,7 +132,11 @@ process.on('SIGINT', () => {
     }
 });
 
-function startServer() {
+function startServer(err) {
+    if (err) {
+        debug.error(err);
+        return process.exit(1);;
+    }
     /**
      * Get port from environment and store in Express.
      */
