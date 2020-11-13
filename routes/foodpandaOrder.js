@@ -268,28 +268,27 @@ router.put('/archive', checkRoleIsAdmin(), validateRequest, (req, res, next) => 
                 return foodpandaOrder.save()
             })
             .then(foodpandaOrder => {
-                console.log(foodpandaOrder.user.user)
-                const lineId = req._user.user.line_channel_userID || req._user.user.line_liff_userID
+                const user = foodpandaOrder.user.user
+                const lineId = user.line_channel_userID || user.line_liff_userID
                 return new Promise((resolve, reject) => {
-                    resolve()
-                    // fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
-                    //     if (err) return reject(err);
-                    //     webhookSubmission = JSON.parse(webhookSubmission);
-                    //     request
-                    //         .post(webhookSubmission.message.url, {
-                    //             messages: [{ 
-                    //                 lineId, message
-                    //             }]
-                    //         })
-                    //         .then(() => {
-                    //             debug.log(`Send Line message to ${lineId}`)
-                    //             resolve()
-                    //         })
-                    //         .catch((err) => {
-                    //             debug.error(`Send Line message failed: ${err}`)
-                    //             reject(err)
-                    //         })
-                    // });
+                    fs.readFile(`${config.staticFileDir}/assets/json/webhook_submission.json`, (err, webhookSubmission) => {
+                        if (err) return reject(err);
+                        webhookSubmission = JSON.parse(webhookSubmission);
+                        request
+                            .post(webhookSubmission.message.url, {
+                                messages: [{ 
+                                    lineId, message
+                                }]
+                            })
+                            .then(() => {
+                                debug.log(`Send Line message to ${lineId}`)
+                                resolve()
+                            })
+                            .catch((err) => {
+                                debug.error(`Send Line message failed: ${err}`)
+                                reject(err)
+                            })
+                    });
                 })
             })
             .then(() => {
