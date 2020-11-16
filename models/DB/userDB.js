@@ -19,8 +19,11 @@ var schema = mongoose.Schema({
             default: null
         },
         lineId: String,
-        line_liff_userID: String,
-        line_channel_userID:  {
+        line_liff_userID: {
+            type: String,
+            default: null
+        },
+        line_channel_userID: {
             type: String,
             default: null
         }
