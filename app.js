@@ -34,7 +34,7 @@ const app = express();
 let io = require('socket.io');
 let esm;
 
-app.use("ping", (req, res) => res.end("pong"));
+app.use("/ping", (req, res) => res.end("pong"));
 app.use(favicon(path.join(__dirname, 'public/favicon.ico')));
 app.use(logger(':date - :method :url HTTP/:http-version :status - :response-time ms'));
 app.use(logSystem(logModel));
