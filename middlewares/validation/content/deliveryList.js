@@ -53,11 +53,7 @@ function fetchBoxCreation(req, res, next) {
 
             req._sequence = _sequence;
             next();
-            console.log(res.statusCode)
-            if (res.statusCode === 200) {
-                redis.set("delivery_box_creation_amount_map", JSON.stringify(dict));
-            }
-
+            redis.set("delivery_box_creation_amount_map", JSON.stringify(dict));
             cb();
         })
     })
