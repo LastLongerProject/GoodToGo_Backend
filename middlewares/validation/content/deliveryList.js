@@ -32,7 +32,7 @@ function createBoxID(date, sequence, stationID) {
         return months <= 0 ? 0 : months;
     }
 
-    const month = intReLength(monthFormatter(date) + absoluteMonth(date), 2)
+    const month = intReLength(absoluteMonth(date) + 1, 2)
     const day = intReLength(dayFormatter(date), 2);
     
     return month + day + String(stationID) + intReLength(sequence, 2);
@@ -52,8 +52,8 @@ function fetchBoxCreation(req, res, next) {
             dict.date = now;
 
             req._sequence = _sequence;
-            redis.set("delivery_box_creation_amount_map", JSON.stringify(dict));
             next();
+            redis.set("delivery_box_creation_amount_map", JSON.stringify(dict));
             cb();
         })
     })
