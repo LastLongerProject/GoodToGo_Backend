@@ -25,16 +25,26 @@ let fullDateStringWithoutYear = function (date) {
 }
 
 function createBoxID(date, sequence, stationID) {
-    let dateString = fullDateStringWithoutYear(date).replace(/\//g, '');
-    return dateString + String(stationID) + String(7) + intReLength(sequence, 4);
+    function absoluteMonth(d1) {
+        var months;
+        months = (d1.getFullYear() - 2019) * 12;
+        months += d1.getMonth();
+        return months <= 0 ? 0 : months;
+    }
+
+    const month = intReLength(monthFormatter(date) + absoluteMonth(date), 2)
+    const day = intReLength(dayFormatter(date), 2);
+    
+    return month + day + String(stationID) + intReLength(sequence, 2);
 }
 
 function fetchBoxCreation(req, res, next) {
     queue.push((cb) => {
-        redis.get("delivery_box_creation_amount", (error, string) => {
+        redis.get("delivery_box_creation_amount_map", (error, string) => {
             let dict = JSON.parse(string || "{}");
             let now = new Date();
-            now.setDate(now.getDate() + 8);
+            now.setTime(now.getTime() + 8 * 1000 * 60 * 60);
+            
             let sequence = dict.sequence;
             let _sequence = isSameDay(now, new Date(dict.date)) ? Number(sequence) + 1 : 1;
 
@@ -42,7 +52,7 @@ function fetchBoxCreation(req, res, next) {
             dict.date = now;
 
             req._sequence = _sequence;
-            redis.set("delivery_box_creation_amount", JSON.stringify(dict));
+            redis.set("delivery_box_creation_amount_map", JSON.stringify(dict));
             next();
             cb();
         })
