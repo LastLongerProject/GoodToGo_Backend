@@ -436,15 +436,17 @@ module.exports = {
                                 });
                                 break;
                             case RoleType.ADMIN:
-                                newRoleList.push({
-                                    roleType: RoleType.ADMIN,
-                                    asStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
-                                    asStationID: 0,
-                                    manager: theRole.manager
-                                });
+                                if (theRole.stationID === 0) {
+                                    newRoleList.push({
+                                        roleType: RoleType.ADMIN,
+                                        asStoreID: aUser.roles.clerk ? aUser.roles.clerk.storeID : null,
+                                        asStationID: theRole.stationID,
+                                        manager: theRole.manager
+                                    });
+                                }
                                 newRoleList.push({
                                     roleType: RoleType.CLEAN_STATION,
-                                    stationID: 0,
+                                    stationID: theRole.stationID,
                                     manager: theRole.manager
                                 });
                                 break;
