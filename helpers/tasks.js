@@ -496,33 +496,50 @@ module.exports = {
     },
     uploadShopOverview: cb => {
         const title = ["ID", "店家", "待使用", "待回收"];
+        const subtitle = ["", ""]
         Container.find({
             storeID: {
                 $ne: null
             }
         }, (err, containersInStore) => {
             if (err) return cb(err);
-            Store.find({}, ["id", "name"], {
+            ContainerType.find({}, ["typeCode", "name"], {
                 sort: {
-                    id: 1
+                    typeCode: 1
                 }
-            }, (err, storeList) => {
+            }, (err, containerTypeList) => {
                 if (err) return cb(err);
-                const storeMap = {};
-                storeList.forEach(aStore => {
-                    storeMap[aStore.id] = [aStore.id, aStore.name, 0, 0];
-                });
-                containersInStore.forEach(aContainer => {
-                    if (aContainer.statusCode === 1) {
-                        storeMap[aContainer.storeID][2]++;
-                    } else if (aContainer.statusCode === 3) {
-                        storeMap[aContainer.storeID][3]++;
+                const emptyCtr = [];
+                const containerTypeAmount = containerTypeList.length;
+                for (let i = 0; i < containerTypeAmount; i++) {
+                    emptyCtr.push(0);
+                    subtitle.push(containerTypeList[i].name);
+                    if (i !== 0)
+                        title.splice(3, 0, "");
+                }
+                Store.find({}, ["id", "name"], {
+                    sort: {
+                        id: 1
                     }
-                });
-                const parsed = [title, ...Object.values(storeMap)];
-                sheet.shopOverview(parsed, (err) => {
+                }, (err, storeList) => {
                     if (err) return cb(err);
-                    cb(null, "Done Uploading Shop Overview");
+                    const storeMap = {};
+                    storeList.forEach(aStore => {
+                        storeMap[aStore.id] = [aStore.id, aStore.name, ...emptyCtr, 0];
+                    });
+                    const lastIndex = containerTypeAmount + 2;
+                    containersInStore.forEach(aContainer => {
+                        if (aContainer.statusCode === 1) {
+                            storeMap[aContainer.storeID][aContainer.typeCode + 2]++;
+                        } else if (aContainer.statusCode === 3) {
+                            storeMap[aContainer.storeID][lastIndex]++;
+                        }
+                    });
+                    const parsed = [title, subtitle, ...Object.values(storeMap)];
+                    sheet.shopOverview(parsed, (err) => {
+                        if (err) return cb(err);
+                        cb(null, "Done Uploading Shop Overview");
+                    });
                 });
             });
         });
