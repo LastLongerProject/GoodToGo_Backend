@@ -33,7 +33,8 @@ const thisModule = module.exports = {
                     if (summary.hasOverdueContainer) {
                         const overdueList = analyzedUserOrder[ID.isRegistered][DueStatus.OVERDUE].concat(analyzedUserOrder[ID.notRegistered][DueStatus.OVERDUE]);
                         thisModule.banUser(dbUser, overdueList);
-                    } else if (dbUser.bannedTimes <= AUTO_UNBANNED_TIME) {
+                    // } else if (dbUser.bannedTimes <= AUTO_UNBANNED_TIME) {
+                    } else {
                         thisModule.unbanUser(dbUser, true);
                     }
                 }
