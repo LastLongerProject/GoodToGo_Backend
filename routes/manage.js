@@ -16,6 +16,7 @@ const refreshStoreImg = require("../helpers/tasks").refreshStoreImg;
 const refreshContainer = require("../helpers/tasks").refreshContainer;
 const refreshCouponImage = require("../helpers/tasks").refreshCouponImage;
 const refreshContainerIcon = require("../helpers/tasks").refreshContainerIcon;
+const uploadShopOverview = require("../helpers/tasks").uploadShopOverview;
 const cleanUndo = require("../helpers/toolkit").cleanUndoTrade;
 const dateCheckpoint = require("../helpers/toolkit").dateCheckpoint;
 const fullDateString = require("../helpers/toolkit").fullDateString;
@@ -1953,6 +1954,32 @@ router.patch("/refresh/couponImage/:forceRenew", checkRoleIsAdmin(), validateReq
     var forceRenew = (req.params.forceRenew === "1" || req.params.forceRenew === "true");
     refreshCouponImage(forceRenew, function (succeed, resData) {
         res.status((succeed) ? 200 : 403).json(resData);
+    });
+});
+
+/**
+ * @apiName Upload Shop Daily Overview to Sheet
+ * @apiGroup Manage
+ *
+ * @api {patch} /manage/uploadShopOverview Upload Shop Daily Overview to Sheet
+ * @apiPermission admin_manager
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        { 
+            type: "uploadShopOverview",
+            message: "Done Uploading Shop Overview"
+        }
+ * @apiError 403 Response data
+ */
+router.patch("/uploadShopOverview", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    uploadShopOverview(function (err, txt) {
+        if (err) return next(err);
+        res.json({
+            type: "uploadShopOverview",
+            message: "Done Uploading Shop Overview"
+        });
     });
 });
 

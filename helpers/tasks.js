@@ -494,6 +494,39 @@ module.exports = {
                 .catch(cb);
         });
     },
+    uploadShopOverview: cb => {
+        const title = ["ID", "店家", "待使用", "待回收"];
+        Container.find({
+            storeID: {
+                $ne: null
+            }
+        }, (err, containersInStore) => {
+            if (err) return cb(err);
+            Store.find({}, ["id", "name"], {
+                sort: {
+                    id: 1
+                }
+            }, (err, storeList) => {
+                if (err) return cb(err);
+                const storeMap = {};
+                storeList.forEach(aStore => {
+                    storeMap[aStore.id] = [aStore.id, aStore.name, 0, 0];
+                });
+                containersInStore.forEach(aContainer => {
+                    if (aContainer.statusCode === 1) {
+                        storeMap[aContainer.storeID][2]++;
+                    } else if (aContainer.statusCode === 3) {
+                        storeMap[aContainer.storeID][3]++;
+                    }
+                });
+                const parsed = [title, ...Object.values(storeMap)];
+                sheet.shopOverview(parsed, (err) => {
+                    if (err) return cb(err);
+                    cb(null, "Done Uploading Shop Overview");
+                });
+            });
+        });
+    },
     reloadSuspendedNotifications
 }
 
