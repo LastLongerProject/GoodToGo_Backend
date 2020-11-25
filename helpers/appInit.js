@@ -48,7 +48,7 @@ module.exports = {
 
         Promise
             .all([
-                new Promise((resolve, reject) => {
+                /*new Promise((resolve, reject) => {
                     tasks.checkCouponIsExpired(err => {
                         if (err) return reject(err);
                         resolve();
@@ -59,7 +59,7 @@ module.exports = {
                         if (err) return reject(err);
                         resolve();
                     });
-                })
+                })*/
             ])
             .then(() => {
                 debug.log("Done App Startup Check List");
