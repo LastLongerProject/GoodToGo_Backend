@@ -99,6 +99,56 @@ module.exports = {
             });
         });
     },
+    shopOverview: function (dataSets, cb) {
+        googleAuth(auth => {
+            const now = new Date();
+            const sheetTitle = now.toLocaleDateString('roc', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            sheets.spreadsheets.values.get({
+                auth,
+                spreadsheetId: configs.overview_sheet_ID,
+                range: sheetTitle
+            }, (err, sheetExist) => {
+                const updateData = (err) => {
+                    if (err) return cb(err);
+                    sheets.spreadsheets.values.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.overview_sheet_ID,
+                        resource: {
+                            valueInputOption: "RAW",
+                            data: {
+                                range: `${sheetTitle}!A1:D`,
+                                values: dataSets
+                            }
+                        }
+                    }, (err, valuesRes) => {
+                        if (err) return cb(err);
+                        cb(null);
+                    });
+                };
+                if (err)
+                    sheets.spreadsheets.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.overview_sheet_ID,
+                        resource: {
+                            requests: [{
+                                "addSheet": {
+                                    "properties": {
+                                        "title": sheetTitle,
+                                        "index": 0
+                                    }
+                                }
+                            }]
+                        }
+                    }, updateData);
+                else
+                    updateData(null);
+            });
+        });
+    },
     getContainer: function (dbAdmin, cb) {
         googleAuth(function getSheet(auth) {
             sheets.spreadsheets.values.batchGet({

@@ -111,6 +111,7 @@ module.exports = function () {
                 setTimeout(tasks.checkUserPoint, 1000 * 60 * 35, logCb);
                 setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, logCb);
                 setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, logCb);
+                setTimeout(tasks.uploadShopOverview, 1000 * 60 * 50, logCb);
             };
             taskList();
             setInterval(taskList, MILLISECONDS_OF_A_DAY);
