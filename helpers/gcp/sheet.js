@@ -102,10 +102,8 @@ module.exports = {
     shopOverview: function (dataSets, cb) {
         googleAuth(auth => {
             const now = new Date();
-            const sheetTitle = now.toLocaleDateString('roc', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
+            const sheetTitle = now.toLocaleDateString('zh-TW', {
+                dateStyle: 'short'
             });
             sheets.spreadsheets.values.get({
                 auth,
@@ -120,7 +118,7 @@ module.exports = {
                         resource: {
                             valueInputOption: "RAW",
                             data: {
-                                range: `${sheetTitle}!A1:D`,
+                                range: `${sheetTitle}`,
                                 values: dataSets
                             }
                         }
