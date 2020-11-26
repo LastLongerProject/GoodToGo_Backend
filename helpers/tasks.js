@@ -535,7 +535,14 @@ module.exports = {
                             storeMap[aContainer.storeID][lastIndex]++;
                         }
                     });
-                    const parsed = [title, subtitle, ...Object.values(storeMap)];
+                    const parsed = [
+                        [
+                            ...title,
+                            `上次更新: ${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`
+                        ],
+                        subtitle,
+                        ...Object.values(storeMap)
+                    ];
                     sheet.shopOverview(parsed, (err) => {
                         if (err) return cb(err);
                         cb(null, "Done Uploading Shop Overview");
