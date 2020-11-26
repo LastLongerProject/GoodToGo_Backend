@@ -101,9 +101,9 @@ module.exports = {
     },
     shopOverview: function (dataSets, cb) {
         googleAuth(auth => {
-            const now = new Date();
-            const sheetTitle = now.toLocaleDateString('zh-TW', {
-                dateStyle: 'short'
+            const sheetTitle = new Date().toLocaleDateString('zh-TW', {
+                dateStyle: 'short',
+                timeZone: "Asia/Taipei"
             });
             sheets.spreadsheets.values.get({
                 auth,
