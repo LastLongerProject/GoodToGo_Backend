@@ -101,49 +101,19 @@ module.exports = {
     },
     shopOverview: function (dataSets, cb) {
         googleAuth(auth => {
-            const sheetTitle = new Date().toLocaleDateString('zh-TW', {
-                dateStyle: 'short',
-                timeZone: "Asia/Taipei"
-            });
-            sheets.spreadsheets.values.get({
+            sheets.spreadsheets.values.batchUpdate({
                 auth,
                 spreadsheetId: configs.overview_sheet_ID,
-                range: sheetTitle
-            }, (err, sheetExist) => {
-                const updateData = (err) => {
-                    if (err) return cb(err);
-                    sheets.spreadsheets.values.batchUpdate({
-                        auth,
-                        spreadsheetId: configs.overview_sheet_ID,
-                        resource: {
-                            valueInputOption: "RAW",
-                            data: {
-                                range: `${sheetTitle}`,
-                                values: dataSets
-                            }
-                        }
-                    }, (err, valuesRes) => {
-                        if (err) return cb(err);
-                        cb(null);
-                    });
-                };
-                if (err)
-                    sheets.spreadsheets.batchUpdate({
-                        auth,
-                        spreadsheetId: configs.overview_sheet_ID,
-                        resource: {
-                            requests: [{
-                                "addSheet": {
-                                    "properties": {
-                                        "title": sheetTitle,
-                                        "index": 0
-                                    }
-                                }
-                            }]
-                        }
-                    }, updateData);
-                else
-                    updateData(null);
+                resource: {
+                    valueInputOption: "RAW",
+                    data: {
+                        range: `Data`,
+                        values: dataSets
+                    }
+                }
+            }, (err, valuesRes) => {
+                if (err) return cb(err);
+                cb(null);
             });
         });
     },
