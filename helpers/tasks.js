@@ -19,6 +19,8 @@ const ContainerAction = require('../models/enums/containerEnum').Action;
 const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
 
 const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
+const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
+const fullDateString = require('../helpers/toolkit').fullDateString;
 
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
@@ -495,13 +497,13 @@ module.exports = {
         });
     },
     uploadShopOverview: cb => {
-        const title = ["ID", "店家", "待使用", "待回收"];
-        const subtitle = ["", ""]
+        const remainingTitle = ["ID", "店家", "待使用", "待回收"];
+        const remainingSubtitle = ["", ""]
         Container.find({
             storeID: {
                 $ne: null
             }
-        }, (err, containersInStore) => {
+        }, ["statusCode", "storeID", "typeCode"], (err, containersInStore) => {
             if (err) return cb(err);
             ContainerType.find({}, ["typeCode", "name"], {
                 sort: {
@@ -513,9 +515,9 @@ module.exports = {
                 const containerTypeAmount = containerTypeList.length;
                 for (let i = 0; i < containerTypeAmount; i++) {
                     emptyCtr.push(0);
-                    subtitle.push(containerTypeList[i].name);
+                    remainingSubtitle.push(containerTypeList[i].name);
                     if (i !== 0)
-                        title.splice(3, 0, "");
+                        remainingTitle.splice(3, 0, "");
                 }
                 Store.find({}, ["id", "name"], {
                     sort: {
@@ -523,29 +525,97 @@ module.exports = {
                     }
                 }, (err, storeList) => {
                     if (err) return cb(err);
-                    const storeMap = {};
+                    const storeRemainingMap = {};
+                    const usageTitle = [
+                        ["ID"],
+                        ["店家"]
+                    ];
+                    const usageTemplate = {}
                     storeList.forEach(aStore => {
-                        storeMap[aStore.id] = [aStore.id, aStore.name, ...emptyCtr, 0];
+                        storeRemainingMap[aStore.id] = [aStore.id, aStore.name, ...emptyCtr, 0];
+                        usageTitle[0].push(aStore.id);
+                        usageTitle[1].push(aStore.name);
+                        usageTemplate[aStore.id] = 0;
                     });
+
+                    const todayCheckpoint = dateCheckpoint(0);
+                    const thisMonth = todayCheckpoint.getMonth() + 1;
+                    let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
+                    const storeUsageMap = {};
+                    let dateIndex = 0;
+                    let dateCheckpointIndex = dateCheckpoint(dateIndex);
+                    while (dateCheckpointIndex.getMonth() + 1 >= lastMonth) {
+                        const dateKey = fullDateString(dateCheckpointIndex);
+                        const monthKey = dateKey.slice(0, 7);
+                        if (!storeUsageMap[`${ContainerAction.RENT}_${monthKey}`]) storeUsageMap[`${ContainerAction.RENT}_${monthKey}`] = {};
+                        if (!storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`]) storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`] = {};
+                        storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
+                        storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
+                        dateIndex--;
+                        dateCheckpointIndex = dateCheckpoint(dateIndex);
+                    }
+
                     const lastIndex = containerTypeAmount + 2;
                     containersInStore.forEach(aContainer => {
                         if (aContainer.statusCode === 1) {
-                            storeMap[aContainer.storeID][aContainer.typeCode + 2]++;
+                            storeRemainingMap[aContainer.storeID][aContainer.typeCode + 2]++;
                         } else if (aContainer.statusCode === 3) {
-                            storeMap[aContainer.storeID][lastIndex]++;
+                            storeRemainingMap[aContainer.storeID][lastIndex]++;
                         }
                     });
-                    const parsed = [
-                        [
-                            ...title,
-                            `上次更新: ${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`
-                        ],
-                        subtitle,
-                        ...Object.values(storeMap)
-                    ];
-                    sheet.shopOverview(parsed, (err) => {
+
+                    Trade.find({
+                        tradeTime: {
+                            '$gte': dateCheckpoint(dateIndex + 1),
+                            '$lt': dateCheckpoint(0)
+                        },
+                        "tradeType.action": {
+                            "$in": [ContainerAction.RENT, ContainerAction.RETURN]
+                        }
+                    }, ["tradeType.action", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
+                        sort: {
+                            tradeTime: -1
+                        }
+                    }, (err, tradeList) => {
                         if (err) return cb(err);
-                        cb(null, "Done Uploading Shop Overview");
+                        tradeList.forEach(aTrade => {
+                            const dateKey = fullDateString(aTrade.tradeTime);
+                            const monthKey = dateKey.slice(0, 7);
+                            if (aTrade.tradeType.action === ContainerAction.RENT) {
+                                storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey][aTrade.oriUser.storeID]++;
+                            } else {
+                                storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey][aTrade.newUser.storeID]++;
+                            }
+                        });
+
+                        const lastModifiedTxt = `上次更新: ${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`;
+                        const parsedUsageMap = {};
+                        for (let key in storeUsageMap) {
+                            parsedUsageMap[key] = [
+                                [
+                                    ...usageTitle[0],
+                                    lastModifiedTxt
+                                ],
+                                usageTitle[1],
+                                ...Object
+                                .keys(storeUsageMap[key])
+                                .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                            ]
+                        }
+
+                        sheet.shopOverview(Object.assign({
+                            Data: [
+                                [
+                                    ...remainingTitle,
+                                    lastModifiedTxt
+                                ],
+                                remainingSubtitle,
+                                ...Object.values(storeRemainingMap)
+                            ]
+                        }, parsedUsageMap), (err) => {
+                            if (err) return cb(err);
+                            cb(null, "Done Uploading Shop Overview");
+                        });
                     });
                 });
             });

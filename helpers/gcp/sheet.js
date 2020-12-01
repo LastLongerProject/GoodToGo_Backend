@@ -101,19 +101,49 @@ module.exports = {
     },
     shopOverview: function (dataSets, cb) {
         googleAuth(auth => {
-            sheets.spreadsheets.values.batchUpdate({
+            const sheetNames = Object.keys(dataSets);
+            const data = sheetNames.map(aDataKey => ({
+                range: aDataKey,
+                values: dataSets[aDataKey]
+            }));
+            sheets.spreadsheets.get({
                 auth,
                 spreadsheetId: configs.overview_sheet_ID,
-                resource: {
-                    valueInputOption: "RAW",
-                    data: {
-                        range: `Data`,
-                        values: dataSets
-                    }
-                }
-            }, (err, valuesRes) => {
+            }, (err, existsSheets) => {
                 if (err) return cb(err);
-                cb(null);
+                const existsSheetNames = existsSheets.data.sheets.map(aSheet => aSheet.properties.title);
+                const sheetsToAdd = sheetNames.filter(newSheet => existsSheetNames.every(existSheet => existSheet !== newSheet));
+                const updateData = (err) => {
+                    if (err) return cb(err);
+                    sheets.spreadsheets.values.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.overview_sheet_ID,
+                        resource: {
+                            valueInputOption: "RAW",
+                            data
+                        }
+                    }, (err, valuesRes) => {
+                        if (err) return cb(err);
+                        cb(null);
+                    });
+                };
+                if (sheetsToAdd.length > 0)
+                    sheets.spreadsheets.batchUpdate({
+                        auth,
+                        spreadsheetId: configs.overview_sheet_ID,
+                        resource: {
+                            requests: sheetsToAdd.map(aSheetName => ({
+                                addSheet: {
+                                    properties: {
+                                        title: aSheetName,
+                                        index: 1
+                                    }
+                                }
+                            })).reverse()
+                        }
+                    }, updateData);
+                else
+                    updateData(null);
             });
         });
     },
@@ -461,3 +491,28 @@ module.exports = {
         });
     }
 };
+
+
+function arr_diff(a1, a2) {
+
+    var a = [],
+        diff = [];
+
+    for (var i = 0; i < a1.length; i++) {
+        a[a1[i]] = true;
+    }
+
+    for (var i = 0; i < a2.length; i++) {
+        if (a[a2[i]]) {
+            delete a[a2[i]];
+        } else {
+            a[a2[i]] = true;
+        }
+    }
+
+    for (var k in a) {
+        diff.push(k);
+    }
+
+    return diff;
+}
