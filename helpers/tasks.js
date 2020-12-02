@@ -19,6 +19,7 @@ const ContainerAction = require('../models/enums/containerEnum').Action;
 const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
 
 const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
+const monthFormatter = require('../helpers/toolkit').monthFormatter;
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 
@@ -497,8 +498,8 @@ module.exports = {
         });
     },
     uploadShopOverview: cb => {
-        const remainingTitle = ["ID", "店家", "待使用", "待回收"];
-        const remainingSubtitle = ["", ""]
+        const remainingTitle = ["", "", "待使用", "待回收"];
+        const remainingSubtitle = ["ID", "店家"]
         Container.find({
             storeID: {
                 $ne: null
@@ -527,8 +528,8 @@ module.exports = {
                     if (err) return cb(err);
                     const storeRemainingMap = {};
                     const usageTitle = [
-                        ["ID"],
-                        ["店家"]
+                        [""],
+                        [""]
                     ];
                     const usageTemplate = {}
                     storeList.forEach(aStore => {
@@ -539,12 +540,12 @@ module.exports = {
                     });
 
                     const todayCheckpoint = dateCheckpoint(0);
-                    const thisMonth = todayCheckpoint.getMonth() + 1;
+                    const thisMonth = monthFormatter(todayCheckpoint);
                     let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
                     const storeUsageMap = {};
-                    let dateIndex = 0;
+                    let dateIndex = -1;
                     let dateCheckpointIndex = dateCheckpoint(dateIndex);
-                    while (dateCheckpointIndex.getMonth() + 1 >= lastMonth) {
+                    while (monthFormatter(dateCheckpointIndex) >= lastMonth) {
                         const dateKey = fullDateString(dateCheckpointIndex);
                         const monthKey = dateKey.slice(0, 7);
                         if (!storeUsageMap[`${ContainerAction.RENT}_${monthKey}`]) storeUsageMap[`${ContainerAction.RENT}_${monthKey}`] = {};
@@ -588,26 +589,29 @@ module.exports = {
                             }
                         });
 
-                        const lastModifiedTxt = `上次更新: ${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`;
+                        const lastModifiedTxt = ["上次更新:", `${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`];
                         const parsedUsageMap = {};
                         for (let key in storeUsageMap) {
                             parsedUsageMap[key] = [
                                 [
-                                    ...usageTitle[0],
-                                    lastModifiedTxt
+                                    lastModifiedTxt[0],
+                                    ...usageTitle[0].slice(1)
                                 ],
-                                usageTitle[1],
+                                [
+                                    lastModifiedTxt[1],
+                                    ...usageTitle[1].slice(1)
+                                ],
                                 ...Object
-                                .keys(storeUsageMap[key])
-                                .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                                    .keys(storeUsageMap[key])
+                                    .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
                             ]
                         }
 
                         sheet.shopOverview(Object.assign({
-                            Data: [
+                            Remaining: [
                                 [
-                                    ...remainingTitle,
-                                    lastModifiedTxt
+                                    ...lastModifiedTxt,
+                                    ...remainingTitle.slice(2)
                                 ],
                                 remainingSubtitle,
                                 ...Object.values(storeRemainingMap)
