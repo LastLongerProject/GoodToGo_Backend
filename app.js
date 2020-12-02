@@ -59,7 +59,11 @@ app.use((req, res, next) => {
     esm(req, res, next);
 });
 
-app.use('/manage', manage);
+app.use('/manage', (req, res, next) => {
+    res.setHeader('Cache-Control', `public, max-age=${60 * 5}`);
+    next();
+}, manage);
+
 app.use('/images', (req, res, next) => {
     res.setHeader('Cache-Control', `public, max-age=${60 * 60 * 24 * 3}`);
     next();
