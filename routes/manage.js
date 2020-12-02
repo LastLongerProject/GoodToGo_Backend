@@ -641,27 +641,27 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
 
         var tradeQuery = {
             "$or": [{
-                    "tradeType.action": ContainerAction.SIGN,
-                    "newUser.storeID": STORE_ID
-                },
-                {
-                    "tradeType.action": ContainerAction.RENT,
-                    "oriUser.storeID": STORE_ID
-                },
-                {
-                    "tradeType.action": ContainerAction.RETURN,
-                    "newUser.storeID": STORE_ID
-                },
-                {
-                    "tradeType.action": ContainerAction.UNDO_RETURN,
-                    "oriUser.storeID": STORE_ID
-                },
-                {
-                    "tradeType.action": ContainerAction.RELOAD,
-                },
-                {
-                    "tradeType.action": ContainerAction.UNDO_RELOAD
-                }
+                "tradeType.action": ContainerAction.SIGN,
+                "newUser.storeID": STORE_ID
+            },
+            {
+                "tradeType.action": ContainerAction.RENT,
+                "oriUser.storeID": STORE_ID
+            },
+            {
+                "tradeType.action": ContainerAction.RETURN,
+                "newUser.storeID": STORE_ID
+            },
+            {
+                "tradeType.action": ContainerAction.UNDO_RETURN,
+                "oriUser.storeID": STORE_ID
+            },
+            {
+                "tradeType.action": ContainerAction.RELOAD,
+            },
+            {
+                "tradeType.action": ContainerAction.UNDO_RELOAD
+            }
             ]
         };
 
@@ -699,9 +699,9 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
                             storeID: unusedContainer[containerKey].storeID
                         };
                         if (result.customersDetail.every(element => {
-                                if (element.phone === aTrade.newUser.phone) element.usedAmount++;
-                                return element.phone !== aTrade.newUser.phone
-                            })) {
+                            if (element.phone === aTrade.newUser.phone) element.usedAmount++;
+                            return element.phone !== aTrade.newUser.phone
+                        })) {
                             let customerDetail = {
                                 phone: aTrade.newUser.phone,
                                 usedAmount: 1,
@@ -719,9 +719,9 @@ router.get("/shopDetail/byCustomer", checkRoleIsAdmin(), validateRequest, functi
                 var timeToNow = now - lastUsed[containerID].time;
                 if (lastUsed[containerID].action === ContainerAction.RENT && timeToNow >= MILLISECONDS_OF_LOST_CONTAINER_CUSTOMER) {
                     if (result.customersDetail.every(element => {
-                            if (element.phone === lastUsed[containerID].newUser) element.lostAmount++;
-                            return element.phone !== lastUsed[containerID].newUser
-                        })) {
+                        if (element.phone === lastUsed[containerID].newUser) element.lostAmount++;
+                        return element.phone !== lastUsed[containerID].newUser
+                    })) {
                         let customerDetail = {
                             phone: lastUsed[containerID].newUser,
                             usedAmount: 0,
@@ -812,14 +812,14 @@ router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, re
         if (STORE_ID === 17) {
             containerQuery = {
                 "$or": [{
-                        "storeID": STORE_ID,
-                        "active": true
-                    },
-                    {
-                        "ID": {
-                            "$in": DEMO_CONTAINER_ID_LIST
-                        }
+                    "storeID": STORE_ID,
+                    "active": true
+                },
+                {
+                    "ID": {
+                        "$in": DEMO_CONTAINER_ID_LIST
                     }
+                }
                 ]
             };
         } else {
@@ -854,27 +854,27 @@ router.get("/shopDetail", checkRoleIsAdmin(), validateRequest, function (req, re
 
             var tradeQuery = {
                 "$or": [{
-                        "tradeType.action": ContainerAction.SIGN,
-                        "newUser.storeID": STORE_ID
-                    },
-                    {
-                        "tradeType.action": ContainerAction.RENT,
-                        "oriUser.storeID": STORE_ID
-                    },
-                    {
-                        "tradeType.action": ContainerAction.RETURN,
-                        "newUser.storeID": STORE_ID
-                    },
-                    {
-                        "tradeType.action": ContainerAction.UNDO_RETURN,
-                        "oriUser.storeID": STORE_ID
-                    },
-                    {
-                        "tradeType.action": ContainerAction.RELOAD,
-                    },
-                    {
-                        "tradeType.action": ContainerAction.UNDO_RELOAD
-                    }
+                    "tradeType.action": ContainerAction.SIGN,
+                    "newUser.storeID": STORE_ID
+                },
+                {
+                    "tradeType.action": ContainerAction.RENT,
+                    "oriUser.storeID": STORE_ID
+                },
+                {
+                    "tradeType.action": ContainerAction.RETURN,
+                    "newUser.storeID": STORE_ID
+                },
+                {
+                    "tradeType.action": ContainerAction.UNDO_RETURN,
+                    "oriUser.storeID": STORE_ID
+                },
+                {
+                    "tradeType.action": ContainerAction.RELOAD,
+                },
+                {
+                    "tradeType.action": ContainerAction.UNDO_RELOAD
+                }
                 ]
             };
 
@@ -1294,17 +1294,17 @@ router.get("/userDetail", checkRoleIsBot(), checkRoleIsAdmin(), validateRequest,
 
         var tradeQuery = {
             "$or": [{
-                    "tradeType.action": ContainerAction.RENT,
-                    "newUser.phone": theUser.user.phone
-                },
-                {
-                    "tradeType.action": ContainerAction.RETURN,
-                    "oriUser.phone": theUser.user.phone
-                },
-                {
-                    "tradeType.action": ContainerAction.UNDO_RETURN,
-                    "newUser.phone": theUser.user.phone
-                }
+                "tradeType.action": ContainerAction.RENT,
+                "newUser.phone": theUser.user.phone
+            },
+            {
+                "tradeType.action": ContainerAction.RETURN,
+                "oriUser.phone": theUser.user.phone
+            },
+            {
+                "tradeType.action": ContainerAction.UNDO_RETURN,
+                "newUser.phone": theUser.user.phone
+            }
             ]
         };
         Trade.find(tradeQuery, (err, tradeList) => {
@@ -1961,7 +1961,7 @@ router.patch("/refresh/couponImage/:forceRenew", checkRoleIsAdmin(), validateReq
  * @apiName Upload Shop Daily Overview to Sheet
  * @apiGroup Manage
  *
- * @api {patch} /manage/uploadShopOverview Upload Shop Daily Overview to Sheet
+ * @api {patch} /refresh/dailyReport Upload Shop Daily Overview to Sheet
  * @apiPermission admin_manager
  * @apiUse JWT
  * 
@@ -1973,7 +1973,7 @@ router.patch("/refresh/couponImage/:forceRenew", checkRoleIsAdmin(), validateReq
         }
  * @apiError 403 Response data
  */
-router.patch("/uploadShopOverview", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+router.patch("/refresh/dailyReport", checkRoleIsAdmin(), validateRequest, function (req, res, next) {
     uploadShopOverview(function (err, txt) {
         if (err) return next(err);
         res.json({
@@ -1987,11 +1987,11 @@ router.get('/summaryData/googlesheet/:storeID/:sheetID', checkRoleIsAdmin(), val
     let storeID = Number(req.params.storeID);
     let sheetID = req.params.sheetID;
     Promise.all([
-            summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID, sheetID),
-            summaryReport.List_Of_Containers_Be_Used(storeID, sheetID),
-            summaryReport.List_Of_User_Of_Containers(storeID, sheetID),
-            summaryReport.List_Of_Not_Return_Users(storeID, sheetID)
-        ])
+        summaryReport.List_Of_Containers_Not_Return_To_Goodtogo(storeID, sheetID),
+        summaryReport.List_Of_Containers_Be_Used(storeID, sheetID),
+        summaryReport.List_Of_User_Of_Containers(storeID, sheetID),
+        summaryReport.List_Of_Not_Return_Users(storeID, sheetID)
+    ])
         .then(messenges => {
             let err_messenge = [];
             for (let index in messenges) {

@@ -543,7 +543,7 @@ module.exports = {
                     const thisMonth = monthFormatter(todayCheckpoint);
                     let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
                     const storeUsageMap = {};
-                    let dateIndex = -1;
+                    let dateIndex = 0;
                     let dateCheckpointIndex = dateCheckpoint(dateIndex);
                     while (monthFormatter(dateCheckpointIndex) >= lastMonth) {
                         const dateKey = fullDateString(dateCheckpointIndex);
@@ -567,8 +567,7 @@ module.exports = {
 
                     Trade.find({
                         tradeTime: {
-                            '$gte': dateCheckpoint(dateIndex + 1),
-                            '$lt': dateCheckpoint(0)
+                            '$gte': dateCheckpoint(dateIndex + 1)
                         },
                         "tradeType.action": {
                             "$in": [ContainerAction.RENT, ContainerAction.RETURN]
