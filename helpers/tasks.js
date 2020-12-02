@@ -16,6 +16,7 @@ const ContainerType = require('../models/DB/containerTypeDB');
 
 const RoleType = require('../models/enums/userEnum').RoleType;
 const ContainerAction = require('../models/enums/containerEnum').Action;
+const ContainerState = require('../models/enums/containerEnum').State;
 const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
 
 const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
@@ -572,7 +573,7 @@ module.exports = {
                         "tradeType.action": {
                             "$in": [ContainerAction.RENT, ContainerAction.RETURN]
                         }
-                    }, ["tradeType.action", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
+                    }, ["tradeType", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
                         sort: {
                             tradeTime: -1
                         }
@@ -581,9 +582,10 @@ module.exports = {
                         tradeList.forEach(aTrade => {
                             const dateKey = fullDateString(aTrade.tradeTime);
                             const monthKey = dateKey.slice(0, 7);
-                            if (aTrade.tradeType.action === ContainerAction.RENT) {
+                            if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE) {
                                 storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey][aTrade.oriUser.storeID]++;
-                            } else {
+                            }
+                            if (aTrade.tradeType.newState === ContainerState.RETURNED) {
                                 storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey][aTrade.newUser.storeID]++;
                             }
                         });
