@@ -504,7 +504,8 @@ module.exports = {
         Container.find({
             storeID: {
                 $ne: null
-            }
+            },
+            active: true
         }, ["statusCode", "storeID", "typeCode"], (err, containersInStore) => {
             if (err) return cb(err);
             ContainerType.find({}, ["typeCode", "name"], {
@@ -603,8 +604,8 @@ module.exports = {
                                     ...usageTitle[1].slice(1)
                                 ],
                                 ...Object
-                                    .keys(storeUsageMap[key])
-                                    .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                                .keys(storeUsageMap[key])
+                                .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
                             ]
                         }
 
