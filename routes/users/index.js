@@ -51,6 +51,7 @@ router.use('/role', roleRoute);
  * @apiParam {String} phone phone of the User.
  * @apiParam {String} password password of the User.
  * @apiSuccessExample {json} Success-Response:
+ *     - before v7 -
  *     HTTP/1.1 200 Login Successfully (res.header.authorization)
  *     { 
  *          **Decoded JWT**
@@ -82,7 +83,28 @@ router.use('/role', roleRoute);
  *              ]
  *          };
  *      }
- *     
+ *      - new -
+        HTTP/1.1 200 Login Successfully
+        (Header Authorization Canceled)
+        { 
+            type: 'loginMessage',
+            message: 'Authentication succeeded',
+            MD5: String, (MD5 of roleList),
+            roleList: [
+                {
+                    "roleType": String,
+                    "apiKey": String,
+                    "secretKey": String,
+                    "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+                    "stationID": Number,  // if [roleType] === "station"
+                    "stationName": String,  // if [roleType] === "station"
+                    "boxable": String,  // if [roleType] === "station"
+                    "storeID": Number,  // if [roleType] === "store"
+                    "storeName": String,  // if [roleType] === "store"
+                    "group": String  // if [roleType] === "customer"
+                },...
+            ]
+        }
  * @apiUse LoginError
  */
 
@@ -93,7 +115,6 @@ router.post('/login', validateDefault, function (req, res, next) {
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -108,6 +129,7 @@ router.post('/login', validateDefault, function (req, res, next) {
  * @apiUse JWT
  * 
  * @apiSuccessExample {json} Success-Response:
+ *      - before v7 -
  *      HTTP/1.1 200 Login Successfully (res.header.authorization)
  *      { 
  *          **Decoded JWT**
@@ -139,6 +161,28 @@ router.post('/login', validateDefault, function (req, res, next) {
  *              ]
  *          };
  *      }
+ *      - new -
+        HTTP/1.1 200 Login Successfully
+        (Header Authorization Canceled)
+        { 
+            type: 'loginMessage',
+            message: 'Authentication succeeded',
+            MD5: String, (MD5 of roleList),
+            roleList: [
+                {
+                    "roleType": String,
+                    "apiKey": String,
+                    "secretKey": String,
+                    "manager": Boolean, // if [roleType] === "store" || [roleType] === "station"
+                    "stationID": Number,  // if [roleType] === "station"
+                    "stationName": String,  // if [roleType] === "station"
+                    "boxable": String,  // if [roleType] === "station"
+                    "storeID": Number,  // if [roleType] === "store"
+                    "storeName": String,  // if [roleType] === "store"
+                    "group": String  // if [roleType] === "customer"
+                },...
+            ]
+        }
  * @apiUse LoginError
  */
 
@@ -149,7 +193,6 @@ router.post('/fetchRole', validateRequest, function (req, res, next) {
         } else if (!user) {
             return res.status(401).json(info);
         } else {
-            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -440,7 +483,7 @@ router.post('/changeBotRole', checkRoleIsAdmin(), validateRequest, function (req
         "user.phone": req.body.bot
     }, (err, dbBot) => {
         if (err) return next(err);
-        if (dbBot.roleList[0].roleType !== RoleType.BOT) 
+        if (dbBot.roleList[0].roleType !== RoleType.BOT)
             return next(new Error("Unknown Error: Bot's Role Structure in Database is invalid."))
         dbBot.roles.bot.rentFromStoreID = req.body.rentFromStoreID;
         dbBot.roleList[0].rentFromStoreID = req.body.rentFromStoreID;
@@ -568,17 +611,17 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
             var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             Trade.find({
                 $or: [{
-                        'tradeType.action': ContainerAction.RENT,
-                        'newUser.phone': dbUser.user.phone,
-                    },
-                    {
-                        'tradeType.action': ContainerAction.RETURN,
-                        'oriUser.phone': dbUser.user.phone,
-                    },
-                    {
-                        'tradeType.action': ContainerAction.UNDO_RETURN,
-                        'newUser.phone': dbUser.user.phone,
-                    },
+                    'tradeType.action': ContainerAction.RENT,
+                    'newUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.RETURN,
+                    'oriUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
+                    'newUser.phone': dbUser.user.phone,
+                },
                 ],
             }, function (err, tradeList) {
                 if (err) return next(err);
@@ -655,20 +698,20 @@ router.get('/data', validateRequest, function (req, res, next) {
     var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
-            $or: [{
-                    'tradeType.action': ContainerAction.RENT,
-                    'newUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.RETURN,
-                    'oriUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.UNDO_RETURN,
-                    'newUser.phone': dbUser.user.phone,
-                },
-            ],
+        $or: [{
+            'tradeType.action': ContainerAction.RENT,
+            'newUser.phone': dbUser.user.phone,
         },
+        {
+            'tradeType.action': ContainerAction.RETURN,
+            'oriUser.phone': dbUser.user.phone,
+        },
+        {
+            'tradeType.action': ContainerAction.UNDO_RETURN,
+            'newUser.phone': dbUser.user.phone,
+        },
+        ],
+    },
         function (err, tradeList) {
             if (err) return next(err);
 
@@ -851,14 +894,14 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
 
     Trade.find({
         "$or": [{
-                "newUser.phone": dbUser.user.phone,
-                "tradeType.action": ContainerAction.RENT,
-                "container.inLineSystem": true
-            },
-            {
-                "oriUser.phone": dbUser.user.phone,
-                "tradeType.action": ContainerAction.RETURN
-            }
+            "newUser.phone": dbUser.user.phone,
+            "tradeType.action": ContainerAction.RENT,
+            "container.inLineSystem": true
+        },
+        {
+            "oriUser.phone": dbUser.user.phone,
+            "tradeType.action": ContainerAction.RETURN
+        }
         ]
     }, {}, {
         sort: {
@@ -927,7 +970,7 @@ router.post('/addPoint/:phone', checkRoleIsAdmin(), validateRequest, function (r
         pointTrade.sendPoint(point, theUser, {
             title: `歸還了${quantity}個容器`,
             body: `${containerIdList.join(", ")}` +
-                ` @ ${storeDict[toStore].name}${bonusPointActivity === null? "": `-${bonusPointActivity.txt}`}`
+                ` @ ${storeDict[toStore].name}${bonusPointActivity === null ? "" : `-${bonusPointActivity.txt}`}`
         });
         res.json({
             success: true,

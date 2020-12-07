@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const queue = require('queue')({
     concurrency: 1,
     autostart: true
@@ -369,13 +370,13 @@ module.exports = {
                 });
             fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
                 if (err) return done(err);
+                const { roleList, MD5 } = results;
                 return done(null, dbUser, {
-                    headers: {
-                        Authorization: results.token
-                    },
                     body: {
                         type: 'loginMessage',
-                        message: 'Authentication succeeded'
+                        message: 'Authentication succeeded',
+                        MD5,
+                        roleList
                     }
                 });
             });
@@ -614,13 +615,13 @@ module.exports = {
         const dbUser = req._user;
         fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
             if (err) return done(err);
+            const { roleList, MD5 } = results;
             return done(null, dbUser, {
-                headers: {
-                    Authorization: results.token
-                },
                 body: {
                     type: 'loginMessage',
-                    message: 'Authentication succeeded'
+                    message: 'Authentication succeeded',
+                    MD5,
+                    roleList
                 }
             });
         });
@@ -711,32 +712,26 @@ function fetchUserKeys(dbUser, cid, ua, done) {
             });
         })))
         .then((keyPairList) => {
-            keys.serverSecretKey((err, serverSecretKey) => {
-                if (err) return done(err);
-                return done(null, {
-                    token: tokenBuilder(serverSecretKey, keyPairList, dbUser)
-                });
-            });
+            return done(null, roleListBuilder(keyPairList, dbUser));
         })
         .catch((err) => {
             if (err) return done(err);
         });
 }
 
-function tokenBuilder(serverSecretKey, userKeyPairList, dbUser) {
-    let payload = {
-        roles: { // Legacy Role sys
-            typeList: dbUser.roles.typeList
-        },
-        roleList: dbUser.roleList
-    };
+function roleListBuilder(userKeyPairList, dbUser) {
+    const roleList = dbUser.roleList
     if (!Array.isArray(userKeyPairList)) userKeyPairList = [userKeyPairList];
-    userKeyPairList.forEach(aUserKeyPair => payloadBuilder(payload, aUserKeyPair));
-    return jwt.sign(payload, serverSecretKey);
+    userKeyPairList.forEach(aUserKeyPair => insertKeyPair(roleList, aUserKeyPair));
+    const md5 = crypto.createHash('md5');
+    return {
+        MD5: md5.update(JSON.stringify(roleList), "utf8").digest("hex"),
+        roleList
+    };
 }
 
-function payloadBuilder(payload, userKey) {
-    const theRole = payload.roleList.find(aRole => aRole.roleID === userKey.roleID);
+function insertKeyPair(roleList, userKey) {
+    const theRole = roleList.find(aRole => aRole.roleID === userKey.roleID);
     Object.assign(theRole, {
         apiKey: userKey.apiKey,
         secretKey: userKey.secretKey
@@ -751,27 +746,4 @@ function payloadBuilder(payload, userKey) {
             [RoleElement.STATION_NAME]: role.getElement(theRole, RoleElement.STATION_NAME),
             [RoleElement.STATION_BOXABLE]: role.getElement(theRole, RoleElement.STATION_BOXABLE)
         });
-
-    // Legacy Role sys
-    if (userKey.roleType === RoleType.CUSTOMER) {
-        payload.roles.customer = {
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-        };
-    } else if (userKey.roleType === RoleType.STORE) {
-        payload.roles[RoleType.CLERK] = {
-            storeID: theRole.storeID,
-            manager: theRole.manager,
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-            storeName: role.getElement(theRole, RoleElement.STORE_NAME)
-        };
-    } else if (userKey.roleType === RoleType.CLEAN_STATION) {
-        payload.roles.admin = {
-            stationID: theRole.stationID,
-            manager: theRole.manager,
-            apiKey: userKey.apiKey,
-            secretKey: userKey.secretKey,
-        };
-    }
 }
