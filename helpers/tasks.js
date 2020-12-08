@@ -660,7 +660,10 @@ module.exports = {
                                     })
                                 })))
                                 .then(() => {
-                                    cb(null, "Done SU roleList Updating");
+                                    dbUser.save(err => {
+                                        if (err) return cb(err);
+                                        cb(null, "Done SU roleList Updating");
+                                    });
                                 })
                                 .catch(cb);
                         });

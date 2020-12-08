@@ -370,7 +370,10 @@ module.exports = {
                 });
             fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
                 if (err) return done(err);
-                const { roleList, MD5 } = results;
+                const {
+                    roleList,
+                    MD5
+                } = results;
                 return done(null, dbUser, {
                     body: {
                         type: 'loginMessage',
@@ -615,7 +618,10 @@ module.exports = {
         const dbUser = req._user;
         fetchUserKeys(dbUser, req.signedCookies.uid || req._uid, req.headers['user-agent'], (err, results) => {
             if (err) return done(err);
-            const { roleList, MD5 } = results;
+            const {
+                roleList,
+                MD5
+            } = results;
             return done(null, dbUser, {
                 body: {
                     type: 'loginMessage',
@@ -726,7 +732,30 @@ function roleListBuilder(userKeyPairList, dbUser) {
     const md5 = crypto.createHash('md5');
     return {
         MD5: md5.update(JSON.stringify(roleList), "utf8").digest("hex"),
-        roleList
+        roleList: roleList.sort((a, b) => {
+            if (a.roleType === RoleType.ADMIN ||
+                (a.roleType === RoleType.CLEAN_STATION && b.roleType !== RoleType.CLEAN_STATION && b.roleType !== RoleType.ADMIN) ||
+                b.roleType === RoleType.BOT || b.roleType === RoleType.CUSTOMER
+            ) {
+                return -1;
+            } else if (a.roleType === RoleType.CUSTOMER ||
+                a.roleType === RoleType.BOT ||
+                (a.roleType === RoleType.STORE && b.roleType !== RoleType.CUSTOMER && b.roleType !== RoleType.STORE) ||
+                b.roleType === RoleType.ADMIN
+            ) {
+                return 1;
+            } else if (a.roleType === b.roleType) {
+                if (a.roleType === RoleType.STORE) {
+                    return a.storeID - b.storeID;
+                } else if (a.roleType === RoleType.CLEAN_STATION) {
+                    return a.stationID - b.stationID;
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        })
     };
 }
 
