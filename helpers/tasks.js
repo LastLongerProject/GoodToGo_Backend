@@ -606,8 +606,8 @@ module.exports = {
                                     ...usageTitle[1].slice(1)
                                 ],
                                 ...Object
-                                    .keys(storeUsageMap[key])
-                                    .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                                .keys(storeUsageMap[key])
+                                .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
                             ]
                         }
 
@@ -653,7 +653,7 @@ module.exports = {
                                     dbUser.addRole(RoleType.CLEAN_STATION, {
                                         typeCode: RoleType.CLEAN_STATION,
                                         manager: true,
-                                        storeID: aStation.ID
+                                        stationID: aStation.ID
                                     }, err => {
                                         if (err) return reject(err);
                                         resolve();
