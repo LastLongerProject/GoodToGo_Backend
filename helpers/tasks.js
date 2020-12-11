@@ -17,6 +17,7 @@ const ContainerType = require('../models/DB/containerTypeDB');
 const RoleType = require('../models/enums/userEnum').RoleType;
 const ContainerAction = require('../models/enums/containerEnum').Action;
 const ContainerState = require('../models/enums/containerEnum').State;
+const BoxStatus = require('../models/enums/boxEnum').BoxStatus;
 const ORI_ROLE_TYPE = [RoleType.CLERK, RoleType.ADMIN, RoleType.BOT, RoleType.CUSTOMER];
 
 const reloadSuspendedNotifications = require("../helpers/notifications/push").reloadSuspendedNotifications;
@@ -499,7 +500,7 @@ module.exports = {
         });
     },
     uploadShopOverview: cb => {
-        const remainingTitle = ["", "", "待使用", "待回收"];
+        const remainingTitle = ["", "", "待使用", "待回收", "待簽收"];
         const remainingSubtitle = ["ID", "店家"]
         Container.find({
             storeID: {
@@ -522,105 +523,114 @@ module.exports = {
                     if (i !== 0)
                         remainingTitle.splice(3, 0, "");
                 }
-                Store.find({}, ["id", "name"], {
-                    sort: {
-                        id: 1
-                    }
-                }, (err, storeList) => {
+                Box.find({
+                    status: BoxStatus.Delivering
+                }, ["storeID", "containerList"], (err, boxList) => {
                     if (err) return cb(err);
-                    const storeRemainingMap = {};
-                    const usageTitle = [
-                        [""],
-                        [""]
-                    ];
-                    const usageTemplate = {}
-                    storeList.forEach(aStore => {
-                        storeRemainingMap[aStore.id] = [aStore.id, aStore.name, ...emptyCtr, 0];
-                        usageTitle[0].push(aStore.id);
-                        usageTitle[1].push(aStore.name);
-                        usageTemplate[aStore.id] = 0;
-                    });
-
-                    const todayCheckpoint = dateCheckpoint(0);
-                    const thisMonth = monthFormatter(todayCheckpoint);
-                    let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
-                    const storeUsageMap = {};
-                    let dateIndex = 0;
-                    let dateCheckpointIndex = dateCheckpoint(dateIndex);
-                    while (monthFormatter(dateCheckpointIndex) >= lastMonth) {
-                        const dateKey = fullDateString(dateCheckpointIndex);
-                        const monthKey = dateKey.slice(0, 7);
-                        if (!storeUsageMap[`${ContainerAction.RENT}_${monthKey}`]) storeUsageMap[`${ContainerAction.RENT}_${monthKey}`] = {};
-                        if (!storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`]) storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`] = {};
-                        storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
-                        storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
-                        dateIndex--;
-                        dateCheckpointIndex = dateCheckpoint(dateIndex);
-                    }
-
-                    const lastIndex = containerTypeAmount + 2;
-                    containersInStore.forEach(aContainer => {
-                        if (aContainer.statusCode === 1) {
-                            storeRemainingMap[aContainer.storeID][aContainer.typeCode + 2]++;
-                        } else if (aContainer.statusCode === 3) {
-                            storeRemainingMap[aContainer.storeID][lastIndex]++;
-                        }
-                    });
-
-                    Trade.find({
-                        tradeTime: {
-                            '$gte': dateCheckpoint(dateIndex + 1)
-                        },
-                        "tradeType.action": {
-                            "$in": [ContainerAction.RENT, ContainerAction.RETURN]
-                        }
-                    }, ["tradeType", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
+                    Store.find({}, ["id", "name"], {
                         sort: {
-                            tradeTime: -1
+                            id: 1
                         }
-                    }, (err, tradeList) => {
+                    }, (err, storeList) => {
                         if (err) return cb(err);
-                        tradeList.forEach(aTrade => {
-                            const dateKey = fullDateString(aTrade.tradeTime);
-                            const monthKey = dateKey.slice(0, 7);
-                            if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE) {
-                                storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey][aTrade.oriUser.storeID]++;
-                            }
-                            if (aTrade.tradeType.newState === ContainerState.RETURNED) {
-                                storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey][aTrade.newUser.storeID]++;
-                            }
+                        const storeRemainingMap = {};
+                        const usageTitle = [
+                            [""],
+                            [""]
+                        ];
+                        const usageTemplate = {}
+                        storeList.forEach(aStore => {
+                            storeRemainingMap[aStore.id] = [aStore.id, aStore.name, ...emptyCtr, 0, 0];
+                            usageTitle[0].push(aStore.id);
+                            usageTitle[1].push(aStore.name);
+                            usageTemplate[aStore.id] = 0;
                         });
 
-                        const lastModifiedTxt = ["上次更新:", `${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`];
-                        const parsedUsageMap = {};
-                        for (let key in storeUsageMap) {
-                            parsedUsageMap[key] = [
-                                [
-                                    lastModifiedTxt[0],
-                                    ...usageTitle[0].slice(1)
-                                ],
-                                [
-                                    lastModifiedTxt[1],
-                                    ...usageTitle[1].slice(1)
-                                ],
-                                ...Object
-                                .keys(storeUsageMap[key])
-                                .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
-                            ]
+                        const todayCheckpoint = dateCheckpoint(0);
+                        const thisMonth = monthFormatter(todayCheckpoint);
+                        let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
+                        const storeUsageMap = {};
+                        let dateIndex = 0;
+                        let dateCheckpointIndex = dateCheckpoint(dateIndex);
+                        while (monthFormatter(dateCheckpointIndex) >= lastMonth) {
+                            const dateKey = fullDateString(dateCheckpointIndex);
+                            const monthKey = dateKey.slice(0, 7);
+                            if (!storeUsageMap[`${ContainerAction.RENT}_${monthKey}`]) storeUsageMap[`${ContainerAction.RENT}_${monthKey}`] = {};
+                            if (!storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`]) storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`] = {};
+                            storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
+                            storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey] = Object.assign({}, usageTemplate);
+                            dateIndex--;
+                            dateCheckpointIndex = dateCheckpoint(dateIndex);
                         }
 
-                        sheet.shopOverview(Object.assign({
-                            Remaining: [
-                                [
-                                    ...lastModifiedTxt,
-                                    ...remainingTitle.slice(2)
-                                ],
-                                remainingSubtitle,
-                                ...Object.values(storeRemainingMap)
-                            ]
-                        }, parsedUsageMap), (err) => {
+                        const toReloadIndex = containerTypeAmount + 2;
+                        const toSignIndex = emptyCtr.length + 3;
+                        containersInStore.forEach(aContainer => {
+                            if (aContainer.statusCode === 1) {
+                                storeRemainingMap[aContainer.storeID][aContainer.typeCode + 2]++;
+                            } else if (aContainer.statusCode === 3) {
+                                storeRemainingMap[aContainer.storeID][toReloadIndex]++;
+                            }
+                        });
+                        boxList.forEach(aBox => {
+                            storeRemainingMap[aBox.storeID][toSignIndex] += aBox.containerList.length;
+                        });
+
+                        Trade.find({
+                            tradeTime: {
+                                '$gte': dateCheckpoint(dateIndex + 1)
+                            },
+                            "tradeType.action": {
+                                "$in": [ContainerAction.RENT, ContainerAction.RETURN]
+                            }
+                        }, ["tradeType", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
+                            sort: {
+                                tradeTime: -1
+                            }
+                        }, (err, tradeList) => {
                             if (err) return cb(err);
-                            cb(null, "Done Uploading Shop Overview");
+                            tradeList.forEach(aTrade => {
+                                const dateKey = fullDateString(aTrade.tradeTime);
+                                const monthKey = dateKey.slice(0, 7);
+                                if (aTrade.tradeType.oriState === ContainerState.READY_TO_USE) {
+                                    storeUsageMap[`${ContainerAction.RENT}_${monthKey}`][dateKey][aTrade.oriUser.storeID]++;
+                                }
+                                if (aTrade.tradeType.newState === ContainerState.RETURNED) {
+                                    storeUsageMap[`${ContainerAction.RETURN}_${monthKey}`][dateKey][aTrade.newUser.storeID]++;
+                                }
+                            });
+
+                            const lastModifiedTxt = ["上次更新:", `${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}`];
+                            const parsedUsageMap = {};
+                            for (let key in storeUsageMap) {
+                                parsedUsageMap[key] = [
+                                    [
+                                        lastModifiedTxt[0],
+                                        ...usageTitle[0].slice(1)
+                                    ],
+                                    [
+                                        lastModifiedTxt[1],
+                                        ...usageTitle[1].slice(1)
+                                    ],
+                                    ...Object
+                                        .keys(storeUsageMap[key])
+                                        .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                                ]
+                            }
+
+                            sheet.shopOverview(Object.assign({
+                                Remaining: [
+                                    [
+                                        ...lastModifiedTxt,
+                                        ...remainingTitle.slice(2)
+                                    ],
+                                    remainingSubtitle,
+                                    ...Object.values(storeRemainingMap)
+                                ]
+                            }, parsedUsageMap), (err) => {
+                                if (err) return cb(err);
+                                cb(null, "Done Uploading Shop Overview");
+                            });
                         });
                     });
                 });
