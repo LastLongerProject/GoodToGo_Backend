@@ -35,12 +35,12 @@ module.exports = {
     afterStartUp: function () {
         if (process.env.NODE_ENV) {
             const ENV = process.env.NODE_ENV.replace(/"|\s/g, "");
-            if (ENV === "testing") {
-                scheduler();
+            if (ENV === "testing" || ENV === "develop") {
+                scheduler.fullDailyJob();
             } else if (ENV === "development") {
                 debug.log("Development Server no scheduler");
             } else {
-                debug.log(`${ENV} Server no scheduler`);
+                scheduler.production();
             }
         } else {
             debug.log("Undefined Server no scheduler");
