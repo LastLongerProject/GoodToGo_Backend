@@ -36,11 +36,11 @@ module.exports = {
         if (process.env.NODE_ENV) {
             const ENV = process.env.NODE_ENV.replace(/"|\s/g, "");
             if (ENV === "testing" || ENV === "develop") {
-                scheduler();
+                scheduler.fullDailyJob();
             } else if (ENV === "development") {
                 debug.log("Development Server no scheduler");
             } else {
-                debug.log(`${ENV} Server no scheduler`);
+                scheduler.production();
             }
         }
 
