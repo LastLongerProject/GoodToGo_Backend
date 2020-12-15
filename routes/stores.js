@@ -172,7 +172,7 @@ router.get('/list', validateDefault, function (req, res, next) {
 router.get('/list/forOfficialPage', function (req, res, next) {
     Place.find({
         "project": {
-            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛", "foodpanda"]
         },
         "active": true
     }, ["ID"], {
@@ -930,7 +930,7 @@ router.get('/getUser/:phone', checkRoleIs([{
                     message: 'The user is not verified'
                 });
             }
-            
+
             var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
             redis.setex('user_token:' + token, 60 * 30, dbUser.user.phone, (err, reply) => {
                 if (err) return next(err);
