@@ -611,23 +611,26 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
             var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             Trade.find({
                 $or: [{
-                    'tradeType.action': ContainerAction.RENT,
-                    'newUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.RETURN,
-                    'oriUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.UNDO_RETURN,
-                    'newUser.phone': dbUser.user.phone,
-                },
+                        'tradeType.action': ContainerAction.RENT,
+                        'newUser.phone': dbUser.user.phone,
+                    }, {
+                        'tradeType.action': ContainerAction.UNDO_RENT,
+                        'oriUser.phone': dbUser.user.phone,
+                    },
+                    {
+                        'tradeType.action': ContainerAction.RETURN,
+                        'oriUser.phone': dbUser.user.phone,
+                    },
+                    {
+                        'tradeType.action': ContainerAction.UNDO_RETURN,
+                        'newUser.phone': dbUser.user.phone,
+                    },
                 ],
             }, function (err, tradeList) {
                 if (err) return next(err);
 
                 tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-                cleanUndoTrade(ContainerAction.RETURN, tradeList);
+                cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], tradeList);
 
                 var containerKey;
                 var tmpReturnedObject;
@@ -698,25 +701,31 @@ router.get('/data', validateRequest, function (req, res, next) {
     var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
-        $or: [{
-            'tradeType.action': ContainerAction.RENT,
-            'newUser.phone': dbUser.user.phone,
+            $or: [{
+                    'tradeType.action': ContainerAction.RENT,
+                    'newUser.phone': dbUser.user.phone,
+                }, {
+                    'tradeType.action': ContainerAction.UNDO_RENT,
+                    'oriUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.RETURN,
+                    'oriUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
+                    'newUser.phone': dbUser.user.phone,
+                },
+            ],
+        }, {}, {
+            sort: {
+                tradeTime: 1
+            }
         },
-        {
-            'tradeType.action': ContainerAction.RETURN,
-            'oriUser.phone': dbUser.user.phone,
-        },
-        {
-            'tradeType.action': ContainerAction.UNDO_RETURN,
-            'newUser.phone': dbUser.user.phone,
-        },
-        ],
-    },
         function (err, tradeList) {
             if (err) return next(err);
 
-            tradeList.sort((a, b) => a.tradeTime - b.tradeTime);
-            cleanUndoTrade(ContainerAction.RETURN, tradeList);
+            cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], tradeList);
 
             var containerKey;
             var tmpReturnedObject;
@@ -894,14 +903,22 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
 
     Trade.find({
         "$or": [{
-            "newUser.phone": dbUser.user.phone,
-            "tradeType.action": ContainerAction.RENT,
-            "container.inLineSystem": true
-        },
-        {
-            "oriUser.phone": dbUser.user.phone,
-            "tradeType.action": ContainerAction.RETURN
-        }
+                "tradeType.action": ContainerAction.RENT,
+                "newUser.phone": dbUser.user.phone,
+                "container.inLineSystem": true
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'oriUser.phone': dbUser.user.phone
+            },
+            {
+                "tradeType.action": ContainerAction.RETURN,
+                "oriUser.phone": dbUser.user.phone
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RETURN,
+                'newUser.phone': dbUser.user.phone
+            }
         ]
     }, {}, {
         sort: {
@@ -911,7 +928,8 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         if (err) return next(err);
 
         const rentHistory = {};
-        const intergratedTrade = {};
+        const integratedTrade = {};
+        cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], tradeList);
         tradeList.forEach(aTrade => {
             const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
             if (aTrade.tradeType.action === ContainerAction.RENT) {
@@ -923,7 +941,7 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
                 };
             } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 if (!rentHistory[tradeKey]) return;
-                intergratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
+                integratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
                     returnTime: aTrade.tradeTime,
                     returnStore: StoreDict[aTrade.newUser.storeID].name
                 });
@@ -931,7 +949,7 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         });
 
         res.json({
-            history: Object.values(intergratedTrade).reverse()
+            history: Object.values(integratedTrade).reverse()
         });
     });
 });

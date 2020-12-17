@@ -24,6 +24,7 @@ const reloadSuspendedNotifications = require("../helpers/notifications/push").re
 const monthFormatter = require('../helpers/toolkit').monthFormatter;
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
+const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
 const getSystemBot = require('../helpers/tools').getSystemBot;
 
 const tradeCallback = require("../controllers/tradeCallback");
@@ -583,14 +584,15 @@ module.exports = {
                                 '$gte': dateCheckpoint(dateIndex + 1)
                             },
                             "tradeType.action": {
-                                "$in": [ContainerAction.RENT, ContainerAction.RETURN]
+                                "$in": [ContainerAction.RENT, ContainerAction.RETURN, ContainerAction.UNDO_RENT, ContainerAction.UNDO_RETURN]
                             }
                         }, ["tradeType", "tradeTime", "oriUser.storeID", "newUser.storeID"], {
                             sort: {
-                                tradeTime: -1
+                                tradeTime: 1
                             }
                         }, (err, tradeList) => {
                             if (err) return cb(err);
+                            cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], tradeList);
                             tradeList.forEach(aTrade => {
                                 const dateKey = fullDateString(aTrade.tradeTime);
                                 const monthKey = dateKey.slice(0, 7);
@@ -615,8 +617,8 @@ module.exports = {
                                         ...usageTitle[1].slice(1)
                                     ],
                                     ...Object
-                                        .keys(storeUsageMap[key])
-                                        .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
+                                    .keys(storeUsageMap[key])
+                                    .map(aDateKey => [aDateKey, ...Object.values(storeUsageMap[key][aDateKey])])
                                 ]
                             }
 

@@ -140,13 +140,13 @@ module.exports = {
                 }
             }
         } else if (Array.isArray(action)) {
-            undoAction = ["Undo" + action[0], "Undo" + action[1]];
+            undoAction = action.map(anAction => `Undo${anAction}`);
             for (let i = tradeList.length - 1; i >= 0; i--) {
-                if (tradeList[i].tradeType.action === undoAction[0] || tradeList[i].tradeType.action === undoAction[1]) {
+                if (undoAction.indexOf(tradeList[i].tradeType.action) !== -1) {
                     containerKey = tradeList[i].container.id + "-" + tradeList[i].container.cycleCtr + "-" + tradeList[i].tradeType.action.slice(4);
                     recordToRemove.push(containerKey);
                     tradeList.splice(i, 1);
-                } else if (tradeList[i].tradeType.action === action[0] || tradeList[i].tradeType.action === action[1]) {
+                } else if (action.indexOf(tradeList[i].tradeType.action) !== -1) {
                     containerKey = tradeList[i].container.id + "-" + tradeList[i].container.cycleCtr + "-" + tradeList[i].tradeType.action;
                     let removeIndex = recordToRemove.indexOf(containerKey);
                     if (removeIndex !== -1) {

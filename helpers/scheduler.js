@@ -43,6 +43,19 @@ function getShouldWait(scheduledHour) {
     }
 }
 
+function updateSecretKey() {
+    fs.readFile(ROOT_DIR + "/config/secret_key.json", 'utf8', function (err, secret_key) {
+        if (err) return debug.error(err);
+        secret_key = JSON.parse(secret_key);
+        secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
+        secret_key.lastUpdate = Date.now();
+        fs.writeFile(ROOT_DIR + "/config/secret_key.json", JSON.stringify(secret_key), 'utf8', function (err) {
+            if (err) return debug.error(err);
+            debug.log('update server secret key');
+        });
+    });
+}
+
 module.exports = {
     production: function () {
         const shouldWait = {
@@ -56,18 +69,7 @@ module.exports = {
                 setTimeout(tasks.containerListCaching, 0, generalCb);
                 setTimeout(tasks.couponListCaching, 1000 * 60 * 3, generalCb);
                 setTimeout(tasks.storeListCaching, 1000 * 60 * 5, generalCb);
-                setTimeout(function () {
-                    fs.readFile(ROOT_DIR + "/config/secret_key.json", 'utf8', function (err, secret_key) {
-                        if (err) return debug.error(err);
-                        secret_key = JSON.parse(secret_key);
-                        secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                        secret_key.lastUpdate = Date.now();
-                        fs.writeFile(ROOT_DIR + "/config/secret_key.json", JSON.stringify(secret_key), 'utf8', function (err) {
-                            if (err) return debug.error(err);
-                            debug.log('update server secret key');
-                        });
-                    });
-                }, 1000 * 60 * 10);
+                setTimeout(updateSecretKey, 1000 * 60 * 10);
             };
             taskList();
             setInterval(taskList, MILLISECONDS_OF_A_DAY);
@@ -120,18 +122,7 @@ module.exports = {
                             debug.log('remove expire login');
                         });
                     }, 1000 * 60 * 20);
-                    setTimeout(function () {
-                        fs.readFile(ROOT_DIR + "/config/secret_key.json", 'utf8', function (err, secret_key) {
-                            if (err) return debug.error(err);
-                            secret_key = JSON.parse(secret_key);
-                            secret_key.text = crypto.randomBytes(48).toString('hex').substr(0, 10);
-                            secret_key.lastUpdate = Date.now();
-                            fs.writeFile(ROOT_DIR + "/config/secret_key.json", JSON.stringify(secret_key), 'utf8', function (err) {
-                                if (err) return debug.error(err);
-                                debug.log('update server secret key');
-                            });
-                        });
-                    }, 1000 * 60 * 25);
+                    setTimeout(updateSecretKey, 1000 * 60 * 25);
                     setTimeout(tasks.solveUnusualUserOrder, 1000 * 60 * 30, (err, results) => {
                         if (err) return debug.error(err);
                         results.failMsg.forEach(debug.error);

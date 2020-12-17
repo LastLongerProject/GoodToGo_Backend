@@ -174,9 +174,16 @@ module.exports = {
                         'tradeType.action': ContainerAction.RENT,
                         "tradeType.oriState": ContainerState.READY_TO_USE,
                         'oriUser.storeID': storeID
-                    }, (err, amount) => {
+                    }, (err, usedAmount) => {
                         if (err) return next(err);
-                        return socket.emitWithLog('data_reply', amount);
+                        Trade.count({
+                            'tradeType.action': ContainerAction.UNDO_RENT,
+                            "tradeType.newState": ContainerState.READY_TO_USE,
+                            'newUser.storeID': storeID
+                        }, (err, undoAmount) => {
+                            if (err) return next(err);
+                            return socket.emitWithLog('data_reply', usedAmount - undoAmount);
+                        });
                     });
                 });
             } else {
