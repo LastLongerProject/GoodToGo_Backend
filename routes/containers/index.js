@@ -7,6 +7,7 @@ const DEMO_CONTAINER_ID_LIST = require('../../config/config').demoContainers;
 
 const Trade = require('../../models/DB/tradeDB');
 const User = require('../../models/DB/userDB.js');
+const UserOrder = require('../../models/DB/userOrderDB');
 const Container = require('../../models/DB/containerDB');
 const RoleType = require('../../models/enums/userEnum').RoleType;
 const RoleElement = require('../../models/enums/userEnum').RoleElement;
@@ -333,6 +334,106 @@ router.post('/readyToClean/:container', checkRoleIs([{
             res.json(reply);
         }
     );
+});
+
+/**
+ * @apiName Containers Undo action 
+ * @apiGroup Containers
+ *
+ * @api {post} /containers/undo/Rent/:container Undo action to specific container 
+ * @apiPermission admin_manager
+ * 
+ * @apiUse JWT
+ * 
+ * @apiSuccessExample {json} Success-Response:
+        HTTP/1.1 200 
+        {
+            type: "UndoMessage",
+            message: "Undo Rent Succeeded"
+        }
+ * @apiUse UndoError
+ */
+router.post('/undo/Rent/:container', checkRoleIsAdmin(), validateRequest, function (req, res, next) {
+    const dbAdmin = req._user;
+    const action = ContainerAction.RENT;
+    const containerID = req.params.container;
+    Trade.findOne({
+        'container.id': containerID,
+        'tradeType.action': action,
+    }, {}, {
+        sort: {
+            logTime: -1,
+        },
+    }, function (err, theTrade) {
+        if (err) return next(err);
+        Container.findOne({
+            ID: containerID
+        }, function (err, theContainer) {
+            if (err) return next(err);
+            if (!theContainer || !theTrade)
+                return res.json({
+                    code: 'F002',
+                    type: 'UndoMessage',
+                    message: 'No container found',
+                    data: containerID
+                });
+            if (theContainer.statusCode !== ContainerState.USING)
+                return res.status(403).json({
+                    code: 'F00?',
+                    type: 'UndoMessage',
+                    message: 'Container is not in that state'
+                });
+            User.findOne({
+                "user.phone": theTrade.newUser.phone
+            }, (err, theCustomer) => {
+                if (err) return next(err);
+                if (!theCustomer)
+                    return res.json({
+                        code: 'F00?',
+                        type: 'UndoMessage',
+                        message: 'No User found',
+                        data: theTrade.newUser.phone
+                    });
+                theContainer.conbineTo = theTrade.oriUser.phone;
+                theContainer.statusCode = theTrade.tradeType.oriState;
+                theContainer.storeID = theTrade.oriUser.storeID;
+                let newTrade = new Trade();
+                newTrade.tradeTime = Date.now();
+                newTrade.tradeType = {
+                    action: 'Undo' + action,
+                    oriState: theTrade.tradeType.newState,
+                    newState: theTrade.tradeType.oriState
+                };
+                var tmpTradeUser = theTrade.newUser;
+                newTrade.newUser = theTrade.oriUser;
+                newTrade.newUser.undoBy = dbAdmin.user.phone;
+                newTrade.oriUser = tmpTradeUser;
+                newTrade.oriUser.undoBy = undefined;
+                newTrade.container = {
+                    id: containerID,
+                    typeCode: theContainer.typeCode,
+                    cycleCtr: theContainer.cycleCtr
+                };
+                newTrade.save(err => {
+                    if (err) return next(err);
+                    theContainer.save(err => {
+                        if (err) return next(err);
+                        UserOrder.deleteOne({
+                            user: theCustomer._id,
+                            containerID,
+                            archived: false
+                        }, err => {
+                            if (err) return next(err);
+                            res.json({
+                                type: 'UndoMessage',
+                                message: 'Undo ' + action + ' Succeeded'
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
 });
 
 /**
