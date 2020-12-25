@@ -10,12 +10,13 @@
         "nodemonDebug": "set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=development & nodemon app.js --verbose",
         "nodemonDebug_mac": "DEBUG=goodtogo_backend:* PORT=3030 NODE_ENV=development nodemon app.js --verbose",
         "test": "echo \"Debudding Mode\" && DEBUG='goodtogo_backend:*' && PORT='3030' && NODE_ENV=development && nodemon --trace-warnings app.js",
-        "start": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=local_development & nodemon app.js",
+        "start": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set PORT=3030 & set NODE_ENV=development & nodemon app.js",
         "ngrok": "ngrok http -region ap 3030",
         "unitTest": "mocha --grep api",
         "migrate": "mocha --grep migrate",
         "apidoc": "apidoc -i routes/ -o ./apidoc",
-        "deployDoc": "bash deployDoc.sh"
+        "deployDoc": "bash deployDoc.sh",
+        "cleanLog": "echo \"Debudding Mode\" & set DEBUG=goodtogo_backend:* & set NODE_ENV=development & node scripts/cleanServerLogs.js"
     },
     "nodemonConfig": {
         "ignore": [
