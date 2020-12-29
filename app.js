@@ -53,7 +53,7 @@ app.use((req, res, next) => {
         esm = require('express-status-monitor')({
             title: "GoodToGo Backend Monitor",
             websocket: app.get('socket.io'),
-            socketPath: `${(config.serverEnv === null? "": ("/" + config.serverEnv))}/socket.io`
+            socketPath: `${(config.serverEnv === null ? "" : ("/" + config.serverEnv))}/socket.io`
         });
     }
     esm(req, res, next);
@@ -120,7 +120,7 @@ app.use(function (err, req, res, next) {
 });
 
 require("./models/redis");
-require("./models/mongo")(mongoose, startServer);
+require("./models/mongo")(mongoose, true, startServer);
 
 process.on('SIGINT', () => {
     debug.log('SIGINT signal received');
@@ -140,7 +140,7 @@ process.on('SIGINT', () => {
 function startServer(err) {
     if (err) {
         debug.error(err);
-        return process.exit(1);;
+        return process.exit(1);
     }
     /**
      * Get port from environment and store in Express.

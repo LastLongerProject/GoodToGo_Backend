@@ -172,7 +172,7 @@ router.get('/list', validateDefault, function (req, res, next) {
 router.get('/list/forOfficialPage', function (req, res, next) {
     Place.find({
         "project": {
-            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛"]
+            "$in": ["正興杯杯", "咖啡店連線", "器喝茶", "慧群", "磐飛", "foodpanda"]
         },
         "active": true
     }, ["ID"], {
@@ -722,6 +722,10 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
                     'oriUser.storeID': thisStoreID
                 },
                 {
+                    'tradeType.action': ContainerAction.UNDO_RENT,
+                    'newUser.storeID': thisStoreID
+                },
+                {
                     'tradeType.action': ContainerAction.RETURN,
                     'newUser.storeID': thisStoreID
                 },
@@ -730,6 +734,10 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
                     'oriUser.storeID': thisStoreID
                 }
             ]
+        }, {}, {
+            sort: {
+                tradeTime: 1
+            }
         }, function (err, trades) {
             if (err) return next(err);
             if (typeof containers !== 'undefined') {
@@ -745,7 +753,7 @@ router.get('/status', checkRoleIsStore(), validateRequest, function (req, res, n
                     }
                 }
             }
-            cleanUndoTrade(ContainerAction.RETURN, trades);
+            cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], trades);
             if (typeof trades !== 'undefined') {
                 for (let i in trades) {
                     if (trades[i].tradeType.action === ContainerAction.RENT)
@@ -930,7 +938,7 @@ router.get('/getUser/:phone', checkRoleIs([{
                     message: 'The user is not verified'
                 });
             }
-            
+
             var token = crypto.randomBytes(48).toString('hex').substr(0, 10);
             redis.setex('user_token:' + token, 60 * 30, dbUser.user.phone, (err, reply) => {
                 if (err) return next(err);
@@ -975,82 +983,55 @@ router.get('/checkUnReturned', checkRoleIsStore(), validateRequest, function (re
     } catch (error) {
         return next(error);
     }
-    Trade.aggregate([{
-        $match: {
-            'tradeType.action': ContainerAction.RENT,
-            'oriUser.storeID': thisStoreID
-        }
-    }, {
+    Trade.find({
+        '$or': [{
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            }
+        ],
+    }, ["container.id", "container.cycleCtr", "newUser.phone", "oriUser.phone", "tradeTime", "tradeType.action"], {
         $sort: {
             tradeTime: 1
         }
-    }, {
-        $group: {
-            _id: "$container.id",
-            id: {
-                $last: "$container.id"
-            },
-            cycleCtr: {
-                $last: "$container.cycleCtr"
-            },
-            phone: {
-                $last: "$newUser.phone"
-            },
-            by: {
-                $last: "$oriUser.phone"
-            },
-            rentedTime: {
-                $last: "$tradeTime"
-            }
-        }
-    }, {
-        $sort: {
-            _id: 1
-        }
-    }], function (err, rentedList) {
+    }, function (err, rentedList) {
         if (err) return next(err);
-        let rentedIdList = rentedList.map(aRecord => aRecord._id);
-        Trade.aggregate([{
-            $match: {
-                'tradeType.action': ContainerAction.RETURN,
-                'container.id': {
-                    '$in': rentedIdList
-                }
+        cleanUndoTrade(ContainerAction.RENT, rentedList);
+        let rentedIdList = rentedList.map(aRecord => aRecord.container.id);
+        Trade.find({
+            'tradeType.action': {
+                "$in": [ContainerAction.RETURN, ContainerAction.UNDO_RETURN]
+            },
+            'container.id': {
+                '$in': rentedIdList
             }
-        }, {
+        }, ["container.id", "container.cycleCtr", "tradeType.action"], {
             $sort: {
                 tradeTime: 1
             }
-        }, {
-            $group: {
-                _id: "$container.id",
-                cycleCtr: {
-                    $last: "$container.cycleCtr"
-                }
-            }
-        }, {
-            $sort: {
-                "_id": 1
-            }
-        }], function (err, returnedList) {
+        }, function (err, returnedList) {
             if (err) return next(err);
-            let rentedIndex = 0;
-            for (let returnedIndex in returnedList) {
-                const theReturnedContainerID = returnedList[returnedIndex]._id;
-                while (rentedList[rentedIndex].id < theReturnedContainerID && rentedIndex < rentedList.length) {
-                    rentedIndex++;
-                }
-                if (rentedList[rentedIndex].id === theReturnedContainerID && rentedList[rentedIndex].cycleCtr <= returnedList[returnedIndex].cycleCtr) {
-                    rentedList.splice(rentedIndex, 1);
-                }
-            }
+            cleanUndoTrade(ContainerAction.RETURN, returnedList);
+            let rentHistory = {};
+            rentedList.forEach(aTrade => {
+                const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
+                rentHistory[tradeKey] = {
+                    id: aTrade.container.id,
+                    phone: aTrade.newUser.phone,
+                    by: aTrade.oriUser.phone,
+                    rentedTime: aTrade.tradeTime.valueOf()
+                };
+            });
+            returnedList.forEach(aTrade => {
+                const tradeKey = `${aTrade.container.id}-${aTrade.container.cycleCtr}`;
+                if (!rentHistory[tradeKey]) return;
+                delete rentHistory[tradeKey];
+            });
             res.json({
-                data: rentedList.sort((a, b) => b.rentedTime - a.rentedTime).map(aRecord => ({
-                    id: aRecord.id,
-                    phone: aRecord.phone,
-                    by: aRecord.by,
-                    rentedTime: aRecord.rentedTime.getTime()
-                }))
+                data: Object.values(rentHistory).sort((a, b) => b.rentedTime - a.rentedTime)
             });
         });
     });
@@ -1311,10 +1292,22 @@ router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, re
     Promise
         .all([new Promise((resolve, reject) => {
                 Trade.find({
-                    'tradeType.action': ContainerAction.RENT,
-                    'oriUser.storeID': thisStoreID
+                    '$or': [{
+                            'tradeType.action': ContainerAction.RENT,
+                            'oriUser.storeID': thisStoreID
+                        },
+                        {
+                            'tradeType.action': ContainerAction.UNDO_RENT,
+                            'newUser.storeID': thisStoreID
+                        }
+                    ]
+                }, {}, {
+                    sort: {
+                        tradeTime: 1
+                    }
                 }, (err, tradeList) => {
                     if (err) return reject(err);
+                    cleanUndoTrade(ContainerAction.RENT, tradeList);
                     var dataList = {};
                     for (var aType in type) {
                         dataList[type[aType].typeCode] = {
@@ -1365,7 +1358,7 @@ router.get('/usedAmount', checkRoleIsStore(), validateRequest, function (req, re
         }
  * 
  */
-router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, next) {
+router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, next) { //CLEAN_UNDO
     const dbRole = req._thisRole;
     let thisStoreID;
     try {
@@ -1379,36 +1372,42 @@ router.get('/history', checkRoleIsStore(), validateRequest, function (req, res, 
             '$gte': dateCheckpoint(1 - historyDays),
             '$lt': dateCheckpoint(1)
         },
-        'tradeType.action': ContainerAction.RENT,
-        'oriUser.storeID': thisStoreID
-    }, function (err, rentTrades) {
-        if (err) return next(err);
-        Trade.find({
-            'tradeTime': {
-                '$gte': dateCheckpoint(1 - historyDays),
-                '$lt': dateCheckpoint(1)
+        '$or': [{
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
             },
-            'tradeType.action': ContainerAction.RETURN,
-            'newUser.storeID': thisStoreID
-        }, function (err, returnTrades) {
-            if (err) return next(err);
-            if (typeof rentTrades !== 'undefined' && typeof returnTrades !== 'undefined') {
-                parseHistory(rentTrades, ContainerAction.RENT, type, function (parsedRent) {
-                    let resJson = {
-                        rentHistory: {
-                            amount: parsedRent.length,
-                            dataList: parsedRent
-                        }
-                    };
-                    parseHistory(returnTrades, ContainerAction.RETURN, type, function (parsedReturn) {
-                        resJson.returnHistory = {
-                            amount: parsedReturn.length,
-                            dataList: parsedReturn
-                        };
-                        res.json(resJson);
-                    });
-                });
+            {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.RETURN,
+                'newUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RETURN,
+                'oriUser.storeID': thisStoreID
             }
+        ]
+    }, function (err, tradeList) {
+        if (err) return next(err);
+        cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN], tradeList);
+        const rentTrades = tradeList.filter(aTrade => aTrade.tradeType.action === ContainerAction.RENT);
+        const returnTrades = tradeList.filter(aTrade => aTrade.tradeType.action === ContainerAction.RETURN);
+        parseHistory(rentTrades, ContainerAction.RENT, type, function (parsedRent) {
+            let resJson = {
+                rentHistory: {
+                    amount: parsedRent.length,
+                    dataList: parsedRent
+                }
+            };
+            parseHistory(returnTrades, ContainerAction.RETURN, type, function (parsedReturn) {
+                resJson.returnHistory = {
+                    amount: parsedReturn.length,
+                    dataList: parsedReturn
+                };
+                res.json(resJson);
+            });
         });
     });
 });
@@ -1453,6 +1452,10 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
                 'oriUser.storeID': thisStoreID
             },
             {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            },
+            {
                 'tradeType.action': ContainerAction.RETURN,
                 'newUser.storeID': thisStoreID
             },
@@ -1486,7 +1489,7 @@ router.get('/history/byContainerType', checkRoleIsStore(), validateRequest, func
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
+        cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var storeLostTradesDict = {};
         var personalLostTradesDict = {};
@@ -1639,6 +1642,10 @@ router.get('/history/byContainerType/csv', checkRoleIsStore(), validateRequest, 
                 'oriUser.storeID': thisStoreID
             },
             {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            },
+            {
                 'tradeType.action': ContainerAction.RETURN,
                 'newUser.storeID': thisStoreID
             },
@@ -1672,7 +1679,7 @@ router.get('/history/byContainerType/csv', checkRoleIsStore(), validateRequest, 
     }, function (err, tradeList) {
         if (err) return next(err);
 
-        cleanUndoTrade([ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
+        cleanUndoTrade([ContainerAction.RENT, ContainerAction.RETURN, ContainerAction.RELOAD], tradeList);
 
         var storeLostTradesDict = {};
         var usedTrades = [];
@@ -1817,8 +1824,15 @@ router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function 
         return next(error);
     }
     let tradeQuery = {
-        "tradeType.action": ContainerAction.RENT,
-        'oriUser.storeID': thisStoreID
+        '$or': [{
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            }
+        ]
     };
     if (req.query.days)
         Object.assign(tradeQuery, {
@@ -1833,13 +1847,14 @@ router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function 
         }
     }, (err, rentTradeList) => {
         if (err) return next(err);
-        let customerByDateDict = {};
-        let customeList = [];
+        cleanUndoTrade(ContainerAction.RENT, rentTradeList);
 
+        let customerByDateDict = {};
+        let customerList = [];
         rentTradeList.forEach(aTrade => {
             let customerPhone = aTrade.newUser.phone;
             let tradeDate = fullDateString(aTrade.tradeTime);
-            if (customeList.indexOf(customerPhone) === -1) customeList.push(customerPhone);
+            if (customerList.indexOf(customerPhone) === -1) customerList.push(customerPhone);
             if (!customerByDateDict[tradeDate]) customerByDateDict[tradeDate] = {};
             if (!customerByDateDict[tradeDate][customerPhone]) customerByDateDict[tradeDate][customerPhone] = [];
             customerByDateDict[tradeDate][customerPhone].push(aTrade.container.id);
@@ -1855,7 +1870,7 @@ router.get('/history/byCustomer', checkRoleIsStore(), validateRequest, function 
         }
 
         res.json({
-            totalDistinctCustomer: customeList.length,
+            totalDistinctCustomer: customerList.length,
             customerSummary: customerByDateDict
         });
     });
@@ -1886,10 +1901,18 @@ router.get('/performance', checkRoleIsStore(), validateRequest, function (req, r
         return next(error);
     }
     Trade.find({
-        'tradeType.action': ContainerAction.RENT,
-        'oriUser.storeID': thisStoreID
+        '$or': [{
+                'tradeType.action': ContainerAction.RENT,
+                'oriUser.storeID': thisStoreID
+            },
+            {
+                'tradeType.action': ContainerAction.UNDO_RENT,
+                'newUser.storeID': thisStoreID
+            }
+        ]
     }, function (err, rentTrades) {
         if (err) return next(err);
+        cleanUndoTrade(ContainerAction.RENT, rentTrades);
         let clerkDict = {};
         if (orderBy && orderBy === "date") {
             rentTrades.forEach(aTrade => {
@@ -1990,39 +2013,36 @@ router.get("/bookedContainer", (req, res, next) => { // none json reply
     });
 });
 
-function parseHistory(data, dataType, type, callback) {
+function parseHistory(trade, tradeType, type, callback) {
     var aHistory;
     var lastHistory;
-    var thisPhone;
     var lastPhone;
     var phoneFormatted;
-    if (data.length === 0) return callback([]);
-    else if (data.length === 1) {
-        aHistory = data[0];
-        if (dataType === ContainerAction.RENT)
+    if (trade.length === 0) return callback([]);
+    else if (trade.length === 1) {
+        aHistory = trade[0];
+        if (tradeType === ContainerAction.RENT)
             lastPhone = aHistory.newUser.phone;
-        else if (dataType === ContainerAction.RETURN)
+        else if (tradeType === ContainerAction.RETURN)
             lastPhone = aHistory.oriUser.phone;
     } else {
-        data.sort(function (a, b) {
+        trade.sort(function (a, b) {
             return b.tradeTime - a.tradeTime;
         });
     }
     var byOrderArr = [];
     var tmpContainerList = [];
-    tmpContainerList.push('#' + intReLength(data[0].container.id, 3) + " | " + type[data[0].container.typeCode].name);
-    for (var i = 1; i < data.length; i++) {
-        aHistory = data[i];
-        lastHistory = data[i - 1];
-        if (dataType === ContainerAction.RENT) {
-            thisPhone = aHistory.newUser.phone;
+    tmpContainerList.push('#' + intReLength(trade[0].container.id, 3) + " | " + type[trade[0].container.typeCode].name);
+    for (var i = 1; i < trade.length; i++) {
+        aHistory = trade[i];
+        lastHistory = trade[i - 1];
+        if (tradeType === ContainerAction.RENT) {
             lastPhone = lastHistory.newUser.phone;
-        } else if (dataType === ContainerAction.RETURN) {
-            thisPhone = aHistory.oriUser.phone;
+        } else if (tradeType === ContainerAction.RETURN) {
             lastPhone = lastHistory.oriUser.phone;
         }
         if (Math.abs(lastHistory.tradeTime - aHistory.tradeTime) > 100) {
-            phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : lastPhone;
+            phoneFormatted = (tradeType === ContainerAction.RETURN) ? '' : lastPhone;
             byOrderArr.push({
                 time: lastHistory.tradeTime,
                 phone: phoneFormatted,
@@ -2033,7 +2053,7 @@ function parseHistory(data, dataType, type, callback) {
         }
         tmpContainerList.push('#' + intReLength(aHistory.container.id, 3) + " | " + type[aHistory.container.typeCode].name);
     }
-    phoneFormatted = (dataType === ContainerAction.RETURN) ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
+    phoneFormatted = (tradeType === ContainerAction.RETURN) ? '' : (lastPhone.slice(0, 4) + "-***-" + lastPhone.slice(7, 10));
     byOrderArr.push({
         time: aHistory.tradeTime,
         phone: phoneFormatted,
@@ -2078,19 +2098,19 @@ function parseHistory(data, dataType, type, callback) {
     return callback(byDateArr);
 }
 
-function getFavorite(data, callback) {
-    if (data.length === 0) return callback([]);
-    data.sort(function (a, b) {
+function getFavorite(trade, callback) {
+    if (trade.length === 0) return callback([]);
+    trade.sort(function (a, b) {
         return b.tradeTime - a.tradeTime;
     });
     var byOrderArr = [];
     var aHistory;
     var lastHistory;
-    var thisPhone = data[0].newUser.phone;
+    var thisPhone = trade[0].newUser.phone;
     var lastPhone;
-    for (var i = 1; i < data.length; i++) {
-        aHistory = data[i];
-        lastHistory = data[i - 1];
+    for (var i = 1; i < trade.length; i++) {
+        aHistory = trade[i];
+        lastHistory = trade[i - 1];
         thisPhone = aHistory.newUser.phone;
         lastPhone = lastHistory.newUser.phone;
         if ((lastHistory.tradeTime - aHistory.tradeTime) !== 0 || lastPhone !== thisPhone) {

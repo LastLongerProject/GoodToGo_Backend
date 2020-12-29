@@ -30,7 +30,7 @@ exports.getContainerHash = function (containerList, isOverview = false) {
     let hashValue
     let set
 
-    if(!isOverview) {
+    if (!isOverview) {
         const containerDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_WITH_DEACTIVE)
         set = new Set(containerList.map(container => containerDict[container]))
     } else {
