@@ -25,12 +25,14 @@ const monthFormatter = require('../helpers/toolkit').monthFormatter;
 const dateCheckpoint = require('../helpers/toolkit').dateCheckpoint;
 const fullDateString = require('../helpers/toolkit').fullDateString;
 const cleanUndoTrade = require('../helpers/toolkit').cleanUndoTrade;
+const getSystemBot = require('../helpers/tools').getSystemBot;
 
 const tradeCallback = require("../controllers/tradeCallback");
 const userTrade = require("../controllers/userTrade");
 
 const sheet = require('./gcp/sheet');
 const drive = require('./gcp/drive');
+const toolkit = require('./toolkit');
 
 module.exports = {
     storeListCaching: function (cb) {
@@ -636,6 +638,49 @@ module.exports = {
                         });
                     });
                 });
+            });
+        });
+    },
+    updateSuperUserRole: cb => {
+        getSystemBot((err, dbUser) => {
+            if (err) return cb(err);
+            Store.find({}, ["id"], (err, storeList) => {
+                if (err) return cb(err);
+                Promise
+                    .all(storeList.map(aStore => new Promise((resolve, reject) => {
+                        dbUser.addRole(RoleType.STORE, {
+                            typeCode: RoleType.STORE,
+                            manager: true,
+                            storeID: aStore.id
+                        }, err => {
+                            if (err) return reject(err);
+                            resolve();
+                        })
+                    })))
+                    .then(() => {
+                        Station.find({}, ["ID"], (err, stationList) => {
+                            if (err) return cb(err);
+                            Promise
+                                .all(stationList.map(aStation => new Promise((resolve, reject) => {
+                                    dbUser.addRole(RoleType.CLEAN_STATION, {
+                                        typeCode: RoleType.CLEAN_STATION,
+                                        manager: true,
+                                        stationID: aStation.ID
+                                    }, err => {
+                                        if (err) return reject(err);
+                                        resolve();
+                                    })
+                                })))
+                                .then(() => {
+                                    dbUser.save(err => {
+                                        if (err) return cb(err);
+                                        cb(null, "Done SU roleList Updating");
+                                    });
+                                })
+                                .catch(cb);
+                        });
+                    })
+                    .catch(cb);
             });
         });
     },

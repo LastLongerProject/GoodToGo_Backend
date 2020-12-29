@@ -132,6 +132,7 @@ module.exports = {
                     setTimeout(tasks.migrateUserRoleStructure, 1000 * 60 * 40, logCb);
                     setTimeout(tasks.migrateBoxStructure, 1000 * 60 * 45, logCb);
                     setTimeout(tasks.uploadShopOverview, 1000 * 60 * 50, logCb);
+                    setTimeout(tasks.updateSuperUserRole, 1000 * 60 * 55, logCb);
                 };
                 taskList();
                 setInterval(taskList, MILLISECONDS_OF_A_DAY);
