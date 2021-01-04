@@ -68,10 +68,19 @@ module.exports = {
             localDate.setDate(localDate.getDate() + 1);
         return localDate.getMonth() + 1;
     },
-    fullDateString: function (date) {
-        var dayFormatted = module.exports.intReLength(module.exports.dayFormatter(date), 2);
-        var monthFormatted = module.exports.intReLength(module.exports.monthFormatter(date), 2);
-        return date.getFullYear() + "/" + monthFormatted + "/" + dayFormatted;
+    yearFormatter: function (dateToFormat) {
+        var localDate = new Date(dateToFormat);
+        if (localDate.getHours() >= 16)
+            localDate.setDate(localDate.getDate() + 1);
+        return localDate.getFullYear();
+    },
+    fullDateString: function (dateToFormat) {
+        var localDate = new Date(dateToFormat);
+        if (localDate.getHours() >= 16)
+            localDate.setDate(localDate.getDate() + 1);
+        return localDate.getFullYear() + "/" +
+            module.exports.intReLength(localDate.getMonth() + 1, 2) + "/" +
+            module.exports.intReLength(localDate.getDate(), 2);
     },
     validateStateChanging: function (bypass, oriState, newState, callback) {
         if (bypass) {
@@ -199,6 +208,14 @@ if (process.env.OS === 'Windows_NT') {
     };
     module.exports.monthFormatter = function (dateToFormat) {
         return dateToFormat.getMonth() + 1;
+    };
+    module.exports.yearFormatter = function (dateToFormat) {
+        return dateToFormat.getFullYear();
+    };
+    module.exports.fullDateString = function (dateToFormat) {
+        return dateToFormat.getFullYear() + "/" +
+            module.exports.intReLength(dateToFormat.getMonth() + 1, 2) + "/" +
+            module.exports.intReLength(dateToFormat.getDate(), 2);
     };
     module.exports.timeFormatter = function (dateToFormat) {
         var hoursFormatted = module.exports.intReLength(dateToFormat.getHours(), 2);
