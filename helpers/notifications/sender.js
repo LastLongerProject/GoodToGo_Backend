@@ -14,7 +14,7 @@ module.exports = {
                 });
             };
         } else {
-            return function (arn) {};
+            return function (arn) { };
         }
     },
     webhook: function (formatted) {
@@ -23,7 +23,7 @@ module.exports = {
                 request
                     .post(url, formatted)
                     .catch(error => {
-                        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "local_development") return null;
+                        if (process.env.NODE_ENV && process.env.NODE_ENV.replace(/"|\s/g, "") === "development") return null;
                         if (error.response) {
                             debug.error(`[Webhook|res] Data: ${error.response.data}`);
                             debug.error(`[Webhook|res] Status: ${error.response.status}`);
@@ -37,7 +37,7 @@ module.exports = {
                     });
             };
         } else {
-            return function (url) {};
+            return function (url) { };
         }
     },
     socket: function (formatted) {
@@ -47,7 +47,7 @@ module.exports = {
                 SocketEmitter.emit(event, formatted);
             };
         } else {
-            return function (url) {};
+            return function (url) { };
         }
     }
 };
