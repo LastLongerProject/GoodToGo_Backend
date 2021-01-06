@@ -372,9 +372,13 @@ module.exports = {
                 if (err) return done(err);
                 const {
                     roleList,
-                    MD5
+                    MD5,
+                    token
                 } = results;
                 return done(null, dbUser, {
+                    headers: {
+                        Authorization: token
+                    },
                     body: {
                         type: 'loginMessage',
                         message: 'Authentication succeeded',
@@ -620,9 +624,13 @@ module.exports = {
             if (err) return done(err);
             const {
                 roleList,
-                MD5
+                MD5,
+                token
             } = results;
             return done(null, dbUser, {
+                headers: {
+                    Authorization: token
+                },
                 body: {
                     type: 'loginMessage',
                     message: 'Authentication succeeded',
@@ -718,44 +726,51 @@ function fetchUserKeys(dbUser, cid, ua, done) {
             });
         })))
         .then((keyPairList) => {
-            return done(null, roleListBuilder(keyPairList, dbUser));
+            keys.serverSecretKey((err, serverSecretKey) => {
+                if (err) return done(err);
+                return done(null, roleListBuilder(serverSecretKey, keyPairList, dbUser));
+            });
         })
         .catch((err) => {
             if (err) return done(err);
         });
 }
 
-function roleListBuilder(userKeyPairList, dbUser) {
-    const roleList = dbUser.roleList
+function roleListBuilder(serverSecretKey, userKeyPairList, dbUser) {
+    const roleList = dbUser.roleList;
     if (!Array.isArray(userKeyPairList)) userKeyPairList = [userKeyPairList];
     userKeyPairList.forEach(aUserKeyPair => insertKeyPair(roleList, aUserKeyPair));
     const md5 = crypto.createHash('md5');
-    return {
-        MD5: md5.update(JSON.stringify(roleList), "utf8").digest("hex"),
-        roleList: roleList.sort((a, b) => {
-            if (a.roleType === RoleType.ADMIN ||
-                (a.roleType === RoleType.CLEAN_STATION && b.roleType !== RoleType.CLEAN_STATION && b.roleType !== RoleType.ADMIN) ||
-                b.roleType === RoleType.BOT || b.roleType === RoleType.CUSTOMER
-            ) {
-                return -1;
-            } else if (a.roleType === RoleType.CUSTOMER ||
-                a.roleType === RoleType.BOT ||
-                (a.roleType === RoleType.STORE && b.roleType !== RoleType.CUSTOMER && b.roleType !== RoleType.STORE) ||
-                b.roleType === RoleType.ADMIN
-            ) {
-                return 1;
-            } else if (a.roleType === b.roleType) {
-                if (a.roleType === RoleType.STORE) {
-                    return a.storeID - b.storeID;
-                } else if (a.roleType === RoleType.CLEAN_STATION) {
-                    return a.stationID - b.stationID;
-                } else {
-                    return 0;
-                }
+    roleList.sort((a, b) => {
+        if (a.roleType === RoleType.ADMIN ||
+            (a.roleType === RoleType.CLEAN_STATION && b.roleType !== RoleType.CLEAN_STATION && b.roleType !== RoleType.ADMIN) ||
+            b.roleType === RoleType.BOT || b.roleType === RoleType.CUSTOMER
+        ) {
+            return -1;
+        } else if (a.roleType === RoleType.CUSTOMER ||
+            a.roleType === RoleType.BOT ||
+            (a.roleType === RoleType.STORE && b.roleType !== RoleType.CUSTOMER && b.roleType !== RoleType.STORE) ||
+            b.roleType === RoleType.ADMIN
+        ) {
+            return 1;
+        } else if (a.roleType === b.roleType) {
+            if (a.roleType === RoleType.STORE) {
+                return a.storeID - b.storeID;
+            } else if (a.roleType === RoleType.CLEAN_STATION) {
+                return a.stationID - b.stationID;
             } else {
                 return 0;
             }
-        })
+        } else {
+            return 0;
+        }
+    });
+    return {
+        MD5: md5.update(JSON.stringify(roleList), "utf8").digest("hex"),
+        roleList,
+        token: jwt.sign({
+            roleList
+        }, serverSecretKey)
     };
 }
 
