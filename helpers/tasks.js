@@ -551,11 +551,11 @@ module.exports = {
 
                         const todayCheckpoint = dateCheckpoint(0);
                         const thisMonth = monthFormatter(todayCheckpoint);
-                        let lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
+                        const lastMonth = (thisMonth - 1) === 0 ? 12 : thisMonth - 1;
                         const storeUsageMap = {};
                         let dateIndex = 0;
                         let dateCheckpointIndex = dateCheckpoint(dateIndex);
-                        while (monthFormatter(dateCheckpointIndex) >= lastMonth || (lastMonth === 12 && monthFormatter(dateCheckpointIndex) === 1)) {
+                        while (monthFormatter(dateCheckpointIndex) === lastMonth || monthFormatter(dateCheckpointIndex) === thisMonth) {
                             const dateKey = fullDateString(dateCheckpointIndex);
                             const monthKey = dateKey.slice(0, 7);
                             if (!storeUsageMap[`${ContainerAction.RENT}_${monthKey}`]) storeUsageMap[`${ContainerAction.RENT}_${monthKey}`] = {};

@@ -115,6 +115,7 @@ router.post('/login', validateDefault, function (req, res, next) {
         } else if (!user) {
             return res.status(401).json(info);
         } else {
+            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -193,6 +194,7 @@ router.post('/fetchRole', validateRequest, function (req, res, next) {
         } else if (!user) {
             return res.status(401).json(info);
         } else {
+            res.header('Authorization', info.headers.Authorization);
             res.json(info.body);
         }
     });
@@ -611,20 +613,20 @@ router.get('/data/byToken', checkRoleIsStore(), checkRoleIsBot(), validateReques
             var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
             Trade.find({
                 $or: [{
-                        'tradeType.action': ContainerAction.RENT,
-                        'newUser.phone': dbUser.user.phone,
-                    }, {
-                        'tradeType.action': ContainerAction.UNDO_RENT,
-                        'oriUser.phone': dbUser.user.phone,
-                    },
-                    {
-                        'tradeType.action': ContainerAction.RETURN,
-                        'oriUser.phone': dbUser.user.phone,
-                    },
-                    {
-                        'tradeType.action': ContainerAction.UNDO_RETURN,
-                        'newUser.phone': dbUser.user.phone,
-                    },
+                    'tradeType.action': ContainerAction.RENT,
+                    'newUser.phone': dbUser.user.phone,
+                }, {
+                    'tradeType.action': ContainerAction.UNDO_RENT,
+                    'oriUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.RETURN,
+                    'oriUser.phone': dbUser.user.phone,
+                },
+                {
+                    'tradeType.action': ContainerAction.UNDO_RETURN,
+                    'newUser.phone': dbUser.user.phone,
+                },
                 ],
             }, function (err, tradeList) {
                 if (err) return next(err);
@@ -701,27 +703,27 @@ router.get('/data', validateRequest, function (req, res, next) {
     var store = DataCacheFactory.get(DataCacheFactory.keys.STORE);
     var containerType = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
     Trade.find({
-            $or: [{
-                    'tradeType.action': ContainerAction.RENT,
-                    'newUser.phone': dbUser.user.phone,
-                }, {
-                    'tradeType.action': ContainerAction.UNDO_RENT,
-                    'oriUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.RETURN,
-                    'oriUser.phone': dbUser.user.phone,
-                },
-                {
-                    'tradeType.action': ContainerAction.UNDO_RETURN,
-                    'newUser.phone': dbUser.user.phone,
-                },
-            ],
-        }, {}, {
-            sort: {
-                tradeTime: 1
-            }
+        $or: [{
+            'tradeType.action': ContainerAction.RENT,
+            'newUser.phone': dbUser.user.phone,
+        }, {
+            'tradeType.action': ContainerAction.UNDO_RENT,
+            'oriUser.phone': dbUser.user.phone,
         },
+        {
+            'tradeType.action': ContainerAction.RETURN,
+            'oriUser.phone': dbUser.user.phone,
+        },
+        {
+            'tradeType.action': ContainerAction.UNDO_RETURN,
+            'newUser.phone': dbUser.user.phone,
+        },
+        ],
+    }, {}, {
+        sort: {
+            tradeTime: 1
+        }
+    },
         function (err, tradeList) {
             if (err) return next(err);
 
@@ -903,22 +905,22 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
 
     Trade.find({
         "$or": [{
-                "tradeType.action": ContainerAction.RENT,
-                "newUser.phone": dbUser.user.phone,
-                "container.inLineSystem": true
-            },
-            {
-                'tradeType.action': ContainerAction.UNDO_RENT,
-                'oriUser.phone': dbUser.user.phone
-            },
-            {
-                "tradeType.action": ContainerAction.RETURN,
-                "oriUser.phone": dbUser.user.phone
-            },
-            {
-                'tradeType.action': ContainerAction.UNDO_RETURN,
-                'newUser.phone': dbUser.user.phone
-            }
+            "tradeType.action": ContainerAction.RENT,
+            "newUser.phone": dbUser.user.phone,
+            "container.inLineSystem": true
+        },
+        {
+            'tradeType.action': ContainerAction.UNDO_RENT,
+            'oriUser.phone': dbUser.user.phone
+        },
+        {
+            "tradeType.action": ContainerAction.RETURN,
+            "oriUser.phone": dbUser.user.phone
+        },
+        {
+            'tradeType.action': ContainerAction.UNDO_RETURN,
+            'newUser.phone': dbUser.user.phone
+        }
         ]
     }, {}, {
         sort: {
