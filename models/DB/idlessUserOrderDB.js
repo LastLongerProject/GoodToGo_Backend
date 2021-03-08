@@ -7,20 +7,23 @@ var schema = mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    user: mongoose.Schema.Types.ObjectId,
-    containerID: {
-        type: Number,
-        default: null
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     },
-    idless: {
-        type: Boolean,
-        default: false,
+    userOrder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "UserOrder"
     },
+    containerType: Number,
     storeID: Number,
     archived: {
         type: Boolean,
         default: false
     }
+}, {
+    usePushEach: true,
+    timestamps: true
 });
 
 schema.index({
@@ -30,9 +33,13 @@ schema.index({
     "user": 1
 });
 schema.index({
-    "containerID": 1
+    "user": 1,
+    "archived": 1
+});
+schema.index({
+    "orderID": 1
 });
 
 
 // create the model for users and expose it to our app
-module.exports = mongoose.model('UserOrder', schema);
+module.exports = mongoose.model('IDlessUserOrder', schema);
