@@ -16,6 +16,10 @@ var schema = mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    containerType: {
+        type: Number,
+        default: null,
+    },
     storeID: Number,
     archived: {
         type: Boolean,

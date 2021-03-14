@@ -23,6 +23,7 @@ var schema = mongoose.Schema({
         id: Number,
         typeCode: Number,
         cycleCtr: Number,
+        orderID: String,
         box: Number,
         inLineSystem: Boolean
     },

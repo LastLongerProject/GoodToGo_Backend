@@ -222,7 +222,7 @@ function analyzeUserOrder(userDict, userObjectIDList, taskPerUser, cb) {
             const analyzedUserOrder = userDict[userID].analyzedUserOrder;
             const dueStatus = getDueStatus(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
             const deadline = getDeadline(aUserOrder.orderTime, userDict[userID].dbUser.getPurchaseStatus(), now);
-            const isIdRegistered = aUserOrder.containerID !== null ? ID.isRegistered : ID.notRegistered;
+            const isIdRegistered = aUserOrder.containerID !== null || aUserOrder.idless ? ID.isRegistered : ID.notRegistered;
             userDict[userID].deadlineList.push(deadline);
             analyzedUserOrder[isIdRegistered][dueStatus].push(aUserOrder);
         });

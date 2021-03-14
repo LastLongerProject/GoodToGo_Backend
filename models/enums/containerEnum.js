@@ -11,7 +11,9 @@ const ContainerAction = Object.freeze({
     RELOAD: "ReadyToClean",
     UNDO_RELOAD: "UndoReadyToClean",
     BOXING: "Boxing",
-    UNBOXING: "Unboxing"
+    UNBOXING: "Unboxing",
+    RENT_IDLESS: "RentWithoutID",
+    RETURN_IDLESS: "ReturnWithoutID",
 });
 
 module.exports = {
@@ -28,7 +30,9 @@ module.exports = {
         [ContainerAction.RELOAD]: "回收",
         [ContainerAction.UNDO_RELOAD]: "取消回收",
         [ContainerAction.BOXING]: "裝箱",
-        [ContainerAction.UNBOXING]: "取消裝箱"
+        [ContainerAction.UNBOXING]: "取消裝箱",
+        [ContainerAction.RENT_IDLESS]: "借出",
+        [ContainerAction.RETURN_IDLESS]: "歸還"
     }),
     State: Object.freeze({
         DELIVERING: 0,

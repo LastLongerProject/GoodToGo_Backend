@@ -17,8 +17,10 @@ const generateUUID = require('../helpers/tools').generateUUID;
 const getSystemBot = require('../helpers/tools').getSystemBot;
 const userIsAvailableForRentContainer = require('../helpers/tools').userIsAvailableForRentContainer;
 
+const RoleElement = require('../models/enums/userEnum').RoleElement;
 const User = require('../models/DB/userDB');
 const UserOrder = require('../models/DB/userOrderDB');
+const Trade = require('../models/DB/tradeDB');
 const ContainerAction = require('../models/enums/containerEnum').Action;
 const ContainerState = require('../models/enums/containerEnum').State;
 const RentalQualification = require('../models/enums/userEnum').RentalQualification;
@@ -563,31 +565,32 @@ router.post('/addWithContainer', validateLine, validateStoreCode, function (req,
 });
 
 /**
- * @apiName RegisterContainerID
+ * @apiName AddUserOrderByBotIdless
  * @apiGroup UserOrder
  * 
- * @api {post} /userOrder/addByBot/idless Register ContainerID of UserOrder
+ * @api {post} /userOrder/addByBot/idless Add User Order
  * @apiUse LINE
  * 
  * @apiParam {String} storeCode storeCode.
  * @apiParam {String} phone phone
- * @apiParam {Number} containerAmount containerAmount.
+ * @apiParam {Array} {containerType: Int, amount: Int}.
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 
  *     {
  *          storeName: String,
- *          containerAmount: Number,
- *          time: Date
+ *          phone: String,
+ *          data: {containerType: Int, amount: Int}
  *      }
  */
 
 router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStoreCode, function (req, res, next) {
+    const bypassCheck = false;
     const storeCode = req.body.storeCode;
-    const StoreDict = DataCacheFactory.get(DataCacheFactory.keys.STORE);
-    const containerAmount = parseInt(req.body.containerAmount);
+    const ContainerTypeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    const data = req.body.data;
     const phone = req.body.phone;
 
-    if (isNaN(containerAmount) || containerAmount <= 0 || !phone)
+    if (!Array.isArray(data) || data.find((obj => !(parseInt(obj.containerType) && parseInt(obj.amount)))) || !phone)
         return res.status(403).json({
             code: 'L002',
             type: 'userOrderMessage',
@@ -596,14 +599,22 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
             txt: "系統維修中>< 請稍後再試！"
         });
 
+    if (data.find(obj => !ContainerTypeDict[obj.containerType]))
+        return res.status(403).json({
+            code: 'L006',
+            type: 'userOrderMessage',
+            message: `ContainerType not found.`
+        });
+
+    const containerAmount = data.reduce((obj, amount) => obj.amount + amount);
+
     User.findOne({ "user.phone": phone })
         .then((dbUser) => {
-            userIsAvailableForRentContainer(dbUser, containerAmount, false, (err, isAvailable, detail) => {
+            userIsAvailableForRentContainer(dbUser, containerAmount, bypassCheck, (err, isAvailable, detail) => {
                 if (err)
                     return next(err);
                 if (!isAvailable) {
-                    if (detail.rentalQualification === ０４１１
-                        .BANNED)
+                    if (detail.rentalQualification === RentalQualification.BANNED)
                         return res.status(403).json({
                             code: 'L001',
                             type: 'userOrderMessage',
@@ -623,31 +634,61 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                 }
         
                 const storeID = req._storeID;
-                const funcList = [];
+                
                 const now = Date.now();
-                for (let i = 0; i < containerAmount; i++) {
-                    funcList.push(new Promise((resolve, reject) => {
-                        let newOrder = new UserOrder({
-                            orderID: generateUUID(),
-                            user: dbUser._id,
-                            idless: true,
-                            storeID,
-                            orderTime: now
-                        });
-                        newOrder.save((err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    }));
-                }
+                const funcList = data.map(({containerType, amount}) => {
+                    return Promise.all(
+                        new Array(amount).map(_ =>
+                            new Promise((resolve, reject) => {
+                                let orderID = generateUUID();
+                                let newOrder = new UserOrder({
+                                    orderID,
+                                    user: dbUser._id,
+                                    idless: true,
+                                    containerType,
+                                    storeID,
+                                    orderTime: now
+                                });
+                                newOrder.save((err) => {
+                                    if (err) return reject(err);
+                                    let trade = new Trade({
+                                        now,
+                                        tradeType: {
+                                            action: ContainerAction.RENT_IDLESS,
+                                            oriState: 1,
+                                            newState: 2,
+                                        },
+                                        oriUser: {
+                                            phone: req._user.user.phone,
+                                            storeID: rentFromStoreID
+                                        },
+                                        newUser: {
+                                            phone: phone,
+                                            storeID: req._storeID
+                                        },
+                                        container: {
+                                            id: null,
+                                            typeCode: containerType,
+                                            cycleCtr: 0,
+                                            box: null,
+                                            orderID,
+                                            inLineSystem: false
+                                        }
+                                    });
+                                    trade.save((err) => {
+                                        if (err) return reject(err);
+                                        resolve();
+                                    })
+                                });
+                            })
+                        )
+                    )
+                });
+                
                 Promise
                     .all(funcList)
                     .then(() => {
-                        res.json({
-                            storeName: StoreDict[storeID].name,
-                            containerAmount,
-                            time: now
-                        });
+                        res.json();
                         userTrade.refreshUserUsingStatus(dbUser, {
                             sendNotice: false,
                             banOrUnbanUser: true
@@ -657,6 +698,121 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                     })
                     .catch(next);
             });
+        })
+        .catch((err) => {
+            return res.status(401).json({
+                code: 'E001',
+                type: "userSearchingError",
+                message: "No User: [" + phone + "] Found",
+                data: {
+                    phone
+                }
+            })
+        });
+});
+
+/**
+ * @apiName CloseUserOrderByBotIdless
+ * @apiGroup UserOrder
+ * 
+ * @api {post} /userOrder/addByBot/idless Add User Order
+ * @apiUse LINE
+ * 
+ * @apiParam {String} storeCode storeCode.
+ * @apiParam {String} phone phone
+ * @apiParam {Array} {containerType: Int, amount: Int}.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 
+ *     {
+ *          storeName: String,
+ *          phone: String,
+ *          data: {containerType: Int, amount: Int}
+ *      }
+ */
+
+ router.post('/closeByBot/idless', checkRoleIsBot(), validateRequest, validateStoreCode, function (req, res, next) {
+    const bypassCheck = false;
+    const storeCode = req.body.storeCode;
+    const ContainerTypeDict = DataCacheFactory.get(DataCacheFactory.keys.CONTAINER_TYPE);
+    const data = req.body.data;
+    const phone = req.body.phone;
+
+    if (!Array.isArray(data) || data.find((obj => !(parseInt(obj.containerType) && parseInt(obj.amount)))) || !phone)
+        return res.status(403).json({
+            code: 'L002',
+            type: 'userOrderMessage',
+            message: `Content not in Correct Format.\n` +
+                `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}, phone: ${phone}`,
+            txt: "系統維修中>< 請稍後再試！"
+        });
+
+    if (data.find(obj => !ContainerTypeDict[obj.containerType]))
+        return res.status(403).json({
+            code: 'L006',
+            type: 'userOrderMessage',
+            message: `ContainerType not found.`
+        });
+
+    const containerAmount = data.reduce((obj, amount) => obj.amount + amount);
+
+    User.findOne({ "user.phone": phone })
+        .then((dbUser) => {
+            return Promise.all(data.map(({containerType, amount}) => {
+                return UserOrder.find({
+                    'containerType': containerType,
+                    'user': dbUser._id,
+                    'archived': false,
+                    'containerID': null,
+                    'idless': true,
+                    'storeID': req._storeID,
+                })
+                .sort({
+                    'orderTime': 1,
+                })
+                .limit(amount)
+                .exec()
+                .then((userOrders) => {
+                    if (userOrders.length !== amount) 
+                        return res.status(403).json({
+                            code: 'L007',
+                            type: 'userOrderMessage',
+                            message: 'user order amount mismatch'
+                        });
+
+                    const rentFromStoreID = req._thisRole.getElement(RoleElement.RETURN_TO_STORE_ID, false);
+
+                    return Promise.all(
+                        userOrders.map( userOrder => {
+                            userOrder.archived = true;
+                            let trade = Trade.insertMany(Array(number).map(_ => new Trade({
+                                now,
+                                tradeType: {
+                                    action: ContainerAction.RETURN_IDLESS,
+                                    oriState: 1,
+                                    newState: 2,
+                                },
+                                oriUser: {
+                                    phone: req._user.user.phone,
+                                    storeID: rentFromStoreID
+                                },
+                                newUser: {
+                                    phone: phone,
+                                    storeID: req._storeID
+                                },
+                                container: {
+                                    id: null,
+                                    typeCode: containerType,
+                                    cycleCtr: 0,
+                                    box: null,
+                                    orderID: userOrder.orderID,
+                                    inLineSystem: false
+                                }
+                            })));
+                            return Promise.all([userOrder.save(), trade.save()]);
+                        })  
+                    )                  
+                })
+            }))
         })
         .catch((err) => {
             return res.status(401).json({
