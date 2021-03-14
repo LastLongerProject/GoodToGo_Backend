@@ -75,9 +75,16 @@ router.get('/list', validateLine, function (req, res, next) {
         if (err) return next(err);
         let orderListWithoutID = {};
         let orderListWithID = [];
+        let idlessOrderList = [];
+
         const now = Date.now();
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
+            if (aUserOrder.idless) {
+                idlessOrderList.push(aUserOrder);
+                return;
+            }
+
             const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
@@ -107,7 +114,8 @@ router.get('/list', validateLine, function (req, res, next) {
             containerAmount: userOrderList.length,
             purchaseStatus: dbUser.getPurchaseStatus(),
             orderListWithoutID: Object.values(orderListWithoutID),
-            orderListWithID
+            orderListWithID,
+            idlessOrderList,
         });
     });
 });
@@ -780,10 +788,10 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                                     newState: 2,
                                 },
                                 oriUser: {
-                                    phone: req._user.user.phone,
+                                    phone: phone,
                                 },
                                 newUser: {
-                                    phone: phone,
+                                    phone: req._user.user.phone,
                                     storeID: returnToStoreID
                                 },
                                 container: {
