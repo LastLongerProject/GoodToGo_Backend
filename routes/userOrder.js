@@ -595,7 +595,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
             code: 'L002',
             type: 'userOrderMessage',
             message: `Content not in Correct Format.\n` +
-                `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}, phone: ${phone}`,
+                `StoreCode: ${storeCode}, data: ${JSON.stringify(data)}, phone: ${phone}`,
             txt: "系統維修中>< 請稍後再試！"
         });
 
@@ -649,6 +649,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                                     storeID,
                                     orderTime: now
                                 });
+                                console.log(newOrder);
                                 newOrder.save((err) => {
                                     if (err) return reject(err);
                                     let trade = new Trade({
@@ -742,7 +743,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
             code: 'L002',
             type: 'userOrderMessage',
             message: `Content not in Correct Format.\n` +
-                `StoreCode: ${storeCode}, ContainerAmount: ${containerAmount}, phone: ${phone}`,
+                `StoreCode: ${storeCode}, data: ${JSON.stringify(data)}, phone: ${phone}`,
             txt: "系統維修中>< 請稍後再試！"
         });
 
@@ -752,8 +753,6 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
             type: 'userOrderMessage',
             message: `ContainerType not found.`
         });
-
-    const containerAmount = data.reduce((obj, amount) => obj.amount + amount);
 
     User.findOne({ "user.phone": phone })
         .then((dbUser) => {
