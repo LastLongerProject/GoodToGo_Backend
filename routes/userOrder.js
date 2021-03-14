@@ -772,8 +772,8 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                     return Promise.all(
                         userOrders.map( userOrder => {
                             userOrder.archived = true;
-                            let trade = Trade.insertMany(Array(number).map(_ => new Trade({
-                                now,
+                            let trade = new Trade({
+                                tradeTime: Date.now(),
                                 tradeType: {
                                     action: ContainerAction.RETURN_IDLESS,
                                     oriState: 1,
@@ -794,7 +794,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                                     orderID: userOrder.orderID,
                                     inLineSystem: false
                                 }
-                            })));
+                            });
                             return Promise.all([userOrder.save(), trade.save()]);
                         })  
                     )                  
