@@ -637,7 +637,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                 
                 const now = Date.now();
                 const rentFromStoreID = req._thisRole.getElement(RoleElement.RENT_FROM_STORE_ID, false);
-                
+
                 data.forEach(async ({containerType, amount}) => {
                     for (let i = 0 ; i < amount ; i++) {
                         let orderID = generateUUID();
@@ -665,7 +665,6 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                             },
                             newUser: {
                                 phone: phone,
-                                storeID: req._storeID
                             },
                             container: {
                                 id: null,
@@ -768,7 +767,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                             message: 'user order amount mismatch'
                         });
 
-                    const rentFromStoreID = req._thisRole.getElement(RoleElement.RETURN_TO_STORE_ID, false);
+                    const returnToStoreID = req._thisRole.getElement(RoleElement.RETURN_TO_STORE_ID, false);
 
                     return Promise.all(
                         userOrders.map( userOrder => {
@@ -782,11 +781,10 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                                 },
                                 oriUser: {
                                     phone: req._user.user.phone,
-                                    storeID: rentFromStoreID
                                 },
                                 newUser: {
                                     phone: phone,
-                                    storeID: req._storeID
+                                    storeID: returnToStoreID
                                 },
                                 container: {
                                     id: null,
@@ -804,6 +802,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
             }))
         })
         .catch((err) => {
+            console.log(err)
             return res.status(401).json({
                 code: 'E001',
                 type: "userSearchingError",
