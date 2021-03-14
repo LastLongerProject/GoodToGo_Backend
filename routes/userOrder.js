@@ -636,7 +636,9 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                 const storeID = req._storeID;
                 
                 const now = Date.now();
-                const funcList = data.forEach(async ({containerType, amount}) => {
+                const rentFromStoreID = req._thisRole.getElement(RoleElement.RENT_FROM_STORE_ID, false);
+                
+                data.forEach(async ({containerType, amount}) => {
                     for (let i = 0 ; i < amount ; i++) {
                         let orderID = generateUUID();
                         let newOrder = new UserOrder({
