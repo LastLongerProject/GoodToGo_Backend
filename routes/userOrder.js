@@ -636,68 +636,56 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                 const storeID = req._storeID;
                 
                 const now = Date.now();
-                const funcList = data.map(({containerType, amount}) => {
-                    return Promise.all(
-                        new Array(amount).map(_ =>
-                            new Promise((resolve, reject) => {
-                                let orderID = generateUUID();
-                                let newOrder = new UserOrder({
-                                    orderID,
-                                    user: dbUser._id,
-                                    idless: true,
-                                    containerType,
-                                    storeID,
-                                    orderTime: now
-                                });
-                                console.log(newOrder);
-                                newOrder.save((err) => {
-                                    if (err) return reject(err);
-                                    let trade = new Trade({
-                                        now,
-                                        tradeType: {
-                                            action: ContainerAction.RENT_IDLESS,
-                                            oriState: 1,
-                                            newState: 2,
-                                        },
-                                        oriUser: {
-                                            phone: req._user.user.phone,
-                                            storeID: rentFromStoreID
-                                        },
-                                        newUser: {
-                                            phone: phone,
-                                            storeID: req._storeID
-                                        },
-                                        container: {
-                                            id: null,
-                                            typeCode: containerType,
-                                            cycleCtr: 0,
-                                            box: null,
-                                            orderID,
-                                            inLineSystem: false
-                                        }
-                                    });
-                                    trade.save((err) => {
-                                        if (err) return reject(err);
-                                        resolve();
-                                    })
-                                });
-                            })
-                        )
-                    )
+                const funcList = data.forEach(async ({containerType, amount}) => {
+                    for (let i = 0 ; i < amount ; i++) {
+                        let orderID = generateUUID();
+                        let newOrder = new UserOrder({
+                            orderID,
+                            user: dbUser._id,
+                            idless: true,
+                            containerType,
+                            storeID,
+                            orderTime: Date.now()
+                        });
+
+                        await newOrder.save();
+
+                        let trade = new Trade({
+                            now,
+                            tradeType: {
+                                action: ContainerAction.RENT_IDLESS,
+                                oriState: 1,
+                                newState: 2,
+                            },
+                            oriUser: {
+                                phone: req._user.user.phone,
+                                storeID: rentFromStoreID
+                            },
+                            newUser: {
+                                phone: phone,
+                                storeID: req._storeID
+                            },
+                            container: {
+                                id: null,
+                                typeCode: containerType,
+                                cycleCtr: 0,
+                                box: null,
+                                orderID,
+                                inLineSystem: false
+                            }
+                        });
+
+                        await trade.save();
+                    }
                 });
                 
-                Promise
-                    .all(funcList)
-                    .then(() => {
-                        res.json();
-                        userTrade.refreshUserUsingStatus(dbUser, {
-                            sendNotice: false,
-                            banOrUnbanUser: true
-                        }, err => {
-                            if (err) return debug.error(err);
-                        });
-                    })
-                    .catch(next);
+                res.json();
+                userTrade.refreshUserUsingStatus(dbUser, {
+                    sendNotice: false,
+                    banOrUnbanUser: true
+                }, err => {
+                    if (err) return debug.error(err);
+                });
             });
         })
         .catch((err) => {
