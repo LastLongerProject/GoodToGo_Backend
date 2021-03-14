@@ -920,6 +920,14 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
         {
             'tradeType.action': ContainerAction.UNDO_RETURN,
             'newUser.phone': dbUser.user.phone
+        },
+        {
+            'tradeType.action': ContainerAction.RENT_IDLESS,
+            'newUser.phone': dbUser.user.phone,
+        },
+        {
+            'tradeType.action': ContainerAction.RETURN_IDLESS,
+            'oriUser.phone': dbUser.user.phone,
         }
         ]
     }, {}, {
@@ -944,6 +952,18 @@ router.get('/usedHistory', validateLine.all, function (req, res, next) {
             } else if (aTrade.tradeType.action === ContainerAction.RETURN) {
                 if (!rentHistory[tradeKey]) return;
                 integratedTrade[tradeKey] = Object.assign(rentHistory[tradeKey], {
+                    returnTime: aTrade.tradeTime,
+                    returnStore: StoreDict[aTrade.newUser.storeID].name
+                });
+            } else if (aTrade.tradeType.action === ContainerAction.RENT_IDLESS) { 
+                rentHistory[aTrade.container.orderID] = {
+                    containerType: ContainerTypeDict[aTrade.container.typeCode].name,
+                    rentTime: aTrade.tradeTime,
+                    rentStore: StoreDict[aTrade.oriUser.storeID].name
+                };
+            } else if (aTrade.tradeType.action === ContainerAction.RETURN_IDLESS) {
+                if (!rentHistory[aTrade.container.orderID]) return;
+                integratedTrade[aTrade.container.orderID] = Object.assign(rentHistory[aTrade.container.orderID], {
                     returnTime: aTrade.tradeTime,
                     returnStore: StoreDict[aTrade.newUser.storeID].name
                 });
