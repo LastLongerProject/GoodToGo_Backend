@@ -80,12 +80,17 @@ router.get('/list', validateLine, function (req, res, next) {
         const now = Date.now();
         userOrderList.sort((a, b) => b.orderTime - a.orderTime);
         userOrderList.forEach(aUserOrder => {
+            const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
+
             if (aUserOrder.idless) {
-                idlessOrderList.push(aUserOrder);
+                idlessOrderList.push({
+                    containerType: ContainerDict[aUserOrder.containerType],
+                    orderTime: aUserOrder.orderTime,
+                    storeName: StoreDict[aUserOrder.storeID].name,
+                    daysToDue
+                })
                 return;
             }
-
-            const daysToDue = computeDaysToDue(aUserOrder.orderTime, dbUser.getPurchaseStatus(), now);
             if (aUserOrder.containerID === null) {
                 if (orderListWithoutID[aUserOrder.orderID]) {
                     orderListWithoutID[aUserOrder.orderID].containerAmount++;
@@ -688,7 +693,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                     }
                 });
                 
-                res.json();
+                res.json({});
                 userTrade.refreshUserUsingStatus(dbUser, {
                     sendNotice: false,
                     banOrUnbanUser: true
@@ -807,6 +812,7 @@ router.post('/addByBot/idless', checkRoleIsBot(), validateRequest, validateStore
                         })  
                     )                  
                 })
+                .then(() => res.json({}))
             }))
         })
         .catch((err) => {
